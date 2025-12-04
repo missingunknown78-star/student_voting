@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+    <!-- PROFILE CARD -->
+    <div class="card profile-card">
+        <div class="profile-icon">
+            <i class="fa fa-user"></i>
+        </div>
+        <div class="profile-info">
+            <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
+            <small>ID Number: {{ current_user.id_number }}</small>
+            <small>Course: {{ current_user.course }}</small>
+
+            {% if has_voted %}
+                <span class="voted-badge">You have already voted</span>
+            {% else %}
+                <span class="voted-badge" style="background:#f39c12;">You have not voted yet</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <br>
+
+    <!-- QUICK REMINDER CARD -->
+    <div class="card">
+        <h2 class="section-title">Important Reminders</h2>
+        <ul style="padding-left: 18px; margin: 0;">
+            <li>Make sure your information is correct before voting.</li>
+            <li>You can vote only once per election.</li>
+            <li>Keep your student ID confidential and secure.</li>
+        </ul>
+    </div>
+
+    <br>
+
+    <!-- ANNOUNCEMENTS PREVIEW -->
+    <div class="card">
+        <h2 class="section-title">Latest Announcements</h2>
+
+        {% if announcements and announcements|length > 0 %}
+            {% for ann in announcements[:3] %}
+                <div class="announcement-item">
+                    {{ ann }}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No announcements available.</p>
+        {% endif %}
+
+        <a href="{{ url_for('student.announcements_page') }}" style="display:block; margin-top:10px; text-align:right; color:#3498db;">
+            View all announcements →
+        </a>
+    </div>
+
+    <br>
+
+    <!-- COUNTDOWN -->
+    <div class="card countdown-box">
+        <h2>Election Countdown</h2>
+        <span id="countdown"></span>
+    </div>
+
+    <br>
+
+    <!-- HELP BOX -->
+    <div class="card">
+        <h2 class="section-title">Need Help?</h2>
+        <p>If you experience any problems with logging in or voting, please visit:</p>
+        <a href="{{ url_for('student.support') }}" style="color:#3498db; font-weight:bold;">
+            Help & Support →
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// REAL-TIME COUNTDOWN
+const countdownDate = new Date("Nov 30, 2025 17:00:00").getTime();
+const countdownEl = document.getElementById("countdown");
+
+setInterval(function() {
+    const now = new Date().getTime();
+    const distance = countdownDate - now;
+
+    if (distance < 0) {
+        countdownEl.innerHTML = "Voting has ended.";
+        return;
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000*60*60*24)) / (1000*60*60));
+    const minutes = Math.floor((distance % (1000*60*60)) / (1000*60));
+    const seconds = Math.floor((distance % (1000*60)) / 1000);
+
+    countdownEl.innerHTML =
+        days + "d " +
+        hours + "h " +
+        minutes + "m " +
+        seconds + "s";
+}, 1000);
+</script>
+{% endblock %}

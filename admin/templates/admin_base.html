@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+
+    <!-- Base Admin CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/sidebar.css') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="dashboard-container">
+
+    <!-- ---------------------- SIDEBAR (GLOBAL) ---------------------- -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}" 
+                 alt="School Logo" class="logo">
+            <h2>Cebu Technological University</h2>
+            <p style="color:#ecf0f1; font-size:0.85rem; margin:0;">Moalboal Campus</p>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('admin.dashboard') }}"
+               class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+               <i class="fa-solid fa-house"></i> Dashboard
+            </a>
+
+            <a href="{{ url_for('admin.manage_students') }}"
+               class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
+               <i class="fa-solid fa-users"></i> Student Management
+            </a>
+
+            <a href="{{ url_for('admin.create_department_election') }}"
+               class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
+               <i class="fa-solid fa-building-columns"></i> Department Elections
+            </a>
+
+            <a href="{{ url_for('admin.manage_candidates') }}"
+               class="{% if request.endpoint == 'admin.manage_candidates' %}active{% endif %}">
+               <i class="fa-solid fa-user-check"></i> Candidate Management
+            </a>
+
+
+            <a href="{{ url_for('admin.manage_positions') }}"
+            class="{% if request.endpoint == 'admin.manage_positions' %}active{% endif %}">
+            <i class="fa-solid fa-clipboard-list"></i> Positions
+         </a>
+         
+
+            <a href="#" class="">
+               <i class="fa-solid fa-calendar-check"></i> Election Status
+            </a>
+
+            <a href="#" class="">
+               <i class="fa-solid fa-chart-pie"></i> Voting Analytics
+            </a>
+
+            <a href="#" class="">
+               <i class="fa-solid fa-bullhorn"></i> Announcements
+            </a>
+
+            <a href="#" class="">
+               <i class="fa-solid fa-file-export"></i> Reports & Exports
+            </a>
+
+            <a href="{{ url_for('admin.logout') }}">
+               <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </nav>
+    </aside>
+    <!-- ------------------------------------------------------------- -->
+
+
+    <!-- MAIN page content -->
+    <main class="main-content">
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+</div>
+
+</body>
+</html>

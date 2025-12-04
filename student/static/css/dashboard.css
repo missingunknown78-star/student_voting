@@ -1,0 +1,202 @@
+/* GENERAL STYLES */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f6fa;
+    color: #2c3e50;
+}
+
+.container {
+    padding: 80px 20px 20px 20px; /* leave space for fixed header */
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ALERTS */
+.alert {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+.alert-success { background-color: #d4edda; color: #155724; }
+.alert-danger { background-color: #f8d7da; color: #721c24; }
+.alert-info { background-color: #d1ecf1; color: #0c5460; }
+
+/* TOP NAVBAR */
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #3498db;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.top-nav .hamburger {
+    font-size: 24px;
+    cursor: pointer;
+}
+.top-nav .nav-title {
+    margin-left: 12px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* SIDE MENU */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    height: 100%;
+    background: #2c3e50;
+    color: #fff;
+    padding-top: 60px;
+    transition: 0.25s left ease;
+    z-index: 999;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.12);
+}
+
+.side-menu.open { left: 0; }
+
+/* SIDE HEADER / LOGO */
+.side-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    position: sticky;
+    top: 0;
+    background: #2c3e50;
+    z-index: 10;
+}
+
+.school-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+    background-color: transparent;
+}
+
+.school-name {
+    font-weight: bold;
+    font-size: 16px;
+    color: #fff;
+}
+
+/* MENU ITEMS */
+.menu-items {
+    overflow-y: auto;
+    max-height: calc(100% - 70px);
+    -ms-overflow-style: none;  /* IE/Edge */
+    scrollbar-width: none;      /* Firefox */
+}
+.menu-items::-webkit-scrollbar { display: none; }
+
+.menu-items a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ecf0f1;
+    padding: 12px 16px;
+    margin: 10px 12px;
+    text-decoration: none;
+    background: #34495e;
+    border-radius: 10px;
+    transition: background 0.20s ease, transform 0.18s ease, color 0.20s ease;
+}
+
+.menu-items a i { font-size: 16px; transition: color 0.18s ease, transform 0.18s ease; }
+
+/* HOVER EFFECT */
+.menu-items a:hover {
+    background: #c9f7d4;
+    color: #13320f;
+    transform: translateX(4px);
+}
+.menu-items a:hover i { color: #13320f; transform: translateX(1px); }
+
+/* ACTIVE MENU */
+.menu-items a.active {
+    background: #8fe2a8;
+    color: #08230a;
+    font-weight: 600;
+}
+
+/* DISABLED LINK */
+.menu-items a.disabled-link {
+    opacity: 0.55;
+    pointer-events: none;
+    filter: grayscale(20%);
+    background: #2f3f4a;
+}
+
+/* DASHBOARD CARDS */
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+/* PROFILE CARD */
+.profile-card { display: flex; align-items: center; gap: 15px; }
+.profile-card .profile-icon {
+    font-size: 50px;
+    background: #3498db;
+    color: #fff;
+    padding: 15px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.profile-card .profile-info h2 { margin: 0; }
+.profile-card .vote-button {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 15px;
+    background: #27ae60;
+    color: #fff;
+    border-radius: 5px;
+    text-decoration: none;
+}
+.profile-card .voted-badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 12px;
+    background: #e74c3c;
+    color: #fff;
+    border-radius: 5px;
+}
+
+/* GRID */
+.grid { display: flex; gap: 15px; flex-wrap: wrap; }
+.grid-3 .card { flex: 1 1 calc(33.33% - 10px); min-width: 200px; text-align: center; }
+
+/* ANNOUNCEMENTS */
+.section-title { margin-bottom: 10px; }
+.announcement-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+
+/* CANDIDATE PREVIEW */
+.candidate-preview { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+
+/* COUNTDOWN */
+.countdown-box { text-align: center; font-weight: bold; }
+
+/* MEDIA QUERIES */
+@media screen and (max-width: 768px) {
+    .grid-3 .card { flex: 1 1 100%; }
+    .profile-card { flex-direction: column; text-align: center; }
+    .profile-card .profile-icon { margin-bottom: 10px; }
+    .side-menu { width: 260px; }
+}

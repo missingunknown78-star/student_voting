@@ -1,0 +1,142 @@
+/* ------------------- Dashboard Header ------------------- */
+.dashboard-header {
+    margin-left: 250px;
+    padding: 20px 30px;
+}
+
+.dashboard-header h1 {
+    font-size: 28px;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.dashboard-header p {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+/* ------------------- Table Container ------------------- */
+.table-container {
+    margin-left: 250px;
+    margin-right: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ------------------- Table Header with Search & Add ------------------- */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.table-header input[type="text"] {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    width: 250px;
+    font-size: 0.9rem;
+}
+
+.add-btn {
+    padding: 8px 15px;
+    background-color: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: 0.2s;
+}
+
+.add-btn:hover {
+    background-color: #2ecc71;
+}
+
+/* ------------------- Students Table ------------------- */
+.students-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.students-table th,
+.students-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.students-table th {
+    background-color: #2980b9;
+    color: #fff;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.students-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.students-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* ------------------- Action Buttons ------------------- */
+.edit-btn,
+.delete-btn {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-btn {
+    background-color: #2980b9;
+    color: #fff;
+}
+
+.edit-btn:hover {
+    background-color: #3498db;
+}
+
+.delete-btn {
+    background-color: #c0392b;
+    color: #fff;
+}
+
+.delete-btn:hover {
+    background-color: #e74c3c;
+}
+
+/* ------------------- Responsive ------------------- */
+@media screen and (max-width: 768px) {
+    .table-container, .dashboard-header {
+        margin-left: 0;
+        margin-right: 15px;
+        padding: 15px;
+    }
+
+    .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .table-header input[type="text"] {
+        width: 100%;
+    }
+}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Election Results{% endblock %}
+
+{% block content %}
+<h2>Election Results</h2>
+<ul>
+    {% for candidate in candidates %}
+    <li>{{ candidate.first_name }} {{ candidate.last_name }}: {{ votes[candidate.id] }} votes</li>
+    {% endfor %}
+</ul>
+<a href="{{ url_for('student.dashboard') }}">Back to Dashboard</a>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "admin_base.html" %}
+{% block title %}Manage Candidates{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_candidates.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Manage Candidates</h1>
+
+    <a href="{{ url_for('admin.add_candidate') }}" class="add-btn">+ Add Candidate</a>
+
+    <table class="candidates-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Position</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in candidates %}
+            <tr>
+                <td>{{ c.id }}</td>
+                <td>
+                    <img src="{{ url_for('admin.static', filename='uploads/candidates/' ~ c.photo) }}" class="candidate-photo">
+                </td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.position }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_candidate', candidate_id=c.id) }}" class="edit-btn">Edit</a>
+                    <a href="{{ url_for('admin.delete_candidate', candidate_id=c.id) }}" class="delete-btn" onclick="return confirm('Are you sure?')">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

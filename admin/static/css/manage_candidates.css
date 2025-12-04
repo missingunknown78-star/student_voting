@@ -1,0 +1,104 @@
+/* ------------------- MANAGE CANDIDATES PAGE ------------------- */
+
+.main-content {
+    margin-left: 250px; /* space for sidebar */
+    padding: 30px;
+    min-height: 100vh;
+    background-color: #f5f6fa;
+    box-sizing: border-box;
+}
+
+.container {
+    max-width: 1000px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin: auto;
+}
+
+.container h1 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+/* Add Candidate Button */
+.add-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+.add-btn:hover {
+    background: #1e8449;
+}
+
+/* Candidates Table */
+.candidates-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.candidates-table th {
+    background: #2c3e50;
+    color: #ffffff;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.candidates-table td {
+    padding: 12px;
+    border-bottom: 1px solid #ecf0f1;
+    vertical-align: middle;
+}
+
+.candidates-table tr:hover {
+    background: #f1f2f6;
+}
+
+/* Candidate Photo */
+.candidate-photo {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+/* Edit/Delete Buttons */
+.edit-btn, .delete-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin-right: 5px;
+    transition: 0.3s;
+}
+
+.edit-btn {
+    background: #3498db;
+    color: white;
+}
+.edit-btn:hover {
+    background: #2980b9;
+}
+
+.delete-btn {
+    background: #e74c3c;
+    color: white;
+}
+.delete-btn:hover {
+    background: #c0392b;
+}

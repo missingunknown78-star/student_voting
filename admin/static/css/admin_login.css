@@ -1,0 +1,146 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Background with subtle gradient */
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #dfe9f3 0%, #ffffff 100%);
+}
+
+/* Flash messages */
+.alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.alert.success { background: #d4edda; color: #155724; }
+.alert.error { background: #f8d7da; color: #721c24; }
+
+/* Main login box – glass effect */
+.login-container {
+    width: 380px;
+    padding: 35px;
+    border-radius: 20px;
+
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header section */
+.header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* Circular Logo (same design but improved border) */
+.school-logo {
+    width: 85px;
+    height: 85px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid #2c3e50;
+    background-color: transparent;
+    display: block;
+    margin: 0 auto 12px auto;
+    box-shadow: 0 0 8px rgba(0,0,0,0.15);
+}
+
+/* School Text Styling */
+.school-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.system-name {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+}
+
+/* Form title */
+.login-form h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #34495e;
+    font-weight: 600;
+}
+
+/* Input groups */
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+/* Input styling */
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: #2980b9;
+    box-shadow: 0 0 6px rgba(41, 128, 185, 0.3);
+    outline: none;
+}
+
+/* Login button with animation */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2980b9;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: 0.25s ease-in-out;
+}
+
+.login-btn:hover {
+    background: #1f6a91;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(31, 106, 145, 0.35);
+}
+
+/* Error message */
+.error-msg {
+    margin-top: 10px;
+    text-align: center;
+    color: #c0392b;
+    font-size: 14px;
+    font-weight: 500;
+}

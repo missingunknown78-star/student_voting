@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Available Elections{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/elections_available.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2 class="page-title">Available Elections</h2>
+
+    {% if elections %}
+        <div class="election-grid">
+        {% for election in elections %}
+            <div class="election-card">
+                <h3 class="election-title">{{ election.title }}</h3>
+                <p><strong>Department:</strong> {{ election.department }}</p>
+                <p><strong>Description:</strong> {{ election.description or "No description available" }}</p>
+                <p><strong>Start:</strong> {{ election.start_date.strftime('%b %d, %Y %I:%M %p') }}</p>
+                <p><strong>End:</strong> {{ election.end_date.strftime('%b %d, %Y %I:%M %p') }}</p>
+                <a href="{{ url_for('student.vote', election_id=election.id) }}" class="vote-button">Vote Now</a>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p class="no-elections">No elections available at the moment.</p>
+    {% endif %}
+</div>
+{% endblock %}

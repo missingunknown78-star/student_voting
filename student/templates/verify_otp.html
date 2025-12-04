@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
+</head>
+<body>
+
+<div class="registration-container">
+    <div class="registration-box">
+
+        <h2>Verify Your Registration</h2>
+        <p>An OTP has been sent to your email. Please enter it below:</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="input-group">
+                <label for="otp">Enter OTP</label>
+                <input type="text" id="otp" name="otp" placeholder="6-digit OTP" required pattern="\d{6}" maxlength="6">
+            </div>
+
+            <button type="submit" class="register-btn">Verify OTP</button>
+        </form>
+
+        <p>
+            Didn't receive an OTP? <a href="{{ url_for('student.register') }}">Resend</a>
+        </p>
+
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+/* Container */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* Page title */
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    color: #2c3e50;
+    text-align: center;
+}
+
+/* Grid layout for cards */
+.election-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+}
+
+/* Individual election card */
+.election-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.election-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Election title */
+.election-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #34495e;
+}
+
+/* Election details */
+.election-card p {
+    font-size: 14px;
+    margin: 5px 0;
+    color: #555;
+}
+
+/* Vote button */
+.vote-button {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 18px;
+    background-color: #3498db;
+    color: #fff;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.3s ease;
+}
+
+.vote-button:hover {
+    background-color: #2980b9;
+}
+
+/* No elections message */
+.no-elections {
+    font-size: 16px;
+    color: #777;
+    text-align: center;
+    margin-top: 40px;
+}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Login</title>
+
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/login.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- WebAuthn Biometric JS -->
+<script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
+
+</head>
+<body>
+
+<div class="login-container">
+    <div class="login-box">
+
+        <div class="logo-header-vertical">
+            <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
+            <div class="university-name">Cebu Technological University <br> Moalboal Campus</div>
+        </div>
+
+        <h2>Student Login</h2>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- FORM LOGIN -->
+        <form method="POST">
+            <div class="input-group">
+                <label for="email">Gmail</label>
+                <input type="email" id="email" name="email" placeholder="Enter your Gmail" required>
+            </div>
+
+            <div class="input-group">
+                <label for="id_number">Student ID</label>
+                <input type="text" id="id_number" name="id_number" placeholder="Enter your Student ID" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            </div>
+
+            <div class="options">
+                <label><input type="checkbox" name="remember"> Remember Me</label>
+                <a href="{{ url_for('student.forgot_password') }}">Forgot Password?</a>
+            </div>
+
+            <button type="submit" class="login-btn">Login</button>
+        </form>
+
+        <!-- BIOMETRIC LOGIN BUTTON -->
+        <button type="button" id="bioLoginBtn" class="bio-btn" style="display:none;">
+            <i class="fa-solid fa-fingerprint"></i> Login with Biometrics
+        </button>
+
+        <p id="bioInfo" style="font-size:0.9rem;color:#666;margin-top:8px;"></p>
+
+        <p class="register-text">
+            Don't have an account? <a href="{{ url_for('student.register') }}">Register</a>
+        </p>
+
+    </div>
+</div>
+
+<!-- BIOMETRIC SCRIPT -->
+<script>
+(async function() {
+    const bioBtn = document.getElementById("bioLoginBtn");
+    const bioInfo = document.getElementById("bioInfo");
+
+    // Detect if platform authenticator is available
+    let isAvailable = false;
+    try {
+        isAvailable = await SimpleWebAuthnBrowser.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch (e) {
+        isAvailable = false;
+    }
+
+    if (!isAvailable) {
+        bioInfo.textContent = "Biometric login not available on this device/browser.";
+        return;
+    }
+
+    // Show button if available. We keep email/password form for fallback.
+    bioBtn.style.display = "inline-block";
+    bioInfo.textContent = "Optional: You can use biometrics to log in (if you have previously enabled it).";
+
+    bioBtn.addEventListener("click", async () => {
+        try {
+            // Request challenge from server.
+            // We intentionally do NOT require email here. The server will either:
+            //  - use email if provided (to narrow credentials), or
+            //  - return a generic challenge (let the browser pick).
+            const email = document.getElementById("email").value.trim().toLowerCase();
+            const payload = email ? { email } : {};
+
+            const challengeRes = await fetch("/student/bio-login-challenge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const challengeData = await challengeRes.json();
+
+            if (!challengeRes.ok || challengeData.status !== "ok") {
+                alert(challengeData.message || "Failed to start biometric login. Try normal login (email/password).");
+                return;
+            }
+
+            // Start WebAuthn authentication using SimpleWebAuthn
+            const authResponse = await SimpleWebAuthnBrowser.startAuthentication(challengeData);
+
+            // Verify with server
+            const verifyRes = await fetch("/student/bio-login-verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(authResponse)
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyRes.ok && verifyData.status === "ok") {
+                window.location.href = "{{ url_for('student.dashboard') }}";
+            } else {
+                alert(verifyData.message || "Biometric login failed. Use email/password instead.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Biometric authentication failed or is not set up on this device.");
+        }
+    });
+})();
+</script>
+
+</body>
+</html>

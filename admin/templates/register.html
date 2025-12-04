@@ -1,0 +1,57 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Comelec Registration{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <div class="logo-header">
+            <img src="{{ url_for('admin.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
+            <h2>Cebu Technological University</h2>
+            <p>Comelec Registration</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.register') }}">
+            <div class="input-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" placeholder="Enter first name" required>
+            </div>
+
+            <div class="input-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" placeholder="Enter last name" required>
+            </div>
+
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Choose a username" required>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter email" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password" required>
+            </div>
+
+            <div class="input-group">
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" required>
+            </div>
+
+            {% if error %}
+                <p class="error">{{ error }}</p>
+            {% endif %}
+
+            <button type="submit" class="register-btn">Register</button>
+        </form>
+
+        <p class="note">
+            Already have an account? <a href="{{ url_for('admin.login') }}">Login here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

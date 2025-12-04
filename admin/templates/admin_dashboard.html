@@ -1,0 +1,42 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_dashboard.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>COMELEC Dashboard</h1>
+</div>
+
+<div class="cards">
+    <div class="card">
+        <i class="fa-solid fa-users fa-2x card-icon"></i>
+        <h2>Total Students</h2>
+        <p>{{ total_students if total_students else 0 }}</p>
+    </div>
+
+    <div class="card">
+        <i class="fa-solid fa-building-columns fa-2x card-icon"></i>
+        <h2>Total Elections</h2>
+        <p>{{ total_elections if total_elections else 0 }}</p>
+    </div>
+
+    <div class="card">
+        <i class="fa-solid fa-chart-pie fa-2x card-icon"></i>
+        <h2>Total Votes Cast</h2>
+        <p>{{ total_votes if total_votes else 0 }}</p>
+    </div>
+
+    <div class="card">
+        <i class="fa-solid fa-calendar-check fa-2x card-icon"></i>
+        <h2>Ongoing Elections</h2>
+        <p>{{ ongoing_elections if ongoing_elections else 0 }}</p>
+    </div>
+</div>
+
+{% endblock %}

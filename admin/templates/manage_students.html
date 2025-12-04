@@ -1,0 +1,73 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Manage Students{% endblock %}
+
+{% block extra_head %}
+
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_students.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+    <h1>Manage Students</h1>
+    <p>View and manage registered students efficiently.</p>
+</div>
+
+<div class="table-container">
+    <div class="table-header">
+        <input type="text" id="searchInput" placeholder="Search by Student ID, Name, or Course..." onkeyup="searchTable()">
+        <button class="add-btn"><i class="fa-solid fa-plus"></i> Add Student</button>
+    </div>
+
+    <table class="students-table">
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Course</th>
+                <th>Year Level</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.id_number }}</td> <!-- Corrected field -->
+                <td>{{ student.first_name }}</td>
+                <td>{{ student.last_name }}</td>
+                <td>{{ student.course }}</td>
+                <td>{{ student.year_level }}</td>
+                <td>
+                    <button class="edit-btn"><i class="fa-solid fa-pen"></i></button>
+                    <button class="delete-btn"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function searchTable() {
+    const input = document.getElementById("searchInput").value.toLowerCase();
+    const table = document.querySelector(".students-table tbody");
+    const rows = table.getElementsByTagName("tr");
+
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName("td");
+        let match = false;
+        for (let j = 0; j < cells.length - 1; j++) { // exclude actions column
+            if (cells[j].innerText.toLowerCase().includes(input)) {
+                match = true;
+                break;
+            }
+        }
+        rows[i].style.display = match ? "" : "none";
+    }
+}
+</script>
+
+{% endblock %}

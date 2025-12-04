@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Student Voting System{% endblock %}</title>
+
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Extra CSS for specific pages -->
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- TOP NAVBAR -->
+<header class="top-nav">
+    <span class="hamburger" id="hamburger">&#9776;</span>
+    <span class="nav-title">Student Dashboard</span>
+</header>
+
+<!-- SIDE MENU -->
+<nav class="side-menu" id="sideMenu">
+
+    <!-- LOGO / HEADER -->
+    <div class="side-header">
+        <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" class="school-logo" alt="School Logo">
+        <span class="school-name">CTU-Moalboal</span>
+    </div>
+
+    <!-- MENU ITEMS -->
+    <div class="menu-items">
+        <a href="{{ url_for('student.dashboard') }}" class="{% if request.path == url_for('student.dashboard') %}active{% endif %}">
+            <i class="fa fa-home"></i> Dashboard
+        </a>
+
+        <a href="{{ url_for('student.available_elections') }}" class="{% if request.path == url_for('student.available_elections') %}active{% endif %}">
+            <i class="fa fa-check-circle"></i> Available Elections
+        </a>
+
+        <a href="{{ url_for('student.candidates') }}" class="{% if request.path == url_for('student.candidates') %}active{% endif %}">
+            <i class="fa fa-users"></i> Candidates
+        </a>
+
+        <a href="{{ url_for('student.guidelines') }}" class="{% if request.path == url_for('student.guidelines') %}active{% endif %}">
+            <i class="fa fa-book"></i> Election Guidelines
+        </a>
+
+        <a href="{{ url_for('student.announcements_page') }}" class="{% if request.path == url_for('student.announcements_page') %}active{% endif %}">
+            <i class="fa fa-bullhorn"></i> Announcements
+        </a>
+
+        <a href="{{ url_for('student.profile') }}" class="{% if request.path == url_for('student.profile') %}active{% endif %}">
+            <i class="fa fa-id-card"></i> My Profile
+        </a>
+
+        <a href="{{ url_for('student.receipt') }}" class="{% if request.path == url_for('student.receipt') %}active{% endif %}">
+            <i class="fa fa-receipt"></i> Voting Receipt
+        </a>
+
+        <a href="{{ url_for('student.help_page') }}" class="{% if request.path == url_for('student.help_page') %}active{% endif %}">
+            <i class="fa fa-question-circle"></i> Help & Support
+        </a>
+
+        <a href="{{ url_for('student.logout') }}">
+            <i class="fa fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+{% block extra_js %}{% endblock %}
+
+<script>
+const hamburger = document.getElementById('hamburger');
+const sideMenu = document.getElementById('sideMenu');
+
+hamburger.addEventListener('click', () => {
+    sideMenu.classList.toggle('open');
+});
+
+window.addEventListener('click', (e) => {
+    if(!sideMenu.contains(e.target) && !hamburger.contains(e.target)) {
+        sideMenu.classList.remove('open');
+    }
+});
+</script>
+
+</body>
+</html>

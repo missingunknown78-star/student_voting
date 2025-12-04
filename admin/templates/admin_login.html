@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+
+    <!-- You can add your CSS here -->
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_login.css') }}">
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <!-- Logo + School Name -->
+    <div class="header">
+        <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}" 
+             alt="School Logo" 
+             class="school-logo">
+
+        <h2 class="school-name">Cebu Technological University</h2>
+        <p class="system-name">CTU-COMELEC</p>
+    </div>
+
+    <!-- Login Form -->
+    <form action="{{ url_for('admin.login') }}" method="POST" class="login-form">
+
+        <h3>Admin Login</h3>
+
+        <div class="input-group">
+            <label>Username</label>
+            <input type="text" name="username" required>
+        </div>
+
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" name="password" required>
+        </div>
+
+        <button type="submit" class="login-btn">Login</button>
+
+        {% if error %}
+            <p class="error-msg">{{ error }}</p>
+        {% endif %}
+
+    </form>
+
+</div>
+
+</body>
+</html>

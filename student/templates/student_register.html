@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Registration</title>
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- WebAuthn Browser JS (kept for other pages like profile) -->
+<script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
+</head>
+<body>
+
+<div class="registration-container">
+    <div class="registration-box">
+
+        <div class="logo-header-vertical">
+            <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
+            <div class="university-name">
+                Cebu Technological University Moalboal Campus
+            </div>
+        </div>
+
+        <h2>Register as a Student</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="registrationForm" method="POST">
+
+            <div class="input-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" placeholder="First Name" required>
+            </div>
+
+            <div class="input-group">
+                <label for="middle_name">Middle Name</label>
+                <input type="text" id="middle_name" name="middle_name" placeholder="Middle Name">
+            </div>
+
+            <div class="input-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" placeholder="Last Name" required>
+            </div>
+
+            <div class="input-group">
+                <label for="suffix">Suffix</label>
+                <input type="text" id="suffix" name="suffix" placeholder="Suffix (Optional)">
+            </div>
+
+            <div class="input-group">
+                <label for="course">Course</label>
+                <input type="text" id="course" name="course" placeholder="Course" required>
+            </div>
+
+            <div class="input-group">
+                <label for="birth_date">Birth Date</label>
+                <input type="date" id="birth_date" name="birth_date" required>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Email Address" required>
+            </div>
+
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Username" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password"
+                       placeholder="Password" required minlength="8">
+            </div>
+
+            <div class="input-group">
+                <label for="id_number">ID Number</label>
+                <input type="text" id="id_number" name="id_number"
+                       placeholder="Enter your Student ID" required>
+            </div>
+
+            <button type="submit" class="register-btn">Register</button>
+        </form>
+
+        <!-- BIOMETRIC SETUP NOTE -->
+        <div style="margin-top:16px; padding:12px; border-radius:8px; background:#f7f7f7; color:#333;">
+            <strong>Biometric / Passkey note:</strong>
+            <p style="margin:6px 0;">To enable biometric (fingerprint / passkey) login, first finish registration and log in. Then go to your Profile or Dashboard and click <em>Enable Biometric Login</em>. This ensures the passkey gets correctly tied to your authenticated account.</p>
+        </div>
+
+        <p class="login-text">
+            Already have an account? <a href="{{ url_for('student.login') }}">Login Here</a>
+        </p>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,97 @@
+/* student/static/css/profile.css */
+
+/* Container for the profile page */
+.profile-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+}
+
+/* Header section with logo and name */
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 2rem;
+}
+
+.profile-header .logo {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.profile-header .student-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Info table */
+.profile-info {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.profile-info td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.profile-info td.label {
+    font-weight: bold;
+    width: 180px;
+    color: #2E86C1;
+}
+
+/* Biometric button */
+.bio-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background-color: #2E86C1;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+    text-decoration: none;
+}
+
+.bio-btn:hover {
+    background-color: #1B4F72;
+}
+
+/* Status message */
+.bio-status {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .profile-header .logo {
+        width: 60px;
+        height: 60px;
+    }
+
+    .profile-header .student-name {
+        font-size: 1.3rem;
+    }
+}

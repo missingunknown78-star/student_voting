@@ -1,0 +1,49 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Create Department Election{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="election-form-container">
+    <h2>Create Department Election</h2>
+    <form method="POST">
+        <div class="election-form-group">
+            <label for="title">Election Title</label>
+            <input type="text" id="title" name="title" placeholder="Enter election title" required>
+        </div>
+
+        <div class="election-form-group">
+            <label for="department">Department</label>
+            <select id="department" name="department" required>
+                <option value="" disabled selected>Select Department</option>
+                <option value="IT">Information Technology</option>
+                <option value="CS">Computer Science</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Business">Business Administration</option>
+                <option value="Education">Education</option>
+            </select>
+        </div>
+
+        <div class="election-form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="4" placeholder="Optional description of election"></textarea>
+        </div>
+
+        <div class="election-form-group">
+            <label for="start_date">Start Date & Time</label>
+            <input type="datetime-local" id="start_date" name="start_date" required>
+        </div>
+
+        <div class="election-form-group">
+            <label for="end_date">End Date & Time</label>
+            <input type="datetime-local" id="end_date" name="end_date" required>
+        </div>
+
+        <button type="submit" class="create-election-btn">Create Election</button>
+    </form>
+</div>
+{% endblock %}

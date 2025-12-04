@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Candidates{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/candidates.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<h2 class="page-title">List of Candidates</h2>
+
+<div class="candidates-container">
+    {% for c in candidates %}
+    <div class="candidate-card">
+
+        <!-- Candidate Photo -->
+        {% if c.image %}
+            <img src="{{ url_for('static', filename='uploads/' ~ c.image) }}" 
+                 class="candidate-photo" 
+                 alt="Candidate Photo">
+        {% else %}
+            <img src="{{ url_for('student.static', filename='image/default_user.png') }}" 
+                 class="candidate-photo"
+                 alt="Default Photo">
+        {% endif %}
+
+        <!-- Name -->
+        <div class="candidate-name">
+            {{ c.first_name }} {{ c.last_name }}
+        </div>
+
+        <!-- Position -->
+        <div class="candidate-position">
+            {{ c.position }}
+        </div>
+
+        <!-- Party List -->
+        <div class="candidate-party">
+            {% if c.partylist %}
+                Partylist: {{ c.partylist }}
+            {% else %}
+                Independent Candidate
+            {% endif %}
+        </div>
+
+        <!-- Platform Section -->
+        {% if c.platform %}
+        <div class="platform-box">
+            {{ c.platform }}
+        </div>
+        {% endif %}
+
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
