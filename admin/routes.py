@@ -1,21 +1,32 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
-from extensions import db, bcrypt, login_manager
-from admin.models import Admin, Candidate, Position, Election
-from flask_login import login_user, logout_user, login_required, current_user
+from extensions import db, bcrypt
+from flask_login import login_user, logout_user, current_user
 from datetime import datetime
+from functools import wraps
 
+from .models import Admin, Candidate, Position, Election
+from student.models import Student, Vote
+
+import mysql.connector
+
+# ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
 
-# ------------------ FLASK-LOGIN USER LOADER ------------------ #
-@login_manager.user_loader
-def load_admin(user_id):
-    return Admin.query.get(int(user_id))
+# ---------------------- Admin Required Decorator ---------------------- #
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or getattr(current_user, 'user_type', None) != 'admin':
+            flash("Please log in as admin to access this page.", "warning")
+            return redirect(url_for('admin.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-# ------------------ ADMIN LOGIN ------------------ #
+# ---------------------- Admin Login ---------------------- #
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        logout_user()
+    if current_user.is_authenticated and getattr(current_user, 'user_type', None) == 'admin':
+        return redirect(url_for('admin.dashboard'))
 
     error = None
     if request.method == 'POST':
@@ -24,7 +35,7 @@ def login():
 
         admin = Admin.query.filter_by(username=username).first()
         if admin and bcrypt.check_password_hash(admin.password, password):
-            login_user(admin)
+            login_user(admin)  # Login
             flash('Admin logged in successfully!', 'success')
             return redirect(url_for('admin.dashboard'))
         else:
@@ -32,47 +43,191 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
-# ------------------ ADMIN DASHBOARD ------------------ #
+# ---------------------- Admin Dashboard ---------------------- #
 @admin_bp.route('/dashboard')
-@login_required
+@admin_required
 def dashboard():
-    from student.models import Student
-
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
     total_elections = Election.query.count()
+    ongoing_elections = Election.query.filter(Election.status == 'Open').count()
+    total_votes = Vote.query.count()
+
+    candidates = Candidate.query.all()
+    vote_labels = [f"{c.first_name} {c.last_name}" for c in candidates]
+    vote_counts = [len(c.votes) for c in candidates]
+
+    recent_elections = Election.query.order_by(Election.start_date.desc()).limit(5).all()
 
     return render_template(
         'admin_dashboard.html',
         admin=current_user,
         total_students=total_students,
         total_candidates=total_candidates,
-        total_elections=total_elections
+        total_elections=total_elections,
+        ongoing_elections=ongoing_elections,
+        total_votes=total_votes,
+        vote_labels=vote_labels,
+        vote_counts=vote_counts,
+        recent_elections=recent_elections,
+        now=datetime.now()
     )
 
-# ------------------ MANAGE STUDENTS ------------------ #
+# ---------------------- Manage Students ---------------------- #
 @admin_bp.route('/students')
-@login_required
+@admin_required
 def manage_students():
-    from student.models import Student
-
     students = Student.query.all()
     return render_template('manage_students.html', students=students)
 
-# ------------------ MANAGE CANDIDATES ------------------ #
+# ---------------------- Departments & Courses ---------------------- #
+@admin_bp.route('/departments')
+def manage_departments():
+    # MySQL Connection
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",  # use your root password if any
+        database="student_voting"
+    )
+
+    cursor = connection.cursor(dictionary=True)
+
+    # Get all departments
+    cursor.execute("SELECT * FROM departments ORDER BY name")
+    departments = cursor.fetchall()
+
+    # Get all courses along with their department
+    cursor.execute("""
+        SELECT c.*, d.name AS department_name
+        FROM courses c
+        JOIN departments d ON c.department_id = d.id
+        ORDER BY d.name, c.course_name
+    """)
+    courses = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    return render_template(
+        'manage_departments.html',
+        departments=departments,
+        courses=courses
+    )
+
+# --- Department routes ---
+@admin_bp.route('/departments/add', methods=['POST'])
+def add_department():
+    name = request.form['name'].strip()
+
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="student_voting"
+    )
+    cursor = connection.cursor()
+    cursor.execute("INSERT INTO departments (name) VALUES (%s)", (name,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    flash('Department added successfully', 'success')
+    return redirect(url_for('admin.manage_departments'))
+
+@admin_bp.route('/departments/delete/<int:id>')
+def delete_department(id):
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="student_voting"
+    )
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM departments WHERE id = %s", (id,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    flash('Department deleted', 'success')
+    return redirect(url_for('admin.manage_departments'))
+
+# --- Course routes ---
+@admin_bp.route('/courses/add', methods=['POST'])
+def add_course():
+    course_name = request.form['course_name'].strip()
+    department_id = request.form['department_id']
+
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="student_voting"
+    )
+    cursor = connection.cursor()
+    cursor.execute(
+        "INSERT INTO courses (course_name, department_id) VALUES (%s, %s)",
+        (course_name, department_id)
+    )
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    flash('Course added successfully', 'success')
+    return redirect(url_for('admin.manage_departments'))
+
+@admin_bp.route('/courses/edit/<int:id>', methods=['POST'])
+def edit_course(id):
+    course_name = request.form['course_name'].strip()
+    department_id = request.form['department_id']
+
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="student_voting"
+    )
+    cursor = connection.cursor()
+    cursor.execute(
+        "UPDATE courses SET course_name = %s, department_id = %s WHERE id = %s",
+        (course_name, department_id, id)
+    )
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    flash('Course updated successfully', 'success')
+    return redirect(url_for('admin.manage_departments'))
+
+@admin_bp.route('/courses/delete/<int:id>')
+def delete_course(id):
+    connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="student_voting"
+    )
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM courses WHERE id = %s", (id,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+    flash('Course deleted', 'success')
+    return redirect(url_for('admin.manage_departments'))
+
+# ---------------------- Manage Candidates ---------------------- #
 @admin_bp.route('/candidates')
-@login_required
+@admin_required
 def manage_candidates():
     candidates = Candidate.query.all()
     return render_template('manage_candidates.html', candidates=candidates)
 
 @admin_bp.route('/candidates/add', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_candidate():
-    from student.models import Student
     positions = Position.query.all()
     students = Student.query.all()
-
     if request.method == 'POST':
         student_id = request.form.get('student_id')
         position_id = request.form.get('position_id')
@@ -86,13 +241,11 @@ def add_candidate():
     return render_template('add_candidate.html', students=students, positions=positions)
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def edit_candidate(id):
     candidate = Candidate.query.get_or_404(id)
-    from student.models import Student
     positions = Position.query.all()
     students = Student.query.all()
-
     if request.method == 'POST':
         candidate.student_id = request.form.get('student_id')
         candidate.position_id = request.form.get('position_id')
@@ -103,7 +256,7 @@ def edit_candidate(id):
     return render_template('edit_candidate.html', candidate=candidate, students=students, positions=positions)
 
 @admin_bp.route('/candidates/delete/<int:id>')
-@login_required
+@admin_required
 def delete_candidate(id):
     candidate = Candidate.query.get_or_404(id)
     db.session.delete(candidate)
@@ -111,13 +264,15 @@ def delete_candidate(id):
     flash('Candidate removed!', 'danger')
     return redirect(url_for('admin.manage_candidates'))
 
-# ------------------ CREATE DEPARTMENT ELECTION ------------------ #
+# ---------------------- Create Department Election ---------------------- #
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def create_department_election():
+    from admin.models import Department, Course  # ensure Course import
+
     if request.method == 'POST':
         title = request.form.get('title')
-        department = request.form.get('department')
+        course_id = request.form.get('course')  # now we select a course
         description = request.form.get('description')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
@@ -129,17 +284,31 @@ def create_department_election():
             flash('Invalid date format!', 'danger')
             return redirect(url_for('admin.create_department_election'))
 
-        new_election = Election(title=title, department=department, description=description, start_date=start_date, end_date=end_date)
+        # Get selected course to store department name in election
+        selected_course = Course.query.get(course_id)
+        department_name = selected_course.department.name if selected_course else ''
+
+        new_election = Election(
+            title=title,
+            department=department_name,
+            description=description,
+            start_date=start_date,
+            end_date=end_date
+        )
         db.session.add(new_election)
         db.session.commit()
         flash('Election created successfully!', 'success')
         return redirect(url_for('admin.dashboard'))
 
-    return render_template('create_department_election.html')
+    # Fetch departments with their courses
+    departments = Department.query.order_by(Department.name).all()
+    courses_by_department = {dept: Course.query.filter_by(department_id=dept.id).order_by(Course.course_name).all() for dept in departments}
 
-# ------------------- MANAGE POSITIONS ------------------- #
+    return render_template('create_department_election.html', courses_by_department=courses_by_department)
+
+# ---------------------- Manage Positions ---------------------- #
 @admin_bp.route('/manage_positions', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def manage_positions():
     if request.method == 'POST':
         position_name = request.form.get('position_name', '').strip()
@@ -157,9 +326,9 @@ def manage_positions():
     positions = Position.query.all()
     return render_template('manage_positions.html', positions=positions)
 
-# ------------------ LOGOUT ------------------ #
+# ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')
-@login_required
+@admin_required
 def logout():
     logout_user()
     flash('Admin has been logged out.', 'info')

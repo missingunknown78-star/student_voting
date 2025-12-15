@@ -1,12 +1,14 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from student.models import Student, Vote
-from admin.models import Candidate, Election
+from admin.models import Candidate, Election, Course, Department
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import func
 from flask_mail import Message
 import hashlib, time, random
+from flask_login import current_user
+from admin.models import Election
 
 # WebAuthn imports
 from webauthn import (
@@ -19,10 +21,8 @@ from webauthn import (
 
 # helper conversions
 try:
-    # Preferred helpers if available
     from webauthn.helpers import bytes_to_base64url, base64url_to_bytes
 except Exception:
-    # fallback
     import base64
     def bytes_to_base64url(b: bytes) -> str:
         return base64.urlsafe_b64encode(b).decode().rstrip("=")
@@ -35,16 +35,18 @@ student_bp = Blueprint('student', __name__, template_folder='templates', static_
 # IMPORTANT: change these when you deploy to production / use HTTPS
 RP_ID = "localhost"
 RP_NAME = "CTU Student Voting System"
-RP_ORIGIN = f"http://{RP_ID}:5000"  # use https://yourdomain for production
+RP_ORIGIN = f"http://{RP_ID}:5000"
 
 # ------------------- HELPER -------------------
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-
 # ------------------- REGISTER -------------------
+
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    from admin.models import Department, Course  # import your models here
+
     if request.method == 'POST':
         registration_data = {
             "first_name": request.form.get('first_name'),
@@ -64,17 +66,27 @@ def register():
 
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
             flash("ID Number already registered!", "danger")
-            return render_template('student_register.html')
+            # Pass courses_by_department to template
+            departments = Department.query.order_by(Department.name).all()
+            courses_by_department = {}
+            for dept in departments:
+                courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+            return render_template('student_register.html', courses_by_department=courses_by_department)
 
         if Student.query.filter_by(email=email).first():
             flash("Email already registered!", "danger")
-            return render_template('student_register.html')
+            # Pass courses_by_department to template
+            departments = Department.query.order_by(Department.name).all()
+            courses_by_department = {}
+            for dept in departments:
+                courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+            return render_template('student_register.html', courses_by_department=courses_by_department)
 
         otp = generate_otp()
         session['otp'] = otp
         session['registration_data'] = registration_data
 
-        # Send OTP email
+        # Send OTP email (unchanged)
         try:
             msg = Message(
                 subject="CTU Registration OTP",
@@ -97,9 +109,20 @@ def register():
 
         except Exception as e:
             flash(f"Failed to send OTP email. Error: {str(e)}", 'danger')
-            return render_template('student_register.html')
+            # Pass courses_by_department to template
+            departments = Department.query.order_by(Department.name).all()
+            courses_by_department = {}
+            for dept in departments:
+                courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+            return render_template('student_register.html', courses_by_department=courses_by_department)
 
-    return render_template('student_register.html')
+    # GET request: just render form
+    departments = Department.query.order_by(Department.name).all()
+    courses_by_department = {}
+    for dept in departments:
+        courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+    return render_template('student_register.html', courses_by_department=courses_by_department)
+
 
 
 # ------------------- OTP VERIFICATION -------------------
@@ -137,7 +160,6 @@ def verify_otp():
 
     return render_template('verify_otp.html')
 
-
 # ------------------- LOGIN -------------------
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -164,7 +186,6 @@ def login():
             return render_template('student_login.html')
 
     return render_template('student_login.html')
-
 
 # ------------------- DASHBOARD -------------------
 @student_bp.route('/dashboard')
@@ -201,7 +222,6 @@ def dashboard():
         leading_candidates=leading_candidates
     )
 
-
 # ------------------- VOTING -------------------
 @student_bp.route('/vote', methods=['GET', 'POST'])
 @login_required
@@ -228,7 +248,6 @@ def vote():
 
     return render_template('vote_page.html', candidates=candidates)
 
-
 # ------------------- AVAILABLE ELECTIONS -------------------
 @student_bp.route('/available-elections')
 @login_required
@@ -236,14 +255,12 @@ def available_elections():
     elections = Election.query.filter(Election.status == 'Open').order_by(Election.start_date.asc()).all()
     return render_template('elections_available.html', elections=elections)
 
-
 # ------------------- CANDIDATES -------------------
 @student_bp.route('/candidates')
 @login_required
 def candidates():
     candidates = Candidate.query.order_by(Candidate.last_name).all()
     return render_template('candidates.html', candidates=candidates)
-
 
 # ------------------- GUIDELINES -------------------
 @student_bp.route('/guidelines')
@@ -257,7 +274,6 @@ def guidelines():
     ]
     return render_template('guidelines.html', rules=rules)
 
-
 # ------------------- ANNOUNCEMENTS -------------------
 @student_bp.route('/announcements')
 @login_required
@@ -267,7 +283,6 @@ def announcements_page():
         {"title": "Last Day Reminder", "date": "2025-11-30", "body": "Last day to vote. Closes at 5 PM."}
     ]
     return render_template('announcements.html', announcements=announcements)
-
 
 # ------------------- RECEIPT -------------------
 @student_bp.route('/receipt')
@@ -284,13 +299,11 @@ def receipt():
 
     return render_template('receipt.html', vote=vote, receipt_code=receipt_code, timestamp=timestamp)
 
-
 # ------------------- PROFILE -------------------
 @student_bp.route('/profile')
 @login_required
 def profile():
     return render_template('profile.html', student=current_user)
-
 
 # ------------------- HELP -------------------
 @student_bp.route('/help')
@@ -303,7 +316,6 @@ def help_page():
     ]
     return render_template('help.html', faqs=faqs)
 
-
 # ------------------- FORGOT PASSWORD -------------------
 @student_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -314,7 +326,6 @@ def forgot_password():
 
     return render_template('forgot_password.html')
 
-
 # ------------------- LOGOUT -------------------
 @student_bp.route('/logout')
 @login_required
@@ -322,7 +333,6 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('student.login'))
-
 
 # ------------------- CONTEXT PROCESSOR -------------------
 @student_bp.app_context_processor
@@ -334,7 +344,6 @@ def inject_student_status():
     except Exception:
         pass
     return {'has_voted': False}
-
 
 # ------------------- SUPPORT -------------------
 @student_bp.route('/support')

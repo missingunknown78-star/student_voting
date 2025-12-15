@@ -55,9 +55,24 @@
             </div>
 
             <div class="input-group">
-                <label for="course">Course</label>
-                <input type="text" id="course" name="course" placeholder="Course" required>
+                <label for="course">Department / Course</label>
+                <select id="course" name="course" required>
+                    <option value="">-- Select Course --</option>
+                    {% for dept_name, courses in courses_by_department.items() %}
+                        <optgroup label="{{ dept_name }}">
+                            {% for course in courses %}
+                                <option value="{{ course.course_name }}"
+                                    {% if session.registration_data and session.registration_data.course == course.course_name %}
+                                        selected
+                                    {% endif %}>
+                                    {{ course.course_name }}
+                                </option>
+                            {% endfor %}
+                        </optgroup>
+                    {% endfor %}
+                </select>
             </div>
+            
 
             <div class="input-group">
                 <label for="birth_date">Birth Date</label>

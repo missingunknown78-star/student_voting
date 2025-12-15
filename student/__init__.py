@@ -1,9 +1,7 @@
-from flask_login import LoginManager
-from app import login_manager
+# student/__init__.py
+from flask import Blueprint
 
-# Import Student model locally to avoid circular imports
-from .models import Student
+student_bp = Blueprint('student_bp', __name__)
 
-@login_manager.user_loader
-def load_student(user_id):
-    return Student.query.get(int(user_id))
+# Import routes only
+from . import routes

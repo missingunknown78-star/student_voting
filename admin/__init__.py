@@ -1,7 +1,8 @@
-from flask_login import LoginManager
-from .models import Admin
-from app import login_manager, db
+# student/__init__.py
+from flask import Blueprint
 
-@login_manager.user_loader
-def load_admin(user_id):
-    return Admin.query.get(int(user_id))
+# Define the student blueprint
+student_bp = Blueprint('student_bp', __name__)
+
+# DO NOT import app or login_manager here
+# Routes will be imported in app.py or inside functions to avoid circular imports

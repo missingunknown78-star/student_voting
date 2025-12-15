@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_dashboard.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -13,30 +13,110 @@
     <h1>COMELEC Dashboard</h1>
 </div>
 
+<!-- KPI Cards -->
 <div class="cards">
     <div class="card">
         <i class="fa-solid fa-users fa-2x card-icon"></i>
         <h2>Total Students</h2>
         <p>{{ total_students if total_students else 0 }}</p>
     </div>
-
     <div class="card">
         <i class="fa-solid fa-building-columns fa-2x card-icon"></i>
         <h2>Total Elections</h2>
         <p>{{ total_elections if total_elections else 0 }}</p>
     </div>
-
-    <div class="card">
-        <i class="fa-solid fa-chart-pie fa-2x card-icon"></i>
-        <h2>Total Votes Cast</h2>
-        <p>{{ total_votes if total_votes else 0 }}</p>
-    </div>
-
     <div class="card">
         <i class="fa-solid fa-calendar-check fa-2x card-icon"></i>
         <h2>Ongoing Elections</h2>
         <p>{{ ongoing_elections if ongoing_elections else 0 }}</p>
     </div>
+    <div class="card">
+        <i class="fa-solid fa-chart-pie fa-2x card-icon"></i>
+        <h2>Total Votes Cast</h2>
+        <p>{{ total_votes if total_votes else 0 }}</p>
+    </div>
 </div>
+
+<!-- Charts Row -->
+<div class="flex-row">
+    <div class="chart-card">
+        <h3>Vote Distribution</h3>
+        <canvas id="votesPieChart"></canvas>
+    </div>
+    <div class="chart-card">
+        <h3>Votes per Candidate</h3>
+        <canvas id="votesBarChart"></canvas>
+    </div>
+</div>
+
+<!-- Recent Elections Table -->
+<div class="recent-elections-container">
+    <h3>Recent Elections</h3>
+    <table class="recent-elections-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Department</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for election in recent_elections %}
+            <tr>
+                <td>{{ election.title }}</td>
+                <td>{{ election.department }}</td>
+                <td>{{ election.start_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ election.end_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if election.start_date > now %}
+                        Upcoming
+                    {% elif election.end_date < now %}
+                        Closed
+                    {% else %}
+                        Open
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Dynamic charts data from Flask
+    const pieLabels = JSON.parse('{{ vote_labels|tojson|safe }}');
+    const pieData = JSON.parse('{{ vote_counts|tojson|safe }}');
+    const barLabels = JSON.parse('{{ vote_labels|tojson|safe }}');
+    const barData = JSON.parse('{{ vote_counts|tojson|safe }}');
+
+    // Pie Chart
+    new Chart(document.getElementById('votesPieChart').getContext('2d'), {
+        type: 'pie',
+        data: { 
+            labels: pieLabels, 
+            datasets: [{ 
+                data: pieData, 
+                backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#FF9F40','#9966FF','#00A36C'] 
+            }] 
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // Bar Chart
+    new Chart(document.getElementById('votesBarChart').getContext('2d'), {
+        type: 'bar',
+        data: { 
+            labels: barLabels, 
+            datasets: [{ label: 'Votes', data: barData, backgroundColor: '#36A2EB' }] 
+        },
+        options: { 
+            responsive: true, 
+            plugins: { legend: { display: false } }, 
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } 
+        }
+    });
+</script>
 
 {% endblock %}

@@ -1,0 +1,97 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Manage Departments & Courses{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_departments.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <h2>Departments & Courses</h2>
+
+    <!-- -------------------- ADD DEPARTMENT -------------------- -->
+    <div class="card">
+        <h3>Add Department</h3>
+        <form method="POST" action="{{ url_for('admin.add_department') }}">
+            <input type="text" name="name" placeholder="Department Name" required>
+            <button type="submit">Add Department</button>
+        </form>
+    </div>
+
+    <!-- -------------------- DEPARTMENTS TABLE -------------------- -->
+    <div class="card">
+        <h3>Departments</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Department Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in departments %}
+                <tr>
+                    <td>{{ dept.id }}</td>
+                    <td>{{ dept.name }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.delete_department', id=dept.id) }}" 
+                           onclick="return confirm('Are you sure you want to delete this department?');">
+                           ❌ Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- -------------------- ADD COURSE -------------------- -->
+    <div class="card">
+        <h3>Add Course</h3>
+        <form method="POST" action="{{ url_for('admin.add_course') }}">
+            <select name="department_id" required>
+                <option value="">Select Department</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="course_name" placeholder="Course Name" required>
+            <button type="submit">Add Course</button>
+        </form>
+    </div>
+
+    <!-- -------------------- COURSES TABLE -------------------- -->
+    <div class="card">
+        <h3>Courses</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Course Name</th>
+                    <th>Department</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr>
+                    <td>{{ course.id }}</td>
+                    <td>{{ course.course_name }}</td>
+                    <td>{{ course.department_name }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.delete_course', id=course.id) }}" 
+                           onclick="return confirm('Are you sure you want to delete this course?');">
+                           ❌ Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}

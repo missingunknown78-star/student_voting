@@ -1,5 +1,6 @@
 from extensions import db
 from flask_login import UserMixin
+from datetime import datetime
 
 # ------------------- ADMIN -------------------
 class Admin(db.Model, UserMixin):
@@ -12,20 +13,20 @@ class Admin(db.Model, UserMixin):
     password = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
-    user_type = "admin"
+    user_type = db.Column(db.String(20), default='admin')
+
 
 # ------------------- POSITION -------------------
 class Position(db.Model):
     __tablename__ = 'positions'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)  # Use 'name'
+    name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
     # Relationship to candidates
     candidates = db.relationship('Candidate', backref='position', lazy=True)
-
 
 
 # ------------------- CANDIDATE -------------------
@@ -43,9 +44,11 @@ class Candidate(db.Model):
     # Relationship
     votes = db.relationship('Vote', backref='candidate', lazy=True)
 
+
 # ------------------- ELECTION -------------------
 class Election(db.Model):
     __tablename__ = 'elections'
+    __table_args__ = {'extend_existing': True}  # <-- prevents "table already defined" error
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
@@ -53,6 +56,44 @@ class Election(db.Model):
     description = db.Column(db.Text)
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(50), default='Open')  # Open or Closed
+    status = db.Column(db.String(50), default='Open')
+
+    # NEW: link to Course table
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
+    # Relationship to access the course object
+    course_rel = db.relationship('Course', backref='elections')
+
+    @property
+    def current_status(self):
+        now = datetime.now()
+        if now < self.start_date:
+            return "Upcoming"
+        elif self.start_date <= now <= self.end_date:
+            return "Open"
+        else:
+            return "Closed"
+
+
+# ------------------- DEPARTMENT -------------------
+class Department(db.Model):
+    __tablename__ = 'departments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
+
+    # Relationship to courses
+    courses = db.relationship('Course', backref='department', lazy=True)
+
+
+# ------------------- COURSE -------------------
+class Course(db.Model):
+    __tablename__ = 'courses'
+
+    id = db.Column(db.Integer, primary_key=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)
+    course_name = db.Column(db.String(255), nullable=False)
+    course_code = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())

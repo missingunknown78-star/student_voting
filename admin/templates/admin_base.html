@@ -30,10 +30,16 @@
             </a>
 
             <a href="{{ url_for('admin.manage_students') }}"
-               class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
-               <i class="fa-solid fa-users"></i> Student Management
+                class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
+                  <i class="fa-solid fa-users"></i> Student Management
             </a>
 
+
+            <a href="{{ url_for('admin.manage_departments') }}"
+                class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
+                <i class="fa-solid fa-building"></i> Departments & Courses
+           </a>
+         
             <a href="{{ url_for('admin.create_department_election') }}"
                class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
                <i class="fa-solid fa-building-columns"></i> Department Elections
@@ -44,12 +50,10 @@
                <i class="fa-solid fa-user-check"></i> Candidate Management
             </a>
 
-
             <a href="{{ url_for('admin.manage_positions') }}"
-            class="{% if request.endpoint == 'admin.manage_positions' %}active{% endif %}">
-            <i class="fa-solid fa-clipboard-list"></i> Positions
-         </a>
-         
+               class="{% if request.endpoint == 'admin.manage_positions' %}active{% endif %}">
+               <i class="fa-solid fa-clipboard-list"></i> Positions
+            </a>
 
             <a href="#" class="">
                <i class="fa-solid fa-calendar-check"></i> Election Status
@@ -74,18 +78,19 @@
     </aside>
     <!-- ------------------------------------------------------------- -->
 
-
     <!-- MAIN page content -->
     <main class="main-content">
 
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <!-- Flash messages (skip on dashboard) -->
+        {% if request.endpoint != 'admin.dashboard' %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        {% endif %}
 
         {% block content %}{% endblock %}
     </main>

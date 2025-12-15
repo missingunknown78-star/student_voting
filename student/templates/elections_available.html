@@ -15,10 +15,25 @@
         {% for election in elections %}
             <div class="election-card">
                 <h3 class="election-title">{{ election.title }}</h3>
+                
+                <!-- Department -->
                 <p><strong>Department:</strong> {{ election.department }}</p>
+                
+                <!-- Course: check if it has a related course -->
+                {% if election.course_rel %}
+                    <p><strong>Course:</strong> {{ election.course_rel.course_name }}</p>
+                {% else %}
+                    <p><strong>Course:</strong> All Courses</p>
+                {% endif %}
+                
+                <!-- Description -->
                 <p><strong>Description:</strong> {{ election.description or "No description available" }}</p>
+                
+                <!-- Start / End -->
                 <p><strong>Start:</strong> {{ election.start_date.strftime('%b %d, %Y %I:%M %p') }}</p>
                 <p><strong>End:</strong> {{ election.end_date.strftime('%b %d, %Y %I:%M %p') }}</p>
+
+                <!-- Vote button -->
                 <a href="{{ url_for('student.vote', election_id=election.id) }}" class="vote-button">Vote Now</a>
             </div>
         {% endfor %}

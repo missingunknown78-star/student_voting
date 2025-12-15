@@ -148,3 +148,56 @@ h2 {
 .bio-btn:hover {
     background-color: #21618C;
 }
+
+
+
+/* Dropdown */
+.input-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    background-color: #fff;
+    appearance: none; /* Remove default arrow on some browsers */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.input-group select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+/* Optional: add a down arrow icon inside the dropdown */
+.input-group select {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%27http://www.w3.org/2000/svg%27%20width%3D%2710%27%20height%3D%275%27%3E%3Cpath%20fill%3D%27%23333%27%20d%3D%27M0%200l5%205%205-5z%27/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px 5px;
+}
+
+
+/* Optgroup styling */
+.input-group select optgroup {
+    font-weight: bold;
+    color: #2E86C1; /* Department color */
+    padding: 5px 0;
+    background-color: #f7f7f7; /* subtle background for separation */
+}
+
+/* Options styling */
+.input-group select option {
+    font-weight: normal;
+    color: #333;
+    padding-left: 10px; /* indent courses under department */
+}
+
+/* Hover effect on options (supported in some browsers) */
+.input-group select option:hover {
+    background-color: #e6f0fa;
+}
