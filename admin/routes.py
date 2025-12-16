@@ -9,6 +9,11 @@ from student.models import Student, Vote
 
 import mysql.connector
 
+from flask import current_app
+import mysql.connector
+from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
+
+
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
 
@@ -81,16 +86,18 @@ def manage_students():
     return render_template('manage_students.html', students=students)
 
 # ---------------------- Departments & Courses ---------------------- #
+from flask import request, redirect, url_for, flash, render_template
+import mysql.connector
+from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
+
 @admin_bp.route('/departments')
 def manage_departments():
-    # MySQL Connection
     connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",  # use your root password if any
-        database="student_voting"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
     )
-
     cursor = connection.cursor(dictionary=True)
 
     # Get all departments
@@ -115,16 +122,17 @@ def manage_departments():
         courses=courses
     )
 
+
 # --- Department routes ---
 @admin_bp.route('/departments/add', methods=['POST'])
 def add_department():
     name = request.form['name'].strip()
 
     connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="student_voting"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
     )
     cursor = connection.cursor()
     cursor.execute("INSERT INTO departments (name) VALUES (%s)", (name,))
@@ -135,13 +143,14 @@ def add_department():
     flash('Department added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
 
+
 @admin_bp.route('/departments/delete/<int:id>')
 def delete_department(id):
     connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="student_voting"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
     )
     cursor = connection.cursor()
     cursor.execute("DELETE FROM departments WHERE id = %s", (id,))
@@ -152,6 +161,7 @@ def delete_department(id):
     flash('Department deleted', 'success')
     return redirect(url_for('admin.manage_departments'))
 
+
 # --- Course routes ---
 @admin_bp.route('/courses/add', methods=['POST'])
 def add_course():
@@ -159,10 +169,10 @@ def add_course():
     department_id = request.form['department_id']
 
     connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="student_voting"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
     )
     cursor = connection.cursor()
     cursor.execute(
@@ -176,16 +186,17 @@ def add_course():
     flash('Course added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
 
+
 @admin_bp.route('/courses/edit/<int:id>', methods=['POST'])
 def edit_course(id):
     course_name = request.form['course_name'].strip()
     department_id = request.form['department_id']
 
     connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="student_voting"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
     )
     cursor = connection.cursor()
     cursor.execute(
@@ -199,13 +210,14 @@ def edit_course(id):
     flash('Course updated successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
 
+
 @admin_bp.route('/courses/delete/<int:id>')
 def delete_course(id):
     connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="student_voting"
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
     )
     cursor = connection.cursor()
     cursor.execute("DELETE FROM courses WHERE id = %s", (id,))
