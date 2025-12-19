@@ -9,6 +9,12 @@ from flask_mail import Message
 import hashlib, time, random
 from flask_login import current_user
 from admin.models import Election
+from flask import render_template
+from flask_login import login_required
+from student.models import Election
+from datetime import datetime
+import pytz
+
 
 # WebAuthn imports
 from webauthn import (
@@ -270,13 +276,16 @@ def vote():
     return render_template('vote_page.html', candidates=candidates)
 
 # ------------------- AVAILABLE ELECTIONS -------------------
-from datetime import datetime
+
 
 @student_bp.route('/available_elections')
 @login_required
 def available_elections():
-    now = datetime.now()
+    # Set the timezone to Philippines (UTC+8)
+    local_tz = pytz.timezone("Asia/Manila")
+    now = datetime.now(local_tz)
 
+    # Filter elections that are currently ongoing
     elections = Election.query.filter(
         Election.start_date <= now,
         Election.end_date >= now
