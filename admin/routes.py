@@ -49,34 +49,42 @@ def login():
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    local_tz = pytz.timezone("Asia/Manila")  # timezone-aware
+    import pytz
+    local_tz = pytz.timezone("Asia/Manila")  # make timezone-aware
     now = datetime.now(local_tz)
 
+    # Counts
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
-    total_elections = Election.query.count()
-    ongoing_elections = Election.query.filter(Election.status == 'Open').count()
     total_votes = Vote.query.count()
 
+    # Ongoing elections (end_date >= now)
+    ongoing_elections = Election.query.filter(Election.end_date >= now).count()
+
+    # Recent elections (show only ongoing/upcoming)
+    recent_elections = Election.query.filter(Election.end_date >= now)\
+                                     .order_by(Election.start_date.desc())\
+                                     .limit(5).all()
+
+    # Candidate votes
     candidates = Candidate.query.all()
     vote_labels = [f"{c.first_name} {c.last_name}" for c in candidates]
     vote_counts = [len(c.votes) for c in candidates]
-
-    recent_elections = Election.query.order_by(Election.start_date.desc()).limit(5).all()
 
     return render_template(
         'admin_dashboard.html',
         admin=current_user,
         total_students=total_students,
         total_candidates=total_candidates,
-        total_elections=total_elections,
+        total_elections=Election.query.count(),
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
         vote_labels=vote_labels,
         vote_counts=vote_counts,
         recent_elections=recent_elections,
-        now=now  # pass timezone-aware now
+        now=now  # pass timezone-aware datetime
     )
+
 
 # ---------------------- Manage Students ---------------------- #
 @admin_bp.route('/students')
