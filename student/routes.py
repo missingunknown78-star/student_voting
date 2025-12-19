@@ -11,7 +11,6 @@ from flask_login import current_user
 from admin.models import Election
 from flask import render_template
 from flask_login import login_required
-from student.models import Election
 from datetime import datetime
 import pytz
 
