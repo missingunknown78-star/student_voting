@@ -284,7 +284,7 @@ def delete_candidate(id):
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])
 @admin_required
 def create_department_election():
-    from admin.models import Department, Course  # ensure Course import
+    from admin.models import Department, Course
 
     if request.method == 'POST':
         title = request.form.get('title')
@@ -293,32 +293,59 @@ def create_department_election():
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
 
-
         tz = pytz.timezone('Asia/Manila')
 
-    try:
-        start_date = tz.localize(
-            datetime.strptime(start_date, '%Y-%m-%dT%H:%M')
-        )
-        end_date = tz.localize(
-            datetime.strptime(end_date, '%Y-%m-%dT%H:%M')
-        )
-    except ValueError:
-        flash('Invalid date format!', 'danger')
-        return redirect(url_for('admin.create_department_election'))
-
+        try:
+            start_date = tz.localize(
+                datetime.strptime(start_date, '%Y-%m-%dT%H:%M')
+            )
+            end_date = tz.localize(
+                datetime.strptime(end_date, '%Y-%m-%dT%H:%M')
+            )
+        except ValueError:
+            flash('Invalid date format!', 'danger')
+            return redirect(url_for('admin.create_department_election'))
 
         new_election = Election(
+            title=title,
+            department=department_name,
+            description=description,
+            start_date=start_date,
+            end_date=end_date
+        )
+        db.session.add(new_election)
+        db.session.commit()
+
+        flash('Election created successfully!', 'success')
+        return redirect(url_for('admin.dashboard'))
+
+    # GET request
+    departments = Department.query.order_by(Department.name).all()
+    courses_by_department = {
+        dept: Course.query.filter_by(department_id=dept.id)
+        .order_by(Course.course_name)
+        .all()
+        for dept in departments
+    }
+
+    return render_template(
+        'create_department_election.html',
+        courses_by_department=courses_by_department
+    )
+
+
+
+    new_election = Election(
               title=title,
               department=department_name,
               description=description,
               start_date=start_date,
               end_date=end_date
                 )
-        db.session.add(new_election)
-        db.session.commit()
-        flash('Election created successfully!', 'success')
-        return redirect(url_for('admin.dashboard'))
+    db.session.add(new_election)
+    db.session.commit()
+    flash('Election created successfully!', 'success')
+    return redirect(url_for('admin.dashboard'))
 
     # Fetch departments with their courses
     departments = Department.query.order_by(Department.name).all()
