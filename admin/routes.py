@@ -4,7 +4,7 @@ from flask_login import login_user, logout_user, current_user
 from datetime import datetime
 from functools import wraps
 
-from .models import Admin, Candidate, Position, Election
+from admin.models import Admin, Candidate, Position, Election
 from student.models import Student, Vote
 
 import mysql.connector
