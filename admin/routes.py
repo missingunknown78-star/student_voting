@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user
 from datetime import datetime
@@ -8,11 +8,8 @@ from .models import Admin, Candidate, Position, Election
 from student.models import Student, Vote
 
 import mysql.connector
-
-from flask import current_app
-import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
-
+import pytz  # <-- added for timezone handling
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
@@ -52,6 +49,9 @@ def login():
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
+    local_tz = pytz.timezone("Asia/Manila")  # timezone-aware
+    now = datetime.now(local_tz)
+
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
     total_elections = Election.query.count()
@@ -75,7 +75,7 @@ def dashboard():
         vote_labels=vote_labels,
         vote_counts=vote_counts,
         recent_elections=recent_elections,
-        now=datetime.now()
+        now=now  # pass timezone-aware now
     )
 
 # ---------------------- Manage Students ---------------------- #
@@ -86,10 +86,6 @@ def manage_students():
     return render_template('manage_students.html', students=students)
 
 # ---------------------- Departments & Courses ---------------------- #
-from flask import request, redirect, url_for, flash, render_template
-import mysql.connector
-from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
-
 @admin_bp.route('/departments')
 def manage_departments():
     connection = mysql.connector.connect(
@@ -122,12 +118,10 @@ def manage_departments():
         courses=courses
     )
 
-
 # --- Department routes ---
 @admin_bp.route('/departments/add', methods=['POST'])
 def add_department():
     name = request.form['name'].strip()
-
     connection = mysql.connector.connect(
         host=MYSQL_HOST,
         user=MYSQL_USER,
@@ -142,7 +136,6 @@ def add_department():
 
     flash('Department added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
-
 
 @admin_bp.route('/departments/delete/<int:id>')
 def delete_department(id):
@@ -160,7 +153,6 @@ def delete_department(id):
 
     flash('Department deleted', 'success')
     return redirect(url_for('admin.manage_departments'))
-
 
 # --- Course routes ---
 @admin_bp.route('/courses/add', methods=['POST'])
@@ -186,7 +178,6 @@ def add_course():
     flash('Course added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
 
-
 @admin_bp.route('/courses/edit/<int:id>', methods=['POST'])
 def edit_course(id):
     course_name = request.form['course_name'].strip()
@@ -209,7 +200,6 @@ def edit_course(id):
 
     flash('Course updated successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
-
 
 @admin_bp.route('/courses/delete/<int:id>')
 def delete_course(id):
@@ -295,10 +285,6 @@ def create_department_election():
         except ValueError:
             flash('Invalid date format!', 'danger')
             return redirect(url_for('admin.create_department_election'))
-
-        # Get selected course to store department name in election
-        department_name = request.form.get('department')
-
 
         new_election = Election(
               title=title,

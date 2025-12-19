@@ -1,6 +1,7 @@
 from extensions import db
 from flask_login import UserMixin
 from datetime import datetime
+import pytz
 
 # ------------------- ADMIN -------------------
 class Admin(db.Model, UserMixin):
@@ -65,15 +66,17 @@ class Election(db.Model):
     # Relationship to access the course object
     course_rel = db.relationship('Course', backref='elections')
 
-    @property
-    def current_status(self):
-        now = datetime.now()
-        if now < self.start_date:
-            return "Upcoming"
-        elif self.start_date <= now <= self.end_date:
-            return "Open"
-        else:
-            return "Closed"
+@property
+def current_status(self):
+    local_tz = pytz.timezone("Asia/Manila")
+    now = datetime.now(local_tz)
+
+    if now < self.start_date:
+        return "Upcoming"
+    elif self.start_date <= now <= self.end_date:
+        return "Open"
+    else:
+        return "Closed"
 
 
 # ------------------- DEPARTMENT -------------------
