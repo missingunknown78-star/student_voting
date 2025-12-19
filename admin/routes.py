@@ -11,6 +11,8 @@ import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
 import pytz  # <-- added for timezone handling
 
+    
+
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
 
@@ -49,7 +51,9 @@ def login():
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    now = datetime.now()  # naive datetime, same type as election.start_date
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+
 
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
@@ -289,12 +293,20 @@ def create_department_election():
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
 
-        try:
-            start_date = datetime.strptime(start_date, '%Y-%m-%dT%H:%M')
-            end_date = datetime.strptime(end_date, '%Y-%m-%dT%H:%M')
-        except ValueError:
-            flash('Invalid date format!', 'danger')
-            return redirect(url_for('admin.create_department_election'))
+
+        tz = pytz.timezone('Asia/Manila')
+
+    try:
+        start_date = tz.localize(
+            datetime.strptime(start_date, '%Y-%m-%dT%H:%M')
+        )
+        end_date = tz.localize(
+            datetime.strptime(end_date, '%Y-%m-%dT%H:%M')
+        )
+    except ValueError:
+        flash('Invalid date format!', 'danger')
+        return redirect(url_for('admin.create_department_election'))
+
 
         new_election = Election(
               title=title,
