@@ -45,23 +45,45 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
-# ---------------------- Admin Dashboard ---------------------- #
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    now = datetime.now()  # naive datetime, same type as election.start_date
+    import pytz
+    local_tz = pytz.timezone("Asia/Manila")  # timezone-aware
+    now = datetime.now(local_tz)
 
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
     total_elections = Election.query.count()
-    ongoing_elections = Election.query.filter(Election.status == 'Open').count()
     total_votes = Vote.query.count()
 
     candidates = Candidate.query.all()
     vote_labels = [f"{c.first_name} {c.last_name}" for c in candidates]
     vote_counts = [len(c.votes) for c in candidates]
 
+    # Fetch recent elections
     recent_elections = Election.query.order_by(Election.start_date.desc()).limit(5).all()
+
+    # --- Update status dynamically ---
+    for election in recent_elections:
+        # Make election datetimes timezone-aware
+        if election.start_date.tzinfo is None:
+            election_start = local_tz.localize(election.start_date)
+        else:
+            election_start = election.start_date
+
+        if election.end_date.tzinfo is None:
+            election_end = local_tz.localize(election.end_date)
+        else:
+            election_end = election.end_date
+
+        # Determine status
+        if now < election_start:
+            election.status = 'Upcoming'
+        elif now > election_end:
+            election.status = 'Ended'
+        else:
+            election.status = 'Open'
 
     return render_template(
         'admin_dashboard.html',
@@ -69,12 +91,12 @@ def dashboard():
         total_students=total_students,
         total_candidates=total_candidates,
         total_elections=total_elections,
-        ongoing_elections=ongoing_elections,
+        ongoing_elections=sum(1 for e in recent_elections if e.status == 'Open'),
         total_votes=total_votes,
         vote_labels=vote_labels,
         vote_counts=vote_counts,
         recent_elections=recent_elections,
-        now=now  # pass naive datetime
+        now=now
     )
 
 
