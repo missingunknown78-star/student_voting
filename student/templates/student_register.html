@@ -61,12 +61,13 @@
                     {% for dept_name, courses in courses_by_department.items() %}
                         <optgroup label="{{ dept_name }}">
                             {% for course in courses %}
-                                <option value="{{ course.course_name }}"
-                                    {% if session.registration_data and session.registration_data.course == course.course_name %}
-                                        selected
-                                    {% endif %}>
+                                 <option value="{{ course.id }}"
+                                    {% if session.registration_data and session.registration_data.course_id == course.id %}
+                                      selected
+                                      {% endif %}>
                                     {{ course.course_name }}
                                 </option>
+                        
                             {% endfor %}
                         </optgroup>
                     {% endfor %}

@@ -22,7 +22,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or getattr(current_user, 'user_type', None) != 'admin':
-            flash("Please log in as admin to access this page.", "warning")
+            flash("Please log in as admin to access this page.", "admin-warning")
             return redirect(url_for('admin.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -284,7 +284,7 @@ def create_department_election():
 
     if request.method == 'POST':
         title = request.form.get('title')
-        course_id = request.form.get('course')  # now we select a course
+        department_name = request.form.get('department')
         description = request.form.get('description')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
@@ -297,16 +297,16 @@ def create_department_election():
             return redirect(url_for('admin.create_department_election'))
 
         # Get selected course to store department name in election
-        selected_course = Course.query.get(course_id)
-        department_name = selected_course.department.name if selected_course else ''
+        department_name = request.form.get('department')
+
 
         new_election = Election(
-            title=title,
-            department=department_name,
-            description=description,
-            start_date=start_date,
-            end_date=end_date
-        )
+              title=title,
+              department=department_name,
+              description=description,
+              start_date=start_date,
+              end_date=end_date
+                )
         db.session.add(new_election)
         db.session.commit()
         flash('Election created successfully!', 'success')

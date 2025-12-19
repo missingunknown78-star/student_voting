@@ -42,10 +42,9 @@ def generate_otp():
     return str(random.randint(100000, 999999))
 
 # ------------------- REGISTER -------------------
-
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    from admin.models import Department, Course  # import your models here
+    from admin.models import Department, Course
 
     if request.method == 'POST':
         registration_data = {
@@ -56,7 +55,10 @@ def register():
             "username": request.form.get('username'),
             "email": request.form.get('email').strip(),
             "password": request.form.get('password'),
+
+            # 🔹 this now receives course.id from the dropdown
             "course": request.form.get('course'),
+
             "birth_date": request.form.get('birth_date'),
             "id_number": request.form.get('id_number')
         }
@@ -64,29 +66,45 @@ def register():
         email = registration_data["email"]
         id_number = registration_data["id_number"]
 
+        # ID number check (UNCHANGED)
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
             flash("ID Number already registered!", "danger")
-            # Pass courses_by_department to template
             departments = Department.query.order_by(Department.name).all()
-            courses_by_department = {}
-            for dept in departments:
-                courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+            courses_by_department = {
+                dept.name: Course.query.filter_by(department_id=dept.id).all()
+                for dept in departments
+            }
             return render_template('student_register.html', courses_by_department=courses_by_department)
 
+        # Email check (UNCHANGED)
         if Student.query.filter_by(email=email).first():
             flash("Email already registered!", "danger")
-            # Pass courses_by_department to template
             departments = Department.query.order_by(Department.name).all()
-            courses_by_department = {}
-            for dept in departments:
-                courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+            courses_by_department = {
+                dept.name: Course.query.filter_by(department_id=dept.id).all()
+                for dept in departments
+            }
             return render_template('student_register.html', courses_by_department=courses_by_department)
 
+        # ✅ FIXED PART (THIS IS THE IMPORTANT ONE)
+        # course now contains course.id
+        course_id = registration_data["course"]
+
+        course_obj = Course.query.get(course_id)
+        if not course_obj:
+            flash("Selected course is invalid.", "danger")
+            return redirect(url_for('student.register'))
+
+        # ✅ STORE EVERYTHING OTP NEEDS
+        registration_data["course"] = course_obj.course_name     # plain text
+        registration_data["course_id"] = course_obj.id
+        registration_data["department_id"] = course_obj.department_id
+
+        # OTP logic (UNCHANGED)
         otp = generate_otp()
         session['otp'] = otp
         session['registration_data'] = registration_data
 
-        # Send OTP email (unchanged)
         try:
             msg = Message(
                 subject="CTU Registration OTP",
@@ -96,31 +114,24 @@ def register():
             <div style="font-family: Arial, sans-serif; text-align: center;">
                 <h2>Cebu Technological University Moalboal Campus</h2>
                 <p>Hello <strong>{registration_data['first_name']}</strong>,</p>
-                <p>Welcome to the CTU Student Voting System!</p>
-                <p>Your <strong>OTP code</strong> for registration is:</p>
-                <h3 style="color: #2E86C1;">{otp}</h3>
-                <p>Please enter this code in the verification page to complete your registration.</p>
-                <p>Thank you!</p>
+                <p>Your <strong>OTP code</strong> is:</p>
+                <h3>{otp}</h3>
             </div>
             """
             mail.send(msg)
-            flash('OTP has been sent to your email. Please check your inbox.', 'info')
+
+            flash('OTP has been sent to your email.', 'info')
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
-            flash(f"Failed to send OTP email. Error: {str(e)}", 'danger')
-            # Pass courses_by_department to template
-            departments = Department.query.order_by(Department.name).all()
-            courses_by_department = {}
-            for dept in departments:
-                courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
-            return render_template('student_register.html', courses_by_department=courses_by_department)
+            flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
 
-    # GET request: just render form
+    # GET request (UNCHANGED)
     departments = Department.query.order_by(Department.name).all()
-    courses_by_department = {}
-    for dept in departments:
-        courses_by_department[dept.name] = Course.query.filter_by(department_id=dept.id).all()
+    courses_by_department = {
+        dept.name: Course.query.filter_by(department_id=dept.id).all()
+        for dept in departments
+    }
     return render_template('student_register.html', courses_by_department=courses_by_department)
 
 
@@ -130,9 +141,13 @@ def register():
 def verify_otp():
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
+
         if entered_otp == session.get('otp'):
             data = session.get('registration_data')
-            password_hash = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
+
+            password_hash = bcrypt.generate_password_hash(
+                data.get('password')
+            ).decode('utf-8')
 
             new_student = Student(
                 first_name=data.get('first_name'),
@@ -142,7 +157,12 @@ def verify_otp():
                 username=data.get('username'),
                 email=data.get('email'),
                 password=password_hash,
-                course=data.get('course'),
+
+                # ✅ NOW EVERYTHING IS STORED
+                course=data.get('course'),               # TEXT
+                course_id=data.get('course_id'),         # FK
+                department_id=data.get('department_id'), # FK
+
                 birth_date=data.get('birth_date'),
                 id_number=data.get('id_number')
             )
@@ -155,8 +175,9 @@ def verify_otp():
 
             flash('Registration successful! You may now log in.', 'success')
             return redirect(url_for('student.login'))
+
         else:
-            flash('Invalid OTP. Try again.', 'danger')
+            flash('Invalid OTP.', 'danger')
 
     return render_template('verify_otp.html')
 
@@ -249,11 +270,20 @@ def vote():
     return render_template('vote_page.html', candidates=candidates)
 
 # ------------------- AVAILABLE ELECTIONS -------------------
-@student_bp.route('/available-elections')
+from datetime import datetime
+
+@student_bp.route('/available_elections')
 @login_required
 def available_elections():
-    elections = Election.query.filter(Election.status == 'Open').order_by(Election.start_date.asc()).all()
+    now = datetime.now()
+
+    elections = Election.query.filter(
+        Election.start_date <= now,
+        Election.end_date >= now
+    ).order_by(Election.start_date.asc()).all()
+
     return render_template('elections_available.html', elections=elections)
+
 
 # ------------------- CANDIDATES -------------------
 @student_bp.route('/candidates')

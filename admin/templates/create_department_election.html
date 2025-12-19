@@ -17,15 +17,11 @@
         </div>
 
         <div class="election-form-group">
-            <label for="course">Select Course</label>
-            <select id="course" name="course" required>
-                <option value="" disabled selected>Select a Course</option>
+            <label for="department">Select Department</label>
+            <select id="department" name="department" required>
+                <option value="" disabled selected>Select a Department</option>
                 {% for department, courses in courses_by_department.items() %}
-                    <optgroup label="{{ department.name }}">
-                        {% for course in courses %}
-                            <option value="{{ course.id }}">{{ course.course_name }}</option>
-                        {% endfor %}
-                    </optgroup>
+                    <option value="{{ department.name }}">{{ department.name }}</option>
                 {% endfor %}
             </select>
         </div>
