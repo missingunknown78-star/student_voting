@@ -1,615 +1,203 @@
-/* ==========================================================================
-   PREMIUM STUDENT REGISTRATION DESIGN
-   ========================================================================== */
-
-/* Modern CSS Reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-/* Premium Background */
+/* Container & Form */
 .registration-container {
-    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
-    padding: 20px;
-    position: relative;
-    overflow-x: hidden;
+    min-height: 100vh;
+    background: linear-gradient(120deg, #f5f7fa, #c3cfe2);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Animated Background Effect */
-.registration-container::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: 
-        radial-gradient(circle at 10% 20%, rgba(255,255,255,0.1) 0%, transparent 20%),
-        radial-gradient(circle at 90% 80%, rgba(255,255,255,0.05) 0%, transparent 20%);
-    z-index: 1;
-    animation: float 20s ease-in-out infinite;
-}
-
-/* Premium Registration Box */
 .registration-box {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 45px 40px;
-    box-shadow: 
-        0 25px 50px rgba(0, 0, 0, 0.25),
-        0 15px 35px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    width: 100%;
-    max-width: 480px;
-    position: relative;
-    z-index: 2;
-    overflow: hidden;
-    animation: fadeInUp 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    background: #ffffff;
+    padding: 40px 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 400px;
+    text-align: center;
+    box-sizing: border-box;
 }
 
-/* Glowing Border Effect */
-.registration-box::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, 
-        #1a2980, #26d0ce, #1a2980, #26d0ce);
-    background-size: 400% 400%;
-    border-radius: 26px;
-    z-index: -1;
-    opacity: 0.6;
-    filter: blur(8px);
-    animation: gradientBorder 8s ease infinite;
-}
-
-/* Logo Header - Premium Style */
+/* Logo & Header */
 .logo-header-vertical {
     text-align: center;
-    margin-bottom: 30px;
-    position: relative;
+    margin-bottom: 20px;
 }
 
 .logo {
     width: 100px;
-    height: 100px;
-    object-fit: contain;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ffffff, #f8f9fa);
-    padding: 12px;
-    border: 3px solid #1a2980;
-    box-shadow: 
-        0 20px 40px rgba(0, 0, 0, 0.15),
-        inset 0 0 0 2px rgba(26, 41, 128, 0.1);
-    margin-bottom: 15px;
-    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
+    margin-bottom: 10px;
 }
 
-.logo:hover {
-    transform: scale(1.08) rotate(5deg);
-    border-color: #26d0ce;
-    box-shadow: 
-        0 25px 50px rgba(0, 0, 0, 0.2),
-        inset 0 0 0 3px rgba(38, 208, 206, 0.2);
-}
-
-/* University Name Styling */
 .university-name {
-    font-size: 18px;
-    font-weight: 800;
-    color: #1a2980;
-    line-height: 1.4;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    letter-spacing: 0.5px;
-    background: linear-gradient(to right, #1a2980, #26d0ce);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 5px;
-}
-
-.subtitle {
-    font-size: 14px;
-    color: #26d0ce;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
 }
 
 /* Form Header */
 h2 {
-    margin-bottom: 30px;
-    color: #1a2980;
-    text-align: center;
-    font-size: 28px;
-    font-weight: 800;
-    position: relative;
-    padding-bottom: 15px;
-}
-
-h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 4px;
-    background: linear-gradient(to right, #1a2980, #26d0ce);
-    border-radius: 2px;
+    margin-bottom: 25px;
+    color: #333;
+    font-weight: bold;
 }
 
 /* Input Groups */
 .input-group {
-    margin-bottom: 22px;
-    position: relative;
+    margin-bottom: 15px;
+    text-align: left;
+    width: 100%;
 }
 
 .input-group label {
     display: block;
-    margin-bottom: 8px;
-    color: #1a2980;
-    font-weight: 700;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    color: #555;
+    font-weight: 500;
 }
 
-/* Premium Input Fields */
-.input-group input,
-.input-group select {
+.input-group input {
     width: 100%;
-    padding: 16px 20px;
-    border: 2px solid #e6e6e6;
-    border-radius: 12px;
-    font-size: 15px;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    background: white;
-    color: #333;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    cursor: pointer;
-}
-
-/* Custom Dropdown Arrow */
-.input-group select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%231a2980' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 20px center;
-    background-size: 12px 8px;
-    padding-right: 50px;
-}
-
-/* Focus States */
-.input-group input:focus,
-.input-group select:focus {
-    border-color: #26d0ce;
-    background: white;
-    box-shadow: 
-        0 8px 30px rgba(38, 208, 206, 0.2),
-        0 0 0 3px rgba(38, 208, 206, 0.1);
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
     outline: none;
-    transform: translateY(-2px);
+    font-size: 14px;
+    box-sizing: border-box;
 }
 
-/* Placeholder Styling */
-.input-group input::placeholder {
-    color: #999;
+.input-group input:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }
 
-/* Dropdown Options Styling */
-.input-group select optgroup {
-    font-weight: 700;
-    color: #1a2980;
-    padding: 10px 0;
-    background: rgba(26, 41, 128, 0.05);
-}
-
-.input-group select option {
-    padding: 12px 15px;
-    font-weight: 400;
-    color: #333;
+/* Button */
+.register-btn {
+    width: 100%;
+    padding: 12px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
     transition: background 0.3s ease;
 }
 
-.input-group select option:hover {
-    background: linear-gradient(to right, #1a2980, #26d0ce);
-    color: white;
-}
-
-/* Flash Messages */
-.alert {
-    padding: 16px 20px;
-    margin-bottom: 25px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: slideDown 0.5s ease-out;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    position: relative;
-    overflow: hidden;
-    border: none;
-}
-
-.alert::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 5px;
-    background: currentColor;
-    opacity: 0.7;
-}
-
-.alert-success { 
-    background: linear-gradient(135deg, #00b09b, #96c93d);
-    color: white;
-}
-
-.alert-danger { 
-    background: linear-gradient(135deg, #ff416c, #ff4b2b);
-    color: white;
-}
-
-.alert-warning { 
-    background: linear-gradient(135deg, #FF9800, #EF6C00);
-    color: white;
-}
-
-.alert-info { 
-    background: linear-gradient(135deg, #2196F3, #1565C0);
-    color: white;
-}
-
-.alert i {
-    font-size: 18px;
-}
-
-/* Premium Register Button */
-.register-btn {
-    width: 100%;
-    padding: 18px;
-    background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-size: 17px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
-    overflow: hidden;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 10px;
-    box-shadow: 0 12px 35px rgba(26, 41, 128, 0.4);
-}
-
 .register-btn:hover {
-    background: linear-gradient(135deg, #26d0ce 0%, #1a2980 100%);
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 
-        0 18px 45px rgba(26, 41, 128, 0.6),
-        0 0 0 2px rgba(255, 255, 255, 0.2);
+    background: #357abd;
 }
 
-.register-btn:active {
-    transform: translateY(-1px) scale(0.98);
-    box-shadow: 0 8px 25px rgba(26, 41, 128, 0.4);
-}
-
-/* Premium Biometric Button */
-.bio-btn {
-    width: 100%;
-    padding: 18px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
-    overflow: hidden;
-    margin: 25px 0 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
-}
-
-.bio-btn i {
-    font-size: 22px;
-    transition: transform 0.3s ease;
-}
-
-.bio-btn:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 
-        0 18px 45px rgba(102, 126, 234, 0.6),
-        0 0 0 2px rgba(255, 255, 255, 0.2);
-}
-
-.bio-btn:hover i {
-    transform: scale(1.2);
-}
-
-.bio-btn:active {
-    transform: translateY(-1px) scale(0.98);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-/* Login Link */
+/* Footer */
 .login-text {
-    margin-top: 25px;
-    font-size: 15px;
-    color: #555;
-    text-align: center;
-    padding-top: 25px;
-    border-top: 1px solid #eee;
+    margin-top: 15px;
+    font-size: 14px;
 }
 
 .login-text a {
-    color: #1a2980;
+    color: #4a90e2;
     text-decoration: none;
-    font-weight: 800;
-    transition: all 0.3s ease;
-    position: relative;
-    padding: 0 5px;
+    font-weight: 500;
 }
 
 .login-text a:hover {
-    color: #26d0ce;
-    text-decoration: none;
+    text-decoration: underline;
 }
 
-.login-text a::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 5px;
-    right: 5px;
-    height: 2px;
-    background: linear-gradient(to right, #1a2980, #26d0ce);
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
+/* Alerts */
+.alert {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    text-align: left;
 }
 
-.login-text a:hover::after {
-    transform: scaleX(1);
+.alert-success {
+    background: #d4edda;
+    color: #155724;
 }
 
-/* ==========================================================================
-   ANIMATIONS
-   ========================================================================== */
-
-@keyframes fadeInUp {
-    0% { 
-        opacity: 0;
-        transform: translateY(40px) scale(0.95);
-    }
-    100% { 
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
 }
 
-@keyframes slideDown {
-    0% { 
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% { 
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* Biometric Setup Button */
+.bio-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #2E86C1;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
-@keyframes gradientBorder {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+.bio-btn i {
+    margin-right: 8px;
 }
 
-@keyframes float {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(20px, 30px) rotate(120deg); }
-    66% { transform: translate(-15px, 15px) rotate(240deg); }
+.bio-btn:hover {
+    background-color: #21618C;
 }
 
-/* Ripple Effect for Buttons */
-.register-btn::after,
-.bio-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.6);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1, 1) translate(-50%);
-    transform-origin: 50% 50%;
+
+
+/* Dropdown */
+.input-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    background-color: #fff;
+    appearance: none; /* Remove default arrow on some browsers */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-.register-btn:focus:not(:active)::after,
-.bio-btn:focus:not(:active)::after {
-    animation: ripple 1s ease-out;
+.input-group select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }
 
-@keyframes ripple {
-    0% {
-        transform: scale(0, 0);
-        opacity: 0.5;
-    }
-    100% {
-        transform: scale(20, 20);
-        opacity: 0;
-    }
+/* Optional: add a down arrow icon inside the dropdown */
+.input-group select {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%27http://www.w3.org/2000/svg%27%20width%3D%2710%27%20height%3D%275%27%3E%3Cpath%20fill%3D%27%23333%27%20d%3D%27M0%200l5%205%205-5z%27/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 10px 5px;
 }
 
-/* ==========================================================================
-   RESPONSIVE DESIGN
-   ========================================================================== */
 
-@media (max-width: 480px) {
-    .registration-box {
-        padding: 35px 25px;
-        margin: 15px;
-        border-radius: 20px;
-    }
-    
-    .logo {
-        width: 85px;
-        height: 85px;
-    }
-    
-    .university-name {
-        font-size: 16px;
-    }
-    
-    .subtitle {
-        font-size: 12px;
-    }
-    
-    h2 {
-        font-size: 24px;
-        margin-bottom: 25px;
-    }
-    
-    .input-group input,
-    .input-group select {
-        padding: 14px 16px;
-        font-size: 14px;
-    }
-    
-    .register-btn,
-    .bio-btn {
-        padding: 16px;
-        font-size: 15px;
-    }
+/* Optgroup styling */
+.input-group select optgroup {
+    font-weight: bold;
+    color: #2E86C1; /* Department color */
+    padding: 5px 0;
+    background-color: #f7f7f7; /* subtle background for separation */
 }
 
-/* Tablet */
-@media (min-width: 481px) and (max-width: 768px) {
-    .registration-box {
-        padding: 40px 35px;
-        max-width: 450px;
-    }
+/* Options styling */
+.input-group select option {
+    font-weight: normal;
+    color: #333;
+    padding-left: 10px; /* indent courses under department */
 }
 
-/* Small screens */
-@media (max-height: 700px) {
-    .registration-container {
-        align-items: flex-start;
-        padding-top: 30px;
-        padding-bottom: 30px;
-    }
-}
-
-/* Large screens */
-@media (min-width: 1200px) {
-    .registration-box {
-        max-width: 500px;
-        padding: 50px 45px;
-    }
-}
-
-/* Loading State */
-.register-btn.loading,
-.bio-btn.loading {
-    pointer-events: none;
-    opacity: 0.8;
-    position: relative;
-    color: transparent;
-}
-
-.register-btn.loading::before,
-.bio-btn.loading::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Password Strength Indicator */
-.password-strength {
-    margin-top: 8px;
-    height: 6px;
-    border-radius: 3px;
-    background: #e0e0e0;
-    overflow: hidden;
-}
-
-.password-strength-bar {
-    height: 100%;
-    width: 0%;
-    transition: width 0.3s ease, background 0.3s ease;
-    background: linear-gradient(to right, #ff4444, #ffbb33, #00C851);
-}
-
-/* Form Validation Styles */
-.input-group.error input,
-.input-group.error select {
-    border-color: #ff416c;
-    background: rgba(255, 65, 108, 0.05);
-}
-
-.input-group.error label {
-    color: #ff416c;
-}
-
-.error-message {
-    font-size: 12px;
-    color: #ff416c;
-    margin-top: 5px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-/* Success State */
-.input-group.success input,
-.input-group.success select {
-    border-color: #00b09b;
-    background: rgba(0, 176, 155, 0.05);
-}
-
-.input-group.success label {
-    color: #00b09b;
+/* Hover effect on options (supported in some browsers) */
+.input-group select option:hover {
+    background-color: #e6f0fa;
 }

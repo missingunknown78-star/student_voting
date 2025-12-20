@@ -1,564 +1,156 @@
-/* ==========================================================================
-   PREMIUM STUDENT LOGIN DESIGN
-   ========================================================================== */
-
-/* Modern CSS Reset */
+/* General Reset */
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Premium Background */
 body {
-    min-height: 100vh;
+    background: linear-gradient(to right, #f8f9fa, #e9ecef);
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    padding: 20px;
-    position: relative;
-    overflow-x: hidden;
+    height: 100vh;
 }
 
-/* Animated Background Particles */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: 
-        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 40%),
-        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%),
-        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.07) 0%, transparent 40%);
-    z-index: 1;
-    animation: float 20s ease-in-out infinite;
-}
-
-/* Premium Login Container */
 .login-container {
     width: 100%;
-    max-width: 420px;
+    max-width: 400px;
     padding: 20px;
-    z-index: 2;
 }
 
-/* Premium Login Box */
 .login-box {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 40px 35px;
-    box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.3),
-        0 8px 25px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    position: relative;
-    overflow: hidden;
-    animation: fadeInUp 0.6s ease-out;
-}
-
-/* Elegant Border Glow */
-.login-box::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, 
-        #1e3c72, #2a5298, #3a6fc8, #2a5298, #1e3c72);
-    background-size: 400% 400%;
-    border-radius: 22px;
-    z-index: -1;
-    opacity: 0.6;
-    filter: blur(8px);
-    animation: gradientBorder 8s ease infinite;
-}
-
-/* Logo Header - Premium Style */
-.logo-header-vertical {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 30px;
-    position: relative;
+    background: #fff;
+    padding: 30px 25px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    text-align: center;
 }
 
 .logo {
-    width: 90px;
-    height: 90px;
-    object-fit: contain;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ffffff, #f8f9fa);
-    padding: 10px;
-    border: 3px solid #1e3c72;
-    box-shadow: 
-        0 15px 35px rgba(0, 0, 0, 0.15),
-        inset 0 0 0 2px rgba(30, 60, 114, 0.1);
+    width: 80px;
     margin-bottom: 15px;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
 }
 
-.logo:hover {
-    transform: scale(1.08) rotate(5deg);
-    border-color: #2a5298;
-    box-shadow: 
-        0 20px 45px rgba(0, 0, 0, 0.2),
-        inset 0 0 0 3px rgba(42, 82, 152, 0.2);
-}
-
-/* University Name Styling */
-.university-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e3c72;
-    text-align: center;
-    line-height: 1.4;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    letter-spacing: 0.5px;
-    background: linear-gradient(to right, #1e3c72, #2a5298);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Title */
 h2 {
-    margin-bottom: 25px;
-    color: #1e3c72;
-    text-align: center;
-    font-size: 26px;
-    font-weight: 800;
-    position: relative;
-    padding-bottom: 10px;
-}
-
-h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 3px;
-    background: linear-gradient(to right, #1e3c72, #2a5298);
-    border-radius: 2px;
-}
-
-/* Flash Messages */
-.alert {
-    padding: 14px 18px;
     margin-bottom: 20px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: slideDown 0.5s ease-out;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-    position: relative;
-    overflow: hidden;
-    border: none;
+    color: #343a40;
 }
 
-.alert::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 5px;
-    background: currentColor;
-    opacity: 0.7;
-}
-
-.alert-success { 
-    background: linear-gradient(135deg, #4CAF50, #2E7D32);
-    color: white;
-}
-
-.alert-error { 
-    background: linear-gradient(135deg, #F44336, #C62828);
-    color: white;
-}
-
-.alert-warning { 
-    background: linear-gradient(135deg, #FF9800, #EF6C00);
-    color: white;
-}
-
-.alert-info { 
-    background: linear-gradient(135deg, #2196F3, #1565C0);
-    color: white;
-}
-
-.alert i {
-    font-size: 16px;
-}
-
-/* Input Groups */
 .input-group {
-    margin-bottom: 20px;
-    position: relative;
+    margin-bottom: 15px;
+    text-align: left;
 }
 
 .input-group label {
     display: block;
-    margin-bottom: 8px;
-    color: #1e3c72;
-    font-weight: 600;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    color: #495057;
+    font-weight: 500;
 }
 
-/* Premium Input Fields */
 .input-group input {
     width: 100%;
-    padding: 15px 18px;
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    font-size: 15px;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    background: white;
-    color: #333;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.input-group input::placeholder {
-    color: #999;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    transition: all 0.3s ease;
 }
 
 .input-group input:focus {
-    border-color: #2a5298;
-    background: white;
-    box-shadow: 
-        0 6px 25px rgba(42, 82, 152, 0.2),
-        0 0 0 3px rgba(42, 82, 152, 0.1);
+    border-color: #007bff;
     outline: none;
-    transform: translateY(-2px);
+    box-shadow: 0 0 5px rgba(0,123,255,0.3);
 }
 
-/* Options Row */
 .options {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
-    font-size: 13px;
-}
-
-.options label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #555;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.options input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: #2a5298;
-    cursor: pointer;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
 }
 
 .options a {
-    color: #2a5298;
+    color: #007bff;
     text-decoration: none;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    position: relative;
 }
 
 .options a:hover {
-    color: #1e3c72;
     text-decoration: underline;
 }
 
-/* Premium Login Button */
 .login-btn {
     width: 100%;
-    padding: 17px;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 12px;
+    background: #007bff;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     color: white;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 1rem;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
-    overflow: hidden;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 10px 30px rgba(30, 60, 114, 0.4);
+    transition: all 0.3s ease;
 }
 
 .login-btn:hover {
-    background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 
-        0 15px 40px rgba(30, 60, 114, 0.6),
-        0 0 0 2px rgba(255, 255, 255, 0.2);
+    background: #0056b3;
 }
 
-.login-btn:active {
-    transform: translateY(-1px) scale(0.98);
-    box-shadow: 0 5px 20px rgba(30, 60, 114, 0.4);
-}
-
-/* Premium Biometric Button */
 .bio-btn {
+    margin-top: 12px;
     width: 100%;
-    padding: 17px;
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    padding: 12px;
+    background: #28a745;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     color: white;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 1rem;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    position: relative;
-    overflow: hidden;
-    margin-top: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
+    transition: 0.3s ease;
 }
 
 .bio-btn i {
-    font-size: 20px;
-    transition: transform 0.3s ease;
+    margin-right: 8px;
+    font-size: 1.2rem;
 }
 
 .bio-btn:hover {
-    background: linear-gradient(135deg, #1e7e34 0%, #28a745 100%);
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 
-        0 15px 40px rgba(40, 167, 69, 0.6),
-        0 0 0 2px rgba(255, 255, 255, 0.2);
+    background: #1e7e34;
+    transform: translateY(-2px);
 }
 
-.bio-btn:hover i {
-    transform: scale(1.2);
-}
-
-.bio-btn:active {
-    transform: translateY(-1px) scale(0.98);
-    box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
-}
-
-/* Biometric Info Text */
-#bioInfo {
-    font-size: 13px;
-    color: #666;
-    margin-top: 12px;
-    text-align: center;
-    line-height: 1.5;
-    font-style: italic;
-    padding: 10px;
-    background: rgba(30, 60, 114, 0.05);
-    border-radius: 8px;
-    border-left: 3px solid #2a5298;
-}
-
-/* Register Text */
 .register-text {
-    margin-top: 25px;
-    font-size: 14px;
-    color: #555;
-    text-align: center;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
+    margin-top: 15px;
+    font-size: 0.9rem;
 }
 
 .register-text a {
-    color: #2a5298;
+    color: #007bff;
     text-decoration: none;
-    font-weight: 700;
-    transition: all 0.3s ease;
-    position: relative;
 }
 
 .register-text a:hover {
-    color: #1e3c72;
     text-decoration: underline;
 }
 
-/* ==========================================================================
-   ANIMATIONS
-   ========================================================================== */
-
-@keyframes fadeInUp {
-    0% { 
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    100% { 
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+/* Logo with University Name */
+.logo-header-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-@keyframes slideDown {
-    0% { 
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% { 
-        opacity: 1;
-        transform: translateY(0);
-    }
+.logo-header-vertical .logo {
+    width: 80px;
+    height: auto;
+    margin-bottom: 10px;
 }
 
-@keyframes gradientBorder {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-@keyframes float {
-    0%, 100% { transform: translate(0, 0) rotate(0deg); }
-    33% { transform: translate(20px, 30px) rotate(120deg); }
-    66% { transform: translate(-15px, 15px) rotate(240deg); }
-}
-
-/* Ripple Effect for Buttons */
-.login-btn::after,
-.bio-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.6);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1, 1) translate(-50%);
-    transform-origin: 50% 50%;
-}
-
-.login-btn:focus:not(:active)::after,
-.bio-btn:focus:not(:active)::after {
-    animation: ripple 1s ease-out;
-}
-
-@keyframes ripple {
-    0% {
-        transform: scale(0, 0);
-        opacity: 0.5;
-    }
-    100% {
-        transform: scale(20, 20);
-        opacity: 0;
-    }
-}
-
-/* ==========================================================================
-   RESPONSIVE DESIGN
-   ========================================================================== */
-
-@media (max-width: 480px) {
-    .login-box {
-        padding: 30px 25px;
-        margin: 15px;
-    }
-    
-    .logo {
-        width: 80px;
-        height: 80px;
-    }
-    
-    .university-name {
-        font-size: 16px;
-    }
-    
-    h2 {
-        font-size: 22px;
-        margin-bottom: 20px;
-    }
-    
-    .input-group input {
-        padding: 13px 16px;
-        font-size: 14px;
-    }
-    
-    .login-btn,
-    .bio-btn {
-        padding: 15px;
-        font-size: 15px;
-    }
-}
-
-/* Tablet */
-@media (min-width: 481px) and (max-width: 768px) {
-    .login-box {
-        padding: 35px 30px;
-    }
-}
-
-/* Small screens */
-@media (max-height: 700px) {
-    body {
-        align-items: flex-start;
-        padding-top: 30px;
-        padding-bottom: 30px;
-    }
-}
-
-/* Loading State */
-.login-btn.loading,
-.bio-btn.loading {
-    pointer-events: none;
-    opacity: 0.8;
-    position: relative;
-    color: transparent;
-}
-
-.login-btn.loading::before,
-.bio-btn.loading::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Password Strength Indicator (Optional) */
-.password-strength {
-    margin-top: 5px;
-    height: 4px;
-    border-radius: 2px;
-    background: #e0e0e0;
-    overflow: hidden;
-}
-
-.password-strength-bar {
-    height: 100%;
-    width: 0%;
-    transition: width 0.3s ease;
-    background: linear-gradient(to right, #ff4444, #ffbb33, #00C851);
+.logo-header-vertical .university-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #343a40;
+    text-align: center;
 }
