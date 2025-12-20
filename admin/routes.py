@@ -10,6 +10,15 @@ from student.models import Student, Vote
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
 import pytz
+from werkzeug.utils import secure_filename
+import os
+from flask import current_app
+from admin.models import Department, Course
+
+
+
+
+
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
@@ -52,32 +61,28 @@ def dashboard():
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
 
+    # KPI counts
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
     total_elections = Election.query.count()
     total_votes = Vote.query.count()
 
+    # Candidates and votes for charts
     candidates = Candidate.query.all()
     vote_labels = [f"{c.first_name} {c.last_name}" for c in candidates]
     vote_counts = [len(c.votes) for c in candidates]
 
-    recent_elections = Election.query.order_by(Election.start_date.desc()).limit(5).all()
+    # Recent elections
+    recent_elections = Election.query.order_by(Election.start_date.desc()).all()
 
-    # --- Dynamically determine election status ---
+    # Ensure start_date and end_date are timezone-aware
     for election in recent_elections:
-        # Make election dates timezone-aware
         if election.start_date.tzinfo is None:
             election.start_date = tz.localize(election.start_date)
         if election.end_date.tzinfo is None:
             election.end_date = tz.localize(election.end_date)
 
-        if now < election.start_date:
-            election.status = 'Upcoming'
-        elif now > election.end_date:
-            election.status = 'Ended'
-        else:
-            election.status = 'Open'
-
+    # Count ongoing elections using the status property
     ongoing_elections = sum(1 for e in recent_elections if e.status == 'Open')
 
     return render_template(
@@ -102,7 +107,9 @@ def manage_students():
     return render_template('manage_students.html', students=students)
 
 # ---------------------- Departments & Courses ---------------------- #
+# ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
+@admin_required
 def manage_departments():
     connection = mysql.connector.connect(
         host=MYSQL_HOST,
@@ -128,8 +135,10 @@ def manage_departments():
 
     return render_template('manage_departments.html', departments=departments, courses=courses)
 
+
 # --- Department routes ---
 @admin_bp.route('/departments/add', methods=['POST'])
+@admin_required
 def add_department():
     name = request.form['name'].strip()
     connection = mysql.connector.connect(
@@ -145,27 +154,35 @@ def add_department():
     connection.close()
 
     flash('Department added successfully', 'success')
-    return redirect(url_for('admin.manage_departments'))
+    return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
-@admin_bp.route('/departments/delete/<int:id>')
-def delete_department(id):
-    connection = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        database=MYSQL_DB
-    )
-    cursor = connection.cursor()
-    cursor.execute("DELETE FROM departments WHERE id = %s", (id,))
-    connection.commit()
-    cursor.close()
-    connection.close()
 
-    flash('Department deleted', 'success')
-    return redirect(url_for('admin.manage_departments'))
+@admin_bp.route('/departments/delete-multiple', methods=['POST'])
+@admin_required
+def delete_multiple_departments():
+    ids = request.form.getlist('department_ids')
+    if ids:
+        connection = mysql.connector.connect(
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DB
+        )
+        cursor = connection.cursor()
+        format_strings = ','.join(['%s'] * len(ids))
+        cursor.execute(f"DELETE FROM departments WHERE id IN ({format_strings})", tuple(ids))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        flash(f'{len(ids)} department(s) deleted successfully!', 'success')
+    else:
+        flash('No departments selected for deletion.', 'warning')
+    return redirect(url_for('admin.manage_departments'))  # <-- fixed
+
 
 # --- Course routes ---
 @admin_bp.route('/courses/add', methods=['POST'])
+@admin_required
 def add_course():
     course_name = request.form['course_name'].strip()
     department_id = request.form['department_id']
@@ -186,86 +203,128 @@ def add_course():
     connection.close()
 
     flash('Course added successfully', 'success')
-    return redirect(url_for('admin.manage_departments'))
+    return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
-@admin_bp.route('/courses/edit/<int:id>', methods=['POST'])
-def edit_course(id):
-    course_name = request.form['course_name'].strip()
-    department_id = request.form['department_id']
 
-    connection = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        database=MYSQL_DB
-    )
-    cursor = connection.cursor()
-    cursor.execute(
-        "UPDATE courses SET course_name = %s, department_id = %s WHERE id = %s",
-        (course_name, department_id, id)
-    )
-    connection.commit()
-    cursor.close()
-    connection.close()
+@admin_bp.route('/courses/delete-multiple', methods=['POST'])
+@admin_required
+def delete_multiple_courses():
+    ids = request.form.getlist('course_ids')
+    if ids:
+        connection = mysql.connector.connect(
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DB
+        )
+        cursor = connection.cursor()
+        format_strings = ','.join(['%s'] * len(ids))
+        cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
+        connection.commit()
+        cursor.close()
+        connection.close()
+        flash(f'{len(ids)} course(s) deleted successfully!', 'success')
+    else:
+        flash('No courses selected for deletion.', 'warning')
+    return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
-    flash('Course updated successfully', 'success')
-    return redirect(url_for('admin.manage_departments'))
+#---------------STOP HERE WHEN UNDO-----------------------------------------------------
 
-@admin_bp.route('/courses/delete/<int:id>')
-def delete_course(id):
-    connection = mysql.connector.connect(
-        host=MYSQL_HOST,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        database=MYSQL_DB
-    )
-    cursor = connection.cursor()
-    cursor.execute("DELETE FROM courses WHERE id = %s", (id,))
-    connection.commit()
-    cursor.close()
-    connection.close()
-
-    flash('Course deleted', 'success')
-    return redirect(url_for('admin.manage_departments'))
 
 # ---------------------- Manage Candidates ---------------------- #
-@admin_bp.route('/candidates')
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask_login import current_user
+from extensions import db
+from werkzeug.utils import secure_filename
+import os
+from admin.models import Candidate, Position, Department  # Ensure Department is imported
+
+@admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
-    candidates = Candidate.query.all()
-    return render_template('manage_candidates.html', candidates=candidates)
-
-@admin_bp.route('/candidates/add', methods=['GET', 'POST'])
-@admin_required
-def add_candidate():
     positions = Position.query.all()
-    students = Student.query.all()
-    if request.method == 'POST':
-        student_id = request.form.get('student_id')
-        position_id = request.form.get('position_id')
+    departments = Department.query.order_by(Department.name).all()
+    elections = Election.query.order_by(Election.start_date.desc()).all()  # Fetch elections
+    candidates = Candidate.query.all()
 
-        new_candidate = Candidate(student_id=student_id, position_id=position_id)
+    # Handle Add Candidate form submission
+    if request.method == 'POST':
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        department_id = request.form.get('department_id')  # Department dropdown
+        position_id = request.form.get('position_id')
+        election_id = request.form.get('election_id')      # Election dropdown
+
+        # Ensure required fields are present
+        if not first_name or not last_name or not department_id or not position_id or not election_id:
+            flash('Please fill in all required fields.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
+
+        # Optional: store department name in candidate.course field (or adjust your model)
+        selected_department = Department.query.get(department_id)
+        department_name = selected_department.name if selected_department else None
+
+        # Handle photo upload
+        photo_file = request.files.get('photo')
+        photo_filename = None
+        photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
+        os.makedirs(photo_folder, exist_ok=True)
+
+        if photo_file and photo_file.filename != '':
+            photo_filename = secure_filename(photo_file.filename)
+            photo_file.save(os.path.join(photo_folder, photo_filename))
+
+        # Create new candidate with election_id
+        new_candidate = Candidate(
+            first_name=first_name,
+            last_name=last_name,
+            course=department_name,  # Store department instead of student course
+            position_id=position_id,
+            election_id=election_id,  # Save election ID here
+            photo=photo_filename
+        )
+
         db.session.add(new_candidate)
         db.session.commit()
         flash('Candidate added successfully!', 'success')
         return redirect(url_for('admin.manage_candidates'))
 
-    return render_template('add_candidate.html', students=students, positions=positions)
+    return render_template(
+        'manage_candidates.html',
+        candidates=candidates,
+        positions=positions,
+        departments=departments,
+        elections=elections  # Pass elections to template for dropdown
+    )
 
-@admin_bp.route('/candidates/edit/<int:id>', methods=['GET', 'POST'])
+@admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
 @admin_required
-def edit_candidate(id):
+def update_candidate(id):   # 👈 renamed
     candidate = Candidate.query.get_or_404(id)
-    positions = Position.query.all()
-    students = Student.query.all()
-    if request.method == 'POST':
-        candidate.student_id = request.form.get('student_id')
-        candidate.position_id = request.form.get('position_id')
-        db.session.commit()
-        flash('Candidate updated successfully!', 'success')
-        return redirect(url_for('admin.manage_candidates'))
 
-    return render_template('edit_candidate.html', candidate=candidate, students=students, positions=positions)
+    candidate.first_name = request.form.get('first_name')
+    candidate.last_name = request.form.get('last_name')
+    candidate.position_id = request.form.get('position_id')
+    candidate.election_id = request.form.get('election_id')
+
+    department_id = request.form.get('department_id')
+    department = Department.query.get(department_id)
+    candidate.course = department.name if department else candidate.course
+
+    photo_file = request.files.get('photo')
+    if photo_file and photo_file.filename:
+        filename = secure_filename(photo_file.filename)
+        photo_folder = os.path.join(
+            current_app.root_path, 'admin', 'static', 'images'
+        )
+        os.makedirs(photo_folder, exist_ok=True)
+        photo_file.save(os.path.join(photo_folder, filename))
+        candidate.photo = filename
+
+    db.session.commit()
+    flash('Candidate updated successfully!', 'success')
+    return redirect(url_for('admin.manage_candidates'))
+
 
 @admin_bp.route('/candidates/delete/<int:id>')
 @admin_required
@@ -273,8 +332,10 @@ def delete_candidate(id):
     candidate = Candidate.query.get_or_404(id)
     db.session.delete(candidate)
     db.session.commit()
-    flash('Candidate removed!', 'danger')
+    flash('Candidate deleted successfully!', 'success')
     return redirect(url_for('admin.manage_candidates'))
+
+
 
 # ---------------------- Create Department Election ---------------------- #
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])

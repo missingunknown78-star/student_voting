@@ -1,53 +1,192 @@
-/* ------------------- MANAGE CANDIDATES PAGE ------------------- */
+/* ================= COMBINED MANAGE + ADD CANDIDATE CSS ================= */
 
+/* ---------------- Variables ---------------- */
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a56d4;
+    --secondary: #7209b7;
+    --secondary-dark: #651099;
+    --success: #06d6a0;
+    --danger: #ef476f;
+    --warning: #ffd166;
+    --light: #f8f9fa;
+    --dark: #212529;
+    --gray-light: #e9ecef;
+    --gray: #adb5bd;
+    --gray-dark: #495057;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* ---------------- Sidebar ---------------- */
+.sidebar {
+    width: 250px;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    z-index: 999; /* below modal/lightbox */
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 0px; /* Chrome, Safari, Edge */
+    background: transparent;
+}
+
+.sidebar-header {
+    text-align: center;
+    padding: 20px 10px;
+    background-color: #2c3e50;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sidebar-header img.logo {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: block;
+    margin: 0 auto 10px auto;
+    background-color: transparent;
+}
+
+.sidebar-header h2 {
+    font-size: 1rem;
+    color: #ecf0f1;
+    margin: 0;
+    font-weight: normal;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin-top: 10px;
+}
+
+.sidebar-nav a {
+    padding: 15px 20px;
+    color: #ecf0f1;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+    background-color: #34495e;
+}
+
+/* ---------------- Main content (adjusted for sidebar) ---------------- */
 .main-content {
-    margin-left: 250px; /* space for sidebar */
-    padding: 30px;
+    margin-left: 250px; /* leave space for sidebar */
+    padding: 30px 20px;
     min-height: 100vh;
     background-color: #f5f6fa;
     box-sizing: border-box;
 }
 
-.container {
-    max-width: 1000px;
-    background: #ffffff;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    margin: auto;
-}
-
-.container h1 {
+/* ---------------- Headings ---------------- */
+h1.page-title {
     font-size: 1.8rem;
     margin-bottom: 20px;
-    color: #2c3e50;
+    text-align: center;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    position: relative;
+    padding-bottom: 20px;
+    z-index: 1;
 }
 
-/* Add Candidate Button */
+h1.page-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 2px;
+}
+
+/* ---------------- Buttons ---------------- */
+.add-btn,
+.cancel-btn,
+.edit-btn {
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 10px 18px;
+}
+
 .add-btn {
     display: inline-block;
-    background: #27ae60;
-    color: white;
-    padding: 10px 18px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-size: 0.9rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
     margin-bottom: 15px;
-    font-weight: bold;
-    transition: 0.3s;
-}
-.add-btn:hover {
-    background: #1e8449;
 }
 
-/* Candidates Table */
+.add-btn:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+.cancel-btn {
+    background: #ccc;
+    color: #333;
+}
+
+.cancel-btn:hover {
+    background: var(--light);
+}
+
+.edit-btn {
+    background: #3498db;
+    color: white;
+}
+
+.edit-btn:hover {
+    background: #2980b9;
+}
+
+
+
+/* ---------------- Table ---------------- */
 .candidates-table {
     width: 100%;
+    max-width: calc(100% - 20px); /* safe margin from sidebar */
     border-collapse: collapse;
     background: #ffffff;
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    margin-bottom: 50px;
 }
 
 .candidates-table th {
@@ -76,29 +215,215 @@
     border-radius: 6px;
 }
 
-/* Edit/Delete Buttons */
-.edit-btn, .delete-btn {
-    padding: 6px 12px;
-    border-radius: 5px;
-    font-size: 0.85rem;
+.clickable-photo {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.clickable-photo:hover {
+    transform: scale(1.05);
+}
+
+/* ---------------- Form ---------------- */
+.form-group {
+    margin-bottom: 28px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 10px;
     font-weight: 600;
-    text-decoration: none;
-    margin-right: 5px;
-    transition: 0.3s;
+    color: var(--dark);
+    font-size: 0.95rem;
 }
 
-.edit-btn {
-    background: #3498db;
+.form-group input[type="text"],
+.form-group select,
+.form-group input[type="file"] {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-light);
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
+    transition: var(--transition);
+    background: white;
+    color: var(--dark);
+    font-family: inherit;
+}
+
+.form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234361ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px;
+    padding-right: 48px;
+}
+
+.form-group input[type="file"]::file-selector-button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    background: var(--primary);
     color: white;
-}
-.edit-btn:hover {
-    background: #2980b9;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-right: 15px;
 }
 
+.form-group select:focus,
+.form-group input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+/* ---------------- Modal Lightboxes ---------------- */
+.lightbox-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000; /* above sidebar */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    justify-content: center;
+    align-items: center;
+}
+
+.lightbox-content {
+    background-color: #f9f9f9;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    animation: zoomIn 0.3s forwards;
+    position: relative;
+    z-index: 10001; /* above sidebar */
+}
+
+/* Hide scrollbar for Chrome, Safari, Opera */
+.lightbox-content::-webkit-scrollbar { display: none; }
+
+/* Close Button */
+.lightbox-content .close {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+}
+
+.lightbox-content button.add-btn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.lightbox-content button.cancel-btn {
+    background-color: #ccc;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+/* ---------------- Lightbox Photo Overlay ---------------- */
+#lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; /* above sidebar */
+    cursor: pointer;
+}
+
+#lightbox-img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    transform: scale(0.8);
+    animation: zoomIn 0.3s forwards;
+}
+
+/* ---------------- Animations ---------------- */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0; /* sidebar will overlay */
+        padding: 20px;
+    }
+    
+    .add-btn,
+    .cancel-btn,
+    .edit-btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 15px;
+    }
+}
+
+
+/* ---------------- Delete Button ---------------- */
 .delete-btn {
-    background: #e74c3c;
-    color: white;
+    display: inline-block;
+    background: linear-gradient(135deg, #e74c3c, #c0392b); /* red gradient */
+    color: #fff;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: bold;
+    padding: 8px 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
 }
+
 .delete-btn:hover {
-    background: #c0392b;
+    background: linear-gradient(135deg, #c0392b, #962d22); /* darker red on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+/* For table cells specifically */
+.candidates-table .delete-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
 }

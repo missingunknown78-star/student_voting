@@ -9,14 +9,16 @@
 <div class="container">
     <h1>Manage Candidates</h1>
 
-    <a href="{{ url_for('admin.add_candidate') }}" class="add-btn">+ Add Candidate</a>
+    <!-- Add Candidate Button -->
+    <a href="#" class="add-btn" id="openAddCandidate">+ Add Candidate</a>
 
+    <!-- Candidates Table -->
     <table class="candidates-table">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Photo</th>
-                <th>Name</th>
+                <th>Student Name</th>
+                <th>Course</th>
                 <th>Position</th>
                 <th>Actions</th>
             </tr>
@@ -24,19 +26,208 @@
         <tbody>
             {% for c in candidates %}
             <tr>
-                <td>{{ c.id }}</td>
                 <td>
-                    <img src="{{ url_for('admin.static', filename='uploads/candidates/' ~ c.photo) }}" class="candidate-photo">
+                    {% if c.photo %}
+                        <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}"
+                             class="candidate-photo clickable-photo"
+                             alt="Candidate Photo">
+                    {% else %}
+                        <span>No Photo</span>
+                    {% endif %}
                 </td>
-                <td>{{ c.name }}</td>
-                <td>{{ c.position }}</td>
+                <td>{{ c.first_name }} {{ c.last_name }}</td>
+                <td>{{ c.course }}</td>
+                <td>{{ c.position.name }}</td>
                 <td>
-                    <a href="{{ url_for('admin.edit_candidate', candidate_id=c.id) }}" class="edit-btn">Edit</a>
-                    <a href="{{ url_for('admin.delete_candidate', candidate_id=c.id) }}" class="delete-btn" onclick="return confirm('Are you sure?')">Delete</a>
+                    <a href="#"
+                       class="edit-btn openEditModal"
+                       data-id="{{ c.id }}"
+                       data-first="{{ c.first_name }}"
+                       data-last="{{ c.last_name }}"
+                       data-position="{{ c.position_id }}"
+                       data-election="{{ c.election_id }}">
+                       Edit
+                    </a>
+
+                    <a href="{{ url_for('admin.delete_candidate', id=c.id) }}" 
+                        class="delete-btn" 
+                        onclick="return confirm('Are you sure?')">
+                        Delete
+                    </a>
+
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<!-- PHOTO LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img">
+</div>
+
+<!-- ADD CANDIDATE MODAL -->
+<div id="addCandidateModal" class="lightbox-modal">
+    <div class="lightbox-content">
+        <span class="close" onclick="closeAddCandidateModal()">&times;</span>
+        <h2>Add Candidate</h2>
+
+        <form method="POST" enctype="multipart/form-data"
+              action="{{ url_for('admin.manage_candidates') }}">
+
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="first_name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="last_name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Department</label>
+                <select name="department_id" required>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Election</label>
+                <select name="election_id" required>
+                    {% for election in elections %}
+                    <option value="{{ election.id }}">{{ election.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Position</label>
+                <select name="position_id" required>
+                    {% for position in positions %}
+                    <option value="{{ position.id }}">{{ position.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Photo</label>
+                <input type="file" name="photo" accept="image/*">
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="add-btn">Add</button>
+                <button type="button" class="cancel-btn"
+                        onclick="closeAddCandidateModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT CANDIDATE MODAL -->
+<div id="editCandidateModal" class="lightbox-modal">
+    <div class="lightbox-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h2>Edit Candidate</h2>
+
+        <form id="editCandidateForm" method="POST" enctype="multipart/form-data">
+            <input type="hidden" id="edit_id">
+
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="first_name" id="edit_first" required>
+            </div>
+
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="last_name" id="edit_last" required>
+            </div>
+
+            <div class="form-group">
+                <label>Department</label>
+                <select name="department_id" id="edit_department" required>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Election</label>
+                <select name="election_id" id="edit_election" required>
+                    {% for election in elections %}
+                    <option value="{{ election.id }}">{{ election.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Position</label>
+                <select name="position_id" id="edit_position" required>
+                    {% for position in positions %}
+                    <option value="{{ position.id }}">{{ position.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Change Photo</label>
+                <input type="file" name="photo" accept="image/*">
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="edit-btn">Update</button>
+                <button type="button" class="cancel-btn"
+                        onclick="closeEditModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- JAVASCRIPT -->
+<script>
+/* PHOTO LIGHTBOX */
+document.querySelectorAll('.clickable-photo').forEach(img => {
+    img.onclick = () => {
+        document.getElementById('lightbox').style.display = 'flex';
+        document.getElementById('lightbox-img').src = img.src;
+    };
+});
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+
+/* ADD MODAL */
+document.getElementById('openAddCandidate').onclick = e => {
+    e.preventDefault();
+    document.getElementById('addCandidateModal').style.display = 'flex';
+};
+function closeAddCandidateModal() {
+    document.getElementById('addCandidateModal').style.display = 'none';
+}
+
+/* EDIT MODAL */
+document.querySelectorAll('.openEditModal').forEach(btn => {
+    btn.onclick = e => {
+        e.preventDefault();
+
+        const id = btn.dataset.id;
+        document.getElementById('edit_first').value = btn.dataset.first;
+        document.getElementById('edit_last').value = btn.dataset.last;
+        document.getElementById('edit_position').value = btn.dataset.position;
+        document.getElementById('edit_election').value = btn.dataset.election;
+
+        document.getElementById('editCandidateForm').action =
+            `/admin/candidates/edit/${id}`;
+
+        document.getElementById('editCandidateModal').style.display = 'flex';
+    };
+});
+function closeEditModal() {
+    document.getElementById('editCandidateModal').style.display = 'none';
+}
+</script>
 {% endblock %}

@@ -1,72 +1,364 @@
-/* ------------------- Sidebar ------------------- */
-.sidebar {
-    width: 250px;
-    background-color: #2c3e50; /* dark sidebar */
-    color: #ecf0f1;
-    display: flex;
-    flex-direction: column;
-    height: 100vh; /* Full viewport height */
-    position: fixed; /* Always on left */
-    top: 0;
-    left: 0;
-    overflow-y: auto; /* scrollable when zoomed */
-
-    /* Invisible scrollbar */
-    scrollbar-width: none; /* Firefox */
+/* ------------------- Variables ------------------- */
+:root {
+    --sidebar-bg: #1a2332;
+    --sidebar-hover: #243247;
+    --sidebar-active: #2c7be5;
+    --sidebar-text: #e9ecef;
+    --sidebar-text-muted: #a4aab3;
+    --sidebar-width: 280px;
+    --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --gradient-primary: linear-gradient(135deg, #1a2332 0%, #2c3e50 100%);
+    --gradient-logo: linear-gradient(135deg, #2c7be5 0%, #1a5bb8 100%);
 }
 
+/* ------------------- Sidebar Container ------------------- */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--gradient-primary);
+    color: var(--sidebar-text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1000;
+    box-shadow: 5px 0 15px rgba(0, 0, 0, 0.1);
+    transition: var(--sidebar-transition);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    
+    /* COMPLETELY INVISIBLE SCROLLBAR */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
 .sidebar::-webkit-scrollbar {
-    width: 0px; /* Chrome, Safari, Edge */
+    display: none;
+    width: 0;
+    height: 0;
     background: transparent;
 }
 
-/* ------------------- Sidebar Header (fixed) ------------------- */
+/* ------------------- Sidebar Header ------------------- */
 .sidebar-header {
     text-align: center;
-    padding: 20px 10px;
-    background-color: #2c3e50; /* keep sidebar header dark */
+    padding: 30px 20px 25px;
+    position: relative;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     position: sticky;
     top: 0;
-    z-index: 10; /* above scrolling links */
+    z-index: 20;
 }
 
+/* Logo container with decorative elements */
+.logo-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-container::before {
+    content: '';
+    position: absolute;
+    width: 110%;
+    height: 110%;
+    background: var(--gradient-logo);
+    border-radius: 50%;
+    filter: blur(10px);
+    opacity: 0.3;
+    z-index: 1;
+    animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.5; }
+}
+
+/* Logo image - FIXED for white background issue */
 .sidebar-header img.logo {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 50%;           /* circular */
-    border: 2px solid #fff;       /* optional white border */
-    display: block;
-    margin: 0 auto 10px auto;
-    background-color: transparent; /* ensure PNG background doesn’t show */
+    width: 100px;
+    height: 100px;
+    object-fit: contain; /* Changed from cover to contain */
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    padding: 5px; /* Added padding to ensure no white shows */
+    background: var(--gradient-logo); /* Fallback gradient background */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                inset 0 2px 10px rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 2;
+    transition: var(--sidebar-transition);
 }
 
+.sidebar-header img.logo:hover {
+    transform: scale(1.05);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 25px rgba(44, 123, 229, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+/* School name styling */
 .sidebar-header h2 {
-    font-size: 1rem;
-    color: #ecf0f1;
-    margin: 0;
-    font-weight: normal;
+    font-size: 1.1rem;
+    color: var(--sidebar-text);
+    margin: 0 0 5px 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
+.sidebar-header p {
+    color: var(--sidebar-text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+    padding: 5px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+/* ------------------- Sidebar Navigation ------------------- */
 .sidebar-nav {
     display: flex;
     flex-direction: column;
+    padding: 20px 0;
     flex-grow: 1;
-    margin-top: 10px;
 }
 
+/* Navigation items */
 .sidebar-nav a {
-    padding: 15px 20px;
-    color: #ecf0f1;
+    padding: 14px 25px;
+    color: var(--sidebar-text);
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    transition: 0.2s;
+    gap: 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 2px 15px;
+    border-radius: 12px;
+    transition: var(--sidebar-transition);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid transparent;
 }
 
-.sidebar-nav a:hover,
+/* Icons styling */
+.sidebar-nav a i {
+    width: 20px;
+    text-align: center;
+    font-size: 1.1rem;
+    transition: var(--sidebar-transition);
+    opacity: 0.8;
+}
+
+/* Hover state */
+.sidebar-nav a:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+    color: #fff;
+}
+
+.sidebar-nav a:hover i {
+    opacity: 1;
+    transform: scale(1.1);
+    color: var(--sidebar-active);
+}
+
+/* Active state */
 .sidebar-nav a.active {
-    background-color: #34495e; /* hover effect */
+    background: rgba(44, 123, 229, 0.15);
+    border-color: rgba(44, 123, 229, 0.3);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(44, 123, 229, 0.2);
+}
+
+.sidebar-nav a.active i {
+    color: var(--sidebar-active);
+    opacity: 1;
+}
+
+.sidebar-nav a.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: var(--sidebar-active);
+    border-radius: 0 4px 4px 0;
+}
+
+/* Logout button styling (last item) */
+.sidebar-nav a:last-child {
+    margin-top: auto;
+    margin-bottom: 20px;
+    background: rgba(231, 76, 60, 0.1);
+    border-color: rgba(231, 76, 60, 0.2);
+    color: #ff8a80;
+}
+
+.sidebar-nav a:last-child:hover {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.3);
+    color: #ff5252;
+}
+
+.sidebar-nav a:last-child i {
+    color: #ff8a80;
+}
+
+/* ------------------- Animation for menu items ------------------- */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sidebar-nav a {
+    animation: slideIn 0.4s ease forwards;
+    animation-delay: calc(var(--item-index, 0) * 0.05s);
+    opacity: 0;
+}
+
+/* Set animation delays for each item */
+.sidebar-nav a:nth-child(1) { --item-index: 1; }
+.sidebar-nav a:nth-child(2) { --item-index: 2; }
+.sidebar-nav a:nth-child(3) { --item-index: 3; }
+.sidebar-nav a:nth-child(4) { --item-index: 4; }
+.sidebar-nav a:nth-child(5) { --item-index: 5; }
+.sidebar-nav a:nth-child(6) { --item-index: 6; }
+.sidebar-nav a:nth-child(7) { --item-index: 7; }
+.sidebar-nav a:nth-child(8) { --item-index: 8; }
+.sidebar-nav a:nth-child(9) { --item-index: 9; }
+.sidebar-nav a:nth-child(10) { --item-index: 10; }
+.sidebar-nav a:nth-child(11) { --item-index: 11; }
+
+/* ------------------- Responsive Design ------------------- */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 250px;
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        position: fixed;
+        z-index: 1000;
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .sidebar-header {
+        padding: 20px 15px;
+    }
+    
+    .logo-container {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .sidebar-header img.logo {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .sidebar-nav a {
+        padding: 12px 20px;
+        margin: 2px 10px;
+    }
+}
+
+/* ------------------- Mobile Toggle Button (Optional) ------------------- */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    background: var(--sidebar-active);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(44, 123, 229, 0.3);
+    transition: var(--sidebar-transition);
+}
+
+.sidebar-toggle:hover {
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .sidebar-toggle {
+        display: flex;
+    }
+}
+
+/* ------------------- Scrollbar Removal Fix for All Browsers ------------------- */
+/* For WebKit browsers (Chrome, Safari, Edge) */
+.sidebar::-webkit-scrollbar {
+    width: 0px !important;
+    height: 0px !important;
+    background: transparent !important;
+    display: none !important;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent !important;
+    display: none !important;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: transparent !important;
+    display: none !important;
+    border: none !important;
+}
+
+.sidebar::-webkit-scrollbar-corner {
+    background: transparent !important;
+    display: none !important;
+}
+
+/* For Firefox */
+.sidebar {
+    scrollbar-width: none !important;
+    scrollbar-color: transparent transparent !important;
+}
+
+/* For Internet Explorer and Edge Legacy */
+.sidebar {
+    -ms-overflow-style: none !important;
 }

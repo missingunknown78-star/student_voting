@@ -1,0 +1,501 @@
+/* ------------------- MANAGE CANDIDATES PAGE ------------------- */
+
+.main-content {
+    margin-left: 250px; /* space for sidebar */
+    padding: 30px;
+    min-height: 100vh;
+    background-color: #f5f6fa;
+    box-sizing: border-box;
+}
+
+.container {
+    max-width: 1000px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin: auto;
+}
+
+.container h1 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+/* Add Candidate Button */
+.add-btn {
+    display: inline-block;
+    background: #27ae60;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+.add-btn:hover {
+    background: #1e8449;
+}
+
+/* Candidates Table */
+.candidates-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.candidates-table th {
+    background: #2c3e50;
+    color: #ffffff;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.candidates-table td {
+    padding: 12px;
+    border-bottom: 1px solid #ecf0f1;
+    vertical-align: middle;
+}
+
+.candidates-table tr:hover {
+    background: #f1f2f6;
+}
+
+/* Candidate Photo */
+.candidate-photo {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+/* Edit/Delete Buttons */
+.edit-btn, .delete-btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin-right: 5px;
+    transition: 0.3s;
+}
+
+.edit-btn {
+    background: #3498db;
+    color: white;
+}
+.edit-btn:hover {
+    background: #2980b9;
+}
+
+.delete-btn {
+    background: #e74c3c;
+    color: white;
+}
+.delete-btn:hover {
+    background: #c0392b;
+}
+
+/* Lightbox overlay */
+#lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    cursor: pointer;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Lightbox image */
+#lightbox-img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    transform: scale(0.8);
+    animation: zoomIn 0.3s forwards;
+}
+
+/* Photo in table */
+.clickable-photo {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.clickable-photo:hover {
+    transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+
+
+
+
+
+/* add_candidate.css - Optimized Version */
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a56d4;
+    --secondary: #7209b7;
+    --secondary-dark: #651099;
+    --success: #06d6a0;
+    --danger: #ef476f;
+    --warning: #ffd166;
+    --light: #f8f9fa;
+    --dark: #212529;
+    --gray-light: #e9ecef;
+    --gray: #adb5bd;
+    --gray-dark: #495057;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+.container {
+    max-width: 680px;
+    margin: 50px auto;
+    padding: 40px;
+    background: linear-gradient(145deg, #fff, #f8fafc);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    font-family: var(--font-family);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 150px;
+    height: 150px;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(114, 9, 183, 0.05));
+    border-radius: 0 0 0 100%;
+    z-index: 0;
+}
+
+.container h1 {
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 2.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    position: relative;
+    padding-bottom: 20px;
+    z-index: 1;
+}
+
+.container h1::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 2px;
+}
+
+.form-group {
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 0.95rem;
+}
+
+.form-group select,
+.form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-light);
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
+    transition: var(--transition);
+    background: white;
+    color: var(--dark);
+    font-family: inherit;
+}
+
+.form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234361ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 16px;
+    padding-right: 48px;
+}
+
+.form-group input[type="file"] {
+    padding: 12px 16px;
+    background: linear-gradient(white, #fafbfc);
+}
+
+.form-group input[type="file"]::file-selector-button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-right: 15px;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+    z-index: 1;
+}
+
+.add-btn,
+.cancel-btn {
+    flex: 1;
+    min-width: 160px;
+    padding: 16px 32px;
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.add-btn {
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.add-btn:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+.cancel-btn {
+    border: 2px solid var(--gray-light);
+    background: white;
+    color: var(--gray-dark);
+}
+
+.cancel-btn:hover {
+    background: var(--light);
+    border-color: var(--gray);
+    color: var(--dark);
+    transform: translateY(-2px);
+}
+
+.form-group.error select,
+.form-group.error input {
+    border-color: var(--danger);
+    background-color: rgba(239, 71, 111, 0.02);
+}
+
+.error-message {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 6px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        margin: 20px auto;
+        padding: 30px 24px;
+        max-width: 90%;
+    }
+    
+    .container h1 { font-size: 1.8rem; }
+    
+    .button-group { flex-direction: column; }
+    
+    .add-btn,
+    .cancel-btn { 
+        width: 100%;
+        min-width: auto;
+        padding: 14px 24px;
+    }
+    
+    .container::before {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 24px 20px;
+        margin: 15px auto;
+    }
+    
+    .container h1 { font-size: 1.5rem; }
+    
+    .form-group { margin-bottom: 22px; }
+    
+    .container::before {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .container {
+        background: linear-gradient(145deg, #1e293b, #0f172a);
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    
+    .form-group label { color: #cbd5e1; }
+    
+    .form-group select,
+    .form-group input {
+        background-color: #334155;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+    
+    .cancel-btn {
+        background-color: #334155;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+    
+    .cancel-btn:hover { background-color: #475569; }
+}
+
+
+/* Add Candidate Modal Lightbox */
+.lightbox-modal {
+    display: none; /* Invisible initially */
+    position: fixed; /* Stay in place */
+    z-index: 9999; /* Above everything */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7); /* Semi-transparent background */
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Modal Content Box */
+.lightbox-content {
+    background-color: #f9f9f9;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    animation: zoomIn 0.3s forwards;
+    position: relative;
+}
+
+/* Close Button */
+.lightbox-content .close {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+}
+
+/* Modal Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Form inside modal */
+.lightbox-content .form-group {
+    margin-bottom: 15px;
+}
+
+.lightbox-content input[type="text"],
+.lightbox-content select,
+.lightbox-content input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.lightbox-content button.add-btn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.lightbox-content button.cancel-btn {
+    background-color: #ccc;
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+}

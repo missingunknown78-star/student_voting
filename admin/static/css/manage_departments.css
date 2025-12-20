@@ -1,92 +1,253 @@
 /* -------------------- Container -------------------- */
 .container {
-    padding: 20px;
+    padding: 30px;
     margin-left: 250px; /* prevent overlapping with sidebar */
+    max-width: 1200px;
+    min-height: 100vh;
+    background-color: #f8fafc;
 }
 
 /* -------------------- Cards -------------------- */
 .card {
     background-color: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #eaeaea;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
 }
 
 /* -------------------- Headings -------------------- */
 .card h3 {
-    margin-bottom: 15px;
-    font-size: 1.2rem;
-    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+    color: #2d3748;
+    font-weight: 600;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+}
+
+.card h3:before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background-color: #2c7be5;
+    margin-right: 12px;
+    border-radius: 2px;
 }
 
 /* -------------------- Forms -------------------- */
 .card form {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
+    gap: 15px;
+    align-items: flex-end;
 }
 
 .card form input[type="text"],
 .card form select {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 12px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
     flex: 1;
+    min-width: 200px;
+    font-size: 15px;
+    transition: all 0.2s;
+    background-color: #fff;
+}
+
+.card form input[type="text"]:focus,
+.card form select:focus {
+    outline: none;
+    border-color: #2c7be5;
+    box-shadow: 0 0 0 3px rgba(44, 123, 229, 0.1);
+}
+
+.card form select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
 }
 
 .card form button {
-    padding: 8px 16px;
+    padding: 12px 24px;
     background-color: #2c7be5;
     color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    font-weight: 600;
+    font-size: 15px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .card form button:hover {
     background-color: #1a5bb8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(44, 123, 229, 0.2);
+}
+
+.card form button:active {
+    transform: translateY(0);
 }
 
 /* -------------------- Tables -------------------- */
 table {
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 table th,
 table td {
-    padding: 10px 12px;
+    padding: 14px 16px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eaeaea;
 }
 
 table th {
-    background-color: #f7f7f7;
+    background-color: #f1f5f9;
+    color: #374151;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-bottom: 2px solid #e0e7ff;
+}
+
+table tr {
+    transition: background-color 0.15s;
+}
+
+table tr:last-child td {
+    border-bottom: none;
 }
 
 table tr:hover {
-    background-color: #f1f1f1;
+    background-color: #f8fafc;
 }
 
 /* -------------------- Action Links -------------------- */
 a {
     color: #e74c3c;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    background-color: rgba(231, 76, 60, 0.05);
+    border: 1px solid transparent;
 }
 
 a:hover {
-    text-decoration: underline;
+    text-decoration: none;
+    background-color: rgba(231, 76, 60, 0.1);
+    border-color: rgba(231, 76, 60, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Add icon to delete links */
+a[onclick*="delete"]:before {
+    content: "🗑️";
+    font-size: 16px;
 }
 
 /* -------------------- Responsive Adjustments -------------------- */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
     .container {
-        margin-left: 0; /* remove sidebar spacing on small screens */
+        margin-left: 250px;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+    .container {
+        margin-left: 0;
+        padding: 15px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .card form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .card form input[type="text"],
+    .card form select {
+        min-width: 100%;
+    }
+    
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
         padding: 10px;
+    }
+    
+    .card {
+        padding: 15px;
+        border-radius: 8px;
+    }
+    
+    .card h3 {
+        font-size: 1.1rem;
+    }
+    
+    table th,
+    table td {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+    
+    a {
+        padding: 5px 8px;
+        font-size: 0.9rem;
+    }
+}
+
+/* -------------------- Print Styles -------------------- */
+@media print {
+    .container {
+        margin-left: 0;
+        padding: 0;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        break-inside: avoid;
+    }
+    
+    a {
+        display: none;
     }
 }

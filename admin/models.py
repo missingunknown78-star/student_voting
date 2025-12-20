@@ -40,16 +40,19 @@ class Candidate(db.Model):
     course = db.Column(db.String(50))
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))  # NEW
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
     # Relationship
     votes = db.relationship('Vote', backref='candidate', lazy=True)
+    election = db.relationship('Election', backref='candidates', lazy=True)  # Now this works
+
 
 
 # ------------------- ELECTION -------------------
 class Election(db.Model):
     __tablename__ = 'elections'
-    __table_args__ = {'extend_existing': True}  # <-- prevents "table already defined" error
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
@@ -57,27 +60,35 @@ class Election(db.Model):
     description = db.Column(db.Text)
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(50), default='Open')
 
-    # NEW: link to Course table
+    # Link to Course table
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
     # Relationship to access the course object
     course_rel = db.relationship('Course', backref='elections')
 
-@property
-def current_status(self):
-    local_tz = pytz.timezone("Asia/Manila")
-    now = datetime.now(local_tz)
 
-    if now < self.start_date:
-        return "Upcoming"
-    elif self.start_date <= now <= self.end_date:
-        return "Open"
-    else:
-        return "Closed"
+    @property
+    def status(self):
+        """Dynamically return election status: Upcoming, Open, or Ended"""
+        tz = pytz.timezone('Asia/Manila')
+        now = datetime.now(tz)
 
+        # Ensure start_date and end_date are timezone-aware
+        start = self.start_date
+        end = self.end_date
+        if start.tzinfo is None:
+            start = tz.localize(start)
+        if end.tzinfo is None:
+            end = tz.localize(end)
+
+        if now < start:
+            return "Upcoming"
+        elif now > end:
+            return "Ended"
+        else:
+            return "Open"
 
 # ------------------- DEPARTMENT -------------------
 class Department(db.Model):
