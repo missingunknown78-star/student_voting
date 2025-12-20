@@ -313,6 +313,7 @@ def create_department_election():
             start_date=start_date,
             end_date=end_date
         )
+
         db.session.add(new_election)
         db.session.commit()
 
