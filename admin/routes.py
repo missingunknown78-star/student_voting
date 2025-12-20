@@ -9,9 +9,7 @@ from student.models import Student, Vote
 
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
-import pytz  # <-- added for timezone handling
-
-    
+import pytz
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
@@ -39,7 +37,7 @@ def login():
 
         admin = Admin.query.filter_by(username=username).first()
         if admin and bcrypt.check_password_hash(admin.password, password):
-            login_user(admin)  # Login
+            login_user(admin)
             flash('Admin logged in successfully!', 'success')
             return redirect(url_for('admin.dashboard'))
         else:
@@ -54,7 +52,6 @@ def dashboard():
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
 
-
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
     total_elections = Election.query.count()
@@ -66,12 +63,20 @@ def dashboard():
 
     recent_elections = Election.query.order_by(Election.start_date.desc()).limit(5).all()
 
-    # --- Dynamically determine election status ---
     for election in recent_elections:
-        if now < election.start_date:
+        start = election.start_date
+        end = election.end_date
+
+        # FIX: DB datetimes may be naive
+        if start.tzinfo is None:
+            start = tz.localize(start)
+        if end.tzinfo is None:
+            end = tz.localize(end)
+
+        if now < start:
             election.status = 'Upcoming'
-        elif now > election.end_date:
-            election.status = 'Ended'
+        elif now > end:
+            election.status = 'Closed'
         else:
             election.status = 'Open'
 
@@ -88,9 +93,8 @@ def dashboard():
         vote_labels=vote_labels,
         vote_counts=vote_counts,
         recent_elections=recent_elections,
-        now=now  # naive datetime
+        now=now
     )
-
 
 # ---------------------- Manage Students ---------------------- #
 @admin_bp.route('/students')
@@ -110,11 +114,9 @@ def manage_departments():
     )
     cursor = connection.cursor(dictionary=True)
 
-    # Get all departments
     cursor.execute("SELECT * FROM departments ORDER BY name")
     departments = cursor.fetchall()
 
-    # Get all courses along with their department
     cursor.execute("""
         SELECT c.*, d.name AS department_name
         FROM courses c
@@ -132,7 +134,6 @@ def manage_departments():
         courses=courses
     )
 
-# --- Department routes ---
 @admin_bp.route('/departments/add', methods=['POST'])
 def add_department():
     name = request.form['name'].strip()
@@ -168,7 +169,7 @@ def delete_department(id):
     flash('Department deleted', 'success')
     return redirect(url_for('admin.manage_departments'))
 
-# --- Course routes ---
+# ---------------------- Courses ---------------------- #
 @admin_bp.route('/courses/add', methods=['POST'])
 def add_course():
     course_name = request.form['course_name'].strip()
@@ -245,10 +246,10 @@ def add_candidate():
     positions = Position.query.all()
     students = Student.query.all()
     if request.method == 'POST':
-        student_id = request.form.get('student_id')
-        position_id = request.form.get('position_id')
-
-        new_candidate = Candidate(student_id=student_id, position_id=position_id)
+        new_candidate = Candidate(
+            student_id=request.form.get('student_id'),
+            position_id=request.form.get('position_id')
+        )
         db.session.add(new_candidate)
         db.session.commit()
         flash('Candidate added successfully!', 'success')
@@ -287,45 +288,35 @@ def create_department_election():
     from admin.models import Department, Course
 
     if request.method == 'POST':
-        title = request.form.get('title')
-        department_name = request.form.get('department')
-        description = request.form.get('description')
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-
         tz = pytz.timezone('Asia/Manila')
 
         try:
             start_date = tz.localize(
-                datetime.strptime(start_date, '%Y-%m-%dT%H:%M')
+                datetime.strptime(request.form.get('start_date'), '%Y-%m-%dT%H:%M')
             )
             end_date = tz.localize(
-                datetime.strptime(end_date, '%Y-%m-%dT%H:%M')
+                datetime.strptime(request.form.get('end_date'), '%Y-%m-%dT%H:%M')
             )
         except ValueError:
             flash('Invalid date format!', 'danger')
             return redirect(url_for('admin.create_department_election'))
 
         new_election = Election(
-            title=title,
-            department=department_name,
-            description=description,
+            title=request.form.get('title'),
+            department=request.form.get('department'),
+            description=request.form.get('description'),
             start_date=start_date,
             end_date=end_date
         )
 
         db.session.add(new_election)
         db.session.commit()
-
         flash('Election created successfully!', 'success')
         return redirect(url_for('admin.dashboard'))
 
-    # GET request
     departments = Department.query.order_by(Department.name).all()
     courses_by_department = {
-        dept: Course.query.filter_by(department_id=dept.id)
-        .order_by(Course.course_name)
-        .all()
+        dept: Course.query.filter_by(department_id=dept.id).order_by(Course.course_name).all()
         for dept in departments
     }
 
@@ -334,26 +325,6 @@ def create_department_election():
         courses_by_department=courses_by_department
     )
 
-
-
-    new_election = Election(
-              title=title,
-              department=department_name,
-              description=description,
-              start_date=start_date,
-              end_date=end_date
-                )
-    db.session.add(new_election)
-    db.session.commit()
-    flash('Election created successfully!', 'success')
-    return redirect(url_for('admin.dashboard'))
-
-    # Fetch departments with their courses
-    departments = Department.query.order_by(Department.name).all()
-    courses_by_department = {dept: Course.query.filter_by(department_id=dept.id).order_by(Course.course_name).all() for dept in departments}
-
-    return render_template('create_department_election.html', courses_by_department=courses_by_department)
-
 # ---------------------- Manage Positions ---------------------- #
 @admin_bp.route('/manage_positions', methods=['GET', 'POST'])
 @admin_required
@@ -361,16 +332,12 @@ def manage_positions():
     if request.method == 'POST':
         position_name = request.form.get('position_name', '').strip()
         description = request.form.get('description', '').strip()
-        if position_name:
-            existing = Position.query.filter_by(name=position_name).first()
-            if existing:
-                flash(f'Position "{position_name}" already exists!', 'warning')
-            else:
-                new_position = Position(name=position_name, description=description)
-                db.session.add(new_position)
-                db.session.commit()
-                flash(f'Position "{position_name}" added successfully!', 'success')
-            return redirect(url_for('admin.manage_positions'))
+        if position_name and not Position.query.filter_by(name=position_name).first():
+            db.session.add(Position(name=position_name, description=description))
+            db.session.commit()
+            flash('Position added successfully!', 'success')
+        return redirect(url_for('admin.manage_positions'))
+
     positions = Position.query.all()
     return render_template('manage_positions.html', positions=positions)
 
