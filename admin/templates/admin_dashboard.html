@@ -70,13 +70,15 @@
                 <td>{{ election.start_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ election.end_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>
-                    {% if election.start_date > now %}
-                        Upcoming
-                    {% elif election.end_date < now %}
-                        Closed
-                    {% else %}
-                        Open
-                    {% endif %}
+                    <span class="badge
+                        {% if election.status == 'Open' %} bg-success
+                            {% elif election.status == 'Upcoming' %} bg-warning
+                            {% else %} bg-danger
+                         {% endif %}
+                        ">
+                      {{ election.status }}
+                    </span>
+
                 </td>
             </tr>
         {% endfor %}
