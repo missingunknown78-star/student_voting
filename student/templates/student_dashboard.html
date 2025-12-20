@@ -2,6 +2,10 @@
 
 {% block title %}Student Dashboard{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+{% endblock %}
+
 {% block content %}
 
 <div class="dashboard-container">
@@ -17,14 +21,12 @@
             <small>Course: {{ current_user.course }}</small>
 
             {% if has_voted %}
-                <span class="voted-badge" style="background:#27ae60;">You have already voted</span>
+                <span class="voted-badge">You have already voted</span>
             {% else %}
-                <span class="voted-badge" style="background:#f39c12;">You have not voted yet</span>
+                <span class="voted-badge" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">You have not voted yet</span>
             {% endif %}
         </div>
     </div>
-
-    <br>
 
     <!-- QUICK REMINDER CARD -->
     <div class="card">
@@ -35,8 +37,6 @@
             <li>Keep your student ID confidential and secure.</li>
         </ul>
     </div>
-
-    <br>
 
     <!-- ANNOUNCEMENTS PREVIEW -->
     <div class="card">
@@ -52,12 +52,10 @@
             <p>No announcements available.</p>
         {% endif %}
 
-        <a href="{{ url_for('student.announcements_page') }}" style="display:block; margin-top:10px; text-align:right; color:#3498db;">
-            View all announcements →
+        <a href="{{ url_for('student.announcements_page') }}" class="view-all-link">
+            View all announcements <i class="fa fa-arrow-right"></i>
         </a>
     </div>
-
-    <br>
 
     <!-- COUNTDOWN -->
     <div class="card countdown-box">
@@ -65,14 +63,12 @@
         <span id="countdown"></span>
     </div>
 
-    <br>
-
     <!-- HELP BOX -->
-    <div class="card">
+    <div class="card help-box">
         <h2 class="section-title">Need Help?</h2>
         <p>If you experience any problems with logging in or voting, please visit:</p>
-        <a href="{{ url_for('student.support') }}" style="color:#3498db; font-weight:bold;">
-            Help & Support →
+        <a href="{{ url_for('student.help_page') }}" class="help-link">
+            Help & Support <i class="fa fa-arrow-right"></i>
         </a>
     </div>
 
@@ -86,7 +82,7 @@
 const countdownDate = new Date("Nov 30, 2025 17:00:00").getTime();
 const countdownEl = document.getElementById("countdown");
 
-setInterval(function() {
+function updateCountdown() {
     const now = new Date().getTime();
     const distance = countdownDate - now;
 
@@ -96,15 +92,24 @@ setInterval(function() {
     }
 
     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000*60*60*24)) / (1000*60*60));
-    const minutes = Math.floor((distance % (1000*60*60)) / (1000*60));
-    const seconds = Math.floor((distance % (1000*60)) / 1000);
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-    countdownEl.innerHTML =
-        days + "d " +
-        hours + "h " +
-        minutes + "m " +
-        seconds + "s";
-}, 1000);
+    countdownEl.innerHTML = 
+        `<span>${days}d</span> ` +
+        `<span>${hours}h</span> ` +
+        `<span>${minutes}m</span> ` +
+        `<span>${seconds}s</span>`;
+}
+
+// Update immediately and then every second
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// Add subtle animation to countdown numbers
+countdownEl.querySelectorAll('span').forEach((span, index) => {
+    span.style.animationDelay = `${index * 0.1}s`;
+});
 </script>
 {% endblock %}

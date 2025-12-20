@@ -3,7 +3,9 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/candidates.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
 {% endblock %}
+
 
 {% block content %}
 
@@ -14,41 +16,26 @@
     <div class="candidate-card">
 
         <!-- Candidate Photo -->
-        {% if c.image %}
-            <img src="{{ url_for('static', filename='uploads/' ~ c.image) }}" 
+        {% if c.photo %}
+            <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
                  class="candidate-photo" 
-                 alt="Candidate Photo">
+                 alt="{{ c.first_name }} {{ c.last_name }}">
         {% else %}
-            <img src="{{ url_for('student.static', filename='image/default_user.png') }}" 
+            <img src="{{ url_for('student.static', filename='images/default_user.png') }}" 
                  class="candidate-photo"
                  alt="Default Photo">
         {% endif %}
 
-        <!-- Name -->
-        <div class="candidate-name">
-            {{ c.first_name }} {{ c.last_name }}
-        </div>
-
-        <!-- Position -->
-        <div class="candidate-position">
-            {{ c.position }}
-        </div>
-
-        <!-- Party List -->
-        <div class="candidate-party">
-            {% if c.partylist %}
-                Partylist: {{ c.partylist }}
+        <!-- Candidate Info -->
+        <div class="candidate-info">
+            <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
+            <p class="candidate-position"><strong>Position:</strong> {{ c.position.name }}</p>
+            {% if c.platform %}
+            <p class="candidate-platform"><strong>Platform:</strong> {{ c.platform }}</p>
             {% else %}
-                Independent Candidate
+            <p class="candidate-platform"><em>No platform provided</em></p>
             {% endif %}
         </div>
-
-        <!-- Platform Section -->
-        {% if c.platform %}
-        <div class="platform-box">
-            {{ c.platform }}
-        </div>
-        {% endif %}
 
     </div>
     {% endfor %}

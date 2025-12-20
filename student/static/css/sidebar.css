@@ -1,0 +1,315 @@
+/* ==========================================================================
+   SIDEBAR - ENHANCED HEADER DESIGN
+   ========================================================================== */
+
+/* SIDEBAR OVERLAY BEHAVIOR */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -320px;
+    width: 300px;
+    height: 100vh;
+    background: linear-gradient(180deg, #1a2530 0%, #2c3e50 100%);
+    color: #fff;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1100;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.side-menu.open { 
+    left: 0;
+}
+
+/* ==========================================================================
+   SIDE HEADER - MODERN & ELEGANT DESIGN
+   ========================================================================== */
+.side-header {
+    padding: 30px 25px;
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    min-height: 140px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Glass effect overlay */
+.side-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    backdrop-filter: blur(5px);
+    z-index: 1;
+}
+
+/* Animated gradient border */
+.side-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #2ecc71, transparent);
+    border-radius: 2px;
+}
+
+/* Logo container with glow effect */
+.logo-container {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 15px;
+}
+
+.school-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: white;
+    padding: 8px;
+    border: 4px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+/* Outer glow effect */
+.school-logo::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    background: linear-gradient(45deg, #3498db, #2ecc71, #3498db);
+    border-radius: 50%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.school-logo:hover {
+    transform: scale(1.08) rotate(5deg);
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 
+        0 12px 35px rgba(0, 0, 0, 0.4),
+        0 0 0 2px rgba(255, 255, 255, 0.2),
+        inset 0 0 30px rgba(255, 255, 255, 0.2);
+}
+
+.school-logo:hover::before {
+    opacity: 0.3;
+}
+
+/* School info styling */
+.school-info {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.school-name {
+    font-weight: 800;
+    font-size: 22px;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    background: linear-gradient(to right, #fff, #ecf0f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.school-subtitle {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    opacity: 0.9;
+}
+
+/* Divider line */
+.school-divider {
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #2ecc71, transparent);
+    margin: 8px auto;
+    border-radius: 1px;
+}
+
+/* ==========================================================================
+   MENU ITEMS WITH HIDDEN SCROLLBAR
+   ========================================================================== */
+.menu-items {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 25px 15px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.menu-items::-webkit-scrollbar {
+    display: none;
+}
+
+/* MENU ITEMS */
+.menu-items a {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #ecf0f1;
+    padding: 14px 18px;
+    margin: 8px 0;
+    text-decoration: none;
+    background: rgba(52, 73, 94, 0.7);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+/* Hover effect */
+.menu-items a:hover {
+    background: rgba(74, 111, 165, 0.9);
+    color: #fff;
+    transform: translateX(5px);
+    border-left-color: #2ecc71;
+}
+
+.menu-items a i { 
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.menu-items a:hover i { 
+    color: #2ecc71;
+    transform: scale(1.1);
+}
+
+/* ACTIVE MENU */
+.menu-items a.active {
+    background: linear-gradient(90deg, #27ae60, #219653);
+    color: #fff;
+    font-weight: 600;
+    border-left-color: #fff;
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+/* Logout button */
+.menu-items a[href*="logout"] {
+    margin-top: 20px;
+    background: rgba(231, 76, 60, 0.7);
+    border-left-color: #e74c3c;
+}
+
+.menu-items a[href*="logout"]:hover {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+    border-left-color: #fff;
+}
+
+/* Menu sections */
+.menu-section {
+    color: #95a5a6;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 20px 0 10px;
+    padding: 0 5px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ANIMATIONS */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.menu-items a {
+    animation: slideIn 0.4s ease forwards;
+    opacity: 0;
+}
+
+/* Stagger animation for menu items */
+.menu-items a:nth-child(1) { animation-delay: 0.05s; }
+.menu-items a:nth-child(2) { animation-delay: 0.1s; }
+.menu-items a:nth-child(3) { animation-delay: 0.15s; }
+.menu-items a:nth-child(4) { animation-delay: 0.2s; }
+.menu-items a:nth-child(5) { animation-delay: 0.25s; }
+.menu-items a:nth-child(6) { animation-delay: 0.3s; }
+.menu-items a:nth-child(7) { animation-delay: 0.35s; }
+.menu-items a:nth-child(8) { animation-delay: 0.4s; }
+.menu-items a:nth-child(9) { animation-delay: 0.45s; }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+@media (max-width: 768px) {
+    .side-menu { 
+        width: 280px;
+        left: -280px;
+    }
+    
+    .side-header {
+        padding: 25px 20px;
+        min-height: 120px;
+    }
+    
+    .school-logo {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .school-name {
+        font-size: 20px;
+    }
+    
+    .school-subtitle {
+        font-size: 12px;
+    }
+    
+    .menu-items a {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+}
+
+/* Desktop enhancement */
+@media (min-width: 1200px) {
+    .side-menu {
+        width: 320px;
+    }
+    
+    .side-header {
+        padding: 35px 25px;
+        min-height: 160px;
+    }
+    
+    .school-logo {
+        width: 90px;
+        height: 90px;
+    }
+    
+    .school-name {
+        font-size: 24px;
+    }
+}

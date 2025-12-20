@@ -1,19 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Profile</title>
+{% extends "base.html" %}
 
+{% block title %}Student Profile{% endblock %}
+
+{% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/profile.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- WebAuthn Browser JS -->
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
+{% endblock %}
 
-</head>
-<body>
-
+{% block content %}
 <div class="profile-container">
     <div class="profile-box">
 
@@ -52,23 +47,21 @@
 
     </div>
 </div>
+{% endblock %}
 
-
-<!-- BIOMETRIC SCRIPT -->
+{% block extra_js %}
 {% if not student.passkey_id %}
 <script>
 document.getElementById("enableBioBtn").addEventListener("click", async () => {
     try {
         const email = "{{ student.email }}".toLowerCase();
 
-        // Check if biometrics / platform authenticator supported
         const supported = await SimpleWebAuthnBrowser.isUserVerifyingPlatformAuthenticatorAvailable();
         if (!supported) {
             alert("This device/browser does not support biometric login. Use Chrome, Edge, Safari with a fingerprint or Face ID.");
             return;
         }
 
-        // Request challenge from server
         const challengeRes = await fetch("/student/bio-register-challenge", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -81,10 +74,8 @@ document.getElementById("enableBioBtn").addEventListener("click", async () => {
             return;
         }
 
-        // Start WebAuthn registration
         const attResp = await SimpleWebAuthnBrowser.startRegistration(challengeData);
 
-        // Send attestation to server
         const verifyRes = await fetch("/student/bio-register-verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -107,6 +98,4 @@ document.getElementById("enableBioBtn").addEventListener("click", async () => {
 });
 </script>
 {% endif %}
-
-</body>
-</html>
+{% endblock %}

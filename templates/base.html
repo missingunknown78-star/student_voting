@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Student Voting System{% endblock %}</title>
 
-<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/sidebar.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <!-- Extra CSS for specific pages -->
@@ -15,21 +15,36 @@
 
 <!-- TOP NAVBAR -->
 <header class="top-nav">
-    <span class="hamburger" id="hamburger">&#9776;</span>
+    <div class="hamburger" id="hamburger">
+        <span></span>
+    </div>
     <span class="nav-title">Menu</span>
 </header>
 
+<!-- OVERLAY FOR MOBILE (Hidden by default) -->
+<div class="side-menu-overlay" id="sideMenuOverlay"></div>
+
 <!-- SIDE MENU -->
 <nav class="side-menu" id="sideMenu">
-
-    <!-- LOGO / HEADER -->
+    <!-- ENHANCED HEADER -->
     <div class="side-header">
-        <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" class="school-logo" alt="School Logo">
-        <span class="school-name">CTU-Moalboal</span>
+        <div class="logo-container">
+            <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" 
+                 class="school-logo" 
+                 alt="CTU Moalboal Logo">
+        </div>
+        <div class="school-info">
+            <div class="school-name">CTU-Moalboal</div>
+            <div class="school-divider"></div>
+            <div class="school-subtitle">Student Voting System</div>
+        </div>
     </div>
 
     <!-- MENU ITEMS -->
     <div class="menu-items">
+        <!-- Main Navigation Section -->
+        <div class="menu-section">Navigation</div>
+        
         <a href="{{ url_for('student.dashboard') }}" class="{% if request.path == url_for('student.dashboard') %}active{% endif %}">
             <i class="fa fa-home"></i> Dashboard
         </a>
@@ -46,6 +61,9 @@
             <i class="fa fa-book"></i> Election Guidelines
         </a>
 
+        <!-- Information Section -->
+        <div class="menu-section" style="margin-top: 20px;">Information</div>
+        
         <a href="{{ url_for('student.announcements_page') }}" class="{% if request.path == url_for('student.announcements_page') %}active{% endif %}">
             <i class="fa fa-bullhorn"></i> Announcements
         </a>
@@ -58,6 +76,9 @@
             <i class="fa fa-receipt"></i> Voting Receipt
         </a>
 
+        <!-- Support Section -->
+        <div class="menu-section" style="margin-top: 20px;">Support</div>
+        
         <a href="{{ url_for('student.help_page') }}" class="{% if request.path == url_for('student.help_page') %}active{% endif %}">
             <i class="fa fa-question-circle"></i> Help & Support
         </a>
@@ -66,7 +87,6 @@
             <i class="fa fa-sign-out-alt"></i> Logout
         </a>
     </div>
-
 </nav>
 
 <!-- MAIN CONTENT -->
@@ -85,19 +105,41 @@
 {% block extra_js %}{% endblock %}
 
 <script>
-const hamburger = document.getElementById('hamburger');
-const sideMenu = document.getElementById('sideMenu');
-
-hamburger.addEventListener('click', () => {
-    sideMenu.classList.toggle('open');
-});
-
-window.addEventListener('click', (e) => {
-    if(!sideMenu.contains(e.target) && !hamburger.contains(e.target)) {
-        sideMenu.classList.remove('open');
-    }
-});
-</script>
-
+    const hamburger = document.getElementById('hamburger');
+    const sideMenu = document.getElementById('sideMenu');
+    const sideMenuOverlay = document.getElementById('sideMenuOverlay');
+    
+    // Toggle sidebar
+    hamburger.addEventListener('click', () => {
+        sideMenu.classList.toggle('open');
+        sideMenuOverlay.classList.toggle('active');
+        hamburger.classList.toggle('active');
+        document.body.classList.toggle('sidebar-open');
+    });
+    
+    // Close sidebar when clicking overlay OR anywhere outside
+    document.addEventListener('click', (e) => {
+        // Only close if sidebar is open
+        if (sideMenu.classList.contains('open')) {
+            // Check if click is NOT inside sidebar and NOT on hamburger
+            if (!sideMenu.contains(e.target) && e.target !== hamburger && !hamburger.contains(e.target)) {
+                sideMenu.classList.remove('open');
+                sideMenuOverlay.classList.remove('active');
+                hamburger.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+        }
+    });
+    
+    // Close with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sideMenu.classList.contains('open')) {
+            sideMenu.classList.remove('open');
+            sideMenuOverlay.classList.remove('active');
+            hamburger.classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        }
+    });
+    </script>
 </body>
 </html>
