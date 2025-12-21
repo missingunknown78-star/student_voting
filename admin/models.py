@@ -37,15 +37,19 @@ class Candidate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    course = db.Column(db.String(50))
+    
+    # Foreign key to Department (nullable because SSG candidates don't have a department)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    department = db.relationship('Department', backref='candidates', lazy=True)
+
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))  # NEW
+    election = db.relationship('Election', backref='candidates', lazy=True)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
     # Relationship
     votes = db.relationship('Vote', backref='candidate', lazy=True)
-    election = db.relationship('Election', backref='candidates', lazy=True)  # Now this works
 
 
 
@@ -56,16 +60,22 @@ class Election(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
-    department = db.Column(db.String(100), nullable=False)
+    election_type = db.Column(db.String(50), nullable=False)  # Department or SSG
+
+    # Store both ID and name
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    department = db.Column(db.String(100), nullable=True)  # department name
+
     description = db.Column(db.Text)
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
 
-    # Link to Course table
+    # Optional link to Course table
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
-    # Relationship to access the course object
+    # Relationships
+    department_rel = db.relationship('Department', backref='elections')
     course_rel = db.relationship('Course', backref='elections')
 
 
@@ -89,6 +99,7 @@ class Election(db.Model):
             return "Ended"
         else:
             return "Open"
+
 
 # ------------------- DEPARTMENT -------------------
 class Department(db.Model):

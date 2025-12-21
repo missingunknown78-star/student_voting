@@ -12,6 +12,31 @@
     <!-- Add Candidate Button -->
     <a href="#" class="add-btn" id="openAddCandidate">+ Add Candidate</a>
 
+    <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
+    <form method="GET" class="filter-form" id="filterForm">
+
+        <!-- Election Type -->
+        <select name="election_type" id="filter_election_type">
+            <option value="">All Election Types</option>
+            <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
+                Department Election
+            </option>
+            <option value="SSG" {% if selected_election_type=='SSG' %}selected{% endif %}>
+                Supreme Student Government (SSG)
+            </option>
+        </select>
+
+        <!-- Department Dropdown (hidden by default) -->
+        <select name="department_id" id="filter_department" style="display:none;">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}" {% if selected_department and selected_department.id == dept.id %}selected{% endif %}>
+                {{ dept.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+
     <!-- Candidates Table -->
     <table class="candidates-table">
         <thead>
@@ -45,7 +70,9 @@
                        data-first="{{ c.first_name }}"
                        data-last="{{ c.last_name }}"
                        data-position="{{ c.position_id }}"
-                       data-election="{{ c.election_id }}">
+                       data-election="{{ c.election_id }}"
+                       data-department="{{ c.course }}"
+                       data-election_type="{{ c.election.election_type }}">
                        Edit
                     </a>
 
@@ -54,7 +81,6 @@
                         onclick="return confirm('Are you sure?')">
                         Delete
                     </a>
-
                 </td>
             </tr>
             {% endfor %}
@@ -87,8 +113,17 @@
             </div>
 
             <div class="form-group">
+                <label>Election Type</label>
+                <select name="election_type" id="add_election_type" required>
+                    <option value="" disabled selected>Select Election Type</option>
+                    <option value="Department">Department Election</option>
+                    <option value="SSG">Supreme Student Government (SSG)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="add_department_field">
                 <label>Department</label>
-                <select name="department_id" required>
+                <select name="department_id" id="add_department">
                     {% for dept in departments %}
                     <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
@@ -97,9 +132,13 @@
 
             <div class="form-group">
                 <label>Election</label>
-                <select name="election_id" required>
+                <select name="election_id" id="add_election" required>
                     {% for election in elections %}
-                    <option value="{{ election.id }}">{{ election.title }}</option>
+                        {% if election.election_type == 'Department' %}
+                            <option value="{{ election.id }}" class="department">{{ election.title }}</option>
+                        {% else %}
+                            <option value="{{ election.id }}" class="ssg">{{ election.title }}</option>
+                        {% endif %}
                     {% endfor %}
                 </select>
             </div>
@@ -147,8 +186,16 @@
             </div>
 
             <div class="form-group">
+                <label>Election Type</label>
+                <select name="election_type" id="edit_election_type" required>
+                    <option value="Department">Department Election</option>
+                    <option value="SSG">Supreme Student Government (SSG)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="edit_department_field">
                 <label>Department</label>
-                <select name="department_id" id="edit_department" required>
+                <select name="department_id" id="edit_department">
                     {% for dept in departments %}
                     <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
@@ -159,7 +206,11 @@
                 <label>Election</label>
                 <select name="election_id" id="edit_election" required>
                     {% for election in elections %}
-                    <option value="{{ election.id }}">{{ election.title }}</option>
+                        {% if election.election_type == 'Department' %}
+                            <option value="{{ election.id }}" class="department">{{ election.title }}</option>
+                        {% else %}
+                            <option value="{{ election.id }}" class="ssg">{{ election.title }}</option>
+                        {% endif %}
                     {% endfor %}
                 </select>
             </div>
@@ -187,7 +238,6 @@
     </div>
 </div>
 
-<!-- JAVASCRIPT -->
 <script>
 /* PHOTO LIGHTBOX */
 document.querySelectorAll('.clickable-photo').forEach(img => {
@@ -213,21 +263,91 @@ function closeAddCandidateModal() {
 document.querySelectorAll('.openEditModal').forEach(btn => {
     btn.onclick = e => {
         e.preventDefault();
-
         const id = btn.dataset.id;
         document.getElementById('edit_first').value = btn.dataset.first;
         document.getElementById('edit_last').value = btn.dataset.last;
         document.getElementById('edit_position').value = btn.dataset.position;
         document.getElementById('edit_election').value = btn.dataset.election;
+        document.getElementById('edit_department').value = btn.dataset.department;
+        document.getElementById('edit_election_type').value = btn.dataset.election_type;
 
-        document.getElementById('editCandidateForm').action =
-            `/admin/candidates/edit/${id}`;
+        document.getElementById('edit_department_field').style.display =
+            btn.dataset.election_type === 'Department' ? 'block' : 'none';
 
+        document.getElementById('editCandidateForm').action = `/admin/candidates/edit/${id}`;
         document.getElementById('editCandidateModal').style.display = 'flex';
     };
 });
 function closeEditModal() {
     document.getElementById('editCandidateModal').style.display = 'none';
 }
+
+/* SHOW/HIDE Department field & FILTER Election dropdown */
+const addElectionType = document.getElementById('add_election_type');
+const addDepartmentField = document.getElementById('add_department_field');
+const addElectionSelect = document.getElementById('add_election');
+
+addDepartmentField.style.display = 'none';
+
+addElectionType.addEventListener('change', () => {
+    addDepartmentField.style.display = addElectionType.value === 'Department' ? 'block' : 'none';
+
+    // Filter election options dynamically
+    Array.from(addElectionSelect.options).forEach(opt => {
+        if(addElectionType.value === 'Department') {
+            opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
+        } else if(addElectionType.value === 'SSG') {
+            opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
+        } else {
+            opt.style.display = 'block';
+        }
+    });
+    addElectionSelect.value = ""; // reset selection
+});
+
+/* EDIT CANDIDATE Department field & election filter */
+const editElectionType = document.getElementById('edit_election_type');
+const editDepartmentField = document.getElementById('edit_department_field');
+const editElectionSelect = document.getElementById('edit_election');
+
+editDepartmentField.style.display = 'none';
+editElectionType.addEventListener('change', () => {
+    editDepartmentField.style.display = editElectionType.value === 'Department' ? 'block' : 'none';
+
+    Array.from(editElectionSelect.options).forEach(opt => {
+        if(editElectionType.value === 'Department') {
+            opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
+        } else if(editElectionType.value === 'SSG') {
+            opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
+        } else {
+            opt.style.display = 'block';
+        }
+    });
+    editElectionSelect.value = ""; // reset selection
+});
+
+/* FILTER: election type & department dependent dropdown */
+const filterForm = document.getElementById('filterForm');
+const filterElectionType = document.getElementById('filter_election_type');
+const filterDepartment = document.getElementById('filter_department');
+
+function updateFilterDepartment() {
+    if (filterElectionType.value === 'Department') {
+        filterDepartment.style.display = 'inline-block';
+    } else {
+        filterDepartment.style.display = 'none';
+        filterDepartment.value = "";
+    }
+}
+
+// Initial load
+updateFilterDepartment();
+
+// Auto-submit on change
+filterElectionType.addEventListener('change', () => {
+    updateFilterDepartment();
+    filterForm.submit();
+});
+filterDepartment.addEventListener('change', () => filterForm.submit());
 </script>
 {% endblock %}

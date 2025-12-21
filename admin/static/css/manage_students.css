@@ -1,6 +1,12 @@
-/* ------------------- Dashboard Header ------------------- */
+/* =================== Layout Variables =================== */
+:root {
+    --content-gap: 20px; /* space between sidebar and content */
+}
+
+/* =================== Dashboard Header =================== */
 .dashboard-header {
-    margin-left: 250px;
+    margin-left: calc(var(--sidebar-width) + var(--content-gap));
+    margin-right: 30px;
     padding: 20px 30px;
 }
 
@@ -15,53 +21,60 @@
     font-size: 0.9rem;
 }
 
-/* ------------------- Table Container ------------------- */
+/* =================== Table Container =================== */
 .table-container {
-    margin-left: 250px;
+    margin-left: calc(var(--sidebar-width) + var(--content-gap));
     margin-right: 30px;
-    background-color: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     overflow-x: auto;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* ------------------- Table Header with Search & Add ------------------- */
+/* =================== Table Header =================== */
 .table-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 18px;
+    gap: 12px;
 }
 
 .table-header input[type="text"] {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    width: 250px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid #dcdcdc;
+    width: 260px;
     font-size: 0.9rem;
 }
 
+.table-header input[type="text"]:focus {
+    outline: none;
+    border-color: #2c7be5;
+    box-shadow: 0 0 0 2px rgba(44, 123, 229, 0.15);
+}
+
 .add-btn {
-    padding: 8px 15px;
+    padding: 9px 16px;
     background-color: #27ae60;
     color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
     display: flex;
     align-items: center;
-    gap: 5px;
-    transition: 0.2s;
+    gap: 6px;
+    transition: 0.2s ease;
 }
 
 .add-btn:hover {
     background-color: #2ecc71;
 }
 
-/* ------------------- Students Table ------------------- */
+/* =================== Students Table =================== */
 .students-table {
     width: 100%;
     border-collapse: collapse;
@@ -69,36 +82,37 @@
 
 .students-table th,
 .students-table td {
-    padding: 12px 15px;
+    padding: 13px 16px;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #ededed;
 }
 
 .students-table th {
     background-color: #2980b9;
-    color: #fff;
-    font-weight: 500;
+    color: #ffffff;
+    font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.4px;
 }
 
 .students-table tr:nth-child(even) {
-    background-color: #f9f9f9;
+    background-color: #fafafa;
 }
 
 .students-table tr:hover {
-    background-color: #f1f1f1;
+    background-color: #f2f6fa;
 }
 
-/* ------------------- Action Buttons ------------------- */
+/* =================== Action Buttons =================== */
 .edit-btn,
 .delete-btn {
-    padding: 6px 10px;
+    padding: 7px 10px;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: 0.2s;
+    transition: 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -122,18 +136,26 @@
     background-color: #e74c3c;
 }
 
-/* ------------------- Responsive ------------------- */
-@media screen and (max-width: 768px) {
-    .table-container, .dashboard-header {
-        margin-left: 0;
+/* =================== Responsive (SYNCED WITH SIDEBAR) =================== */
+@media (max-width: 1024px) {
+    .dashboard-header,
+    .table-container {
+        margin-left: var(--content-gap);
+        margin-right: var(--content-gap);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-header,
+    .table-container {
+        margin-left: 15px;
         margin-right: 15px;
-        padding: 15px;
+        padding: 16px;
     }
 
     .table-header {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+        align-items: stretch;
     }
 
     .table-header input[type="text"] {

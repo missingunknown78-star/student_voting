@@ -1,37 +1,75 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Create Department Election{% endblock %}
+{% block title %}Create Election{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    min-width: 200px;
+    margin-bottom: 10px;
+    padding: 10px 20px;
+    color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.toast-success { background-color: #28a745; }
+.toast-danger  { background-color: #dc3545; }
+.toast-warning { background-color: #ffc107; color: #000; }
+.toast-info    { background-color: #17a2b8; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="election-form-container">
-    <h2>Create Department Election</h2>
+    <h2>Create Election</h2>
     <form method="POST">
+        <!-- Election Title -->
         <div class="election-form-group">
             <label for="title">Election Title</label>
             <input type="text" id="title" name="title" placeholder="Enter election title" required>
         </div>
 
+        <!-- Election Type -->
         <div class="election-form-group">
+            <label for="election_type">Election Type</label>
+            <select id="election_type" name="election_type" required>
+                <option value="" disabled selected>Select Election Type</option>
+                <option value="Department">Department Election</option>
+                <option value="SSG">Supreme Student Government (SSG)</option>
+            </select>
+        </div>
+
+        <!-- Department Dropdown -->
+        <div class="election-form-group" id="department_field">
             <label for="department">Select Department</label>
-            <select id="department" name="department" required>
+            <select id="department" name="department_id">
                 <option value="" disabled selected>Select a Department</option>
-                {% for department, courses in courses_by_department.items() %}
-                    <option value="{{ department.name }}">{{ department.name }}</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        
 
+        <!-- Description -->
         <div class="election-form-group">
             <label for="description">Description</label>
             <textarea id="description" name="description" rows="4" placeholder="Optional description of election"></textarea>
         </div>
 
+        <!-- Start & End Date -->
         <div class="election-form-group">
             <label for="start_date">Start Date & Time</label>
             <input type="datetime-local" id="start_date" name="start_date" required>
@@ -45,4 +83,44 @@
         <button type="submit" class="create-election-btn">Create Election</button>
     </form>
 </div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Flash messages JSON -->
+<script type="application/json" id="flash-messages">
+{{ get_flashed_messages(with_categories=true)|tojson }}
+</script>
+
+<script>
+// Department field toggle
+const electionType = document.getElementById('election_type');
+const departmentField = document.getElementById('department_field');
+departmentField.style.display = 'none';
+electionType.addEventListener('change', () => {
+    departmentField.style.display = electionType.value === 'Department' ? 'block' : 'none';
+});
+
+// Toast notifications
+function showNotification(message, category='info') {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.className = `toast toast-${category}`;
+    toastContainer.appendChild(toast);
+
+    // Fade in
+    setTimeout(() => toast.style.opacity = 1, 50);
+
+    // Auto remove after 3s
+    setTimeout(() => {
+        toast.style.opacity = 0;
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Load Flask flash messages
+const flashMessages = JSON.parse(document.getElementById('flash-messages').textContent || '[]');
+flashMessages.forEach(([category, message]) => showNotification(message, category));
+</script>
 {% endblock %}

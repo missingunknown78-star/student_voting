@@ -19,88 +19,19 @@
     --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --content-gap: 20px; /* Space between sidebar and content */
 }
 
 * { box-sizing: border-box; }
 
-/* ---------------- Sidebar ---------------- */
-.sidebar {
-    width: 250px;
-    background-color: #2c3e50;
-    color: #ecf0f1;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    overflow-y: auto;
-    scrollbar-width: none; /* Firefox */
-    z-index: 999; /* below modal/lightbox */
-}
-
-.sidebar::-webkit-scrollbar {
-    width: 0px; /* Chrome, Safari, Edge */
-    background: transparent;
-}
-
-.sidebar-header {
-    text-align: center;
-    padding: 20px 10px;
-    background-color: #2c3e50;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.sidebar-header img.logo {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    display: block;
-    margin: 0 auto 10px auto;
-    background-color: transparent;
-}
-
-.sidebar-header h2 {
-    font-size: 1rem;
-    color: #ecf0f1;
-    margin: 0;
-    font-weight: normal;
-}
-
-.sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    margin-top: 10px;
-}
-
-.sidebar-nav a {
-    padding: 15px 20px;
-    color: #ecf0f1;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    transition: 0.2s;
-}
-
-.sidebar-nav a:hover,
-.sidebar-nav a.active {
-    background-color: #34495e;
-}
-
-/* ---------------- Main content (adjusted for sidebar) ---------------- */
+/* ---------------- Main content (adjusted for sidebar with gap) ---------------- */
 .main-content {
-    margin-left: 250px; /* leave space for sidebar */
-    padding: 30px 20px;
+    margin-left: calc(280px + var(--content-gap)); /* Hardcoded 280px to match sidebar.css */
+    padding: 30px;
     min-height: 100vh;
     background-color: #f5f6fa;
     box-sizing: border-box;
+    max-width: calc(100% - 280px - var(--content-gap) - 30px);
 }
 
 /* ---------------- Headings ---------------- */
@@ -175,12 +106,9 @@ h1.page-title::after {
     background: #2980b9;
 }
 
-
-
 /* ---------------- Table ---------------- */
 .candidates-table {
     width: 100%;
-    max-width: calc(100% - 20px); /* safe margin from sidebar */
     border-collapse: collapse;
     background: #ffffff;
     border-radius: 10px;
@@ -284,7 +212,7 @@ h1.page-title::after {
 .lightbox-modal {
     display: none;
     position: fixed;
-    z-index: 10000; /* above sidebar */
+    z-index: 10000;
     left: 0;
     top: 0;
     width: 100%;
@@ -307,7 +235,7 @@ h1.page-title::after {
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
     animation: zoomIn 0.3s forwards;
     position: relative;
-    z-index: 10001; /* above sidebar */
+    z-index: 10001;
 }
 
 /* Hide scrollbar for Chrome, Safari, Opera */
@@ -354,7 +282,7 @@ h1.page-title::after {
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 10000; /* above sidebar */
+    z-index: 10000;
     cursor: pointer;
 }
 
@@ -378,11 +306,61 @@ h1.page-title::after {
     to { transform: scale(1); opacity: 1; }
 }
 
-/* ---------------- Responsive ---------------- */
+/* ---------------- Delete Button ---------------- */
+.delete-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: bold;
+    padding: 8px 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.delete-btn:hover {
+    background: linear-gradient(135deg, #c0392b, #962d22);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+/* For table cells specifically */
+.candidates-table .delete-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+/* ---------------- Filter Form ---------------- */
+.filter-form {
+    margin: 15px 0 20px;
+}
+
+.filter-form select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+}
+
+/* ---------------- Responsive Design ---------------- */
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: var(--content-gap);
+        max-width: calc(100% - var(--content-gap) - 30px);
+    }
+}
+
 @media (max-width: 768px) {
     .main-content {
-        margin-left: 0; /* sidebar will overlay */
+        margin-left: 0;
         padding: 20px;
+        max-width: 100%;
     }
     
     .add-btn,
@@ -397,33 +375,15 @@ h1.page-title::after {
     .main-content {
         padding: 15px;
     }
-}
-
-
-/* ---------------- Delete Button ---------------- */
-.delete-btn {
-    display: inline-block;
-    background: linear-gradient(135deg, #e74c3c, #c0392b); /* red gradient */
-    color: #fff;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    font-size: 0.9rem;
-    font-weight: bold;
-    padding: 8px 16px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: var(--transition);
-    text-align: center;
-}
-
-.delete-btn:hover {
-    background: linear-gradient(135deg, #c0392b, #962d22); /* darker red on hover */
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-}
-
-/* For table cells specifically */
-.candidates-table .delete-btn {
-    padding: 6px 12px;
-    font-size: 0.85rem;
+    
+    .candidates-table th,
+    .candidates-table td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+    
+    .candidate-photo {
+        width: 40px;
+        height: 40px;
+    }
 }

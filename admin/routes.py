@@ -232,55 +232,69 @@ def delete_multiple_courses():
 
 
 # ---------------------- Manage Candidates ---------------------- #
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
-from flask_login import current_user
-from extensions import db
-from werkzeug.utils import secure_filename
-import os
-from admin.models import Candidate, Position, Department  # Ensure Department is imported
-
+# ---------------------- Manage Candidates ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
     positions = Position.query.all()
     departments = Department.query.order_by(Department.name).all()
-    elections = Election.query.order_by(Election.start_date.desc()).all()  # Fetch elections
-    candidates = Candidate.query.all()
+    elections = Election.query.order_by(Election.start_date.desc()).all()
 
-    # Handle Add Candidate form submission
+    # ================= FILTER =================
+    selected_election_type = request.args.get('election_type', default=None)
+    department_id = request.args.get('department_id', type=int)
+    selected_department = None
+
+    query = Candidate.query.join(Election, Candidate.election_id == Election.id)
+
+    # Filter by election type
+    if selected_election_type:
+        query = query.filter(Election.election_type == selected_election_type)
+
+    # Filter by department only if election type is Department
+    if selected_election_type == 'Department' and department_id:
+        selected_department = Department.query.get(department_id)
+        if selected_department:
+            query = query.filter(Candidate.department_id == department_id)
+
+    candidates = query.all()
+    # ==========================================
+
+    # ---------- ADD CANDIDATE ----------
     if request.method == 'POST':
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
-        department_id = request.form.get('department_id')  # Department dropdown
+        department_id_form = request.form.get('department_id', type=int)
         position_id = request.form.get('position_id')
-        election_id = request.form.get('election_id')      # Election dropdown
+        election_id = request.form.get('election_id')
+        election_type = request.form.get('election_type')
 
-        # Ensure required fields are present
-        if not first_name or not last_name or not department_id or not position_id or not election_id:
+        # Validate required fields
+        if not all([first_name, last_name, position_id, election_id, election_type]):
             flash('Please fill in all required fields.', 'danger')
             return redirect(url_for('admin.manage_candidates'))
 
-        # Optional: store department name in candidate.course field (or adjust your model)
-        selected_department = Department.query.get(department_id)
-        department_name = selected_department.name if selected_department else None
+        # Only required if Department election
+        if election_type == 'Department' and not department_id_form:
+            flash('Department is required for Department Elections.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
 
-        # Handle photo upload
+        # Save photo if uploaded
         photo_file = request.files.get('photo')
         photo_filename = None
         photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
         os.makedirs(photo_folder, exist_ok=True)
 
-        if photo_file and photo_file.filename != '':
+        if photo_file and photo_file.filename:
             photo_filename = secure_filename(photo_file.filename)
             photo_file.save(os.path.join(photo_folder, photo_filename))
 
-        # Create new candidate with election_id
         new_candidate = Candidate(
             first_name=first_name,
             last_name=last_name,
-            course=department_name,  # Store department instead of student course
+            department_id=department_id_form if election_type == 'Department' else None,
             position_id=position_id,
-            election_id=election_id,  # Save election ID here
+            election_id=election_id,
             photo=photo_filename
         )
 
@@ -289,13 +303,24 @@ def manage_candidates():
         flash('Candidate added successfully!', 'success')
         return redirect(url_for('admin.manage_candidates'))
 
+    # ----------------- Filter elections for modals -----------------
+    # Prepare election lists for Add/Edit modal dropdowns
+    department_elections = [e for e in elections if e.election_type == 'Department']
+    ssg_elections = [e for e in elections if e.election_type == 'SSG']
+
     return render_template(
         'manage_candidates.html',
         candidates=candidates,
         positions=positions,
         departments=departments,
-        elections=elections  # Pass elections to template for dropdown
+        elections=elections,  # all elections
+        department_elections=department_elections,  # filtered for JS if needed
+        ssg_elections=ssg_elections,               # filtered for JS if needed
+        selected_department=selected_department,
+        selected_election_type=selected_election_type
     )
+
+
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
 @admin_required
@@ -338,44 +363,81 @@ def delete_candidate(id):
 
 
 # ---------------------- Create Department Election ---------------------- #
+# ---------------------- Create Department Election ---------------------- #
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])
 @admin_required
 def create_department_election():
-    from admin.models import Department, Course
+    from admin.models import Department, Election
+    from datetime import datetime
+    import pytz
+
+    # Get all departments
+    departments = Department.query.order_by(Department.name).all()
 
     if request.method == 'POST':
-        title = request.form.get('title')
-        department_name = request.form.get('department')
-        description = request.form.get('description')
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
+        title = request.form.get('title', '').strip()
+        election_type = request.form.get('election_type', '').strip()
+        department_id_str = request.form.get('department_id')
+        description = request.form.get('description', '').strip()
+        start_date_str = request.form.get('start_date', '').strip()
+        end_date_str = request.form.get('end_date', '').strip()
 
-        tz = pytz.timezone('Asia/Manila')
+        # Convert department_id to int if provided
+        department_id = int(department_id_str) if department_id_str else None
 
-        try:
-            start_date = tz.localize(datetime.strptime(start_date, '%Y-%m-%dT%H:%M'))
-            end_date = tz.localize(datetime.strptime(end_date, '%Y-%m-%dT%H:%M'))
-        except ValueError:
-            flash('Invalid date format!', 'danger')
+        # Validation
+        if not title or not election_type or not start_date_str or not end_date_str:
+            flash('All required fields must be filled.', 'danger')
             return redirect(url_for('admin.create_department_election'))
 
+        if election_type == 'Department' and not department_id:
+            flash('Department is required for Department Elections.', 'danger')
+            return redirect(url_for('admin.create_department_election'))
+
+        # Parse datetime with timezone
+        tz = pytz.timezone('Asia/Manila')
+        try:
+            start_date = tz.localize(datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M'))
+            end_date = tz.localize(datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M'))
+        except ValueError:
+            flash('Invalid date format.', 'danger')
+            return redirect(url_for('admin.create_department_election'))
+
+        if end_date <= start_date:
+            flash('End date must be later than start date.', 'danger')
+            return redirect(url_for('admin.create_department_election'))
+
+        # Get department name if Department election
+        department_name = None
+        if election_type == 'Department' and department_id:
+            dept_obj = Department.query.get(department_id)
+            department_name = dept_obj.name if dept_obj else None
+        else:
+            # SSG election: no department assigned
+            department_id = None
+            department_name = None
+
+        # Create the new election
         new_election = Election(
             title=title,
+            election_type=election_type,
+            department_id=department_id,
             department=department_name,
             description=description,
             start_date=start_date,
             end_date=end_date
         )
+
         db.session.add(new_election)
         db.session.commit()
+
         flash('Election created successfully!', 'success')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for('admin.create_department_election'))
 
-    # Fetch departments with courses
-    departments = Department.query.order_by(Department.name).all()
-    courses_by_department = {dept: Course.query.filter_by(department_id=dept.id).order_by(Course.course_name).all() for dept in departments}
+    return render_template('create_department_election.html', departments=departments)
 
-    return render_template('create_department_election.html', courses_by_department=courses_by_department)
+
+
 
 # ---------------------- Manage Positions ---------------------- #
 @admin_bp.route('/manage_positions', methods=['GET', 'POST'])

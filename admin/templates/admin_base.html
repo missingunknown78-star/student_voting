@@ -14,7 +14,7 @@
 
 <div class="dashboard-container">
 
-    <!-- ---------------------- SIDEBAR (GLOBAL) ---------------------- -->
+    <!-- ---------------------- SIDEBAR ---------------------- -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}" 
@@ -33,7 +33,6 @@
                 class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
                   <i class="fa-solid fa-users"></i> Student Management
             </a>
-
 
             <a href="{{ url_for('admin.manage_departments') }}"
                 class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
@@ -55,43 +54,15 @@
                <i class="fa-solid fa-clipboard-list"></i> Positions
             </a>
 
-            <a href="#" class="">
-               <i class="fa-solid fa-calendar-check"></i> Election Status
-            </a>
-
-            <a href="#" class="">
-               <i class="fa-solid fa-chart-pie"></i> Voting Analytics
-            </a>
-
-            <a href="#" class="">
-               <i class="fa-solid fa-bullhorn"></i> Announcements
-            </a>
-
-            <a href="#" class="">
-               <i class="fa-solid fa-file-export"></i> Reports & Exports
-            </a>
-
             <a href="{{ url_for('admin.logout') }}">
                <i class="fa-solid fa-right-from-bracket"></i> Logout
             </a>
         </nav>
     </aside>
-    <!-- ------------------------------------------------------------- -->
+    <!-- ---------------------------------------------------- -->
 
     <!-- MAIN page content -->
     <main class="main-content">
-
-        <!-- Flash messages (skip on dashboard) -->
-        {% if request.endpoint != 'admin.dashboard' %}
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        {% endif %}
-
         {% block content %}{% endblock %}
     </main>
 
