@@ -1,8 +1,12 @@
-{% extends "base.html" %}
-{% block title %}Student Voting{% endblock %}
-
-{% block content %}
-<link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote - {{ election.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
+</head>
+<body>
 
 <div class="vote-container">
 
@@ -10,75 +14,79 @@
     <header class="vote-header">
         <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
         <h1>Student Government Elections 2025-2026</h1>
-        <a href="{{ url_for('student.dashboard') }}" class="back-btn">Back to Dashboard</a>
-        <a href="{{ url_for('student.logout') }}" class="logout-btn">Logout</a>
     </header>
+
+    <!-- Election Title -->
+    <div class="election-title">
+        <h2>{{ election.title }}</h2>
+    </div>
 
     <!-- Instructions -->
     <section class="instructions">
-        <p>Please vote for your preferred candidate in each position. You can only vote once. Once submitted, your vote cannot be changed.</p>
+        <p>Please vote for your preferred candidates. You can only vote once per position. Once submitted, your vote cannot be changed.</p>
     </section>
 
-    <!-- Voting Deadline Countdown -->
-<section class="voting-deadline">
-    <h3>Voting ends in:</h3>
-    <div id="countdown" class="countdown-timer"></div>
-</section>
+    <!-- Candidates Form -->
+    <form method="POST" action="{{ url_for('student.submit_vote', election_id=election.id) }}" class="candidates-form">
 
-    <!-- Candidates List -->
-    <form method="POST" class="candidates-form">
-        {% for candidate in candidates %}
-        <div class="candidate-card">
-            <img src="{{ url_for('admin.static', filename='images/candidates/' ~ candidate.photo) }}" alt="{{ candidate.first_name }}" class="candidate-photo">
-            <div class="candidate-info">
-                <h3>{{ candidate.first_name }} {{ candidate.last_name }}</h3>
-                <p>Course: {{ candidate.course }}</p>
-                <p>{{ candidate.position }}</p>
-                <p>{{ candidate.slogan }}</p>
-            </div>
-            <div class="candidate-select">
-                <input type="radio" name="candidate_id" value="{{ candidate.id }}" required>
-                <label>Vote</label>
+        {% for position, candidates in candidates_by_position.items() %}
+        <div class="position-group">
+            <!-- Use the key directly -->
+            <h3 class="position-title">{{ position }}</h3>
+            <div class="position-candidates">
+                {% for candidate in candidates %}
+                <label class="candidate-row">
+                    <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
+                         alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
+                         class="candidate-photo">
+                    <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
+                    <!-- Replace spaces in position for valid radio name -->
+                    <input type="radio" name="candidate_{{ position|replace(' ', '_') }}" value="{{ candidate.id }}" required>
+                </label>
+                {% endfor %}
             </div>
         </div>
         {% endfor %}
 
+        <!-- Voting Countdown -->
+        <div class="voting-deadline-container">
+            <h3>Voting ends in:</h3>
+            <div id="countdown" class="countdown-timer"></div>
+        </div>
+
+        <!-- Submit Button -->
         <div class="submit-vote">
-            <button type="submit" onclick="return confirm('Are you sure you want to submit your vote?')">Cast My Vote</button>
+            <button type="submit" onclick="return confirm('Submit your vote?')">Cast My Vote</button>
         </div>
     </form>
+
 </div>
 
 <script>
-    // Set voting deadline (YYYY-MM-DD HH:MM:SS)
-    const deadline = new Date("2025-11-30 23:59:59").getTime();
-    
-    // Countdown timer
+    // Countdown Timer
+    const deadline = new Date("{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}").getTime();
     const countdownEl = document.getElementById("countdown");
     const candidatesForm = document.querySelector(".candidates-form");
     const submitButton = document.querySelector(".submit-vote button");
-    
+
     const timer = setInterval(() => {
         const now = new Date().getTime();
         const distance = deadline - now;
-    
+
         if (distance > 0) {
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-    
+            const days = Math.floor(distance / (1000*60*60*24));
+            const hours = Math.floor((distance % (1000*60*60*24)) / (1000*60*60));
+            const minutes = Math.floor((distance % (1000*60*60)) / (1000*60));
+            const seconds = Math.floor((distance % (1000*60)) / 1000);
             countdownEl.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
         } else {
             clearInterval(timer);
             countdownEl.innerHTML = "Voting period has ended ⏰";
-            // Disable form inputs and submit button
-            if (candidatesForm) {
-                candidatesForm.querySelectorAll("input[type=radio]").forEach(input => input.disabled = true);
-            }
-            if (submitButton) submitButton.disabled = true;
+            if(candidatesForm) candidatesForm.querySelectorAll("input[type=radio]").forEach(i => i.disabled = true);
+            if(submitButton) submitButton.disabled = true;
         }
     }, 1000);
-    </script>
-    
-{% endblock %}
+</script>
+
+</body>
+</html>

@@ -35,9 +35,12 @@ class Student(db.Model, UserMixin):
     course_rel = db.relationship('Course', backref='students')  # renamed relationship to avoid conflict with string field
 
 class Vote(db.Model):
-    __tablename__ = 'votes'
-    
+    __tablename__ = "votes"
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id'), nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
 
+    student = db.relationship("Student", backref="student_votes")        # changed
+    candidate = db.relationship("Candidate", backref="candidate_votes")  # changed
+    election = db.relationship("Election", backref="election_votes")     # changed

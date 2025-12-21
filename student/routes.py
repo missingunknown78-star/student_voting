@@ -249,48 +249,109 @@ def dashboard():
     )
 
 # ------------------- VOTING -------------------
-@student_bp.route('/vote', methods=['GET', 'POST'])
+from flask import flash, redirect, url_for, render_template, request
+from flask_login import login_required, current_user
+from datetime import datetime
+import pytz
+from student.models import Vote
+from admin.models import Election, Candidate
+from collections import defaultdict
+
+
+@student_bp.route('/vote/<int:election_id>', methods=['GET', 'POST'])
 @login_required
-def vote():
-    candidates = Candidate.query.all()
-    existing_vote = Vote.query.filter_by(student_id=current_user.id).first()
+def vote_page(election_id):
+    local_tz = pytz.timezone("Asia/Manila")
+    now = datetime.now(local_tz).replace(tzinfo=None)
+
+    election = Election.query.filter_by(id=election_id).first()
+    if not election:
+        flash("Election not found.", "danger")
+        return redirect(url_for('student.available_elections'))
+
+    start_date = election.start_date
+    end_date = election.end_date
+
+    if not (start_date <= now <= end_date):
+        flash("This election is not currently open.", "warning")
+        return redirect(url_for('student.available_elections'))
+
+    existing_vote = Vote.query.filter_by(student_id=current_user.id, election_id=election.id).first()
     if existing_vote:
-        flash('You have already voted!', 'info')
-        return redirect(url_for('student.receipt'))
+        flash("You have already voted in this election.", "info")
+        return redirect(url_for('student.available_elections'))
 
-    if request.method == 'POST':
-        candidate_id = request.form.get('candidate_id')
-        candidate = Candidate.query.get(candidate_id)
-        if not candidate:
-            flash('Please select a valid candidate.', 'danger')
-            return redirect(url_for('student.vote'))
+    # Fetch candidates and group by position
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    candidates_by_position = defaultdict(list)
+    for c in candidates:
+        if c.position:
+            candidates_by_position[c.position.name].append(c)
 
-        vote = Vote(student_id=current_user.id, candidate_id=candidate.id)
-        db.session.add(vote)
-        db.session.commit()
+    return render_template(
+        'vote_page.html',
+        election=election,
+        candidates_by_position=candidates_by_position
+    )
 
-        flash('Your vote has been cast! View your voting receipt for details.', 'success')
-        return redirect(url_for('student.receipt'))
 
-    return render_template('vote_page.html', candidates=candidates)
+@student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
+@login_required
+def submit_vote(election_id):
+    candidate_id = request.form.get('candidate_id')
+    if not candidate_id:
+        flash("Please select a candidate before submitting.", "warning")
+        return redirect(url_for('student.vote_page', election_id=election_id))
 
-# ------------------- AVAILABLE ELECTIONS -------------------
+    # Prevent duplicate voting
+    existing_vote = Vote.query.filter_by(student_id=current_user.id, election_id=election_id).first()
+    if existing_vote:
+        flash("You have already voted in this election.", "info")
+        return redirect(url_for('student.available_elections'))
 
+    # Record the vote
+    vote = Vote(student_id=current_user.id, candidate_id=candidate_id, election_id=election_id)
+    db.session.add(vote)
+    db.session.commit()
+
+    flash("Your vote has been submitted successfully!", "success")
+    return redirect(url_for('student.available_elections'))
+
+
+
+
+
+
+
+
+
+from sqlalchemy import or_
+
+from flask import flash, redirect, url_for
+from sqlalchemy import or_
 
 @student_bp.route('/available_elections')
 @login_required
 def available_elections():
-    # Set the timezone to Philippines (UTC+8)
+    # Philippines timezone
     local_tz = pytz.timezone("Asia/Manila")
     now = datetime.now(local_tz)
 
-    # Filter elections that are currently ongoing
+    student_department_id = current_user.department_id
+
+    # Filter elections student can vote in
     elections = Election.query.filter(
         Election.start_date <= now,
-        Election.end_date >= now
+        Election.end_date >= now,
+        or_(
+            Election.department_id == student_department_id,  # department-specific
+            Election.department_id == None  # SSG/general
+        )
     ).order_by(Election.start_date.asc()).all()
 
     return render_template('elections_available.html', elections=elections)
+
+
 
 
 # ------------------- CANDIDATES -------------------

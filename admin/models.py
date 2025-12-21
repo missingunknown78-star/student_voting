@@ -38,18 +38,16 @@ class Candidate(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     
-    # Foreign key to Department (nullable because SSG candidates don't have a department)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     department = db.relationship('Department', backref='candidates', lazy=True)
 
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
-    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))  # NEW
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))
     election = db.relationship('Election', backref='candidates', lazy=True)
-    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
-    # Relationship
-    votes = db.relationship('Vote', backref='candidate', lazy=True)
+    votes = db.relationship('Vote', back_populates='candidate', lazy=True)
+
 
 
 

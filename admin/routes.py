@@ -54,7 +54,6 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
-# ---------------------- Admin Dashboard ---------------------- #
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
@@ -72,18 +71,21 @@ def dashboard():
     vote_labels = [f"{c.first_name} {c.last_name}" for c in candidates]
     vote_counts = [len(c.votes) for c in candidates]
 
-    # Recent elections
-    recent_elections = Election.query.order_by(Election.start_date.desc()).all()
+    # All elections ordered by start_date desc
+    recent_elections_all = Election.query.order_by(Election.start_date.desc()).all()
 
-    # Ensure start_date and end_date are timezone-aware
-    for election in recent_elections:
+    # Ensure timezone-awareness
+    for election in recent_elections_all:
         if election.start_date.tzinfo is None:
             election.start_date = tz.localize(election.start_date)
         if election.end_date.tzinfo is None:
             election.end_date = tz.localize(election.end_date)
 
-    # Count ongoing elections using the status property
-    ongoing_elections = sum(1 for e in recent_elections if e.status == 'Open')
+    # Only show 5 in table by default
+    recent_elections = recent_elections_all[:5]
+
+    # Count ongoing elections using status property
+    ongoing_elections = sum(1 for e in recent_elections_all if e.status == 'Open')
 
     return render_template(
         'admin_dashboard.html',
@@ -96,6 +98,7 @@ def dashboard():
         vote_labels=vote_labels,
         vote_counts=vote_counts,
         recent_elections=recent_elections,
+        recent_elections_all=recent_elections_all,
         now=now
     )
 

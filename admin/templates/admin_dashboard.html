@@ -50,6 +50,7 @@
 </div>
 
 <!-- Recent Elections Table -->
+<!-- Recent Elections Table -->
 <div class="recent-elections-container">
     <h3>Recent Elections</h3>
     <table class="recent-elections-table">
@@ -66,25 +67,67 @@
         {% for election in recent_elections %}
             <tr>
                 <td>{{ election.title }}</td>
-                <td>{{ election.department }}</td>
+                <td>{{ election.department or 'General' }}</td>
                 <td>{{ election.start_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ election.end_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>
                     <span class="badge
                         {% if election.status == 'Open' %} bg-success
-                            {% elif election.status == 'Upcoming' %} bg-warning
-                            {% else %} bg-danger
-                         {% endif %}
-                        ">
+                        {% elif election.status == 'Upcoming' %} bg-warning
+                        {% else %} bg-danger
+                        {% endif %}">
                       {{ election.status }}
                     </span>
-
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+
+    <!-- See More Button -->
+{% if recent_elections_all|length > 5 %}
+<button id="seeMoreBtn" class="see-more-btn">See more...</button>
+{% endif %}
+
+<!-- Modal -->
+<div id="recentElectionsModal" class="modal">
+<div class="modal-content">
+<span class="close">&times;</span>
+<h3 style="margin-bottom:15px; color:#333;">All Recent Elections</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Department</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for election in recent_elections_all %}
+        <tr>
+            <td>{{ election.title }}</td>
+            <td>{{ election.department or 'General' }}</td>
+            <td>{{ election.start_date.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ election.end_date.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+                <span class="badge
+                    {% if election.status == 'Open' %} bg-success
+                    {% elif election.status == 'Upcoming' %} bg-warning
+                    {% else %} bg-danger
+                    {% endif %}">
+                  {{ election.status }}
+                </span>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 </div>
+</div>
+
+
 
 <script>
     // Dynamic charts data from Flask
@@ -119,6 +162,27 @@
             scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } 
         }
     });
+
+
+    var modal = document.getElementById("recentElectionsModal");
+    var btn = document.getElementById("seeMoreBtn");
+    var span = document.getElementsByClassName("close")[0];
+
+    if(btn){
+        btn.onclick = function() {
+          modal.style.display = "block";
+        }
+    }
+
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
 </script>
 
 {% endblock %}

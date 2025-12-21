@@ -1,173 +1,294 @@
-/* vote_page.css */
+/* ======================
+   GENERAL LAYOUT
+====================== */
 
-/* General container */
-.vote-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f9f9f9;
+body {
+    margin: 0;
+    background: #f4f6fa;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Header */
+.vote-container {
+    padding: 10px;
+}
+
+/* ======================
+   HEADER (SMALL & CLEAN)
+====================== */
+
 .vote-header {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 30px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ddd;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #ffffff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .vote-header .logo {
-    height: 60px;
-    margin-right: 15px;
+    height: 32px;        /* 🔥 SMALL LOGO */
+    width: auto;
 }
 
 .vote-header h1 {
-    flex: 1;
-    font-size: 1.8rem;
+    font-size: 0.9rem;   /* 🔥 SMALL TITLE */
+    font-weight: 600;
     color: #2c3e50;
+    margin: 0;
+    line-height: 1.2;
 }
 
-.vote-header .back-btn,
-.vote-header .logout-btn {
-    text-decoration: none;
-    background-color: #3498db;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 5px;
-    margin-left: 10px;
-    transition: background-color 0.3s ease;
-}
+/* ======================
+   INSTRUCTIONS
+====================== */
 
-.vote-header .back-btn:hover,
-.vote-header .logout-btn:hover {
-    background-color: #2980b9;
-}
-
-/* Instructions */
 .instructions {
-    background-color: #ecf0f1;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 25px;
-    font-size: 1rem;
-    color: #2c3e50;
+    background: #ffffff;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #555;
+    margin-bottom: 12px;
 }
 
-/* Candidate cards form */
+/* ======================
+   GRID (BALLOT STYLE)
+====================== */
+
 .candidates-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
 }
 
-/* Candidate card */
+/* ======================
+   CANDIDATE CARD
+====================== */
+
 .candidate-card {
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
 }
 
-.candidate-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+.candidate-card input {
+    display: none;
 }
 
-/* Candidate image */
+/* PHOTO */
 .candidate-photo {
-    width: 100%;
-    max-width: 180px;
-    height: 180px;
-    object-fit: cover;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
-    margin-bottom: 10px;
-    border: 3px solid #3498db;
+    object-fit: cover;
+    border: 2px solid #dfe6e9;
+    margin-bottom: 6px;
 }
 
-/* Candidate info */
-.candidate-info {
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.candidate-info h3 {
-    margin: 5px 0;
+/* NAME */
+.candidate-name {
+    font-size: 0.75rem;
+    font-weight: 600;
     color: #2c3e50;
+    line-height: 1.2;
 }
 
-.candidate-info p {
-    margin: 2px 0;
-    font-size: 0.9rem;
-    color: #555;
+/* SELECTED */
+.candidate-card:has(input:checked) {
+    border: 2px solid #27ae60;
+    background: #eefaf3;
 }
 
-/* Candidate select */
-.candidate-select {
-    margin-top: auto;
+.candidate-card:has(input:checked) .candidate-photo {
+    border-color: #27ae60;
 }
 
-.candidate-select input[type="radio"] {
-    transform: scale(1.3);
-    margin-right: 5px;
-    cursor: pointer;
-}
+/* ======================
+   SUBMIT BUTTON
+====================== */
 
-.candidate-select label {
-    font-weight: bold;
-    color: #3498db;
-    cursor: pointer;
-}
-
-/* Submit button */
 .submit-vote {
     grid-column: 1 / -1;
-    text-align: center;
-    margin-top: 20px;
+    margin-top: 14px;
 }
 
 .submit-vote button {
-    background-color: #27ae60;
-    color: white;
+    width: 100%;
+    padding: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 12px;
     border: none;
-    padding: 12px 25px;
-    font-size: 1.1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+    background: #27ae60;
+    color: white;
 }
 
-.submit-vote button:hover {
-    background-color: #219150;
+/* ======================
+   RESPONSIVE
+====================== */
+
+@media (min-width: 768px) {
+    .candidates-form {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .candidates-form {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ======================
+   GENERAL LAYOUT
+====================== */
+.vote-container {
+    padding: 10px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f4f6fa;
+}
+
+/* ======================
+   HEADER
+====================== */
+.vote-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #ffffff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.vote-header .logo {
+    height: 32px;
+}
+
+.vote-header h1 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+/* ======================
+   INSTRUCTIONS
+====================== */
+.instructions {
+    background: #ffffff;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #555;
+    margin-bottom: 12px;
+}
+/* ======================
+   CANDIDATE GRID (2-columns)
+====================== */
+.candidates-form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns desktop */
+    gap: 10px;
+}
+
+/* Ensure each candidate row still uses flex for photo-name-bullet */
+.candidate-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* photo-left, radio-right */
+    background: #ffffff;
+    padding: 6px 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Adjust photo and name for tighter 2-column layout */
+.candidate-photo {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+}
+
+.candidate-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #2c3e50;
+    flex: 1; /* name takes remaining space */
+}
+
+/* Radio button to the right */
+.candidate-row input[type="radio"] {
+    margin-left: 10px; /* separate from name */
+}
+
+/* Hover & Selected */
+.candidate-row:hover {
+    background: #f0f8ff;
+}
+
+.candidate-row:has(input:checked) {
+    border: 2px solid #27ae60;
+    background: #eefaf3;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-    .vote-header {
-        flex-direction: column;
-        text-align: center;
+@media (max-width: 480px) {
+    .candidates-form {
+        grid-template-columns: 1fr; /* single column mobile */
     }
 
-    .vote-header h1 {
-        margin: 10px 0;
+    .candidate-photo {
+        width: 35px;
+        height: 35px;
+    }
+
+    .candidate-name {
+        font-size: 0.75rem;
     }
 }
 
+
+.election-title {
+    text-align: center;
+    margin: 10px 0 20px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+
+.voting-deadline-container {
+    background: #ffffff;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+    margin: 15px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.voting-deadline-container h3 {
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    color: #2c3e50;
+}
 
 .countdown-timer {
-    font-size: 1.3rem;
-    font-weight: bold;
+    font-size: 0.9rem;
+    font-weight: 600;
     color: #e74c3c;
-    margin-top: 10px;
-}
-.voting-deadline {
-    text-align: center;
-    margin-bottom: 20px;
 }
