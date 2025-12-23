@@ -15,9 +15,6 @@
     transition: margin-left 0.3s ease, padding 0.3s ease;
 }
 
-/* REMOVED the overlay that was covering the background photo */
-/* .main-content::before and .main-content::after are removed */
-
 /* Ensure content is properly positioned */
 .main-content > * {
     position: relative;
@@ -40,6 +37,9 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .dashboard-header h1 {
@@ -420,117 +420,25 @@
     }
 }
 
-
-/* Modal Styles */
-/* Modal overlay */
-.modal {
-    display: none; 
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5); /* darker background for focus */
-    backdrop-filter: blur(4px); /* subtle blur behind modal */
-    animation: fadeIn 0.3s ease;
-  }
-  
-  /* Center modal content */
-  .modal-content {
-    background-color: #ffffff;
-    margin: auto;
-    border-radius: 12px;
-    width: 70%;
-    max-width: 900px;
-    max-height: 80%;
-    padding: 25px 30px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    overflow-y: scroll;
-    -ms-overflow-style: none;  /* IE/Edge */
-    scrollbar-width: none;      /* Firefox */
+/* ------------------- Message Icon ------------------- */
+.message-icon {
     position: relative;
-    animation: slideDown 0.3s ease;
-  }
-  
-  /* Hide scrollbars */
-  .modal-content::-webkit-scrollbar {
-    display: none;
-  }
-  
-  /* Close button */
-  .close {
+    font-size: 22px;
+    color: #334155;
+    text-decoration: none;
+}
+
+.message-icon:hover {
+    color: #2563eb;
+}
+
+.message-badge {
     position: absolute;
-    top: 15px;
-    right: 20px;
-    color: #888;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-  
-  .close:hover {
-    color: #333;
-  }
-  
-  /* Fade in animation */
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  
-  /* Slide down animation */
-  @keyframes slideDown {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-  
-  /* See more button */
-  .see-more-btn {
-    margin-top: 15px;
-    padding: 10px 20px;
-    background-color: #36A2EB;
+    top: -6px;
+    right: -8px;
+    background: #ef4444;
     color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.2s;
-  }
-  
-  .see-more-btn:hover {
-    background-color: #2b88c3;
-    transform: translateY(-2px);
-  }
-  
-  /* Table styling inside modal */
-  .modal table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-  }
-  
-  .modal th, .modal td {
-    padding: 10px 12px;
-    text-align: left;
-    border-bottom: 1px solid #e0e0e0;
-  }
-  
-  .modal th {
-    background-color: #f5f5f5;
-    font-weight: 600;
-  }
-  
-  .modal tr:hover {
-    background-color: #f0f8ff;
-  }
-  
-  /* Responsive */
-  @media (max-width: 768px) {
-    .modal-content {
-      width: 90%;
-      padding: 20px;
-    }
-  }
-  
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 999px;
+}

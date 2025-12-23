@@ -1,0 +1,133 @@
+.messages-container {
+    max-width: 900px;
+    margin: 80px auto 30px auto;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    font-family: 'Segoe UI', sans-serif;
+    position: relative;
+    z-index: 1;
+}
+
+.messages-container h2 {
+    font-size: 1.8rem;
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.chat-box {
+    flex: 1;
+    border: 1px solid #ccc;
+    border-radius: 15px;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #f9f9f9;
+    max-height: calc(70vh - 70px);
+}
+
+.chat-message {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 20px;
+    word-wrap: break-word;
+    position: relative;
+}
+
+.student-message {
+    align-self: flex-end;
+    background-color: #4361ee;
+    color: white;
+    border-bottom-right-radius: 0;
+}
+
+.admin-message {
+    align-self: flex-start;
+    background-color: #e0e0e0;
+    color: #000;
+    border-bottom-left-radius: 0;
+}
+
+.message-date {
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.6);
+    margin-top: 5px;
+    text-align: right;
+}
+
+.no-messages {
+    text-align: center;
+    color: #888;
+    margin-top: 20px;
+}
+
+.message-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.message-form textarea {
+    flex: 1;
+    resize: none;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+.message-form button {
+    padding: 0 20px;
+    border: none;
+    background-color: #4361ee;
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message-form button:hover {
+    background-color: #3a56d4;
+}
+
+.message-form button i {
+    margin-right: 5px;
+}
+
+@media screen and (max-width: 768px) {
+    .messages-container {
+        margin: 100px 15px 20px 15px;
+        padding: 15px;
+    }
+
+    .chat-box {
+        max-height: calc(100vh - 120px - 60px);
+    }
+
+    .message-form {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 10px;
+        background-color: white;
+        box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        gap: 10px;
+    }
+
+    .message-form textarea {
+        font-size: 0.9rem;
+        border-radius: 15px;
+    }
+
+    .message-form button {
+        padding: 0 15px;
+        border-radius: 15px;
+    }
+}

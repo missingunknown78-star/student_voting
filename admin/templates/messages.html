@@ -1,0 +1,157 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Student Messages{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/messages.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>
+    .message-item { cursor: pointer; }
+    .messages-container { max-height: 70vh; overflow-y: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="messages-page">
+    <h1>📨 Student Inquiries</h1>
+
+    <!-- Tabs -->
+    <div class="messages-tabs mb-3">
+        <button class="tab-btn btn btn-outline-primary active" data-tab="unread">Unread</button>
+        <button class="tab-btn btn btn-outline-primary" data-tab="read">Read</button>
+        <button class="tab-btn btn btn-outline-primary" data-tab="replied">Replied</button>
+    </div>
+
+    <!-- Messages container -->
+    <div class="messages-container">
+        {% for msg in unread_messages + read_messages + replied_messages %}
+        <div 
+            class="message-item {{ 'unread' if not msg.read else 'replied' if msg.replied and msg.replied != '' else 'read' }}" 
+            data-id="{{ msg.id }}"
+            data-student="{{ msg.first_name }} {{ msg.last_name }}"
+            data-content="{{ msg.content }}"
+            data-created="{{ msg.created_at.strftime('%b %d, %Y • %I:%M %p') }}"
+            data-reply-url="{{ url_for('admin.reply_message', message_id=msg.id) }}"
+        >
+            <h5>{{ msg.first_name }} {{ msg.last_name }}</h5>
+            <p class="subject">{{ msg.content[:50] }}{% if msg.content|length > 50 %}...{% endif %}</p>
+            <small>{{ msg.created_at.strftime('%b %d, %Y • %I:%M %p') }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Single Modal -->
+<div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="replyModalLabel">Message</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Sent by:</strong> <span id="modalStudent"></span></p>
+        <p><strong>Sent at:</strong> <span id="modalCreated"></span></p>
+        <hr>
+        <p id="modalContent"></p>
+        <hr>
+        <form id="modalReplyForm" method="POST">
+            <div class="mb-3">
+                <label for="replyContent" class="form-label">Reply</label>
+                <textarea class="form-control" id="replyContent" name="reply_content" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Send Reply</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const messages = document.querySelectorAll('.message-item');
+
+    // Handle tabs
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const tabType = tab.dataset.tab;
+            messages.forEach(msg => {
+                if(tabType === 'all') msg.style.display = 'block';
+                else msg.style.display = msg.classList.contains(tabType) ? 'block' : 'none';
+            });
+        });
+    });
+
+    // Show only unread by default
+    messages.forEach(msg => {
+        if(!msg.classList.contains('unread')) msg.style.display = 'none';
+    });
+
+    // Modal elements
+    const modal = new bootstrap.Modal(document.getElementById('replyModal'));
+    const modalStudent = document.getElementById('modalStudent');
+    const modalContent = document.getElementById('modalContent');
+    const modalCreated = document.getElementById('modalCreated');
+    const modalForm = document.getElementById('modalReplyForm');
+    const replyTextarea = document.getElementById('replyContent');
+
+    messages.forEach(msg => {
+        msg.addEventListener('click', () => {
+            modalStudent.textContent = msg.dataset.student;
+            modalContent.textContent = msg.dataset.content;
+            modalCreated.textContent = msg.dataset.created;
+            modalForm.action = msg.dataset.replyUrl;
+            replyTextarea.value = msg.dataset.replied || ''; // show existing reply if any
+            modal.show();
+
+            // Mark as read in DB if unread
+            if(msg.classList.contains('unread')){
+                fetch(`/admin/messages/mark_read/${msg.dataset.id}`, { method: 'POST' })
+                .then(res => {
+                    if(res.ok){
+                        msg.classList.remove('unread');
+                        msg.classList.add('read');
+                        const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+                        if(activeTab !== 'read') msg.style.display = 'none';
+                    }
+                });
+            }
+        });
+    });
+
+    // Handle reply form submission via AJAX
+    modalForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(modalForm);
+        fetch(modalForm.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success){
+                const msg = document.querySelector(`.message-item[data-id="${data.message_id}"]`);
+                msg.classList.remove('read');
+                msg.classList.add('replied');
+                // Update dataset with reply content
+                msg.dataset.replied = replyTextarea.value;
+
+                const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+                if(activeTab !== 'replied') msg.style.display = 'none';
+
+                modal.hide();
+            } else {
+                alert('Failed to send reply.');
+            }
+        })
+        .catch(err => alert('Error sending reply.'));
+    });
+});
+</script>
+{% endblock %}

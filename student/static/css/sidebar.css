@@ -313,3 +313,69 @@
         font-size: 24px;
     }
 }
+
+
+
+
+/* ----------- MESSAGE ICON & TOP NAV FIX ------ */
+.top-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* left + right */
+    padding: 10px 20px;
+    background-color: var(--primary, #4361ee);
+    color: #fff;
+    position: relative; /* stays above content */
+    width: 100%;
+    z-index: 1000;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* very close to hamburger */
+}
+
+.hamburger {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* center bars vertically with text */
+}
+
+.hamburger span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    margin: 3px 0; /* slightly smaller margin for tighter look */
+    background-color: #fff;
+    transition: 0.3s;
+}
+
+.nav-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    line-height: 1; /* vertically align with hamburger */
+}
+
+.messages-icon {
+    position: relative;
+    cursor: pointer;
+}
+
+.messages-icon i {
+    font-size: 1.4rem;
+    color: #fff;
+}
+
+.messages-icon .badge {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    background-color: #ef476f;
+    color: #fff;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Messages{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/student_messages.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="messages-container">
+    <h2>Conversation with Admin</h2>
+
+    <div class="chat-box" id="chat-box">
+        {% if messages %}
+            {% for msg in messages %}
+                <!-- Student message -->
+                <div class="chat-message student-message">
+                    <div class="message-content">{{ msg.content }}</div>
+                    <div class="message-date">{{ msg.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+                </div>
+
+                <!-- Admin reply, if exists -->
+                {% if msg.replied and msg.replied != "" %}
+                    <div class="chat-message admin-message">
+                        <div class="message-content">{{ msg.replied }}</div>
+                        <div class="message-date">
+                            {{ msg.replied_at.strftime('%b %d, %Y %H:%M') if msg.replied_at else '' }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <p class="no-messages">No messages yet. Start the conversation!</p>
+        {% endif %}
+    </div>
+
+    <!-- Reply form -->
+    <form method="POST" class="message-form" id="message-form">
+        <textarea name="message" placeholder="Type a message..." required></textarea>
+        <button type="submit" id="send-btn"><i class="fa fa-paper-plane"></i> Send</button>
+    </form>
+</div>
+
+<script>
+const chatBox = document.getElementById('chat-box');
+const form = document.getElementById('message-form');
+const sendBtn = document.getElementById('send-btn');
+
+// Scroll to bottom on page load
+chatBox.scrollTop = chatBox.scrollHeight;
+
+// Scroll to bottom after sending a message and show "Sending..."
+form.addEventListener('submit', () => {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fa fa-paper-plane"></i> Sending...';
+    setTimeout(() => {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fa fa-paper-plane"></i> Send';
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }, 500);
+});
+</script>
+{% endblock %}

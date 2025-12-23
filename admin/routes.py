@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from admin.models import Admin, Candidate, Position, Election
-from student.models import Student, Vote
+from student.models import Student, Vote, Message
 
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -14,7 +14,8 @@ from werkzeug.utils import secure_filename
 import os
 from flask import current_app
 from admin.models import Department, Course
-
+from flask_login import login_required
+from flask import request, jsonify
 
 
 
@@ -54,6 +55,8 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
+
+# ---------------------- DASHBOARD ---------------------- #
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
@@ -101,6 +104,90 @@ def dashboard():
         recent_elections_all=recent_elections_all,
         now=now
     )
+
+
+# ------------------- Messages Page ------------------- #
+@admin_bp.route('/messages')
+@login_required
+def messages_page():
+    # Fetch messages with student info
+    all_messages = db.session.query(
+        Message,
+        Student.first_name.label('first_name'),
+        Student.last_name.label('last_name')
+    ).join(Student, Student.id == Message.sender_id).order_by(Message.created_at.desc()).all()
+
+    # Convert to list of dicts so template can access easily
+    messages_list = []
+    for msg, first_name, last_name in all_messages:
+        messages_list.append({
+            'id': msg.id,
+            'content': msg.content,
+            'read': msg.read,
+            'created_at': msg.created_at,
+            'first_name': first_name,
+            'last_name': last_name,
+            'replied': getattr(msg, 'replied', False)
+        })
+
+    # Separate by status
+    unread_messages = [m for m in messages_list if not m['read']]
+    read_messages = [m for m in messages_list if m['read'] and not m['replied']]
+    replied_messages = [m for m in messages_list if m['replied']]
+
+    return render_template(
+        'messages.html',
+        unread_messages=unread_messages,
+        read_messages=read_messages,
+        replied_messages=replied_messages
+    )
+
+
+# ------------------- Mark as Read ------------------- #
+@admin_bp.route('/messages/read/<int:message_id>', methods=['POST'])
+@login_required
+def mark_as_read(message_id):
+    msg = Message.query.get_or_404(message_id)
+    if not msg.read:
+        msg.read = True
+        db.session.commit()
+    return '', 204  # No content, just acknowledge
+
+@admin_bp.route('/messages/mark_read/<int:message_id>', methods=['POST'])
+@login_required
+def mark_message_read(message_id):
+    msg = Message.query.get_or_404(message_id)
+    if not msg.read:
+        msg.read = True
+        db.session.commit()
+    return '', 200  # return success for AJAX
+
+
+
+# ------------------- Reply to Message ------------------- #
+# admin/routes.py
+
+@admin_bp.route('/messages/reply/<int:message_id>', methods=['POST'])
+@login_required
+def reply_message(message_id):
+    try:
+        msg = Message.query.get_or_404(message_id)
+        reply_content = request.form.get('reply_content')
+
+        if not reply_content or reply_content.strip() == "":
+            return jsonify({'success': False, 'error': 'Reply is empty', 'message_id': message_id})
+
+        msg.replied = reply_content.strip()
+        msg.read = True
+        msg.replied_at = datetime.utcnow()  # optional
+        db.session.commit()
+
+        return jsonify({'success': True, 'message_id': message_id})
+    
+    except Exception as e:
+        # Log the error for debugging
+        print("Error replying:", e)
+        return jsonify({'success': False, 'error': str(e), 'message_id': message_id})
 
 # ---------------------- Manage Students ---------------------- #
 @admin_bp.route('/students')

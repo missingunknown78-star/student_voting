@@ -1,97 +1,474 @@
-/* student/static/css/profile.css */
+/* student/static/css/profile.css - FIXED VERSION */
 
-/* Container for the profile page */
-.profile-container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    font-family: Arial, sans-serif;
+/* ==========================================================================
+   MAIN CONTAINER WITH PROPER HEADER SPACING
+   ========================================================================== */
+   .profile-container {
+    display: flex;
+    gap: 40px;
+    max-width: 1400px;
+    margin: 90px auto 40px;
+    padding: 0 40px;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: calc(100vh - 150px);
 }
 
-/* Header section with logo and name */
-.profile-header {
+/* ==========================================================================
+   PROFILE BOX - SCALABLE DESKTOP DESIGN
+   ========================================================================== */
+.profile-box {
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    border-radius: 20px;
+    padding: 40px;
+    width: 480px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.profile-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+}
+
+.profile-box h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 30px;
+    text-align: center;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f4f8;
+}
+
+/* ==========================================================================
+   PROFILE INFO - SCALABLE DESIGN
+   ========================================================================== */
+.profile-info {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 30px;
+    margin: 25px 0;
+    border: 1px solid #e2e8f0;
+}
+
+.profile-info p {
+    margin: 18px 0;
+    padding: 16px 20px;
+    background: white;
+    border-radius: 12px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border-left: 4px solid #3498db;
+    transition: transform 0.2s ease;
 }
 
-.profile-header .logo {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 50%;
+.profile-info p:hover {
+    transform: translateX(5px);
 }
 
-.profile-header .student-name {
-    font-size: 1.5rem;
-    font-weight: bold;
+.profile-info strong {
     color: #2c3e50;
+    font-weight: 600;
+    min-width: 120px;
+    font-size: 0.95rem;
+    letter-spacing: 0.3px;
 }
 
-/* Info table */
-.profile-info {
+/* Text wrapping for long content */
+.profile-info p span {
+    word-break: break-word;
+    font-size: 0.95rem;
+    color: #4a5568;
+    flex: 1;
+    min-width: 0; /* Allow text to shrink */
+}
+
+/* Specific for email */
+.profile-info p:nth-child(2) span {
+    word-break: break-all;
+}
+
+/* ==========================================================================
+   FINGERPRINT CONTAINER - FIXED
+   ========================================================================== */
+.fingerprint-container {
+    background: linear-gradient(145deg, #2c3e50, #1a2530);
+    border-radius: 20px;
+    padding: 40px;
+    width: 480px;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.fingerprint-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, #9b59b6, #3498db);
+}
+
+.fingerprint-container h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: white;
+    text-align: center;
+}
+
+.subtitle {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* ==========================================================================
+   USERNAME INPUT - FIXED (NO RANDOM LOGO)
+   ========================================================================== */
+.input-group {
+    position: relative;
+    margin: 20px 0;
+}
+
+.input-group input {
     width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 2rem;
-}
-
-.profile-info td {
-    padding: 12px 8px;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: white;
     font-size: 1rem;
-    color: #333;
+    transition: all 0.3s;
 }
 
-.profile-info td.label {
-    font-weight: bold;
-    width: 180px;
-    color: #2E86C1;
+.input-group input:focus {
+    outline: none;
+    border-color: #3498db;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
-/* Biometric button */
-.bio-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background-color: #2E86C1;
-    color: #fff;
+/* ==========================================================================
+   REGISTER BUTTON
+   ========================================================================== */
+.fingerprint-container button {
+    width: 100%;
+    padding: 18px;
+    font-size: 1.1rem;
+    font-weight: 600;
     border: none;
     border-radius: 12px;
-    font-size: 1rem;
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
     cursor: pointer;
-    transition: background 0.3s;
-    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    margin-top: 10px;
+    box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
 }
 
-.bio-btn:hover {
-    background-color: #1B4F72;
+.fingerprint-container button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(46, 204, 113, 0.4);
 }
 
-/* Status message */
-.bio-status {
-    margin-top: 12px;
+.fingerprint-container button:disabled {
+    background: #7f8c8d;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ==========================================================================
+   STATUS MESSAGES
+   ========================================================================== */
+#fp-status {
+    margin-top: 25px;
+    padding: 18px;
     font-size: 0.95rem;
-    color: #555;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease;
+    border: 1px solid transparent;
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
-    .profile-header {
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.status-error {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    border-color: rgba(231, 76, 60, 0.3);
+}
+
+.status-success {
+    background: rgba(46, 204, 113, 0.1);
+    color: #27ae60;
+    border-color: rgba(46, 204, 113, 0.3);
+}
+
+.status-waiting {
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+    border-color: rgba(52, 152, 219, 0.3);
+}
+
+/* ==========================================================================
+   LARGE DESKTOP (1920px and above)
+   ========================================================================== */
+@media (min-width: 1920px) {
+    .profile-container {
+        max-width: 1600px;
+        gap: 60px;
+        margin-top: 100px;
+    }
+    
+    .profile-box, .fingerprint-container {
+        width: 580px;
+        padding: 50px;
+    }
+    
+    .profile-box h2 {
+        font-size: 2.2rem;
+    }
+    
+    .profile-info {
+        padding: 40px;
+    }
+    
+    .profile-info p {
+        padding: 20px 25px;
+        margin: 22px 0;
+    }
+    
+    .profile-info strong {
+        min-width: 140px;
+        font-size: 1rem;
+    }
+}
+
+/* ==========================================================================
+   STANDARD DESKTOP (1200px to 1919px)
+   ========================================================================== */
+@media (min-width: 1200px) and (max-width: 1919px) {
+    .profile-container {
+        max-width: 1200px;
+        gap: 40px;
+    }
+    
+    .profile-box, .fingerprint-container {
+        width: 460px;
+    }
+}
+
+/* ==========================================================================
+   TABLET & SMALL DESKTOP (992px to 1199px)
+   ========================================================================== */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .profile-container {
+        max-width: 1000px;
+        gap: 30px;
+        padding: 0 30px;
+    }
+    
+    .profile-box, .fingerprint-container {
+        width: 420px;
+        padding: 35px;
+    }
+    
+    .profile-box h2 {
+        font-size: 1.8rem;
+    }
+    
+    .profile-info {
+        padding: 25px;
+    }
+    
+    .profile-info p {
+        padding: 14px 18px;
+    }
+}
+
+/* ==========================================================================
+   TABLET LANDSCAPE (768px to 991px)
+   ========================================================================== */
+@media (min-width: 768px) and (max-width: 991px) {
+    .profile-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 30px;
+        margin-top: 85px;
+        padding: 0 25px;
+    }
+    
+    .profile-box, .fingerprint-container {
+        width: calc(50% - 15px);
+        min-width: 300px;
+        padding: 30px;
+    }
+    
+    .profile-box h2 {
+        font-size: 1.7rem;
+        margin-bottom: 25px;
+    }
+}
+
+/* ==========================================================================
+   MOBILE & TABLET PORTRAIT (Up to 767px)
+   ========================================================================== */
+@media (max-width: 767px) {
+    .profile-container {
+        flex-direction: column;
+        gap: 25px;
+        margin-top: 80px;
+        padding: 0 20px;
+        max-width: 500px;
+    }
+    
+    .profile-box, .fingerprint-container {
+        width: 100%;
+        padding: 30px 25px;
+    }
+    
+    .profile-box h2 {
+        font-size: 1.6rem;
+        margin-bottom: 25px;
+    }
+    
+    .profile-info {
+        padding: 25px 20px;
+    }
+    
+    .profile-info p {
         flex-direction: column;
         align-items: flex-start;
+        gap: 8px;
+        padding: 15px;
+        margin: 15px 0;
     }
-
-    .profile-header .logo {
-        width: 60px;
-        height: 60px;
+    
+    .profile-info strong {
+        min-width: auto;
+        font-size: 0.9rem;
+        color: #2c3e50;
     }
+    
+    .profile-info p span {
+        font-size: 0.9rem;
+        width: 100%;
+    }
+    
+    .fingerprint-container h3 {
+        font-size: 1.5rem;
+    }
+    
+    .fingerprint-container button {
+        padding: 16px;
+        font-size: 1rem;
+    }
+}
 
-    .profile-header .student-name {
+/* ==========================================================================
+   SMALL MOBILE (Up to 480px)
+   ========================================================================== */
+@media (max-width: 480px) {
+    .profile-container {
+        margin-top: 75px;
+        padding: 0 15px;
+    }
+    
+    .profile-box, .fingerprint-container {
+        padding: 25px 20px;
+        border-radius: 18px;
+    }
+    
+    .profile-box h2 {
+        font-size: 1.4rem;
+    }
+    
+    .profile-info {
+        padding: 20px;
+    }
+    
+    .profile-info p {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+    
+    .fingerprint-container h3 {
         font-size: 1.3rem;
+    }
+    
+    .subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .input-group input {
+        padding: 14px 16px;
+        font-size: 0.95rem;
+    }
+}
+
+/* ==========================================================================
+   SIDEBAR ADJUSTMENTS (When sidebar opens)
+   ========================================================================== */
+@media (min-width: 768px) {
+    .side-menu.open ~ .dashboard-container .profile-container {
+        margin-left: calc(300px + 30px);
+        transition: margin-left 0.35s ease;
+    }
+}
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+    .profile-box {
+        background: linear-gradient(145deg, #2c3e50, #1a2530);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #ecf0f1;
+    }
+    
+    .profile-box h2 {
+        color: #ecf0f1;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .profile-info {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .profile-info p {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .profile-info strong {
+        color: #ecf0f1;
+    }
+    
+    .profile-info p span {
+        color: rgba(255, 255, 255, 0.9);
     }
 }

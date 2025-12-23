@@ -14,12 +14,25 @@
 <body>
 
 <!-- TOP NAVBAR -->
+<!-- TOP NAVBAR -->
 <header class="top-nav">
-    <div class="hamburger" id="hamburger">
-        <span></span>
+    <div class="nav-left">
+        <div class="hamburger" id="hamburger">
+            <span></span>
+        </div>
+        <span class="nav-title">Menu</span>
     </div>
-    <span class="nav-title">Menu</span>
+
+    <div class="messages-icon">
+        <a href="{{ url_for('student.messages_page') }}">
+            <i class="fa fa-envelope"></i>
+            <span class="badge">{{ unread_messages_count }}</span>
+        </a>
+    </div>
+    
 </header>
+
+
 
 <!-- OVERLAY FOR MOBILE (Hidden by default) -->
 <div class="side-menu-overlay" id="sideMenuOverlay"></div>

@@ -9,6 +9,13 @@ from flask_mail import Message
 import hashlib, time, random
 from datetime import datetime
 import pytz
+from student.models import Message  # Make sure you have a Message model
+
+
+
+
+
+
 
 # WebAuthn imports
 from webauthn import (
@@ -165,20 +172,27 @@ def login():
 
     return render_template('student_login.html')
 
+
+
 # ==================== DASHBOARD ====================
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
+    # Total students and votes
     total_students = Student.query.count()
     total_votes = Vote.query.count()
+    
+    # Check if current student has voted
     has_voted = Vote.query.filter_by(student_id=current_user.id).first() is not None
 
+    # Example announcements (replace with your actual logic)
     announcements = [
         "Student government elections start on Nov 25.",
         "Voting closes on Nov 30 at 5:00 PM.",
         "Check the candidates' platforms on the voting page."
     ]
 
+    # Leading candidates by vote count
     leading_candidates = (
         db.session.query(Candidate, func.count(Vote.id).label("vote_count"))
         .outerjoin(Vote, Candidate.id == Vote.candidate_id)
@@ -188,14 +202,50 @@ def dashboard():
         .all()
     )
 
+    # Unread messages count for header badge
+    unread_count = Message.query.filter_by(sender_id=current_user.id, read=False).count()
+
     return render_template(
         'student_dashboard.html',
         total_students=total_students,
         total_votes=total_votes,
         has_voted=has_voted,
         announcements=announcements,
-        leading_candidates=leading_candidates
+        leading_candidates=leading_candidates,
+        unread_messages_count=unread_count
     )
+
+
+# ==================== MESSAGES ====================
+from sqlalchemy import or_, and_
+
+
+@student_bp.route('/messages', methods=['GET', 'POST'])
+@login_required
+def messages_page():
+    if request.method == 'POST':
+        content = request.form.get('message')
+        if content:
+            new_message = Message(
+                sender_id=current_user.id,
+                receiver='admin',
+                content=content,
+                read=False
+            )
+            db.session.add(new_message)
+            db.session.commit()
+            return redirect(url_for('student.messages_page'))
+
+    # Fetch all messages: student → admin OR admin reply
+    messages = Message.query.filter(
+        or_(
+            and_(Message.sender_id == current_user.id, Message.receiver == 'admin'),
+            and_(Message.replied != None, Message.receiver == 'student')  # only messages with admin replies
+        )
+    ).order_by(Message.created_at.asc()).all()
+
+    return render_template('student_messages.html', messages=messages)
+
 
 
 # ------------------- VOTING -------------------
