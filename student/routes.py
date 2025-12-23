@@ -4,49 +4,44 @@ from student.models import Student, Vote
 from admin.models import Candidate, Election, Course, Department
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from flask_mail import Message
 import hashlib, time, random
-from flask_login import current_user
-from admin.models import Election
-from flask import render_template
-from flask_login import login_required
 from datetime import datetime
 import pytz
-
 
 # WebAuthn imports
 from webauthn import (
     generate_registration_options,
-    generate_authentication_options,
     options_to_json,
     verify_registration_response,
+    generate_authentication_options,
     verify_authentication_response
 )
-
-# helper conversions
-try:
-    from webauthn.helpers import bytes_to_base64url, base64url_to_bytes
-except Exception:
-    import base64
-    def bytes_to_base64url(b: bytes) -> str:
-        return base64.urlsafe_b64encode(b).decode().rstrip("=")
-    def base64url_to_bytes(s: str) -> bytes:
-        padding = '=' * (-len(s) % 4)
-        return base64.urlsafe_b64decode(s + padding)
+from webauthn.helpers.structs import (
+    PublicKeyCredentialDescriptor,
+    PublicKeyCredentialType,
+    AuthenticatorSelectionCriteria,
+    UserVerificationRequirement,
+    AuthenticatorAttachment,
+    AttestationConveyancePreference,
+    AuthenticatorTransport  
+)
 
 student_bp = Blueprint('student', __name__, template_folder='templates', static_folder='static')
 
-# IMPORTANT: change these when you deploy to production / use HTTPS
-RP_ID = "localhost"
-RP_NAME = "CTU Student Voting System"
-RP_ORIGIN = f"http://{RP_ID}:5000"
-
-# ------------------- HELPER -------------------
+# ==================== HELPER FUNCTIONS ====================
 def generate_otp():
     return str(random.randint(100000, 999999))
 
-# ------------------- REGISTER -------------------
+def get_origin_and_rp_id():
+    origin = request.headers.get("Origin")
+    if origin is None:
+        origin = request.url_root[:-1]
+    rp_id = origin.split("://")[1].split(":")[0]
+    return origin, rp_id
+
+# ==================== REGISTER ====================
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
     from admin.models import Department, Course
@@ -60,10 +55,7 @@ def register():
             "username": request.form.get('username'),
             "email": request.form.get('email').strip(),
             "password": request.form.get('password'),
-
-            # 🔹 this now receives course.id from the dropdown
             "course": request.form.get('course'),
-
             "birth_date": request.form.get('birth_date'),
             "id_number": request.form.get('id_number')
         }
@@ -71,88 +63,53 @@ def register():
         email = registration_data["email"]
         id_number = registration_data["id_number"]
 
-        # ID number check (UNCHANGED)
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
             flash("ID Number already registered!", "danger")
-            departments = Department.query.order_by(Department.name).all()
-            courses_by_department = {
-                dept.name: Course.query.filter_by(department_id=dept.id).all()
-                for dept in departments
-            }
-            return render_template('student_register.html', courses_by_department=courses_by_department)
-
-        # Email check (UNCHANGED)
-        if Student.query.filter_by(email=email).first():
+        elif Student.query.filter_by(email=email).first():
             flash("Email already registered!", "danger")
-            departments = Department.query.order_by(Department.name).all()
-            courses_by_department = {
-                dept.name: Course.query.filter_by(department_id=dept.id).all()
-                for dept in departments
-            }
-            return render_template('student_register.html', courses_by_department=courses_by_department)
+        else:
+            course_id = registration_data["course"]
+            course_obj = Course.query.get(course_id)
+            if not course_obj:
+                flash("Selected course is invalid.", "danger")
+                return redirect(url_for('student.register'))
 
-        # ✅ FIXED PART (THIS IS THE IMPORTANT ONE)
-        # course now contains course.id
-        course_id = registration_data["course"]
+            registration_data["course"] = course_obj.course_name
+            registration_data["course_id"] = course_obj.id
+            registration_data["department_id"] = course_obj.department_id
 
-        course_obj = Course.query.get(course_id)
-        if not course_obj:
-            flash("Selected course is invalid.", "danger")
-            return redirect(url_for('student.register'))
+            otp = generate_otp()
+            session['otp'] = otp
+            session['registration_data'] = registration_data
 
-        # ✅ STORE EVERYTHING OTP NEEDS
-        registration_data["course"] = course_obj.course_name     # plain text
-        registration_data["course_id"] = course_obj.id
-        registration_data["department_id"] = course_obj.department_id
+            try:
+                msg = Message(subject="CTU Registration OTP", recipients=[email])
+                msg.html = f"""
+                <div style="font-family: Arial, sans-serif; text-align: center;">
+                    <h2>Cebu Technological University Moalboal Campus</h2>
+                    <p>Hello <strong>{registration_data['first_name']}</strong>,</p>
+                    <p>Your <strong>OTP code</strong> is:</p>
+                    <h3>{otp}</h3>
+                </div>
+                """
+                mail.send(msg)
+                flash('OTP has been sent to your email.', 'info')
+                return redirect(url_for('student.verify_otp'))
+            except Exception as e:
+                flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
 
-        # OTP logic (UNCHANGED)
-        otp = generate_otp()
-        session['otp'] = otp
-        session['registration_data'] = registration_data
-
-        try:
-            msg = Message(
-                subject="CTU Registration OTP",
-                recipients=[email]
-            )
-            msg.html = f"""
-            <div style="font-family: Arial, sans-serif; text-align: center;">
-                <h2>Cebu Technological University Moalboal Campus</h2>
-                <p>Hello <strong>{registration_data['first_name']}</strong>,</p>
-                <p>Your <strong>OTP code</strong> is:</p>
-                <h3>{otp}</h3>
-            </div>
-            """
-            mail.send(msg)
-
-            flash('OTP has been sent to your email.', 'info')
-            return redirect(url_for('student.verify_otp'))
-
-        except Exception as e:
-            flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
-
-    # GET request (UNCHANGED)
     departments = Department.query.order_by(Department.name).all()
-    courses_by_department = {
-        dept.name: Course.query.filter_by(department_id=dept.id).all()
-        for dept in departments
-    }
+    courses_by_department = {dept.name: Course.query.filter_by(department_id=dept.id).all() for dept in departments}
     return render_template('student_register.html', courses_by_department=courses_by_department)
 
-
-
-# ------------------- OTP VERIFICATION -------------------
+# ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
-
         if entered_otp == session.get('otp'):
             data = session.get('registration_data')
-
-            password_hash = bcrypt.generate_password_hash(
-                data.get('password')
-            ).decode('utf-8')
+            password_hash = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
 
             new_student = Student(
                 first_name=data.get('first_name'),
@@ -162,22 +119,17 @@ def verify_otp():
                 username=data.get('username'),
                 email=data.get('email'),
                 password=password_hash,
-
-                # ✅ NOW EVERYTHING IS STORED
-                course=data.get('course'),               # TEXT
-                course_id=data.get('course_id'),         # FK
-                department_id=data.get('department_id'), # FK
-
+                course=data.get('course'),
+                course_id=data.get('course_id'),
+                department_id=data.get('department_id'),
                 birth_date=data.get('birth_date'),
                 id_number=data.get('id_number')
             )
 
             db.session.add(new_student)
             db.session.commit()
-
             session.pop('otp', None)
             session.pop('registration_data', None)
-
             flash('Registration successful! You may now log in.', 'success')
             return redirect(url_for('student.login'))
 
@@ -186,7 +138,7 @@ def verify_otp():
 
     return render_template('verify_otp.html')
 
-# ------------------- LOGIN -------------------
+# ==================== LOGIN (merged traditional + WebAuthn page) ====================
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -213,7 +165,7 @@ def login():
 
     return render_template('student_login.html')
 
-# ------------------- DASHBOARD -------------------
+# ==================== DASHBOARD ====================
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -228,10 +180,7 @@ def dashboard():
     ]
 
     leading_candidates = (
-        db.session.query(
-            Candidate,
-            func.count(Vote.id).label("vote_count")
-        )
+        db.session.query(Candidate, func.count(Vote.id).label("vote_count"))
         .outerjoin(Vote, Candidate.id == Vote.candidate_id)
         .group_by(Candidate.id)
         .order_by(func.count(Vote.id).desc())
@@ -247,6 +196,7 @@ def dashboard():
         announcements=announcements,
         leading_candidates=leading_candidates
     )
+
 
 # ------------------- VOTING -------------------
 from flask import flash, redirect, url_for, render_template, request
@@ -398,11 +348,12 @@ def receipt():
 
     return render_template('receipt.html', vote=vote, receipt_code=receipt_code, timestamp=timestamp)
 
-# ------------------- PROFILE -------------------
+# ==================== PROFILE ====================
 @student_bp.route('/profile')
 @login_required
 def profile():
-    return render_template('profile.html', student=current_user)
+    fingerprint_registered = bool(current_user.passkey_id)  # True if fingerprint exists
+    return render_template('profile.html', student=current_user, fingerprint_registered=fingerprint_registered)
 
 # ------------------- HELP -------------------
 @student_bp.route('/help')
@@ -453,163 +404,139 @@ def support():
 
 # ===================== WEBAUTHN / BIOMETRIC ROUTES =====================
 
-# ------------------- BIOMETRIC REGISTRATION CHALLENGE -------------------
-@student_bp.route('/bio-register-challenge', methods=['POST'])
-@login_required
-def bio_register_challenge():
-    # Only allow a logged-in user to register a passkey (safe flow)
-    if current_user.passkey_id:
-        return jsonify({"status": "failed", "message": "You already have a registered biometric login."})
+# student/routes.py
+# ==================== WEBAUTHN / BIOMETRIC ROUTES ====================
+# ─── Registration ──────────────────────────
+@student_bp.route("/webauthn/register/options")
+def webauthn_register_options():
+    username = request.args.get("username")
+    if not username:
+        return jsonify({"status": "Error", "message": "Username is required"}), 400
 
-    # Build user and rp entities through helper generate function
-    try:
-        registration_options = generate_registration_options(
-            rp_id=RP_ID,
-            rp_name=RP_NAME,
-            user_id=str(current_user.id),
-            user_name=current_user.email,
-            user_display_name=f"{current_user.first_name} {current_user.last_name}",
-            authenticator_selection={"userVerification": "preferred"}
+    user = Student.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"status": "Error", "message": "User not found"}), 404
+
+    origin, rp_id = get_origin_and_rp_id()
+
+    options = generate_registration_options(
+        rp_name="Fingerprint Demo",
+        rp_id=rp_id,
+        user_id=str(user.id).encode("utf-8"),
+        user_name=user.username,
+        attestation=AttestationConveyancePreference.DIRECT,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            user_verification=UserVerificationRequirement.REQUIRED
         )
+    )
 
-        # store challenge in session for later verification
-        session['webauthn_registration_challenge'] = registration_options.challenge
+    user.current_challenge = options.challenge
+    db.session.commit()
 
-        # return the JSON options expected by SimpleWebAuthn (camelCase)
-        return jsonify({"status": "ok", **options_to_json(registration_options)})
-
-    except Exception as e:
-        return jsonify({"status": "failed", "message": str(e)}), 500
+    return options_to_json(options)
 
 
-# ------------------- BIOMETRIC REGISTRATION VERIFY -------------------
-@student_bp.route('/bio-register-verify', methods=['POST'])
-@login_required
-def bio_register_verify():
+@student_bp.route("/webauthn/register/verify", methods=["POST"])
+def webauthn_register_verify():
+    data = request.get_json()
+    username = data.get("username")
+    if not username:
+        return jsonify({"status": "Error", "message": "Username is required"}), 400
+
+    user = Student.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"status": "Error", "message": "User not found"}), 404
+
+    origin, rp_id = get_origin_and_rp_id()
     try:
-        credential = request.json
-        expected_challenge = session.get('webauthn_registration_challenge')
-        if not expected_challenge:
-            return jsonify({"status": "failed", "message": "No registration challenge found."}), 400
-
         verification = verify_registration_response(
-            credential=credential,
-            expected_challenge=expected_challenge,
-            expected_origin=RP_ORIGIN,
-            expected_rp_id=RP_ID
+            credential=data,
+            expected_challenge=user.current_challenge,
+            expected_rp_id=rp_id,
+            expected_origin=origin
         )
 
-        # Save credential info in user record (Base64URL strings)
-        current_user.passkey_id = bytes_to_base64url(verification.credential_id)
-        current_user.public_key = bytes_to_base64url(verification.credential_public_key)
-        current_user.sign_count = verification.sign_count or 0
-
+        user.passkey_id = verification.credential_id
+        user.public_key = verification.credential_public_key
+        user.sign_count = verification.sign_count
+        user.current_challenge = None
         db.session.commit()
-        session.pop('webauthn_registration_challenge', None)
 
-        return jsonify({"status": "ok", "message": "Biometric registered!"})
-
+        return jsonify({"status": "Fingerprint registered!"})
     except Exception as e:
-        # return error message (useful during testing)
-        return jsonify({"status": "failed", "message": str(e)}), 400
+        return jsonify({"status": "Error", "message": str(e)})
 
 
-# ------------------- BIOMETRIC LOGIN CHALLENGE -------------------
-@student_bp.route('/bio-login-challenge', methods=['POST'])
-def bio_login_challenge():
-    """
-    This endpoint supports two modes:
-    - If client sends {"email": "user@example.com"} -> only allow that user's credential (helpful UX)
-    - If no email provided -> return a generic authentication challenge (let browser choose passkey)
-    """
-    data = request.get_json(silent=True) or {}
-    email = data.get('email')
 
-    # Build allowCredentials list if we know which student (email supplied)
-    allow_credentials = None
-    if email:
-        student = Student.query.filter(func.lower(Student.email) == email.strip().lower()).first()
-        if not student or not student.passkey_id:
-            return jsonify({"status": "failed", "message": "No biometric registered for that email."}), 400
-        # library expects bytes for credential ids in some implementations - we pass bytes to generator
-        try:
-            cred_bytes = base64url_to_bytes(student.passkey_id)
-            allow_credentials = [cred_bytes]
-        except Exception:
-            # fallback: pass nothing (some libs accept Base64URL strings)
-            allow_credentials = [student.passkey_id]
+@student_bp.route("/webauthn/login/options")
+def webauthn_login_options():
+    student_id = request.args.get("student_id")
+    if not student_id:
+        return jsonify({"status": "Error", "message": "Student ID is required"}), 400
 
-    try:
-        options = generate_authentication_options(
-            rp_id=RP_ID,
-            allow_credentials=allow_credentials  # may be None
+    user = Student.query.filter_by(id_number=student_id).first()
+    if not user or not user.passkey_id:
+        return jsonify({"status": "Error", "message": "Student has no registered fingerprint"}), 400
+
+    origin, rp_id = get_origin_and_rp_id()
+
+    allow_credentials = [
+        PublicKeyCredentialDescriptor(
+            id=user.passkey_id,
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            transports=[AuthenticatorTransport.INTERNAL]
         )
+    ]
 
-        session['webauthn_auth_challenge'] = options.challenge
+    options = generate_authentication_options(
+        rp_id=rp_id,
+        allow_credentials=allow_credentials,
+        user_verification=UserVerificationRequirement.REQUIRED
+    )
 
-        return jsonify({"status": "ok", **options_to_json(options)})
+    user.current_challenge = options.challenge
+    db.session.commit()
 
-    except Exception as e:
-        return jsonify({"status": "failed", "message": str(e)}), 500
+    return options_to_json(options)
 
 
-# ------------------- BIOMETRIC LOGIN VERIFY -------------------
-@student_bp.route('/bio-login-verify', methods=['POST'])
-def bio_login_verify():
-    data = request.json
-    expected_challenge = session.get('webauthn_auth_challenge')
-    if not expected_challenge:
-        return jsonify({"status": "failed", "message": "No auth challenge in session."}), 400
+from flask_login import login_user
 
-    # The credential 'id' is base64url string in the client response.
-    credential_id = data.get('id') or (data.get('rawId') if data.get('rawId') else None)
-    if not credential_id:
-        # Try credentialId in nested structure (some clients send different shapes)
-        credential_id = data.get('response', {}).get('attestationObject') or data.get('response', {}).get('authenticatorData')
+@student_bp.route("/webauthn/login/verify", methods=["POST"])
+def webauthn_login_verify():
+    data = request.get_json()
+    student_id = data.get("student_id")
 
-    # Attempt to find student by stored passkey_id
-    student = None
-    if credential_id:
-        # If `rawId` could be bytes array; if bytes, convert to base64url
-        try:
-            # if it's already a base64url string (common), try direct match
-            student = Student.query.filter_by(passkey_id=credential_id).first()
-        except Exception:
-            student = None
+    if not student_id:
+        return jsonify({"status": "Error", "message": "Student ID is required"}), 400
 
-    # If we couldn't find by direct id, attempt to locate by trying to decode rawId if it's bytes-like
-    if not student:
-        # iterate students with passkey set to find match (slower, but fallback for dev/testing)
-        candidates = Student.query.filter(Student.passkey_id.isnot(None)).all()
-        for s in candidates:
-            if s.passkey_id and credential_id and (credential_id == s.passkey_id):
-                student = s
-                break
+    user = Student.query.filter_by(id_number=student_id).first()
+    if not user or not user.passkey_id:
+        return jsonify({"status": "Error", "message": "Student not found or no fingerprint registered"}), 400
 
-    if not student:
-        return jsonify({"status": "failed", "message": "Unknown credential or user not registered."}), 400
+    origin, rp_id = get_origin_and_rp_id()
 
     try:
         verification = verify_authentication_response(
             credential=data,
-            expected_challenge=expected_challenge,
-            expected_rp_id=RP_ID,
-            expected_origin=RP_ORIGIN,
-            credential_public_key=base64url_to_bytes(student.public_key),
-            previous_sign_count=student.sign_count
+            expected_challenge=user.current_challenge,
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+            credential_public_key=user.public_key,
+            credential_current_sign_count=user.sign_count
         )
 
-        # update sign count
-        student.sign_count = verification.new_sign_count or student.sign_count
+        # Update sign count and clear challenge
+        user.sign_count = verification.new_sign_count
+        user.current_challenge = None
         db.session.commit()
 
-        # log the user in
-        login_user(student)
+        # Log the user in for Flask-Login
+        login_user(user)
 
-        # clear challenge
-        session.pop('webauthn_auth_challenge', None)
-
-        return jsonify({"status": "ok", "message": "Logged in via biometric."})
+        return jsonify({"status": "Login successful!"})
 
     except Exception as e:
-        return jsonify({"status": "failed", "message": str(e)}), 400
+        print("WebAuthn verification failed:", str(e))
+        return jsonify({"status": "Error", "message": f"Biometric verification failed: {str(e)}"}), 400

@@ -5,13 +5,47 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/profile.css') }}">
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
+<style>
+    /* Fingerprint Registration Styles */
+    .fingerprint-container {
+        background: #ffffff;
+        width: 360px;
+        padding: 20px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-top: 20px;
+        text-align: center;
+    }
+    .fingerprint-container h3 {
+        margin-bottom: 10px;
+    }
+    .fingerprint-container button {
+        width: 100%;
+        padding: 10px;
+        font-size: 15px;
+        border: none;
+        border-radius: 4px;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+    }
+    #fp-status {
+        margin-top: 15px;
+        padding: 10px;
+        font-size: 14px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #333;
+    }
+    .status-error { background: #fee2e2; color: #991b1b; }
+    .status-success { background: #dcfce7; color: #065f46; }
+    .status-waiting { background: #e0f2fe; color: #075985; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="profile-container">
     <div class="profile-box">
-
         <h2>Your Profile</h2>
 
         <div class="profile-info">
@@ -23,79 +57,110 @@
 
         <hr style="margin: 20px 0;">
 
-        <!-- BIOMETRIC LOGIN SECTION -->
-        <div class="biometric-section">
-            <h3><i class="fa-solid fa-fingerprint"></i> Biometric / Passkey Login</h3>
-            <p style="margin-top:6px;">
-                Enable fingerprint / Face ID / device PIN login on this account.
-            </p>
-
-            {% if student.passkey_id %}
-                <p style="color: green; font-weight: bold; margin-top: 10px;">
-                    ✔ Biometric login is enabled.
-                </p>
-            {% else %}
-                <button id="enableBioBtn" class="bio-btn">
-                    <i class="fa-solid fa-fingerprint"></i> Enable Biometric Login
-                </button>
-            {% endif %}
-        </div>
-
         <p class="back-text">
             <a href="{{ url_for('student.dashboard') }}">← Back to Dashboard</a>
         </p>
+    </div>
 
+    <!-- Fingerprint Registration -->
+    <div class="fingerprint-container">
+        <h3>Register Fingerprint</h3>
+        <p class="subtitle">Scan your fingerprint to register</p>
+
+        <div class="input-group">
+            <input type="text" id="username" value="{{ student.username }}" readonly>
+        </div>
+
+        <button onclick="registerFingerprint()">Register Fingerprint</button>
+        <div id="fp-status">Click the button to start fingerprint registration</div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
-{% if not student.passkey_id %}
 <script>
-document.getElementById("enableBioBtn").addEventListener("click", async () => {
+function bufferToBase64URL(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64URLToBuffer(base64) {
+    const padding = '='.repeat((4 - base64.length % 4) % 4);
+    const base64Fixed = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64Fixed);
+    const buffer = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) buffer[i] = raw.charCodeAt(i);
+    return buffer;
+}
+
+async function registerFingerprint() {
+    const statusDiv = document.getElementById("fp-status");
+    const username = document.getElementById("username").value.trim();
+    const registerBtn = document.querySelector('.fingerprint-container button');
+
+    statusDiv.className = '';
+    statusDiv.textContent = "Waiting for fingerprint...";
+    statusDiv.classList.add('status-waiting');
+    registerBtn.disabled = true;
+
     try {
-        const email = "{{ student.email }}".toLowerCase();
+        const res = await fetch(`/student/webauthn/register/options?username=${username}`);
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Server returned error: ${text}`);
+        }
+        const options = await res.json();
 
-        const supported = await SimpleWebAuthnBrowser.isUserVerifyingPlatformAuthenticatorAvailable();
-        if (!supported) {
-            alert("This device/browser does not support biometric login. Use Chrome, Edge, Safari with a fingerprint or Face ID.");
-            return;
+        options.challenge = base64URLToBuffer(options.challenge);
+        options.user.id = base64URLToBuffer(options.user.id);
+
+        if (options.excludeCredentials) {
+            options.excludeCredentials = options.excludeCredentials.map(c => ({
+                id: base64URLToBuffer(c.id),
+                type: c.type,
+                transports: c.transports || ["internal"]
+            }));
         }
 
-        const challengeRes = await fetch("/student/bio-register-challenge", {
+        const credential = await navigator.credentials.create({ publicKey: options });
+
+        const credentialForBackend = {
+            id: credential.id,
+            rawId: bufferToBase64URL(credential.rawId),
+            type: credential.type,
+            response: {
+                attestationObject: bufferToBase64URL(credential.response.attestationObject),
+                clientDataJSON: bufferToBase64URL(credential.response.clientDataJSON)
+            },
+            username: username
+        };
+
+        statusDiv.textContent = "Verifying fingerprint...";
+
+        const verifyRes = await fetch("/student/webauthn/register/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email })
+            body: JSON.stringify(credentialForBackend)
         });
 
-        const challengeData = await challengeRes.json();
-        if (challengeData.status !== "ok") {
-            alert(challengeData.message || "Failed to start biometric registration.");
-            return;
-        }
+        const result = await verifyRes.json();
+        statusDiv.textContent = result.status;
 
-        const attResp = await SimpleWebAuthnBrowser.startRegistration(challengeData);
-
-        const verifyRes = await fetch("/student/bio-register-verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(attResp)
-        });
-
-        const verifyData = await verifyRes.json();
-
-        if (verifyData.status === "ok") {
-            alert("Biometric login enabled successfully!");
-            window.location.reload();
+        if (result.status === "Fingerprint registered!") {
+            statusDiv.classList.add('status-success');
+            registerBtn.textContent = "Success";
         } else {
-            alert(verifyData.message || "Biometric setup failed.");
+            statusDiv.classList.add('status-error');
+            registerBtn.disabled = false;
+            registerBtn.textContent = "Register Fingerprint";
         }
 
     } catch (err) {
-        console.error(err);
-        alert("Biometric setup failed. Your device might not support WebAuthn or you may need to enable a screen lock.");
+        statusDiv.textContent = "Error: " + err.message;
+        statusDiv.classList.add('status-error');
+        registerBtn.disabled = false;
+        registerBtn.textContent = "Register Fingerprint";
     }
-});
+}
 </script>
-{% endif %}
 {% endblock %}

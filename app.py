@@ -2,6 +2,7 @@ from flask import Flask, redirect, url_for
 from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_DB, SECRET_KEY
 from extensions import db, bcrypt, login_manager, mail
 
+
 # ---------------------- Initialize Flask app ---------------------- #
 app = Flask(__name__)
 
