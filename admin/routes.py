@@ -557,30 +557,3 @@ def logout():
     flash('Admin has been logged out.', 'info')
     return redirect(url_for('admin.login'))
 
-
-
-#--------NEW ROUTES-------
-@admin_bp.route('/voting')
-@login_required
-def voting():
-    return render_template('admin/voting.html')
-
-@admin_bp.route('/results')
-@login_required
-def results():
-    return render_template('admin/results.html')
-
-@admin_bp.route('/audit-logs')
-@login_required
-def audit_logs():
-    return render_template('admin/audit_logs.html')
-
-@admin_bp.route('/reports')
-@login_required
-def reports():
-    return render_template('admin/reports.html')
-
-@admin_bp.route('/settings')
-@login_required
-def settings():
-    return render_template('admin/settings.html')

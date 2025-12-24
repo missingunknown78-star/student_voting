@@ -94,8 +94,11 @@
     </table>
 
     <!-- See More Button -->
+<!-- See More Button -->
 {% if recent_elections_all|length > 5 %}
-<button id="seeMoreBtn" class="see-more-btn">See more...</button>
+<div class="see-more-wrapper">
+    <button id="seeMoreBtn" class="see-more-btn">See more...</button>
+</div>
 {% endif %}
 
 <!-- Modal -->
@@ -174,24 +177,28 @@
 
 
     var modal = document.getElementById("recentElectionsModal");
-    var btn = document.getElementById("seeMoreBtn");
-    var span = document.getElementsByClassName("close")[0];
+var btn = document.getElementById("seeMoreBtn");
+var span = document.getElementsByClassName("close")[0];
 
-    if(btn){
-        btn.onclick = function() {
-          modal.style.display = "block";
-        }
+if (btn) {
+    btn.onclick = function() {
+        modal.style.display = "block";
+        document.body.classList.add('modal-open'); // hide main scroll
     }
+}
 
-    span.onclick = function() {
-      modal.style.display = "none";
-    }
+span.onclick = function() {
+    modal.style.display = "none";
+    document.body.classList.remove('modal-open'); // restore main scroll
+}
 
-    window.onclick = function(event) {
-      if (event.target == modal) {
+window.onclick = function(event) {
+    if (event.target == modal) {
         modal.style.display = "none";
-      }
+        document.body.classList.remove('modal-open'); // restore main scroll
     }
+}
+
 </script>
 
 {% endblock %}
