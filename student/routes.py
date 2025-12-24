@@ -10,6 +10,9 @@ import hashlib, time, random
 from datetime import datetime
 import pytz
 from student.models import Message  # Make sure you have a Message model
+from student.models import LoginHistory
+from user_agents import parse  # pip install user-agents
+
 
 
 
@@ -32,7 +35,8 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
     AuthenticatorAttachment,
     AttestationConveyancePreference,
-    AuthenticatorTransport  
+    AuthenticatorTransport,
+    ResidentKeyRequirement
 )
 
 student_bp = Blueprint('student', __name__, template_folder='templates', static_folder='static')
@@ -165,6 +169,34 @@ def login():
         if bcrypt.check_password_hash(student.password, password):
             login_user(student)
             flash('Login successful!', 'success')
+
+            # ---------------- Log login history ----------------
+            try:
+                
+
+                user_agent = parse(request.headers.get('User-Agent'))
+
+                device_type = "PC"
+                if user_agent.is_mobile:
+                    device_type = "Mobile"
+                elif user_agent.is_tablet:
+                    device_type = "Tablet"
+
+                ip = request.remote_addr or "Unknown"
+                browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
+
+                login_record = LoginHistory(
+                    user_id=student.id,
+                    device=device_type,
+                    ip_address=ip,
+                    browser=browser
+                )
+                db.session.add(login_record)
+                db.session.commit()
+            except Exception as e:
+                print("Login history logging failed:", e)
+            # ----------------------------------------------------
+
             return redirect(url_for('student.dashboard'))
         else:
             flash('Incorrect password', 'danger')
@@ -246,6 +278,15 @@ def messages_page():
 
     return render_template('student_messages.html', messages=messages)
 
+
+from flask_login import login_required, current_user
+
+@student_bp.route('/login-history')
+@login_required
+def login_history():
+    # Use current_user.id instead of session
+    history = LoginHistory.query.filter_by(user_id=current_user.id).order_by(LoginHistory.timestamp.desc()).all()
+    return render_template('login_history.html', history=history)
 
 
 # ------------------- VOTING -------------------
@@ -427,11 +468,36 @@ def forgot_password():
     return render_template('forgot_password.html')
 
 # ------------------- LOGOUT -------------------
+
 @student_bp.route('/logout')
-@login_required
 def logout():
-    logout_user()
-    flash('You have been logged out.', 'info')
+    if current_user.is_authenticated:
+        try:
+            # Log the logout in login_history table
+            user_agent = parse(request.headers.get('User-Agent'))
+            device_type = "PC"
+            if user_agent.is_mobile:
+                device_type = "Mobile"
+            elif user_agent.is_tablet:
+                device_type = "Tablet"
+
+            ip = request.remote_addr or "Unknown"
+            browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
+
+            logout_record = LoginHistory(
+                user_id=current_user.id,
+                device=device_type,
+                ip_address=ip,
+                browser=browser,
+                action="logout"  # optional: you can have an 'action' column
+            )
+            db.session.add(logout_record)
+            db.session.commit()
+        except Exception as e:
+            print("Logout history logging failed:", e)
+
+        logout_user()
+        flash("You have been logged out.", "success")
     return redirect(url_for('student.login'))
 
 # ------------------- CONTEXT PROCESSOR -------------------
@@ -477,9 +543,16 @@ def webauthn_register_options():
         attestation=AttestationConveyancePreference.DIRECT,
         authenticator_selection=AuthenticatorSelectionCriteria(
             authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            resident_key=ResidentKeyRequirement.REQUIRED,
+            require_resident_key=True,
             user_verification=UserVerificationRequirement.REQUIRED
         )
     )
+
+    user.current_challenge = options.challenge
+    db.session.commit()
+
+    return options_to_json(options)
 
     user.current_challenge = options.challenge
     db.session.commit()
@@ -521,49 +594,60 @@ def webauthn_register_verify():
 
 @student_bp.route("/webauthn/login/options")
 def webauthn_login_options():
-    student_id = request.args.get("student_id")
-    if not student_id:
-        return jsonify({"status": "Error", "message": "Student ID is required"}), 400
-
-    user = Student.query.filter_by(id_number=student_id).first()
-    if not user or not user.passkey_id:
-        return jsonify({"status": "Error", "message": "Student has no registered fingerprint"}), 400
-
+    """
+    Phase 2: True one-click passkey login
+    - No Student ID input needed
+    - Browser selects resident key automatically
+    """
     origin, rp_id = get_origin_and_rp_id()
 
-    allow_credentials = [
-        PublicKeyCredentialDescriptor(
-            id=user.passkey_id,
-            type=PublicKeyCredentialType.PUBLIC_KEY,
-            transports=[AuthenticatorTransport.INTERNAL]
-        )
-    ]
+    # Get all students who have registered a fingerprint
+    users_with_passkey = Student.query.filter(Student.passkey_id != None).all()
+    if not users_with_passkey:
+        return jsonify({"status": "Error", "message": "No students have registered fingerprints"}), 400
 
+    # allow_credentials is None → browser will automatically show resident keys
     options = generate_authentication_options(
         rp_id=rp_id,
-        allow_credentials=allow_credentials,
+        allow_credentials=None,  # Resident key login: browser picks automatically
         user_verification=UserVerificationRequirement.REQUIRED
     )
 
-    user.current_challenge = options.challenge
+    # Save the challenge to all users with passkeys
+    for u in users_with_passkey:
+        u.current_challenge = options.challenge
     db.session.commit()
 
     return options_to_json(options)
 
 
-from flask_login import login_user
+from base64 import b64decode
 
+from flask_login import login_user
 @student_bp.route("/webauthn/login/verify", methods=["POST"])
 def webauthn_login_verify():
+    """
+    Phase 2: True one-click passkey login
+    - No Student ID needed
+    - Identify user by credential.userHandle
+    """
     data = request.get_json()
-    student_id = data.get("student_id")
+    
+    # userHandle is base64url encoded, convert to bytes
+    user_handle_b64 = data.get("response", {}).get("userHandle")
+    if not user_handle_b64:
+        return jsonify({"status": "Error", "message": "No userHandle provided"}), 400
 
-    if not student_id:
-        return jsonify({"status": "Error", "message": "Student ID is required"}), 400
+    try:
+        user_handle_bytes = b64decode(user_handle_b64 + "==")  # restore padding
+        user_id = int(user_handle_bytes.decode("utf-8"))
+    except Exception as e:
+        return jsonify({"status": "Error", "message": f"Invalid userHandle: {str(e)}"}), 400
 
-    user = Student.query.filter_by(id_number=student_id).first()
+    # Lookup user by ID
+    user = Student.query.filter_by(id=user_id).first()
     if not user or not user.passkey_id:
-        return jsonify({"status": "Error", "message": "Student not found or no fingerprint registered"}), 400
+        return jsonify({"status": "Error", "message": "User not found or no fingerprint registered"}), 400
 
     origin, rp_id = get_origin_and_rp_id()
 

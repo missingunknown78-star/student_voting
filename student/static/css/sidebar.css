@@ -321,14 +321,15 @@
 .top-nav {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* left + right */
+    justify-content: space-between;
     padding: 10px 20px;
     background-color: var(--primary, #4361ee);
     color: #fff;
-    position: relative; /* stays above content */
+    position: relative;
     width: 100%;
     z-index: 1000;
 }
+
 
 .nav-left {
     display: flex;
@@ -368,6 +369,41 @@
     color: #fff;
 }
 
+.messages-icon .badge {
+    position: absolute;
+    top: -5px;
+    right: -8px;
+    background-color: #ef476f;
+    color: #fff;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+
+/* Right icons container */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;       /* space between settings and mail */
+    margin-left: auto; /* push to the far right */
+}
+
+.settings-icon i,
+.messages-icon i {
+    font-size: 1.4rem;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.settings-icon:hover i,
+.messages-icon:hover i {
+    color: #2ecc71;
+    transform: scale(1.1);
+}
+
+/* Badge stays positioned on top-right of the envelope */
 .messages-icon .badge {
     position: absolute;
     top: -5px;

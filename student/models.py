@@ -72,3 +72,16 @@ class Vote(db.Model):
     student = db.relationship("Student", backref="student_votes")
     candidate = db.relationship("Candidate", backref="candidate_votes")
     election = db.relationship("Election", backref="election_votes")
+
+
+
+class LoginHistory(db.Model):
+    __tablename__ = "login_history"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    device = db.Column(db.String(255))
+    ip_address = db.Column(db.String(50))
+    browser = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("Student", backref="login_histories")

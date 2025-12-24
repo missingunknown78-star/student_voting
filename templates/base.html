@@ -14,7 +14,6 @@
 <body>
 
 <!-- TOP NAVBAR -->
-<!-- TOP NAVBAR -->
 <header class="top-nav">
     <div class="nav-left">
         <div class="hamburger" id="hamburger">
@@ -23,14 +22,25 @@
         <span class="nav-title">Menu</span>
     </div>
 
-    <div class="messages-icon">
-        <a href="{{ url_for('student.messages_page') }}">
-            <i class="fa fa-envelope"></i>
-            <span class="badge">{{ unread_messages_count }}</span>
-        </a>
+    <!-- Right icons container -->
+    <div class="nav-right">
+        <!-- Settings/History -->
+        <div class="settings-icon">
+            <a href="{{ url_for('student.login_history') }}">
+                <i class="fa fa-history"></i>
+            </a>
+        </div>
+
+        <!-- Messages -->
+        <div class="messages-icon">
+            <a href="{{ url_for('student.messages_page') }}">
+                <i class="fa fa-envelope"></i>
+                <span class="badge">{{ unread_messages_count }}</span>
+            </a>
+        </div>
     </div>
-    
 </header>
+
 
 
 

@@ -8,9 +8,6 @@
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/login.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- Optional: SimpleWebAuthn (not needed if you use raw fetch approach) -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script> -->
-
 </head>
 <body>
 
@@ -35,7 +32,7 @@
             {% endif %}
         {% endwith %}
 
-        <!-- FORM LOGIN -->
+        <!-- NORMAL LOGIN FORM -->
         <form method="POST">
             <div class="input-group">
                 <label for="email">Gmail</label>
@@ -75,111 +72,93 @@
 </div>
 
 <!-- BIOMETRIC SCRIPT -->
-
-
-
 <script>
-    (async function() {
-        const bioBtn = document.getElementById("bioLoginBtn");
-        const bioInfo = document.getElementById("bioInfo");
-    
-        // Check if WebAuthn API is available
-        let isAvailable = false;
+(async function() {
+    const bioBtn = document.getElementById("bioLoginBtn");
+    const bioInfo = document.getElementById("bioInfo");
+
+    // Check if WebAuthn API is available
+    let isAvailable = !!(navigator.credentials && navigator.credentials.get);
+    if (!isAvailable) {
+        bioInfo.textContent = "Biometric login not available on this device/browser.";
+        return;
+    }
+
+    bioBtn.style.display = "inline-block";
+    bioInfo.textContent = "Optional: Click to login with fingerprint (no ID required).";
+
+    bioBtn.addEventListener("click", async () => {
+        const statusDiv = bioInfo;
+        const loginBtn = bioBtn;
+
+        statusDiv.textContent = "Waiting for fingerprint...";
+        loginBtn.disabled = true;
+
         try {
-            isAvailable = !!(navigator.credentials && navigator.credentials.get);
-        } catch (e) {
-            isAvailable = false;
-        }
-    
-        if (!isAvailable) {
-            bioInfo.textContent = "Biometric login not available on this device/browser.";
-            return;
-        }
-    
-        bioBtn.style.display = "inline-block";
-        bioInfo.textContent = "Optional: You can use biometrics to log in (if previously enabled).";
-    
-        bioBtn.addEventListener("click", async () => {
-            const statusDiv = bioInfo;
-            const studentId = document.getElementById("id_number").value.trim();
-            const loginBtn = bioBtn;
-    
-            if (!studentId) {
-                statusDiv.textContent = "Please enter your Student ID to login with biometrics.";
+            // Phase 2: fetch login options without student ID
+            const optionsRes = await fetch("/student/webauthn/login/options");
+            const options = await optionsRes.json();
+
+            if (!optionsRes.ok || options.status === "Error") {
+                statusDiv.textContent = options.message || "Failed to start biometric login.";
+                loginBtn.disabled = false;
                 return;
             }
-    
-            statusDiv.textContent = "Waiting for fingerprint...";
-            loginBtn.disabled = true;
-    
-            try {
-                // Get challenge options from server
-                const optionsRes = await fetch(`/student/webauthn/login/options?student_id=${studentId}`);
-                const options = await optionsRes.json();
-    
-                if (!optionsRes.ok || options.status === "Error") {
-                    statusDiv.textContent = options.message || "Failed to start biometric login.";
-                    loginBtn.disabled = false;
-                    return;
-                }
-    
-                // Convert challenge & allowCredentials to proper buffers
-                options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+
+            // Convert challenge & allowCredentials
+            options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+            if (options.allowCredentials) {
                 options.allowCredentials = options.allowCredentials.map(c => ({
                     id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), x => x.charCodeAt(0)),
                     type: "public-key",
                     transports: c.transports || ["internal"]
                 }));
-    
-                // Request credential
-                const credential = await navigator.credentials.get({ publicKey: options });
-                console.log("Credential received:", credential);
-    
-                // Prepare data to send to server
-                const credentialForBackend = {
-                    id: credential.id,
-                    rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                    type: credential.type,
-                    response: {
-                        authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                        clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                        signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                        userHandle: credential.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(credential.response.userHandle))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : null
-                    },
-                    student_id: studentId
-                };
-    
-                // Verify on server
-                const verifyRes = await fetch("/student/webauthn/login/verify", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(credentialForBackend)
-                });
-    
-                const verifyData = await verifyRes.json();
-                console.log("Server response:", verifyData);
-    
-                if (verifyRes.ok && verifyData.status === "Login successful!") {
-                    statusDiv.textContent = "Login successful! Redirecting...";
-                    statusDiv.className = "status-success";
-                    setTimeout(() => window.location.href = "{{ url_for('student.dashboard') }}", 1000);
-                } else {
-                    statusDiv.textContent = verifyData.message || verifyData.status || "Biometric login failed.";
-                    statusDiv.className = "status-error";
-                    loginBtn.disabled = false;
+            }
+
+            // Request credential
+            const credential = await navigator.credentials.get({ publicKey: options });
+
+            // Prepare data for backend verification
+            const credentialForBackend = {
+                id: credential.id,
+                rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                type: credential.type,
+                response: {
+                    authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                    clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                    signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                    userHandle: credential.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(credential.response.userHandle))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : null
                 }
-    
-            } catch (err) {
-                console.error("Biometric login error:", err);
-                statusDiv.textContent = "Biometric login failed. Use normal login instead.";
+            };
+
+            // Verify on server
+            const verifyRes = await fetch("/student/webauthn/login/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(credentialForBackend)
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyRes.ok && verifyData.status === "Login successful!") {
+                statusDiv.textContent = "Login successful! Redirecting...";
+                statusDiv.className = "status-success";
+                setTimeout(() => window.location.href = "{{ url_for('student.dashboard') }}", 1000);
+            } else {
+                statusDiv.textContent = verifyData.message || verifyData.status || "Biometric login failed.";
                 statusDiv.className = "status-error";
                 loginBtn.disabled = false;
             }
-        });
-    })();
-    </script>
 
-    
+        } catch (err) {
+            console.error("Biometric login error:", err);
+            statusDiv.textContent = "Biometric login failed. Use normal login instead.";
+            statusDiv.className = "status-error";
+            loginBtn.disabled = false;
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

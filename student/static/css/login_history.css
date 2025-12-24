@@ -1,0 +1,33 @@
+.history-container {
+    margin-top: 30px;
+}
+
+.history-table {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.history-table th {
+    background: #4361ee;
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+}
+
+.history-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.history-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.no-history {
+    text-align: center;
+    padding: 30px;
+    font-size: 1rem;
+    color: #555;
+}
