@@ -13,7 +13,7 @@
     <h1>COMELEC Dashboard</h1>
 
     <!-- Messages Icon -->
-    <a href="{{ url_for('admin.messages') }}" class="message-icon">
+    <a href="{{ url_for('admin.messages_page') }}" class="message-icon">
         <i class="fa-solid fa-envelope"></i>
         {% if unread_messages and unread_messages > 0 %}
             <span class="message-badge">{{ unread_messages }}</span>
