@@ -120,3 +120,20 @@ class Course(db.Model):
     course_name = db.Column(db.String(255), nullable=False)
     course_code = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
+
+
+class Announcement(db.Model):
+    __tablename__ = 'announcements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)  # NULL = All
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    # Optional: relationship to department
+    department = db.relationship('Department', backref=db.backref('announcements', lazy=True))
+
+    def __repr__(self):
+        return f"<Announcement {self.title} - {self.date}>"

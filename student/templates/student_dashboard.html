@@ -39,23 +39,27 @@
     </div>
 
     <!-- ANNOUNCEMENTS PREVIEW -->
-    <div class="card">
-        <h2 class="section-title">Latest Announcements</h2>
+<div class="card">
+    <h2 class="section-title">Latest Announcements</h2>
 
-        {% if announcements and announcements|length > 0 %}
-            {% for ann in announcements[:3] %}
-                <div class="announcement-item">
-                    {{ ann }}
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No announcements available.</p>
-        {% endif %}
+    {% if announcements and announcements|length > 0 %}
+        {% for ann in announcements[:3] %}
+            <div class="announcement-item">
+                <h4>{{ ann.title }}</h4>
+                <p>{{ ann.content }}</p>
+                <small>{{ ann.date.strftime('%b %d, %Y') }}</small>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No announcements available.</p>
+    {% endif %}
 
-        <a href="{{ url_for('student.announcements_page') }}" class="view-all-link">
-            View all announcements <i class="fa fa-arrow-right"></i>
-        </a>
-    </div>
+    <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
+        View all announcements <i class="fa fa-arrow-right"></i>
+    </a>
+    
+</div>
+
 
     <!-- COUNTDOWN -->
     <div class="card countdown-box">

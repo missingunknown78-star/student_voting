@@ -16,6 +16,8 @@ from flask import current_app
 from admin.models import Department, Course
 from flask_login import login_required
 from flask import request, jsonify
+from admin.models import Announcement
+
 
 
 
@@ -548,6 +550,43 @@ def manage_positions():
             return redirect(url_for('admin.manage_positions'))
     positions = Position.query.all()
     return render_template('manage_positions.html', positions=positions)
+
+
+
+    # ----------- ANNOUNCEMENTS ROUTE -----------
+@admin_bp.route('/announcements', methods=['GET', 'POST'])
+@login_required
+def announcements():
+    departments = Department.query.all()  # For dropdown
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        content = request.form.get('content')
+        date = request.form.get('date')
+        department_id = request.form.get('department')
+
+        if department_id == "all":
+            department_id = None  # None means visible to all
+
+        new_announcement = Announcement(
+            title=title,
+            content=content,
+            date=date,
+            department_id=department_id
+        )
+        db.session.add(new_announcement)
+        db.session.commit()
+
+        return redirect(url_for('admin.announcements'))
+
+    # GET: fetch announcements to display
+    announcements_list = Announcement.query.order_by(Announcement.date.desc()).all()
+
+    return render_template('announcements.html', departments=departments, announcements=announcements_list)
+
+
+
+
 
 # ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')

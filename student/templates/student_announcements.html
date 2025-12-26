@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Announcements{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/student_announcements.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2 class="section-title">Announcements & Reminders</h2>
+
+    {% if announcements and announcements|length > 0 %}
+        {% for ann in announcements %}
+            <div class="announcement-card">
+                <h3>{{ ann.title }}</h3>
+                <p>{{ ann.content }}</p>
+                <div class="date">{{ ann.date.strftime('%b %d, %Y') }}</div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No announcements available.</p>
+    {% endif %}
+
+    <a href="{{ url_for('student.dashboard') }}" class="view-all-link">
+        Back to Dashboard <i class="fa fa-arrow-left"></i>
+    </a>
+</div>
+{% endblock %}

@@ -28,12 +28,12 @@
                class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
                <i class="fa-solid fa-house"></i> Dashboard
             </a>
-
+        
             <a href="{{ url_for('admin.manage_students') }}"
                 class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
                   <i class="fa-solid fa-users"></i> Student Management
             </a>
-
+        
             <a href="{{ url_for('admin.manage_departments') }}"
                 class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
                 <i class="fa-solid fa-building"></i> Departments & Courses
@@ -43,21 +43,28 @@
                class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
                <i class="fa-solid fa-building-columns"></i> Department Elections
             </a>
-
+        
             <a href="{{ url_for('admin.manage_candidates') }}"
                class="{% if request.endpoint == 'admin.manage_candidates' %}active{% endif %}">
                <i class="fa-solid fa-user-check"></i> Candidate Management
             </a>
-
+        
             <a href="{{ url_for('admin.manage_positions') }}"
                class="{% if request.endpoint == 'admin.manage_positions' %}active{% endif %}">
                <i class="fa-solid fa-clipboard-list"></i> Positions
             </a>
-
+        
+            <!-- ======== ANNOUNCEMENTS BUTTON ======== -->
+            <a href="{{ url_for('admin.announcements') }}"
+               class="{% if request.endpoint == 'admin.announcements' %}active{% endif %}">
+               <i class="fa-solid fa-bullhorn"></i> Announcements
+            </a>
+        
             <a href="{{ url_for('admin.logout') }}">
                <i class="fa-solid fa-right-from-bracket"></i> Logout
             </a>
         </nav>
+        
     </aside>
     <!-- ---------------------------------------------------- -->
 

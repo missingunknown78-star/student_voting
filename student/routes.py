@@ -1,7 +1,7 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from student.models import Student, Vote
-from admin.models import Candidate, Election, Course, Department
+from admin.models import Candidate, Election, Course, Department, Announcement
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import func, or_
@@ -12,6 +12,7 @@ import pytz
 from student.models import Message  # Make sure you have a Message model
 from student.models import LoginHistory
 from user_agents import parse  # pip install user-agents
+
 
 
 
@@ -207,6 +208,7 @@ def login():
 
 
 # ==================== DASHBOARD ====================
+
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -217,12 +219,11 @@ def dashboard():
     # Check if current student has voted
     has_voted = Vote.query.filter_by(student_id=current_user.id).first() is not None
 
-    # Example announcements (replace with your actual logic)
-    announcements = [
-        "Student government elections start on Nov 25.",
-        "Voting closes on Nov 30 at 5:00 PM.",
-        "Check the candidates' platforms on the voting page."
-    ]
+    # Fetch announcements for this student's department or all departments
+    announcements = Announcement.query.filter(
+        (Announcement.department_id == current_user.department_id) | 
+        (Announcement.department_id == None)  # None means "All"
+    ).order_by(Announcement.date.desc()).all()
 
     # Leading candidates by vote count
     leading_candidates = (
@@ -245,6 +246,21 @@ def dashboard():
         announcements=announcements,
         leading_candidates=leading_candidates,
         unread_messages_count=unread_count
+    )
+
+
+@student_bp.route('/announcements')
+@login_required
+def student_announcements():
+    # Fetch all announcements relevant to the student
+    announcements = Announcement.query.filter(
+        (Announcement.department_id == current_user.department_id) | 
+        (Announcement.department_id == None)
+    ).order_by(Announcement.date.desc()).all()
+
+    return render_template(
+        'student_announcements.html',
+        announcements=announcements
     )
 
 
@@ -357,13 +373,6 @@ def submit_vote(election_id):
 
     flash("Your vote has been submitted successfully!", "success")
     return redirect(url_for('student.available_elections'))
-
-
-
-
-
-
-
 
 
 from sqlalchemy import or_
