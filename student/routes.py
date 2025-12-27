@@ -9,7 +9,6 @@ from flask_mail import Message
 import hashlib, time, random
 from datetime import datetime
 import pytz
-from student.models import Message  # Make sure you have a Message model
 from student.models import LoginHistory
 from user_agents import parse  # pip install user-agents
 
@@ -235,9 +234,6 @@ def dashboard():
         .all()
     )
 
-    # Unread messages count for header badge
-    unread_count = Message.query.filter_by(sender_id=current_user.id, read=False).count()
-
     return render_template(
         'student_dashboard.html',
         total_students=total_students,
@@ -245,8 +241,10 @@ def dashboard():
         has_voted=has_voted,
         announcements=announcements,
         leading_candidates=leading_candidates,
-        unread_messages_count=unread_count
+ 
     )
+
+
 
 
 @student_bp.route('/announcements')
@@ -263,36 +261,16 @@ def student_announcements():
         announcements=announcements
     )
 
-
-# ==================== MESSAGES ====================
-from sqlalchemy import or_, and_
-
-
-@student_bp.route('/messages', methods=['GET', 'POST'])
+# ------------------- HELP -------------------
+@student_bp.route('/help')
 @login_required
-def messages_page():
-    if request.method == 'POST':
-        content = request.form.get('message')
-        if content:
-            new_message = Message(
-                sender_id=current_user.id,
-                receiver='admin',
-                content=content,
-                read=False
-            )
-            db.session.add(new_message)
-            db.session.commit()
-            return redirect(url_for('student.messages_page'))
-
-    # Fetch all messages: student → admin OR admin reply
-    messages = Message.query.filter(
-        or_(
-            and_(Message.sender_id == current_user.id, Message.receiver == 'admin'),
-            and_(Message.replied != None, Message.receiver == 'student')  # only messages with admin replies
-        )
-    ).order_by(Message.created_at.asc()).all()
-
-    return render_template('student_messages.html', messages=messages)
+def help_page():
+    faqs = [
+        {"q": "How do I vote?", "a": "Go to Available Elections, select candidates, and submit."},
+        {"q": "Can I change my vote?", "a": "No — once submitted, votes are final."},
+        {"q": "Who to contact for issues?", "a": "Election Committee: comelec@example.edu"}
+    ]
+    return render_template('help_page.html', faqs=faqs)
 
 
 from flask_login import login_required, current_user
@@ -455,16 +433,7 @@ def profile():
     fingerprint_registered = bool(current_user.passkey_id)  # True if fingerprint exists
     return render_template('profile.html', student=current_user, fingerprint_registered=fingerprint_registered)
 
-# ------------------- HELP -------------------
-@student_bp.route('/help')
-@login_required
-def help_page():
-    faqs = [
-        {"q": "How do I vote?", "a": "Go to Available Elections, select candidates, and submit."},
-        {"q": "Can I change my vote?", "a": "No — once submitted, votes are final."},
-        {"q": "Who to contact for issues?", "a": "Election Committee: comelec@example.edu"}
-    ]
-    return render_template('help.html', faqs=faqs)
+
 
 # ------------------- FORGOT PASSWORD -------------------
 @student_bp.route('/forgot-password', methods=['GET', 'POST'])

@@ -45,21 +45,6 @@ class Student(db.Model, UserMixin):
 
 
 
-
-class Message(db.Model):
-    __tablename__ = 'messages'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, nullable=False)  # Student who sent the message
-    receiver = db.Column(db.String(50), nullable=False, default='admin')  # Could also be admin_id
-    content = db.Column(db.Text, nullable=False)
-    read = db.Column(db.Boolean, default=False)
-    replied = db.Column(db.Boolean, default=False)  # <-- add this
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return f"<Message {self.id} from {self.sender_id}>"
-
 class Vote(db.Model):
     __tablename__ = "votes"
 

@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from admin.models import Admin, Candidate, Position, Election
-from student.models import Student, Vote, Message
+from student.models import Student, Vote
 
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -107,90 +107,6 @@ def dashboard():
         now=now
     )
 
-
-# ------------------- Messages Page ------------------- #
-@admin_bp.route('/messages')
-@login_required
-def messages_page():
-    # Fetch messages with student info
-    all_messages = db.session.query(
-        Message,
-        Student.first_name.label('first_name'),
-        Student.last_name.label('last_name')
-    ).join(Student, Student.id == Message.sender_id).order_by(Message.created_at.desc()).all()
-
-    # Convert to list of dicts so template can access easily
-    messages_list = []
-    for msg, first_name, last_name in all_messages:
-        messages_list.append({
-            'id': msg.id,
-            'content': msg.content,
-            'read': msg.read,
-            'created_at': msg.created_at,
-            'first_name': first_name,
-            'last_name': last_name,
-            'replied': getattr(msg, 'replied', False)
-        })
-
-    # Separate by status
-    unread_messages = [m for m in messages_list if not m['read']]
-    read_messages = [m for m in messages_list if m['read'] and not m['replied']]
-    replied_messages = [m for m in messages_list if m['replied']]
-
-    return render_template(
-        'messages.html',
-        unread_messages=unread_messages,
-        read_messages=read_messages,
-        replied_messages=replied_messages
-    )
-
-
-# ------------------- Mark as Read ------------------- #
-@admin_bp.route('/messages/read/<int:message_id>', methods=['POST'])
-@login_required
-def mark_as_read(message_id):
-    msg = Message.query.get_or_404(message_id)
-    if not msg.read:
-        msg.read = True
-        db.session.commit()
-    return '', 204  # No content, just acknowledge
-
-@admin_bp.route('/messages/mark_read/<int:message_id>', methods=['POST'])
-@login_required
-def mark_message_read(message_id):
-    msg = Message.query.get_or_404(message_id)
-    if not msg.read:
-        msg.read = True
-        db.session.commit()
-    return '', 200  # return success for AJAX
-
-
-
-# ------------------- Reply to Message ------------------- #
-# admin/routes.py
-
-@admin_bp.route('/messages/reply/<int:message_id>', methods=['POST'])
-@login_required
-def reply_message(message_id):
-    try:
-        msg = Message.query.get_or_404(message_id)
-        reply_content = request.form.get('reply_content')
-
-        if not reply_content or reply_content.strip() == "":
-            return jsonify({'success': False, 'error': 'Reply is empty', 'message_id': message_id})
-
-        msg.replied = reply_content.strip()
-        msg.read = True
-        msg.replied_at = datetime.utcnow()  # optional
-        db.session.commit()
-
-        return jsonify({'success': True, 'message_id': message_id})
-    
-    except Exception as e:
-        # Log the error for debugging
-        print("Error replying:", e)
-        return jsonify({'success': False, 'error': str(e), 'message_id': message_id})
-
 # ---------------------- Manage Students ---------------------- #
 @admin_bp.route('/students')
 @admin_required
@@ -198,7 +114,6 @@ def manage_students():
     students = Student.query.all()
     return render_template('manage_students.html', students=students)
 
-# ---------------------- Departments & Courses ---------------------- #
 # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
 @admin_required
@@ -320,10 +235,7 @@ def delete_multiple_courses():
         flash('No courses selected for deletion.', 'warning')
     return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
-#---------------STOP HERE WHEN UNDO-----------------------------------------------------
 
-
-# ---------------------- Manage Candidates ---------------------- #
 # ---------------------- Manage Candidates ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required

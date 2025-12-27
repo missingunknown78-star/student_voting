@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Voting Guidelines{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/guidelines.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <h2 class="page-title">Voting Guidelines</h2>
+
+    <div class="info-card">
+        <h3>📌 Purpose of the Election</h3>
+        <p>
+            The Student Government Election allows officially enrolled students to
+            select their leaders in a fair, transparent, and secure manner using
+            the online voting system.
+        </p>
+    </div>
+
+    <div class="info-card">
+        <h3>🗳️ Voting Rules</h3>
+        <ul>
+            <li>Each student is allowed to vote <strong>only once</strong>.</li>
+            <li>Votes submitted cannot be changed or canceled.</li>
+            <li>Only officially registered and verified students can participate.</li>
+            <li>Sharing of accounts or voting on behalf of others is strictly prohibited.</li>
+        </ul>
+    </div>
+
+    <div class="info-card">
+        <h3>📝 How to Vote</h3>
+        <ol>
+            <li>Log in using your registered student account.</li>
+            <li>Go to the <strong>Available Elections</strong> section.</li>
+            <li>Select your preferred candidates for each position.</li>
+            <li>Review your choices carefully.</li>
+            <li>Click <strong>Submit Vote</strong> to finalize your ballot.</li>
+        </ol>
+    </div>
+
+    <div class="info-card">
+        <h3>🔒 Privacy & Security</h3>
+        <p>
+            Your vote is confidential. The system does not display individual
+            voting choices to administrators or other students.
+            All votes are securely stored and counted automatically.
+        </p>
+    </div>
+
+    <div class="info-card warning">
+        <h3>⚠ Important Reminders</h3>
+        <ul>
+            <li>Make sure you have a stable internet connection before voting.</li>
+            <li>Do not refresh or close the browser while submitting your vote.</li>
+            <li>Report any technical issues immediately to the election committee.</li>
+        </ul>
+    </div>
+
+    <!-- NEW: Fingerprint Login Info -->
+    <div class="info-card info">
+        <h3>🔑 Fingerprint Login</h3>
+        <p>
+            To enable fingerprint login for faster access, go to your 
+            <strong>Profile</strong> page and register your fingerprint. 
+            Once registered, you can log in securely using your fingerprint on supported devices.
+        </p>
+    </div>
+
+</div>
+{% endblock %}

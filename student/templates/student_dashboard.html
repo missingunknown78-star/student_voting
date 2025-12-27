@@ -28,6 +28,24 @@
         </div>
     </div>
 
+    <!-- GUIDELINES NOTICE -->
+<!-- GUIDELINES BOX -->
+<div class="card guidelines-box">
+    <h2 class="section-title">Before You Start</h2>
+    <p>
+        Please read the official guidelines carefully before participating
+        in the Student Government Election.
+    </p>
+    <a href="{{ url_for('student.guidelines') }}" class="guidelines-link">
+        See Guidelines<i class="fa fa-arrow-right"></i>
+    </a>
+</div>
+
+
+
+
+
+
     <!-- QUICK REMINDER CARD -->
     <div class="card">
         <h2 class="section-title">Important Reminders</h2>
@@ -38,8 +56,8 @@
         </ul>
     </div>
 
-    <!-- ANNOUNCEMENTS PREVIEW -->
-<div class="card">
+<!-- ANNOUNCEMENTS PREVIEW -->
+<div class="card announcements-card">
     <h2 class="section-title">Latest Announcements</h2>
 
     {% if announcements and announcements|length > 0 %}
@@ -57,24 +75,21 @@
     <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
         View all announcements <i class="fa fa-arrow-right"></i>
     </a>
-    
 </div>
 
 
-    <!-- COUNTDOWN -->
-    <div class="card countdown-box">
-        <h2>Election Countdown</h2>
-        <span id="countdown"></span>
-    </div>
+    <!-- HELP & SUPPORT CARD -->
+<div class="card help-box">
+    <h2 class="section-title">Need Help?</h2>
+    <p>
+        If you experience any problems with logging in, voting, or using the system, 
+        you can visit the Help & Support page for guidance.
+    </p>
+    <a href="{{ url_for('student.help_page') }}" class="help-link">
+        Help & Support <i class="fa fa-arrow-right"></i>
+    </a>
+</div>
 
-    <!-- HELP BOX -->
-    <div class="card help-box">
-        <h2 class="section-title">Need Help?</h2>
-        <p>If you experience any problems with logging in or voting, please visit:</p>
-        <a href="{{ url_for('student.help_page') }}" class="help-link">
-            Help & Support <i class="fa fa-arrow-right"></i>
-        </a>
-    </div>
 
 </div>
 

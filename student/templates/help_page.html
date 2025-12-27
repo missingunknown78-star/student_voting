@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Help & Support{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/help_page.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2 class="page-title">Help & Support</h2>
+
+    <!-- COMMON ISSUES -->
+    <div class="help-card">
+        <h3>⚙ Common Issues</h3>
+        <ul>
+            <li>Cannot log in — check your student ID and password.</li>
+            <li>Voting page not loading — ensure stable internet connection.</li>
+            <li>Browser compatibility issues — try Chrome or Edge.</li>
+            <li>Fingerprint login not working — register fingerprint in your profile.</li>
+            <li>Already voted message — ensure you are logged in with your correct account.</li>
+        </ul>
+    </div>
+
+    <!-- CONTACT INFORMATION -->
+    <div class="help-card">
+        <h3>📞 Contact</h3>
+        <p>
+            For further assistance, contact the election committee at:
+        </p>
+        <ul>
+            <li>Email: <a href="mailto:election@school.edu">election@school.edu</a></li>
+            <li>Phone: 0912-345-6789</li>
+        </ul>
+    </div>
+
+    <!-- ADDITIONAL RESOURCES -->
+    <div class="help-card">
+        <h3>📘 Additional Resources</h3>
+        <ul>
+            <li><a href="{{ url_for('student.guidelines') }}">Voting Guidelines</a></li>
+            <li><a href="{{ url_for('student.student_announcements') }}">Latest Announcements</a></li>
+            <li><a href="{{ url_for('student.profile') }}">Profile / Fingerprint Setup</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
