@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Profile</title>
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_profile.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+<body>
+
+<!-- Header -->
+<div class="dashboard-header">
+    <h1>Admin Profile</h1>
+    <div class="profile-container">
+        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" alt="Admin Profile" id="profilePic" class="profile-pic">
+        <div class="profile-menu" id="profileMenu">
+            <a href="#">Profile</a>
+            <a href="#">Settings</a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="profile-page">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" alt="Profile Picture">
+            <div class="profile-info">
+                <h2>John Doe</h2>
+                <p>admin@example.com</p>
+                <p>Administrator</p>
+                <button class="edit-profile-btn">Edit Profile</button>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="account-details">
+            <h3>Account Details</h3>
+            <form>
+                <label>Username</label>
+                <input type="text" value="admin">
+                
+                <label>Email</label>
+                <input type="email" value="admin@example.com">
+
+                <label>Change Password</label>
+                <input type="password" placeholder="New Password">
+                <input type="password" placeholder="Confirm Password">
+
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+
+        <!-- Activity Stats -->
+        <div class="activity-stats">
+            <h3>Activity Stats</h3>
+            <ul>
+                <li>Total Elections Managed: 12</li>
+                <li>Total Votes Overseen: 340</li>
+                <li>Account Created: 2025-12-27 08:30</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Profile menu toggle
+    const profilePic = document.getElementById('profilePic');
+    const profileMenu = document.getElementById('profileMenu');
+
+    profilePic.addEventListener('click', () => {
+        profileMenu.style.display = profileMenu.style.display === 'block' ? 'none' : 'block';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (!profilePic.contains(e.target) && !profileMenu.contains(e.target)) {
+            profileMenu.style.display = 'none';
+        }
+    });
+</script>
+
+</body>
+</html>

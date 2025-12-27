@@ -498,6 +498,23 @@ def announcements():
 
 
 
+@admin_bp.route('/profile')
+@login_required
+def admin_profile():
+    # Ensure only admin user can access
+    if current_user.user_type != 'admin':
+        return "Unauthorized", 403
+
+    # Get the admin data
+    admin = Admin.query.get(current_user.id)
+
+    # Optional: fetch stats
+    total_elections = 12  # replace with actual query
+    total_votes = 340      # replace with actual query
+
+    return render_template('admin_profile.html', admin=admin,
+                           total_elections=total_elections,
+                           total_votes=total_votes)
 
 
 # ---------------------- Logout ---------------------- #

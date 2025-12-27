@@ -12,7 +12,21 @@
 <div class="dashboard-header">
     <h1>COMELEC Dashboard</h1>
 
+    <!-- Profile Menu -->
+    <div class="profile-container">
+        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" 
+             alt="Admin Profile" class="profile-pic" id="profilePic">
+
+        <!-- Floating Menu -->
+        <div class="profile-menu" id="profileMenu">
+            <a href="{{ url_for('admin.admin_profile') }}">Profile</a>
+            <a href="#">Settings</a>
+        </div>
+        
+
+    </div>
 </div>
+
 
 
 <!-- KPI Cards -->
@@ -191,6 +205,23 @@ window.onclick = function(event) {
         document.body.classList.remove('modal-open'); // restore main scroll
     }
 }
+
+
+// Profile menu toggle
+const profilePic = document.getElementById('profilePic');
+const profileMenu = document.getElementById('profileMenu');
+
+profilePic.addEventListener('click', () => {
+    profileMenu.style.display = profileMenu.style.display === 'block' ? 'none' : 'block';
+});
+
+// Close menu when clicking outside
+window.addEventListener('click', (e) => {
+    if (!profilePic.contains(e.target) && !profileMenu.contains(e.target)) {
+        profileMenu.style.display = 'none';
+    }
+});
+
 
 </script>
 

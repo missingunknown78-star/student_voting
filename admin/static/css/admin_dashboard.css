@@ -30,31 +30,90 @@
 
 /* ------------------- Dashboard Header ------------------- */
 .dashboard-header {
-    margin-bottom: 30px;
-    padding: 25px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    position: fixed;       /* always visible at top */
+    top: 0;
+    left: 280px;           /* start after sidebar */
+    width: calc(100% - 280px); /* full width minus sidebar */
+    background-color: #36adfd; /* match page background */
+    padding: 15px 30px;     /* smaller padding */
+    box-shadow: 0 2px 5px rgb(255, 252, 252);
+    z-index: 500;           /* above content but below sidebar */
 }
 
 .dashboard-header h1 {
-    font-size: 32px;
-    margin-bottom: 8px;
-    color: #2d3748;
-    font-weight: 700;
+    margin: 0;
+    font-size: 2 rem; /* smaller size */
+    font-weight: 1000;
+    font-style: normal;
+    color: #0f0f0f;
 }
 
-.dashboard-header p {
-    color: #4a5568;
-    margin-bottom: 0;
-    font-size: 1.05rem;
-    opacity: 0.9;
+/* ------------------- Main Dashboard Content ------------------- */
+.main-content {
+    margin-left: 280px;          /* leave space for sidebar */
+    padding: 90px 40px 40px 40px; /* top padding to avoid overlap with fixed header */
+    min-height: 100vh;
+    overflow-y: auto;
+    background-color: #f5f6fa;
 }
+
+/* Optional: adjust cards and charts to fit nicely */
+.cards, .flex-row, .recent-elections-container {
+    margin-top: 20px;
+}
+
+
+
+/* ------------------- Profile Menu ------------------- */
+.profile-container {
+    position: absolute;
+    top: 54%;
+    right: 80px; /* distance from right edge */
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.profile-pic {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #36A2EB;
+    transition: transform 0.2s ease;
+}
+
+.profile-pic:hover {
+    transform: scale(1.1);
+}
+
+.profile-menu {
+    display: none;
+    position: absolute;
+    top: 50px; /* below the profile picture */
+    right: 0;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 600;
+    min-width: 140px;
+}
+
+.profile-menu a {
+    display: block;
+    padding: 10px 15px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.profile-menu a:hover {
+    background-color: #f0f0f0;
+}
+
+
+
 
 /* ------------------- Cards Grid ------------------- */
 .cards {
