@@ -1,6 +1,7 @@
 from flask import Flask, redirect, url_for
 from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_DB, SECRET_KEY
 from extensions import db, bcrypt, login_manager, mail
+from datetime import timedelta
 
 
 # ---------------------- Initialize Flask app ---------------------- #
@@ -12,6 +13,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
     f'mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+
+
+# ---- Session Security ----
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 
 # ---------------------- Mail Configuration ---------------------- #
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -34,7 +41,7 @@ from admin.models import Admin, Election
 # ---------------------- Flask-Login User Loader ---------------------- #
 @login_manager.user_loader
 def load_user(user_id):
-    admin = Admin.query.get(int(user_id))
+    admin = db.session.get(Admin, int(user_id))
     if admin:
         return admin
 

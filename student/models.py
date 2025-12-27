@@ -45,6 +45,7 @@ class Student(db.Model, UserMixin):
 
 
 
+# ------------------- VOTE -------------------
 class Vote(db.Model):
     __tablename__ = "votes"
 
@@ -53,11 +54,10 @@ class Vote(db.Model):
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id'), nullable=False)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
 
-    # relationships (UNCHANGED)
+    # relationships
     student = db.relationship("Student", backref="student_votes")
-    candidate = db.relationship("Candidate", backref="candidate_votes")
+    candidate = db.relationship("Candidate", back_populates="votes")  # <-- match back_populates
     election = db.relationship("Election", backref="election_votes")
-
 
 
 class LoginHistory(db.Model):

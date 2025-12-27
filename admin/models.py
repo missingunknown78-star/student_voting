@@ -15,6 +15,8 @@ class Admin(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
     user_type = db.Column(db.String(20), default='admin')
+    totp_secret = db.Column(db.String(32), nullable=True)
+
 
 
 # ------------------- POSITION -------------------
@@ -46,8 +48,12 @@ class Candidate(db.Model):
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))
     election = db.relationship('Election', backref='candidates', lazy=True)
 
-    votes = db.relationship('Vote', back_populates='candidate', lazy=True)
-
+    votes = db.relationship(
+        'Vote', 
+        back_populates='candidate', 
+        lazy=True,
+        overlaps="candidate_votes"  # <-- added to fix warning
+    )
 
 
 

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin 2FA Verification</title>
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_login.css') }}">
+</head>
+<body>
+<div class="login-container">
+    <div class="header">
+        <h2>Two-Factor Authentication</h2>
+        <p>Enter the 6-digit code from your authenticator app</p>
+    </div>
+
+    <form method="POST" class="login-form">
+        <div class="input-group">
+            <label>Authentication Code</label>
+            <input type="text" name="code" required placeholder="123456" maxlength="6">
+        </div>
+
+        <button type="submit" class="login-btn">Verify</button>
+
+        {% if error %}
+            <p class="error-msg">{{ error }}</p>
+        {% endif %}
+    </form>
+</div>
+</body>
+</html>

@@ -1,46 +1,94 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session, jsonify
 from extensions import db, bcrypt
-from flask_login import login_user, logout_user, current_user
+from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
 from functools import wraps
-
-from admin.models import Admin, Candidate, Position, Election
+from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course
 from student.models import Student, Vote
-
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
 import pytz
 from werkzeug.utils import secure_filename
 import os
-from flask import current_app
-from admin.models import Department, Course
-from flask_login import login_required
-from flask import request, jsonify
-from admin.models import Announcement
-
-
-
-
-
+import logging
+import time
+import pyotp
+from datetime import timedelta
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
 
-# ---------------------- Admin Required Decorator ---------------------- #
+
+# ---------------------- Secure Admin Required Decorator ---------------------- #
+# Configure logging for unauthorized attempts
+logging.basicConfig(filename='admin_access.log', level=logging.WARNING,
+                    format='%(asctime)s - %(message)s')
+
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or getattr(current_user, 'user_type', None) != 'admin':
-            flash("Please log in as admin to access this page.", "admin-warning")
+        # Track failed attempts per IP
+        ip = request.remote_addr
+        attempts = session.get(f'admin_attempts_{ip}', 0)
+        cooldown = session.get(f'admin_cooldown_{ip}', 0)
+
+        # Check cooldown
+        if time.time() < cooldown:
+            flash(f"Too many failed attempts. Try again in {int(cooldown - time.time())} seconds.", "admin-warning")
             return redirect(url_for('admin.login'))
+
+        # Check if user is authenticated and admin
+        if not current_user.is_authenticated or getattr(current_user, 'user_type', None) != 'admin':
+            logging.warning(f"Unauthorized admin access attempt from IP: {ip}")
+            
+            # Increase failed attempts
+            attempts += 1
+            session[f'admin_attempts_{ip}'] = attempts
+
+            # Start cooldown if max attempts reached
+            if attempts >= MAX_ATTEMPTS:
+                session[f'admin_cooldown_{ip}'] = time.time() + COOLDOWN_TIME
+                session[f'admin_attempts_{ip}'] = 0
+                flash("Too many failed attempts. Admin login temporarily locked.", "admin-warning")
+            else:
+                flash("Please log in as admin to access this page.", "admin-warning")
+            
+            return redirect(url_for('admin.login'))
+
+        # Reset failed attempts on successful admin login
+        session[f'admin_attempts_{ip}'] = 0
+        session[f'admin_cooldown_{ip}'] = 0
+
         return f(*args, **kwargs)
     return decorated_function
 
-# ---------------------- Admin Login ---------------------- #
+
+
+
+
+
+# ------------------- Configuration ------------------- #
+MAX_ATTEMPTS = 3          # max allowed failed username/password attempts
+COOLDOWN_TIME = 300       # cooldown in seconds (5 minutes)
+MAX_2FA_ATTEMPTS = 5      # max allowed failed 2FA attempts
+TWO_FA_COOLDOWN = 300     # cooldown for 2FA in seconds
+
+# ------------------- Admin Login Route ------------------- #
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated and getattr(current_user, 'user_type', None) == 'admin':
         return redirect(url_for('admin.dashboard'))
+
+    ip = request.remote_addr
+    attempts = session.get(f'login_attempts_{ip}', 0)
+    cooldown = session.get(f'login_cooldown_{ip}', 0)
+
+    # Check cooldown
+    if time.time() < cooldown:
+        remaining = int(cooldown - time.time())
+        error = f'Too many failed attempts. Try again in {remaining} seconds.'
+        return render_template('admin_login.html', error=error)
 
     error = None
     if request.method == 'POST':
@@ -49,13 +97,123 @@ def login():
 
         admin = Admin.query.filter_by(username=username).first()
         if admin and bcrypt.check_password_hash(admin.password, password):
-            login_user(admin)
-            flash('Admin logged in successfully!', 'success')
-            return redirect(url_for('admin.dashboard'))
+            # Reset failed attempts
+            session[f'login_attempts_{ip}'] = 0
+            session[f'login_cooldown_{ip}'] = 0
+
+            # Set session permanent
+            session.permanent = True
+
+            # If admin has TOTP secret, require 2FA verification
+            if getattr(admin, 'totp_secret', None):
+                session['pre_2fa_admin_id'] = admin.id
+                return redirect(url_for('admin.verify_2fa'))
+
+            # If no TOTP secret, require 2FA setup first
+            else:
+                session['pre_2fa_admin_id'] = admin.id
+                return redirect(url_for('admin.setup_2fa'))
+
         else:
-            error = 'Invalid username or password'
+            # Increment failed attempts
+            attempts += 1
+            session[f'login_attempts_{ip}'] = attempts
+
+            if attempts >= MAX_ATTEMPTS:
+                session[f'login_cooldown_{ip}'] = time.time() + COOLDOWN_TIME
+                session[f'login_attempts_{ip}'] = 0
+                error = 'Too many failed attempts. Admin login temporarily locked.'
+            else:
+                error = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
 
     return render_template('admin_login.html', error=error)
+
+
+# ------------------- Admin 2FA Verification ------------------- #
+@admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
+def verify_2fa():
+    if 'pre_2fa_admin_id' not in session:
+        return redirect(url_for('admin.login'))
+
+    admin_id = session['pre_2fa_admin_id']
+    admin = Admin.query.get(admin_id)
+    if not admin:
+        session.pop('pre_2fa_admin_id', None)
+        return redirect(url_for('admin.login'))
+
+    ip = request.remote_addr
+    attempts = session.get(f'2fa_attempts_{ip}', 0)
+    cooldown = session.get(f'2fa_cooldown_{ip}', 0)
+
+    # Check cooldown
+    if time.time() < cooldown:
+        remaining = int(cooldown - time.time())
+        error = f"Too many 2FA attempts. Try again in {remaining} seconds."
+        return render_template('admin_2fa_verify.html', error=error)
+
+    error = None
+    if request.method == 'POST':
+        code = request.form.get('code')
+        totp = pyotp.TOTP(admin.totp_secret)
+
+        if totp.verify(code):
+            # ✅ Success: log in the user
+            login_user(admin)
+            session.permanent = True
+
+            # Cleanup session keys
+            session.pop('pre_2fa_admin_id', None)
+            session.pop(f'2fa_attempts_{ip}', None)
+            session.pop(f'2fa_cooldown_{ip}', None)
+
+            flash("2FA verified. Welcome, Admin.", "success")
+            return redirect(url_for('admin.dashboard'))
+
+        else:
+            attempts += 1
+            session[f'2fa_attempts_{ip}'] = attempts
+
+            if attempts >= MAX_2FA_ATTEMPTS:
+                session[f'2fa_cooldown_{ip}'] = time.time() + TWO_FA_COOLDOWN
+                session[f'2fa_attempts_{ip}'] = 0
+                error = "Too many invalid codes. 2FA temporarily locked."
+            else:
+                error = f"Invalid code. Attempt {attempts} of {MAX_2FA_ATTEMPTS}."
+
+    return render_template('admin_2fa_verify.html', error=error)
+
+
+
+def generate_2fa_secret(admin):
+    if not getattr(admin, 'totp_secret', None):
+        secret = pyotp.random_base32()
+        admin.totp_secret = secret
+        db.session.commit()
+    return admin.totp_secret
+
+@admin_bp.route('/2fa/setup', methods=['GET', 'POST'])
+@admin_required
+def setup_2fa():
+    admin = current_user
+    secret = generate_2fa_secret(admin)
+    totp = pyotp.TOTP(secret)
+    
+    if request.method == 'POST':
+        code = request.form.get('code')
+        if totp.verify(code):
+            admin.is_2fa_enabled = True  # you might need to add this column
+            db.session.commit()
+            flash("Two-factor authentication enabled!", "success")
+            return redirect(url_for('admin.dashboard'))
+        else:
+            flash("Invalid code. Try again.", "error")
+    
+    totp_uri = totp.provisioning_uri(
+        name=admin.email,
+        issuer_name="CTU-COMELEC Admin"
+    )
+    return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
+
 
 
 # ---------------------- DASHBOARD ---------------------- #
