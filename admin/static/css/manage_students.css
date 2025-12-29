@@ -162,3 +162,97 @@
         width: 100%;
     }
 }
+
+
+/* ---------------- Pagination ---------------- */
+.pagination {
+    margin-top: 15px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.pagination button {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.pagination button:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+.pagination button:disabled {
+    background-color: #dcdcdc;
+    cursor: default;
+}
+
+/* ---------------- Dropdown Filter Bar ---------------- */
+.table-header select {
+    padding: 6px 10px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.table-header select:hover {
+    border-color: #888;
+}
+
+.table-header select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
+}
+
+/* Optional: style the hidden dropdown when it becomes visible */
+#filterValue {
+    min-width: 150px;
+}
+
+/* ---------------- Search Input ---------------- */
+#searchInput {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    flex-grow: 1;
+}
+
+#searchInput:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
+}
+
+/* ---------------- Add / Export Buttons ---------------- */
+.add-btn {
+    padding: 6px 12px;
+    background-color: #27ae60;
+    border: none;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s;
+}
+
+.add-btn:hover {
+    background-color: #219150;
+}
+
+/* Optional: make table header filters wrap nicely on small screens */
+.table-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}

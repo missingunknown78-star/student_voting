@@ -9,42 +9,50 @@
 {% block content %}
 
 <div class="dashboard-container">
+<!-- PROFILE CARD -->
+<div class="card profile-card fingerprint-wrapper">
 
-    <!-- PROFILE CARD -->
-    <div class="card profile-card">
-        <div class="profile-icon">
-            <i class="fa fa-user"></i>
-        </div>
-        <div class="profile-info">
-            <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
-            <small>ID Number: {{ current_user.id_number }}</small>
-            <small>Course: {{ current_user.course }}</small>
-
-            {% if has_voted %}
-                <span class="voted-badge">You have already voted</span>
-            {% else %}
-                <span class="voted-badge" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">You have not voted yet</span>
-            {% endif %}
-        </div>
+    <div class="profile-icon">
+        <i class="fa fa-user"></i>
     </div>
 
-    <!-- GUIDELINES NOTICE -->
-<!-- GUIDELINES BOX -->
-<div class="card guidelines-box">
-    <h2 class="section-title">Before You Start</h2>
-    <p>
-        Please read the official guidelines carefully before participating
-        in the Student Government Election.
-    </p>
-    <a href="{{ url_for('student.guidelines') }}" class="guidelines-link">
-        See Guidelines<i class="fa fa-arrow-right"></i>
-    </a>
+    <div class="profile-info">
+        <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
+        <small>ID Number: {{ current_user.id_number }}</small>
+        <small>Course: {{ current_user.course }}</small>
+
+        {% if has_voted %}
+            <span class="voted-badge">You have already voted</span>
+        {% else %}
+            <span class="voted-badge" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+                You have not voted yet
+            </span>
+        {% endif %}
+
+        <!-- Fingerprint Button (NOW CORRECT POSITION) -->
+        <button class="fingerprint-btn" onclick="registerFingerprint()">
+            <i class="fa fa-fingerprint"></i>
+            <span>Register Fingerprint</span>
+        </button>
+
+        <input type="hidden" id="username" value="{{ current_user.username }}">
+        <div id="fp-status" class="fp-status">
+            Click fingerprint icon to register
+        </div>
+    </div>
 </div>
 
-
-
-
-
+    <!-- GUIDELINES BOX -->
+    <div class="card guidelines-box">
+        <h2 class="section-title">Before You Start</h2>
+        <p>
+            Please read the official guidelines carefully before participating
+            in the Student Government Election.
+        </p>
+        <a href="{{ url_for('student.guidelines') }}" class="guidelines-link">
+            See Guidelines <i class="fa fa-arrow-right"></i>
+        </a>
+    </div>
 
     <!-- QUICK REMINDER CARD -->
     <div class="card">
@@ -56,40 +64,38 @@
         </ul>
     </div>
 
-<!-- ANNOUNCEMENTS PREVIEW -->
-<div class="card announcements-card">
-    <h2 class="section-title">Latest Announcements</h2>
+    <!-- ANNOUNCEMENTS PREVIEW -->
+    <div class="card announcements-card">
+        <h2 class="section-title">Latest Announcements</h2>
 
-    {% if announcements and announcements|length > 0 %}
-        {% for ann in announcements[:3] %}
-            <div class="announcement-item">
-                <h4>{{ ann.title }}</h4>
-                <p>{{ ann.content }}</p>
-                <small>{{ ann.date.strftime('%b %d, %Y') }}</small>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p>No announcements available.</p>
-    {% endif %}
+        {% if announcements and announcements|length > 0 %}
+            {% for ann in announcements[:3] %}
+                <div class="announcement-item">
+                    <h4>{{ ann.title }}</h4>
+                    <p>{{ ann.content }}</p>
+                    <small>{{ ann.date.strftime('%b %d, %Y') }}</small>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No announcements available.</p>
+        {% endif %}
 
-    <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
-        View all announcements <i class="fa fa-arrow-right"></i>
-    </a>
-</div>
-
+        <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
+            View all announcements <i class="fa fa-arrow-right"></i>
+        </a>
+    </div>
 
     <!-- HELP & SUPPORT CARD -->
-<div class="card help-box">
-    <h2 class="section-title">Need Help?</h2>
-    <p>
-        If you experience any problems with logging in, voting, or using the system, 
-        you can visit the Help & Support page for guidance.
-    </p>
-    <a href="{{ url_for('student.help_page') }}" class="help-link">
-        Help & Support <i class="fa fa-arrow-right"></i>
-    </a>
-</div>
-
+    <div class="card help-box">
+        <h2 class="section-title">Need Help?</h2>
+        <p>
+            If you experience any problems with logging in, voting, or using the system,
+            you can visit the Help & Support page for guidance.
+        </p>
+        <a href="{{ url_for('student.help_page') }}" class="help-link">
+            Help & Support <i class="fa fa-arrow-right"></i>
+        </a>
+    </div>
 
 </div>
 
@@ -97,38 +103,113 @@
 
 {% block extra_js %}
 <script>
-// REAL-TIME COUNTDOWN
-const countdownDate = new Date("Nov 30, 2025 17:00:00").getTime();
-const countdownEl = document.getElementById("countdown");
-
-function updateCountdown() {
-    const now = new Date().getTime();
-    const distance = countdownDate - now;
-
-    if (distance < 0) {
-        countdownEl.innerHTML = "Voting has ended.";
-        return;
-    }
-
-    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-    countdownEl.innerHTML = 
-        `<span>${days}d</span> ` +
-        `<span>${hours}h</span> ` +
-        `<span>${minutes}m</span> ` +
-        `<span>${seconds}s</span>`;
+// ==================== FINGERPRINT (WEB AUTHN) ====================
+function bufferToBase64URL(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
 }
 
-// Update immediately and then every second
-updateCountdown();
-setInterval(updateCountdown, 1000);
+function base64URLToBuffer(base64) {
+    const padding = '='.repeat((4 - base64.length % 4) % 4);
+    const base64Fixed = (base64 + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+    const raw = atob(base64Fixed);
+    return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
 
-// Add subtle animation to countdown numbers
-countdownEl.querySelectorAll('span').forEach((span, index) => {
-    span.style.animationDelay = `${index * 0.1}s`;
-});
+async function registerFingerprint() {
+    const statusDiv = document.getElementById("fp-status");
+    const username = document.getElementById("username").value.trim();
+    const btn = document.querySelector(".fingerprint-btn");
+
+    statusDiv.textContent = "Waiting for fingerprint...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/student/webauthn/register/options?username=${username}`);
+        if (!res.ok) throw new Error("Failed to get registration options");
+
+        const options = await res.json();
+        options.challenge = base64URLToBuffer(options.challenge);
+        options.user.id = base64URLToBuffer(options.user.id);
+
+        if (options.excludeCredentials) {
+            options.excludeCredentials = options.excludeCredentials.map(c => ({
+                id: base64URLToBuffer(c.id),
+                type: c.type,
+                transports: c.transports || ["internal"]
+            }));
+        }
+
+        const credential = await navigator.credentials.create({
+            publicKey: options
+        });
+
+        const verifyRes = await fetch("/student/webauthn/register/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id: credential.id,
+                rawId: bufferToBase64URL(credential.rawId),
+                type: credential.type,
+                response: {
+                    attestationObject: bufferToBase64URL(
+                        credential.response.attestationObject
+                    ),
+                    clientDataJSON: bufferToBase64URL(
+                        credential.response.clientDataJSON
+                    )
+                },
+                username: username
+            })
+        });
+
+        const result = await verifyRes.json();
+        statusDiv.textContent = result.status;
+
+        if (result.status === "Fingerprint registered!") {
+            btn.innerHTML = '<i class="fa fa-check"></i><span>Registered</span>';
+            btn.classList.add("success");
+
+        } else {
+            btn.disabled = false;
+        }
+
+    } catch (err) {
+        statusDiv.textContent = "Error: " + err.message;
+        btn.disabled = false;
+    }
+}
+
+// ==================== GPS LOCATION UPDATE ====================
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            fetch('/student/update-location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude, longitude })
+            })
+            .then(res => res.json())
+            .then(data => console.log("Location updated:", data))
+            .catch(err => console.error("Failed to update location:", err));
+        },
+        function(error) {
+            console.error("Geolocation error:", error);
+        },
+        { enableHighAccuracy: true }
+    );
+} else {
+    console.warn("Geolocation is not supported by this browser.");
+}
 </script>
 {% endblock %}

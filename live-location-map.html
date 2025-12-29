@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Location Map Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f0f5ff;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c6ed5 0%, #4a90e2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+        }
+        
+        @media (min-width: 992px) {
+            .content {
+                flex-direction: row;
+            }
+        }
+        
+        .map-container {
+            flex: 3;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+            min-height: 500px;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+        }
+        
+        .info-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .info-box {
+            background: #f8faff;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 5px solid #4a90e2;
+        }
+        
+        .info-box h3 {
+            color: #2c6ed5;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .location-data {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .data-value {
+            font-weight: 500;
+            color: #222;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 160px;
+        }
+        
+        .primary-btn {
+            background: #4a90e2;
+            color: white;
+        }
+        
+        .primary-btn:hover {
+            background: #3a7bc8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(58, 123, 200, 0.3);
+        }
+        
+        .secondary-btn {
+            background: #f0f5ff;
+            color: #4a90e2;
+            border: 2px solid #4a90e2;
+        }
+        
+        .secondary-btn:hover {
+            background: #e1e9ff;
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .success {
+            background-color: #e7f7ef;
+            color: #2d8f58;
+            border: 1px solid #a8e6c3;
+        }
+        
+        .error {
+            background-color: #fee;
+            color: #d33;
+            border: 1px solid #fbb;
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .accuracy-indicator {
+            height: 10px;
+            background: linear-gradient(to right, #ff4757, #ffa502, #2ed573);
+            border-radius: 5px;
+            margin-top: 5px;
+            position: relative;
+        }
+        
+        .accuracy-marker {
+            position: absolute;
+            top: -3px;
+            width: 16px;
+            height: 16px;
+            background: #2c6ed5;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            border: 3px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .location-icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            position: relative;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        .location-icon:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+        }
+        
+        .pulse-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #ff4757;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .permission-help {
+            background-color: #fff8e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 4px solid #ffa502;
+        }
+        
+        .permission-help h4 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+        
+        .permission-help ul {
+            padding-left: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .permission-help li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Live Location Map Tracker</h1>
+        <p>See your real-time location on an interactive map</p>
+    </div>
+    
+    <div class="container">
+        <div class="content">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="info-box">
+                    <h3>Your Location Details</h3>
+                    <div class="location-data">
+                        <div class="data-row">
+                            <span class="data-label">Latitude:</span>
+                            <span id="latitude" class="data-value">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Longitude:</span>
+                            <span id="longitude" class="data-value">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Accuracy:</span>
+                            <span id="accuracy" class="data-value">--</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Last Update:</span>
+                            <span id="lastUpdate" class="data-value">--</span>
+                        </div>
+                        
+                        <div style="margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span class="data-label">Position Accuracy:</span>
+                                <span id="accuracyValue" class="data-value">--</span>
+                            </div>
+                            <div class="accuracy-indicator">
+                                <div id="accuracyMarker" class="accuracy-marker" style="left: 50%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #777; margin-top: 5px;">
+                                <span>Low</span>
+                                <span>Medium</span>
+                                <span>High</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h3>Controls</h3>
+                    <div class="controls">
+                        <button id="locateBtn" class="primary-btn">
+                            <span class="location-icon"></span> Locate Me Now
+                        </button>
+                        <button id="watchBtn" class="secondary-btn">Track Continuously</button>
+                        <button id="stopBtn" class="secondary-btn" disabled>Stop Tracking</button>
+                    </div>
+                    
+                    <div id="status" class="status warning">
+                        <span class="loading"></span> Requesting your location...
+                    </div>
+                    
+                    <div id="permissionHelp" class="permission-help" style="display: none;">
+                        <h4>Location Permission Required</h4>
+                        <p>To see your actual location in the Philippines:</p>
+                        <ul>
+                            <li>Allow location access when your browser asks</li>
+                            <li>If denied, check your browser's address bar for location icon</li>
+                            <li>Make sure location services are enabled on your device</li>
+                        </ul>
+                        <p>Click "Locate Me Now" to try again.</p>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h3>How It Works</h3>
+                    <p>This page uses your browser's Geolocation API to determine your position. Click "Locate Me Now" to find your current location.</p>
+                    <p>Your location data never leaves your browser and is not stored or sent to any server.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Live Location Map Tracker | Uses OpenStreetMap and Leaflet.js | Location data is processed locally in your browser</p>
+    </div>
+
+    <script>
+        // Initialize variables
+        let map = null;
+        let userMarker = null;
+        let accuracyCircle = null;
+        let watchId = null;
+        let isTracking = false;
+        
+        // DOM elements
+        const latitudeElement = document.getElementById('latitude');
+        const longitudeElement = document.getElementById('longitude');
+        const accuracyElement = document.getElementById('accuracy');
+        const lastUpdateElement = document.getElementById('lastUpdate');
+        const accuracyValueElement = document.getElementById('accuracyValue');
+        const accuracyMarkerElement = document.getElementById('accuracyMarker');
+        const statusElement = document.getElementById('status');
+        const permissionHelpElement = document.getElementById('permissionHelp');
+        const locateBtn = document.getElementById('locateBtn');
+        const watchBtn = document.getElementById('watchBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        
+        // Initialize the map - Use Philippines as default instead of London
+        function initMap() {
+            // Default center - Philippines (Manila area)
+            const defaultCenter = [12.8797, 121.7740];
+            
+            // Create map
+            map = L.map('map').setView(defaultCenter, 6);
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Add a default marker
+            userMarker = L.marker(defaultCenter).addTo(map)
+                .bindPopup('Default location: Philippines<br>Click "Locate Me Now" to find your exact position')
+                .openPopup();
+            
+            // Add accuracy circle
+            accuracyCircle = L.circle(defaultCenter, {
+                color: '#4a90e2',
+                fillColor: '#4a90e2',
+                fillOpacity: 0.1,
+                radius: 100000
+            }).addTo(map);
+            
+            // Try to get user's location immediately
+            setTimeout(getCurrentLocation, 500);
+        }
+        
+        // Update the map with user's location
+        function updateLocation(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+            
+            // Update display elements
+            latitudeElement.textContent = lat.toFixed(6);
+            longitudeElement.textContent = lng.toFixed(6);
+            accuracyElement.textContent = `${Math.round(accuracy)} meters`;
+            accuracyValueElement.textContent = `${Math.round(accuracy)} meters`;
+            
+            const now = new Date();
+            lastUpdateElement.textContent = now.toLocaleTimeString();
+            
+            // Update accuracy indicator (0-100 meters, with 100 being low accuracy)
+            const accuracyPercent = Math.min(accuracy, 100) / 100;
+            const markerPosition = accuracyPercent * 100;
+            accuracyMarkerElement.style.left = `${markerPosition}%`;
+            
+            // Center map on user's location
+            map.setView([lat, lng], 15);
+            
+            // Update or create marker
+            if (userMarker) {
+                userMarker.setLatLng([lat, lng]);
+            } else {
+                userMarker = L.marker([lat, lng]).addTo(map);
+            }
+            
+            // Update marker popup
+            userMarker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>You are here!</strong><br>
+                    Latitude: ${lat.toFixed(6)}<br>
+                    Longitude: ${lng.toFixed(6)}<br>
+                    Accuracy: ${Math.round(accuracy)} meters
+                </div>
+            `).openPopup();
+            
+            // Update accuracy circle
+            if (accuracyCircle) {
+                accuracyCircle.setLatLng([lat, lng]);
+                accuracyCircle.setRadius(accuracy);
+            } else {
+                accuracyCircle = L.circle([lat, lng], {
+                    color: '#4a90e2',
+                    fillColor: '#4a90e2',
+                    fillOpacity: 0.1,
+                    radius: accuracy
+                }).addTo(map);
+            }
+            
+            // Add pulsing effect to location icon
+            const locationIcon = document.querySelector('.location-icon');
+            if (!locationIcon.querySelector('.pulse-ring')) {
+                const pulseRing = document.createElement('div');
+                pulseRing.className = 'pulse-ring';
+                locationIcon.appendChild(pulseRing);
+            }
+            
+            updateStatus(`Location found! You're at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
+            permissionHelpElement.style.display = 'none';
+        }
+        
+        // Handle geolocation errors
+        function handleLocationError(error) {
+            let errorMessage = "Unable to retrieve your location.";
+            
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = "Location permission denied. Please allow location access to see where you are.";
+                    permissionHelpElement.style.display = 'block';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = "Location information is unavailable. Check if your device has location services enabled.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = "Location request timed out. Please try again.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMessage = "An unknown error occurred. Please refresh the page and try again.";
+                    break;
+            }
+            
+            updateStatus(errorMessage, 'error');
+            
+            // If we're tracking, stop tracking
+            if (isTracking) {
+                stopTracking();
+            }
+        }
+        
+        // Get current location once
+        function getCurrentLocation() {
+            if (!navigator.geolocation) {
+                updateStatus("Geolocation is not supported by your browser. Try a modern browser like Chrome, Firefox, or Edge.", 'error');
+                permissionHelpElement.style.display = 'block';
+                return;
+            }
+            
+            updateStatus("<span class='loading'></span> Getting your location...", 'warning');
+            
+            // Try with high accuracy first, fall back to regular accuracy
+            navigator.geolocation.getCurrentPosition(
+                updateLocation,
+                function(error) {
+                    // If high accuracy fails, try with lower accuracy
+                    if (error.code === error.TIMEOUT) {
+                        updateStatus("<span class='loading'></span> Trying with standard accuracy...", 'warning');
+                        navigator.geolocation.getCurrentPosition(
+                            updateLocation,
+                            handleLocationError,
+                            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                        );
+                    } else {
+                        handleLocationError(error);
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+        
+        // Start continuous tracking
+        function startTracking() {
+            if (!navigator.geolocation) {
+                updateStatus("Geolocation is not supported by your browser.", 'error');
+                return;
+            }
+            
+            updateStatus("Starting continuous tracking...", 'success');
+            
+            // Stop any existing tracking
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            
+            watchId = navigator.geolocation.watchPosition(
+                updateLocation,
+                handleLocationError,
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+            
+            isTracking = true;
+            watchBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            updateStatus("Tracking active. Your location will update as you move.", 'success');
+        }
+        
+        // Stop continuous tracking
+        function stopTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            isTracking = false;
+            watchBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            updateStatus("Tracking stopped.", 'success');
+        }
+        
+        // Update status message
+        function updateStatus(message, type) {
+            statusElement.innerHTML = message;
+            statusElement.className = `status ${type}`;
+            statusElement.style.display = 'block';
+        }
+        
+        // Event listeners
+        locateBtn.addEventListener('click', function() {
+            locateBtn.innerHTML = '<span class="loading"></span> Locating...';
+            getCurrentLocation();
+            setTimeout(() => {
+                locateBtn.innerHTML = '<span class="location-icon"></span> Locate Me Now';
+            }, 2000);
+        });
+        
+        watchBtn.addEventListener('click', startTracking);
+        stopBtn.addEventListener('click', stopTracking);
+        
+        // Initialize the map when page loads
+        document.addEventListener('DOMContentLoaded', initMap);
+        
+        // Add a manual trigger for browsers that block automatic location requests
+        window.addEventListener('load', function() {
+            // Some browsers require a user gesture for location access
+            // So we'll show instructions instead of auto-requesting
+            setTimeout(function() {
+                if (latitudeElement.textContent === '--') {
+                    updateStatus('Click "Locate Me Now" to find your position in the Philippines', 'warning');
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

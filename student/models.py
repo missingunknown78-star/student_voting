@@ -16,33 +16,32 @@ class Student(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(200))
 
-    # keep existing string field for backward compatibility
+    # backward compatibility
     course = db.Column(db.String(100))
 
-    # relational fields (UNCHANGED)
+    # relational fields
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
 
     birth_date = db.Column(db.Date)
     id_number = db.Column(db.String(50), unique=True)
 
-    # 🔐 BIOMETRIC / WEBAUTHN FIELDS (FIXED TYPES ONLY)
+    # BIOMETRIC / WEBAUTHN
     passkey_id = db.Column(db.LargeBinary)
     public_key = db.Column(db.LargeBinary)
     sign_count = db.Column(db.Integer, default=0)
 
-    # REQUIRED for WebAuthn challenge
+    # WebAuthn challenge
     current_challenge = db.Column(db.LargeBinary)
+
+    # 🔐 Forgot Password Token
+    reset_token = db.Column(db.String(100), nullable=True)
 
     user_type = "student"
 
-    # Relationships (UNCHANGED)
+    # Relationships
     department = db.relationship('Department', backref='students')
-    course_rel = db.relationship(
-        'Course',
-        backref='students'
-    )  # renamed to avoid conflict with string field
-
+    course_rel = db.relationship('Course', backref='students')
 
 
 # ------------------- VOTE -------------------
@@ -67,6 +66,11 @@ class LoginHistory(db.Model):
     device = db.Column(db.String(255))
     ip_address = db.Column(db.String(50))
     browser = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    region = db.Column(db.String(100))
+    country = db.Column(db.String(100))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("Student", backref="login_histories")
