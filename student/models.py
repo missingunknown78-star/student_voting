@@ -74,3 +74,14 @@ class LoginHistory(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("Student", backref="login_histories")
+
+
+
+
+
+
+
+
+
+
+
