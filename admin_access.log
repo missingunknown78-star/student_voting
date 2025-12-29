@@ -1152,3 +1152,361 @@
 2025-12-29 17:35:40,742 - 127.0.0.1 - - [29/Dec/2025 17:35:40] "GET /student/login HTTP/1.1" 200 -
 2025-12-29 17:35:41,793 - 127.0.0.1 - - [29/Dec/2025 17:35:41] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
 2025-12-29 17:35:41,802 - 127.0.0.1 - - [29/Dec/2025 17:35:41] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 17:40:44,401 - 127.0.0.1 - - [29/Dec/2025 17:40:44] "GET /student/profile HTTP/1.1" 200 -
+2025-12-29 17:40:45,259 - 127.0.0.1 - - [29/Dec/2025 17:40:45] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 17:40:45,531 - 127.0.0.1 - - [29/Dec/2025 17:40:45] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 17:40:45,540 - 127.0.0.1 - - [29/Dec/2025 17:40:45] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 17:40:45,543 - 127.0.0.1 - - [29/Dec/2025 17:40:45] "[36mGET /student/static/css/profile.css HTTP/1.1[0m" 304 -
+2025-12-29 17:54:38,420 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\models.py', reloading
+2025-12-29 17:54:39,152 -  * Restarting with stat
+2025-12-29 17:54:42,842 -  * Debugger is active!
+2025-12-29 17:54:42,842 -  * Debugger PIN: 140-881-099
+2025-12-29 17:56:02,457 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 17:56:02,763 -  * Restarting with stat
+2025-12-29 17:56:05,358 -  * Debugger is active!
+2025-12-29 17:56:05,359 -  * Debugger PIN: 140-881-099
+2025-12-29 18:00:10,567 - 127.0.0.1 - - [29/Dec/2025 18:00:10] "[32mGET /student/help HTTP/1.1[0m" 302 -
+2025-12-29 18:00:11,590 - 127.0.0.1 - - [29/Dec/2025 18:00:11] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:00:12,365 - 127.0.0.1 - - [29/Dec/2025 18:00:12] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:00:12,555 - 127.0.0.1 - - [29/Dec/2025 18:00:12] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:00:13,609 - 127.0.0.1 - - [29/Dec/2025 18:00:13] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-12-29 18:00:24,967 - 127.0.0.1 - - [29/Dec/2025 18:00:24] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:00:26,045 - 127.0.0.1 - - [29/Dec/2025 18:00:26] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:00:27,025 - 127.0.0.1 - - [29/Dec/2025 18:00:27] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:00:27,275 - 127.0.0.1 - - [29/Dec/2025 18:00:27] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:00:27,279 - 127.0.0.1 - - [29/Dec/2025 18:00:27] "GET /student/static/css/dashboard.css HTTP/1.1" 200 -
+2025-12-29 18:00:30,234 - 127.0.0.1 - - [29/Dec/2025 18:00:30] "[35m[1mGET /student/login-history HTTP/1.1[0m" 500 -
+2025-12-29 18:00:31,221 - 127.0.0.1 - - [29/Dec/2025 18:00:31] "GET /student/login-history?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 200 -
+2025-12-29 18:00:31,226 - 127.0.0.1 - - [29/Dec/2025 18:00:31] "GET /student/login-history?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 200 -
+2025-12-29 18:00:32,195 - 127.0.0.1 - - [29/Dec/2025 18:00:32] "GET /student/login-history?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+2025-12-29 18:00:45,595 - 127.0.0.1 - - [29/Dec/2025 18:00:45] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:00:46,395 - 127.0.0.1 - - [29/Dec/2025 18:00:46] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:00:47,276 - 127.0.0.1 - - [29/Dec/2025 18:00:47] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:00:47,280 - 127.0.0.1 - - [29/Dec/2025 18:00:47] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:00:47,515 - 127.0.0.1 - - [29/Dec/2025 18:00:47] "GET /student/static/css/dashboard.css HTTP/1.1" 200 -
+2025-12-29 18:00:50,022 - 127.0.0.1 - - [29/Dec/2025 18:00:50] "[35m[1mGET /student/login-history HTTP/1.1[0m" 500 -
+2025-12-29 18:00:50,851 - 127.0.0.1 - - [29/Dec/2025 18:00:50] "[36mGET /student/login-history?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-12-29 18:00:50,857 - 127.0.0.1 - - [29/Dec/2025 18:00:50] "[36mGET /student/login-history?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-12-29 18:00:51,962 - 127.0.0.1 - - [29/Dec/2025 18:00:51] "[36mGET /student/login-history?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-12-29 18:01:23,011 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 18:01:23,722 -  * Restarting with stat
+2025-12-29 18:01:27,482 -  * Debugger is active!
+2025-12-29 18:01:27,482 -  * Debugger PIN: 140-881-099
+2025-12-29 18:01:27,745 - 127.0.0.1 - - [29/Dec/2025 18:01:27] "[35m[1mGET /student/login-history HTTP/1.1[0m" 500 -
+2025-12-29 18:01:28,557 - 127.0.0.1 - - [29/Dec/2025 18:01:28] "[36mGET /student/login-history?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-12-29 18:01:28,572 - 127.0.0.1 - - [29/Dec/2025 18:01:28] "[36mGET /student/login-history?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-12-29 18:01:29,483 - 127.0.0.1 - - [29/Dec/2025 18:01:29] "[36mGET /student/login-history?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-12-29 18:02:34,893 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 18:02:35,180 -  * Restarting with stat
+2025-12-29 18:02:38,365 -  * Debugger is active!
+2025-12-29 18:02:38,381 -  * Debugger PIN: 140-881-099
+2025-12-29 18:02:47,755 - 127.0.0.1 - - [29/Dec/2025 18:02:47] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:02:48,555 - 127.0.0.1 - - [29/Dec/2025 18:02:48] "GET /student/static/css/login_history.css HTTP/1.1" 200 -
+2025-12-29 18:02:48,805 - 127.0.0.1 - - [29/Dec/2025 18:02:48] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:02:48,807 - 127.0.0.1 - - [29/Dec/2025 18:02:48] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:02:54,704 - 127.0.0.1 - - [29/Dec/2025 18:02:54] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:02:55,757 - 127.0.0.1 - - [29/Dec/2025 18:02:55] "GET /student/static/css/login_history.css HTTP/1.1" 200 -
+2025-12-29 18:02:55,761 - 127.0.0.1 - - [29/Dec/2025 18:02:55] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:02:55,764 - 127.0.0.1 - - [29/Dec/2025 18:02:55] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:04,423 - Unauthorized admin access attempt from IP: 127.0.0.1
+2025-12-29 18:05:04,423 - 127.0.0.1 - - [29/Dec/2025 18:05:04] "[32mGET /admin/students HTTP/1.1[0m" 302 -
+2025-12-29 18:05:05,185 - 127.0.0.1 - - [29/Dec/2025 18:05:05] "GET /admin/login HTTP/1.1" 200 -
+2025-12-29 18:05:05,962 - 127.0.0.1 - - [29/Dec/2025 18:05:05] "[36mGET /admin/static/css/admin_login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:05,966 - 127.0.0.1 - - [29/Dec/2025 18:05:05] "[36mGET /admin/static/images/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:05:13,682 - 127.0.0.1 - - [29/Dec/2025 18:05:13] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 18:05:14,493 - 127.0.0.1 - - [29/Dec/2025 18:05:14] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:05:15,468 - 127.0.0.1 - - [29/Dec/2025 18:05:15] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:05:15,726 - 127.0.0.1 - - [29/Dec/2025 18:05:15] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:25,370 - 127.0.0.1 - - [29/Dec/2025 18:05:25] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:05:26,596 - 127.0.0.1 - - [29/Dec/2025 18:05:26] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:05:27,469 - 127.0.0.1 - - [29/Dec/2025 18:05:27] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:27,727 - 127.0.0.1 - - [29/Dec/2025 18:05:27] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:27,731 - 127.0.0.1 - - [29/Dec/2025 18:05:27] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:05:31,002 - 127.0.0.1 - - [29/Dec/2025 18:05:31] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:05:32,098 - 127.0.0.1 - - [29/Dec/2025 18:05:32] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:32,116 - 127.0.0.1 - - [29/Dec/2025 18:05:32] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:05:32,118 - 127.0.0.1 - - [29/Dec/2025 18:05:32] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:09:32,810 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 18:09:33,104 -  * Restarting with stat
+2025-12-29 18:09:35,713 -  * Debugger is active!
+2025-12-29 18:09:35,713 -  * Debugger PIN: 140-881-099
+2025-12-29 18:11:41,150 - 127.0.0.1 - - [29/Dec/2025 18:11:41] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:11:42,557 - 127.0.0.1 - - [29/Dec/2025 18:11:42] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:11:42,563 - 127.0.0.1 - - [29/Dec/2025 18:11:42] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:11:42,566 - 127.0.0.1 - - [29/Dec/2025 18:11:42] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:11:53,702 - 127.0.0.1 - - [29/Dec/2025 18:11:53] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 18:11:54,803 - 127.0.0.1 - - [29/Dec/2025 18:11:54] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:11:56,013 - 127.0.0.1 - - [29/Dec/2025 18:11:56] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:11:56,020 - 127.0.0.1 - - [29/Dec/2025 18:11:56] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:12:06,184 - 127.0.0.1 - - [29/Dec/2025 18:12:06] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:12:07,199 - 127.0.0.1 - - [29/Dec/2025 18:12:07] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:12:08,252 - 127.0.0.1 - - [29/Dec/2025 18:12:08] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:12:08,497 - 127.0.0.1 - - [29/Dec/2025 18:12:08] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:12:08,500 - 127.0.0.1 - - [29/Dec/2025 18:12:08] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:12:18,843 - 127.0.0.1 - - [29/Dec/2025 18:12:18] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 18:12:23,397 - 127.0.0.1 - - [29/Dec/2025 18:12:23] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:12:24,419 - 127.0.0.1 - - [29/Dec/2025 18:12:24] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:12:24,575 - 127.0.0.1 - - [29/Dec/2025 18:12:24] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:12:24,576 - 127.0.0.1 - - [29/Dec/2025 18:12:24] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:13:29,220 - 127.0.0.1 - - [29/Dec/2025 18:13:29] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 18:13:29,973 - 127.0.0.1 - - [29/Dec/2025 18:13:29] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:13:30,761 - 127.0.0.1 - - [29/Dec/2025 18:13:30] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:13:31,005 - 127.0.0.1 - - [29/Dec/2025 18:13:31] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:13:40,528 - 127.0.0.1 - - [29/Dec/2025 18:13:40] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:13:41,296 - 127.0.0.1 - - [29/Dec/2025 18:13:41] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:13:42,123 - 127.0.0.1 - - [29/Dec/2025 18:13:42] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:13:42,378 - 127.0.0.1 - - [29/Dec/2025 18:13:42] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:13:42,381 - 127.0.0.1 - - [29/Dec/2025 18:13:42] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:13:47,002 - 127.0.0.1 - - [29/Dec/2025 18:13:47] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 18:13:50,867 - 127.0.0.1 - - [29/Dec/2025 18:13:50] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:13:51,707 - 127.0.0.1 - - [29/Dec/2025 18:13:51] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:13:51,799 - 127.0.0.1 - - [29/Dec/2025 18:13:51] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:13:51,953 - 127.0.0.1 - - [29/Dec/2025 18:13:51] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:15:44,798 - 127.0.0.1 - - [29/Dec/2025 18:15:44] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:15:45,852 - 127.0.0.1 - - [29/Dec/2025 18:15:45] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:15:45,878 - 127.0.0.1 - - [29/Dec/2025 18:15:45] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:15:45,883 - 127.0.0.1 - - [29/Dec/2025 18:15:45] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:15:59,736 - 127.0.0.1 - - [29/Dec/2025 18:15:59] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:15:59,744 - 127.0.0.1 - - [29/Dec/2025 18:15:59] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:16:08,756 - 127.0.0.1 - - [29/Dec/2025 18:16:08] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:16:10,387 - 127.0.0.1 - - [29/Dec/2025 18:16:10] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:16:10,398 - 127.0.0.1 - - [29/Dec/2025 18:16:10] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:16:10,398 - 127.0.0.1 - - [29/Dec/2025 18:16:10] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:18:09,210 - 127.0.0.1 - - [29/Dec/2025 18:18:09] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:18:10,035 - 127.0.0.1 - - [29/Dec/2025 18:18:10] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:18:10,295 - 127.0.0.1 - - [29/Dec/2025 18:18:10] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:18:10,303 - 127.0.0.1 - - [29/Dec/2025 18:18:10] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:19:10,727 - 127.0.0.1 - - [29/Dec/2025 18:19:10] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:19:11,669 - 127.0.0.1 - - [29/Dec/2025 18:19:11] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:19:11,738 - 127.0.0.1 - - [29/Dec/2025 18:19:11] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:19:11,743 - 127.0.0.1 - - [29/Dec/2025 18:19:11] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:19:14,587 - 127.0.0.1 - - [29/Dec/2025 18:19:14] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:19:15,451 - 127.0.0.1 - - [29/Dec/2025 18:19:15] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:19:15,456 - 127.0.0.1 - - [29/Dec/2025 18:19:15] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:19:15,769 - 127.0.0.1 - - [29/Dec/2025 18:19:15] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:19:17,156 - 127.0.0.1 - - [29/Dec/2025 18:19:17] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 18:19:17,635 - 127.0.0.1 - - [29/Dec/2025 18:19:17] "GET /student/webauthn/register/options?username=Carling HTTP/1.1" 200 -
+2025-12-29 18:19:41,981 - 127.0.0.1 - - [29/Dec/2025 18:19:41] "POST /student/webauthn/register/verify HTTP/1.1" 200 -
+2025-12-29 18:22:06,349 - 127.0.0.1 - - [29/Dec/2025 18:22:06] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:22:07,210 - 127.0.0.1 - - [29/Dec/2025 18:22:07] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:22:07,238 - 127.0.0.1 - - [29/Dec/2025 18:22:07] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:22:07,466 - 127.0.0.1 - - [29/Dec/2025 18:22:07] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:24:34,992 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 18:24:35,465 -  * Restarting with stat
+2025-12-29 18:24:38,399 -  * Debugger is active!
+2025-12-29 18:24:38,407 -  * Debugger PIN: 140-881-099
+2025-12-29 18:24:45,198 - 127.0.0.1 - - [29/Dec/2025 18:24:45] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:24:46,078 - 127.0.0.1 - - [29/Dec/2025 18:24:46] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:24:46,333 - 127.0.0.1 - - [29/Dec/2025 18:24:46] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:24:46,338 - 127.0.0.1 - - [29/Dec/2025 18:24:46] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:25:16,473 - 127.0.0.1 - - [29/Dec/2025 18:25:16] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:25:17,310 - 127.0.0.1 - - [29/Dec/2025 18:25:17] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:25:17,569 - 127.0.0.1 - - [29/Dec/2025 18:25:17] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:25:17,572 - 127.0.0.1 - - [29/Dec/2025 18:25:17] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:25:17,573 - 127.0.0.1 - - [29/Dec/2025 18:25:17] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:25:21,831 - 127.0.0.1 - - [29/Dec/2025 18:25:21] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 18:25:22,622 - 127.0.0.1 - - [29/Dec/2025 18:25:22] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:25:23,599 - 127.0.0.1 - - [29/Dec/2025 18:25:23] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:25:23,622 - 127.0.0.1 - - [29/Dec/2025 18:25:23] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:25:32,571 - 127.0.0.1 - - [29/Dec/2025 18:25:32] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:25:33,409 - 127.0.0.1 - - [29/Dec/2025 18:25:33] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:25:34,323 - 127.0.0.1 - - [29/Dec/2025 18:25:34] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:25:34,361 - 127.0.0.1 - - [29/Dec/2025 18:25:34] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:25:34,580 - 127.0.0.1 - - [29/Dec/2025 18:25:34] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:28:24,766 - 127.0.0.1 - - [29/Dec/2025 18:28:24] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:28:25,634 - 127.0.0.1 - - [29/Dec/2025 18:28:25] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:28:25,905 - 127.0.0.1 - - [29/Dec/2025 18:28:25] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:28:25,906 - 127.0.0.1 - - [29/Dec/2025 18:28:25] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:29:51,317 - 127.0.0.1 - - [29/Dec/2025 18:29:51] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:29:52,198 - 127.0.0.1 - - [29/Dec/2025 18:29:52] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:29:52,437 - 127.0.0.1 - - [29/Dec/2025 18:29:52] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:29:52,442 - 127.0.0.1 - - [29/Dec/2025 18:29:52] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:29:55,810 - 127.0.0.1 - - [29/Dec/2025 18:29:55] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:29:56,712 - 127.0.0.1 - - [29/Dec/2025 18:29:56] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:29:56,919 - 127.0.0.1 - - [29/Dec/2025 18:29:56] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:29:56,924 - 127.0.0.1 - - [29/Dec/2025 18:29:56] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:29:56,926 - 127.0.0.1 - - [29/Dec/2025 18:29:56] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:30:06,033 - 127.0.0.1 - - [29/Dec/2025 18:30:06] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:30:07,324 - 127.0.0.1 - - [29/Dec/2025 18:30:07] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:30:07,331 - 127.0.0.1 - - [29/Dec/2025 18:30:07] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:30:07,578 - 127.0.0.1 - - [29/Dec/2025 18:30:07] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:30:10,563 - 127.0.0.1 - - [29/Dec/2025 18:30:10] "GET /student/webauthn/register/options?username=Carling HTTP/1.1" 200 -
+2025-12-29 18:30:21,525 - 127.0.0.1 - - [29/Dec/2025 18:30:21] "POST /student/webauthn/register/verify HTTP/1.1" 200 -
+2025-12-29 18:33:25,523 - 127.0.0.1 - - [29/Dec/2025 18:33:25] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:33:26,410 - 127.0.0.1 - - [29/Dec/2025 18:33:26] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:33:26,414 - 127.0.0.1 - - [29/Dec/2025 18:33:26] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:33:26,653 - 127.0.0.1 - - [29/Dec/2025 18:33:26] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:33:26,666 - 127.0.0.1 - - [29/Dec/2025 18:33:26] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:33:53,424 - 127.0.0.1 - - [29/Dec/2025 18:33:53] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 18:33:54,238 - 127.0.0.1 - - [29/Dec/2025 18:33:54] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:33:55,265 - 127.0.0.1 - - [29/Dec/2025 18:33:55] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:33:55,519 - 127.0.0.1 - - [29/Dec/2025 18:33:55] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:07,604 - 127.0.0.1 - - [29/Dec/2025 18:34:07] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:34:08,528 - 127.0.0.1 - - [29/Dec/2025 18:34:08] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:34:09,494 - 127.0.0.1 - - [29/Dec/2025 18:34:09] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:09,747 - 127.0.0.1 - - [29/Dec/2025 18:34:09] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:34:09,755 - 127.0.0.1 - - [29/Dec/2025 18:34:09] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:15,056 - 127.0.0.1 - - [29/Dec/2025 18:34:15] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 18:34:15,938 - 127.0.0.1 - - [29/Dec/2025 18:34:15] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:34:16,763 - 127.0.0.1 - - [29/Dec/2025 18:34:16] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:17,036 - 127.0.0.1 - - [29/Dec/2025 18:34:17] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:34:17,043 - 127.0.0.1 - - [29/Dec/2025 18:34:17] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:17,046 - 127.0.0.1 - - [29/Dec/2025 18:34:17] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:42,739 - 127.0.0.1 - - [29/Dec/2025 18:34:42] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 18:34:43,520 - 127.0.0.1 - - [29/Dec/2025 18:34:43] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 18:34:44,398 - 127.0.0.1 - - [29/Dec/2025 18:34:44] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:34:44,399 - 127.0.0.1 - - [29/Dec/2025 18:34:44] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:54,713 - 127.0.0.1 - - [29/Dec/2025 18:34:54] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 18:34:55,516 - 127.0.0.1 - - [29/Dec/2025 18:34:55] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 18:34:56,384 - 127.0.0.1 - - [29/Dec/2025 18:34:56] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:56,394 - 127.0.0.1 - - [29/Dec/2025 18:34:56] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:34:56,663 - 127.0.0.1 - - [29/Dec/2025 18:34:56] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:35:02,418 - 127.0.0.1 - - [29/Dec/2025 18:35:02] "GET /student/login-history HTTP/1.1" 200 -
+2025-12-29 18:35:03,466 - 127.0.0.1 - - [29/Dec/2025 18:35:03] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 18:35:03,478 - 127.0.0.1 - - [29/Dec/2025 18:35:03] "[36mGET /student/static/css/login_history.css HTTP/1.1[0m" 304 -
+2025-12-29 18:35:03,722 - 127.0.0.1 - - [29/Dec/2025 18:35:03] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 18:35:03,730 - 127.0.0.1 - - [29/Dec/2025 18:35:03] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 19:00:42,443 - 127.0.0.1 - - [29/Dec/2025 19:00:42] "GET /admin/login HTTP/1.1" 200 -
+2025-12-29 19:00:43,516 - 127.0.0.1 - - [29/Dec/2025 19:00:43] "[36mGET /admin/static/css/admin_login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:00:43,772 - 127.0.0.1 - - [29/Dec/2025 19:00:43] "[36mGET /admin/static/images/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:03:49,308 - 127.0.0.1 - - [29/Dec/2025 19:03:49] "[32mGET /student/login-history HTTP/1.1[0m" 302 -
+2025-12-29 19:03:50,021 - 127.0.0.1 - - [29/Dec/2025 19:03:50] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:03:50,802 - 127.0.0.1 - - [29/Dec/2025 19:03:50] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:03:51,038 - 127.0.0.1 - - [29/Dec/2025 19:03:51] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:04:05,282 - 127.0.0.1 - - [29/Dec/2025 19:04:05] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 19:04:06,068 - 127.0.0.1 - - [29/Dec/2025 19:04:06] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:04:06,973 - 127.0.0.1 - - [29/Dec/2025 19:04:06] "GET /student/static/css/dashboard.css HTTP/1.1" 200 -
+2025-12-29 19:04:06,977 - 127.0.0.1 - - [29/Dec/2025 19:04:06] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:04:07,259 - 127.0.0.1 - - [29/Dec/2025 19:04:07] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:04:17,891 - 127.0.0.1 - - [29/Dec/2025 19:04:17] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:04:45,556 - 127.0.0.1 - - [29/Dec/2025 19:04:45] "[32mGET /student/dashboard HTTP/1.1[0m" 302 -
+2025-12-29 19:04:46,532 - 127.0.0.1 - - [29/Dec/2025 19:04:46] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:04:47,592 - 127.0.0.1 - - [29/Dec/2025 19:04:47] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:04:47,610 - 127.0.0.1 - - [29/Dec/2025 19:04:47] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:04:51,307 - 127.0.0.1 - - [29/Dec/2025 19:04:51] "GET /student/webauthn/login/options HTTP/1.1" 200 -
+2025-12-29 19:04:58,433 - 127.0.0.1 - - [29/Dec/2025 19:04:58] "[31m[1mPOST /student/webauthn/login/verify HTTP/1.1[0m" 400 -
+2025-12-29 19:05:05,831 - 127.0.0.1 - - [29/Dec/2025 19:05:05] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:05:06,697 - 127.0.0.1 - - [29/Dec/2025 19:05:06] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:05:06,928 - 127.0.0.1 - - [29/Dec/2025 19:05:06] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:05:09,838 - 127.0.0.1 - - [29/Dec/2025 19:05:09] "GET /student/webauthn/login/options HTTP/1.1" 200 -
+2025-12-29 19:05:15,047 - 127.0.0.1 - - [29/Dec/2025 19:05:15] "POST /student/webauthn/login/verify HTTP/1.1" 200 -
+2025-12-29 19:05:16,964 - 127.0.0.1 - - [29/Dec/2025 19:05:16] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:05:17,948 - 127.0.0.1 - - [29/Dec/2025 19:05:17] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:05:17,956 - 127.0.0.1 - - [29/Dec/2025 19:05:17] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:05:18,375 - 127.0.0.1 - - [29/Dec/2025 19:05:18] "GET /student/static/css/dashboard.css HTTP/1.1" 200 -
+2025-12-29 19:05:20,714 - 127.0.0.1 - - [29/Dec/2025 19:05:20] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:05:32,713 - 127.0.0.1 - - [29/Dec/2025 19:05:32] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:05:33,623 - 127.0.0.1 - - [29/Dec/2025 19:05:33] "GET /student/static/css/dashboard.css HTTP/1.1" 200 -
+2025-12-29 19:05:33,646 - 127.0.0.1 - - [29/Dec/2025 19:05:33] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:05:34,013 - 127.0.0.1 - - [29/Dec/2025 19:05:34] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:05:35,128 - 127.0.0.1 - - [29/Dec/2025 19:05:35] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:05:49,865 - 127.0.0.1 - - [29/Dec/2025 19:05:49] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 19:05:50,822 - 127.0.0.1 - - [29/Dec/2025 19:05:50] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:05:51,616 - 127.0.0.1 - - [29/Dec/2025 19:05:51] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:05:51,623 - 127.0.0.1 - - [29/Dec/2025 19:05:51] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:05:53,665 - 127.0.0.1 - - [29/Dec/2025 19:05:53] "GET /student/webauthn/login/options HTTP/1.1" 200 -
+2025-12-29 19:06:12,158 - 127.0.0.1 - - [29/Dec/2025 19:06:12] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:06:12,915 - 127.0.0.1 - - [29/Dec/2025 19:06:12] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:06:13,220 - 127.0.0.1 - - [29/Dec/2025 19:06:13] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:06:14,756 - 127.0.0.1 - - [29/Dec/2025 19:06:14] "GET /student/webauthn/login/options HTTP/1.1" 200 -
+2025-12-29 19:06:19,511 - 127.0.0.1 - - [29/Dec/2025 19:06:19] "[31m[1mPOST /student/webauthn/login/verify HTTP/1.1[0m" 400 -
+2025-12-29 19:06:55,298 - 127.0.0.1 - - [29/Dec/2025 19:06:55] "[32mPOST /student/login HTTP/1.1[0m" 302 -
+2025-12-29 19:06:56,304 - 127.0.0.1 - - [29/Dec/2025 19:06:56] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:06:57,206 - 127.0.0.1 - - [29/Dec/2025 19:06:57] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 19:06:57,445 - 127.0.0.1 - - [29/Dec/2025 19:06:57] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:06:57,446 - 127.0.0.1 - - [29/Dec/2025 19:06:57] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:06:59,576 - 127.0.0.1 - - [29/Dec/2025 19:06:59] "GET /student/webauthn/register/options?username=Carling HTTP/1.1" 200 -
+2025-12-29 19:06:59,605 - 127.0.0.1 - - [29/Dec/2025 19:06:59] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:07:04,856 - 127.0.0.1 - - [29/Dec/2025 19:07:04] "POST /student/webauthn/register/verify HTTP/1.1" 200 -
+2025-12-29 19:07:08,925 - 127.0.0.1 - - [29/Dec/2025 19:07:08] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 19:07:09,741 - 127.0.0.1 - - [29/Dec/2025 19:07:09] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:07:10,523 - 127.0.0.1 - - [29/Dec/2025 19:07:10] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:07:10,525 - 127.0.0.1 - - [29/Dec/2025 19:07:10] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:12,567 - 127.0.0.1 - - [29/Dec/2025 19:07:12] "GET /student/webauthn/login/options HTTP/1.1" 200 -
+2025-12-29 19:07:17,364 - 127.0.0.1 - - [29/Dec/2025 19:07:17] "POST /student/webauthn/login/verify HTTP/1.1" 200 -
+2025-12-29 19:07:19,270 - 127.0.0.1 - - [29/Dec/2025 19:07:19] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:07:20,125 - 127.0.0.1 - - [29/Dec/2025 19:07:20] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:20,358 - 127.0.0.1 - - [29/Dec/2025 19:07:20] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:20,365 - 127.0.0.1 - - [29/Dec/2025 19:07:20] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:07:22,381 - 127.0.0.1 - - [29/Dec/2025 19:07:22] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:07:23,318 - 127.0.0.1 - - [29/Dec/2025 19:07:23] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 19:07:24,064 - 127.0.0.1 - - [29/Dec/2025 19:07:24] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:07:24,975 - 127.0.0.1 - - [29/Dec/2025 19:07:24] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:25,348 - 127.0.0.1 - - [29/Dec/2025 19:07:25] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:07:30,759 - 127.0.0.1 - - [29/Dec/2025 19:07:30] "GET /student/webauthn/login/options HTTP/1.1" 200 -
+2025-12-29 19:07:38,160 - 127.0.0.1 - - [29/Dec/2025 19:07:38] "POST /student/webauthn/login/verify HTTP/1.1" 200 -
+2025-12-29 19:07:39,936 - 127.0.0.1 - - [29/Dec/2025 19:07:39] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:07:40,892 - 127.0.0.1 - - [29/Dec/2025 19:07:40] "[36mGET /student/static/css/dashboard.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:41,121 - 127.0.0.1 - - [29/Dec/2025 19:07:41] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:41,135 - 127.0.0.1 - - [29/Dec/2025 19:07:41] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:07:43,244 - 127.0.0.1 - - [29/Dec/2025 19:07:43] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:07:45,450 - 127.0.0.1 - - [29/Dec/2025 19:07:45] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 19:07:46,268 - 127.0.0.1 - - [29/Dec/2025 19:07:46] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:07:47,023 - 127.0.0.1 - - [29/Dec/2025 19:07:47] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:07:47,259 - 127.0.0.1 - - [29/Dec/2025 19:07:47] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:07:58,649 - 127.0.0.1 - - [29/Dec/2025 19:07:58] "GET /student/register HTTP/1.1" 200 -
+2025-12-29 19:07:59,415 - 127.0.0.1 - - [29/Dec/2025 19:07:59] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:07:59,417 - 127.0.0.1 - - [29/Dec/2025 19:07:59] "[36mGET /student/static/css/registration.css HTTP/1.1[0m" 304 -
+2025-12-29 19:08:15,490 - 127.0.0.1 - - [29/Dec/2025 19:08:15] "GET /student/dashboard HTTP/1.1" 200 -
+2025-12-29 19:08:16,229 - 127.0.0.1 - - [29/Dec/2025 19:08:16] "[36mGET /student/static/css/sidebar.css HTTP/1.1[0m" 304 -
+2025-12-29 19:08:16,462 - 127.0.0.1 - - [29/Dec/2025 19:08:16] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:08:16,466 - 127.0.0.1 - - [29/Dec/2025 19:08:16] "GET /student/static/css/dashboard.css HTTP/1.1" 200 -
+2025-12-29 19:08:17,336 - 127.0.0.1 - - [29/Dec/2025 19:08:17] "[33mPOST /student/update-location HTTP/1.1[0m" 404 -
+2025-12-29 19:08:22,948 - 127.0.0.1 - - [29/Dec/2025 19:08:22] "[32mGET /student/logout HTTP/1.1[0m" 302 -
+2025-12-29 19:08:23,682 - 127.0.0.1 - - [29/Dec/2025 19:08:23] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:08:24,737 - 127.0.0.1 - - [29/Dec/2025 19:08:24] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:08:24,739 - 127.0.0.1 - - [29/Dec/2025 19:08:24] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:08:28,376 - 127.0.0.1 - - [29/Dec/2025 19:08:28] "GET /student/register HTTP/1.1" 200 -
+2025-12-29 19:08:29,133 - 127.0.0.1 - - [29/Dec/2025 19:08:29] "GET /student/static/css/registration.css HTTP/1.1" 200 -
+2025-12-29 19:08:29,463 - 127.0.0.1 - - [29/Dec/2025 19:08:29] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:08:56,729 - 127.0.0.1 - - [29/Dec/2025 19:08:56] "GET /student/register HTTP/1.1" 200 -
+2025-12-29 19:08:57,614 - 127.0.0.1 - - [29/Dec/2025 19:08:57] "[36mGET /student/static/css/registration.css HTTP/1.1[0m" 304 -
+2025-12-29 19:08:57,837 - 127.0.0.1 - - [29/Dec/2025 19:08:57] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:09:02,085 - 127.0.0.1 - - [29/Dec/2025 19:09:02] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:09:02,865 - 127.0.0.1 - - [29/Dec/2025 19:09:02] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:09:03,127 - 127.0.0.1 - - [29/Dec/2025 19:09:03] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:09:10,273 - 127.0.0.1 - - [29/Dec/2025 19:09:10] "GET /student/register HTTP/1.1" 200 -
+2025-12-29 19:09:11,066 - 127.0.0.1 - - [29/Dec/2025 19:09:11] "[36mGET /student/static/css/registration.css HTTP/1.1[0m" 304 -
+2025-12-29 19:09:11,300 - 127.0.0.1 - - [29/Dec/2025 19:09:11] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:12:07,258 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 19:12:07,610 -  * Restarting with stat
+2025-12-29 19:22:15,589 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-12-29 19:22:15,590 - [33mPress CTRL+C to quit[0m
+2025-12-29 19:22:15,593 -  * Restarting with stat
+2025-12-29 19:22:17,647 -  * Debugger is active!
+2025-12-29 19:22:17,661 -  * Debugger PIN: 140-881-099
+2025-12-29 19:22:21,721 - 127.0.0.1 - - [29/Dec/2025 19:22:21] "GET /student/register HTTP/1.1" 200 -
+2025-12-29 19:22:22,550 - 127.0.0.1 - - [29/Dec/2025 19:22:22] "[36mGET /student/static/css/registration.css HTTP/1.1[0m" 304 -
+2025-12-29 19:22:22,555 - 127.0.0.1 - - [29/Dec/2025 19:22:22] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:22:27,056 - 127.0.0.1 - - [29/Dec/2025 19:22:27] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:22:27,851 - 127.0.0.1 - - [29/Dec/2025 19:22:27] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:22:27,852 - 127.0.0.1 - - [29/Dec/2025 19:22:27] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:22:37,824 - 127.0.0.1 - - [29/Dec/2025 19:22:37] "POST /student/forgot-password HTTP/1.1" 200 -
+2025-12-29 19:23:11,044 - 127.0.0.1 - - [29/Dec/2025 19:23:11] "POST /student/forgot-password HTTP/1.1" 200 -
+2025-12-29 19:23:24,265 - 127.0.0.1 - - [29/Dec/2025 19:23:24] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:23:25,012 - 127.0.0.1 - - [29/Dec/2025 19:23:25] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:23:25,014 - 127.0.0.1 - - [29/Dec/2025 19:23:25] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:24:50,403 - 127.0.0.1 - - [29/Dec/2025 19:24:50] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:24:51,248 - 127.0.0.1 - - [29/Dec/2025 19:24:51] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:24:51,260 - 127.0.0.1 - - [29/Dec/2025 19:24:51] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:25:24,434 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 19:25:24,799 -  * Restarting with stat
+2025-12-29 19:25:27,578 -  * Debugger is active!
+2025-12-29 19:25:27,578 -  * Debugger PIN: 140-881-099
+2025-12-29 19:27:09,680 - 127.0.0.1 - - [29/Dec/2025 19:27:09] "GET /student/login HTTP/1.1" 200 -
+2025-12-29 19:27:10,431 - 127.0.0.1 - - [29/Dec/2025 19:27:10] "[36mGET /student/static/css/login.css HTTP/1.1[0m" 304 -
+2025-12-29 19:27:10,446 - 127.0.0.1 - - [29/Dec/2025 19:27:10] "[36mGET /student/static/image/school_logo.png HTTP/1.1[0m" 304 -
+2025-12-29 19:28:41,390 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 19:28:42,022 -  * Restarting with stat
+2025-12-29 19:28:44,836 -  * Debugger is active!
+2025-12-29 19:28:44,848 -  * Debugger PIN: 140-881-099
+2025-12-29 19:29:18,913 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading
+2025-12-29 19:29:19,189 -  * Restarting with stat
+2025-12-29 19:29:22,119 -  * Debugger is active!
+2025-12-29 19:29:22,119 -  * Debugger PIN: 140-881-099
+2025-12-29 19:29:38,577 - 127.0.0.1 - - [29/Dec/2025 19:29:38] "[35m[1mGET /student/login HTTP/1.1[0m" 500 -
+2025-12-29 19:29:39,415 - 127.0.0.1 - - [29/Dec/2025 19:29:39] "[36mGET /student/login?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-12-29 19:29:39,421 - 127.0.0.1 - - [29/Dec/2025 19:29:39] "[36mGET /student/login?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-12-29 19:29:40,904 - 127.0.0.1 - - [29/Dec/2025 19:29:40] "[36mGET /student/login?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-12-29 19:31:29,689 -  * Detected change in 'C:\\Users\\Administrator\\Desktop\\prototype\\student_voting\\student\\routes.py', reloading

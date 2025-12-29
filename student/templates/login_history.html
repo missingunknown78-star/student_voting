@@ -4,7 +4,14 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/login_history.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+#map { height: 400px; margin-bottom: 20px; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -12,6 +19,14 @@
     <h2 class="mb-4">Login History</h2>
 
     {% if history and history|length > 0 %}
+    
+    <!-- Hidden div to pass JSON to JS -->
+    <div id="login-data" style="display:none;" data-history='{{ history|tojson|safe }}'></div>
+
+    <!-- MAP -->
+    <div id="map"></div>
+
+    <!-- TABLE -->
     <div class="table-responsive history-table">
         <table class="table table-striped table-hover mb-0">
             <thead>
@@ -20,6 +35,7 @@
                     <th>Device</th>
                     <th>IP Address</th>
                     <th>Browser</th>
+                    <th>Location</th>
                     <th>Timestamp</th>
                 </tr>
             </thead>
@@ -30,16 +46,65 @@
                     <td>{{ record.device }}</td>
                     <td>{{ record.ip_address }}</td>
                     <td>{{ record.browser }}</td>
-                    <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        {{ record.city or 'Unknown' }}, {{ record.region or '' }}, {{ record.country or '' }}
+                    </td>
+                    <td>{{ record.timestamp }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
     {% else %}
     <div class="no-history">
         No login history available.
     </div>
     {% endif %}
 </div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var loginDataDiv = document.getElementById('login-data');
+if (loginDataDiv) {
+    var logins = JSON.parse(loginDataDiv.getAttribute('data-history'));
+
+    // Initialize map
+    var map = L.map('map').setView([12.8797, 121.7740], 6); // Center Philippines
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18
+    }).addTo(map);
+
+    logins.forEach(function(login) {
+        // Use GPS coordinates if available, otherwise fallback to IP-based lat/lon
+        var lat = login.latitude || login.ip_latitude || 0;
+        var lon = login.longitude || login.ip_longitude || 0;
+
+        if (lat && lon) {
+            var marker = L.marker([lat, lon]).addTo(map);
+            marker.bindPopup(
+                "<strong>Device:</strong> " + login.device + "<br>" +
+                "<strong>IP:</strong> " + login.ip_address + "<br>" +
+                "<strong>Browser:</strong> " + login.browser + "<br>" +
+                "<strong>Location:</strong> " + (login.city || 'Unknown') + ", " +
+                                             (login.region || '') + ", " +
+                                             (login.country || '') + "<br>" +
+                "<strong>Timestamp:</strong> " + login.timestamp
+            );
+        }
+    });
+
+    // Auto-fit map to markers
+    var group = new L.featureGroup(logins
+        .filter(l => (l.latitude || l.ip_latitude) && (l.longitude || l.ip_longitude))
+        .map(l => L.marker([l.latitude || l.ip_latitude, l.longitude || l.ip_longitude]))
+    );
+
+    if (group.getLayers().length > 0) {
+        map.fitBounds(group.getBounds().pad(0.5));
+    }
+}
+</script>
 {% endblock %}

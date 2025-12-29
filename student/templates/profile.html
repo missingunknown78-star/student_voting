@@ -10,16 +10,63 @@
 {% block content %}
 <div class="profile-container">
     <div class="profile-box">
+
         <h2>Your Profile</h2>
 
-        <div class="profile-info">
+        <!-- Optional Profile Photo -->
+        {% if student.profile_photo %}
+        <div class="profile-photo">
+            <img src="{{ url_for('student.static', filename='uploads/' ~ student.profile_photo) }}" alt="Profile Photo">
+        </div>
+        {% endif %}
+
+        <!-- Personal Info -->
+        <div class="profile-section">
+            <h3>Personal Info</h3>
             <p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
             <p><strong>Email:</strong> {{ student.email }}</p>
             <p><strong>Student ID:</strong> {{ student.id_number }}</p>
             <p><strong>Course:</strong> {{ student.course }}</p>
+            {% if student.year_level %}
+            <p><strong>Year Level:</strong> {{ student.year_level }}</p>
+            {% endif %}
+            {% if student.section %}
+            <p><strong>Section:</strong> {{ student.section }}</p>
+            {% endif %}
         </div>
 
-        <hr class="profile-divider">
+        <!-- Academic Info -->
+        <div class="profile-section">
+            <h3>Academic Info</h3>
+            {% if student.status %}
+            <p><strong>Enrollment Status:</strong> {{ student.status }}</p>
+            {% endif %}
+            {% if student.gpa %}
+            <p><strong>GPA:</strong> {{ student.gpa }}</p>
+            {% endif %}
+            {% if student.scholarship %}
+            <p><strong>Scholarship:</strong> {{ student.scholarship }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Account Info -->
+        <div class="profile-section">
+            <h3>Account Info</h3>
+            {% if student.created_at %}
+            <p><strong>Account Created:</strong> {{ student.created_at.strftime('%B %d, %Y') }}</p>
+            {% endif %}
+            {% if student.last_login %}
+            <p><strong>Last Login:</strong> {{ student.last_login.strftime('%B %d, %Y %I:%M %p') }}</p>
+            {% endif %}
+        </div>
+
+        <div class="button-group">
+            <a href="{{ url_for('student.dashboard') }}" class="btn">Back to Dashboard</a>
+            {% if student.can_edit_profile %}
+            <a href="{{ url_for('student.edit_profile') }}" class="btn">Edit Profile</a>
+            {% endif %}
+        </div>
+
     </div>
 </div>
 {% endblock %}

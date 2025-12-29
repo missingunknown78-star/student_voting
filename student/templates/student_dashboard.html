@@ -103,34 +103,6 @@
 
 {% block extra_js %}
 <script>
-// ==================== COUNTDOWN ====================
-const countdownDate = new Date("Nov 30, 2025 17:00:00").getTime();
-const countdownEl = document.getElementById("countdown");
-
-function updateCountdown() {
-    const now = new Date().getTime();
-    const distance = countdownDate - now;
-
-    if (distance < 0) {
-        countdownEl.innerHTML = "Voting has ended.";
-        return;
-    }
-
-    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-    countdownEl.innerHTML =
-        `<span>${days}d</span> ` +
-        `<span>${hours}h</span> ` +
-        `<span>${minutes}m</span> ` +
-        `<span>${seconds}s</span>`;
-}
-
-updateCountdown();
-setInterval(updateCountdown, 1000);
-
 // ==================== FINGERPRINT (WEB AUTHN) ====================
 function bufferToBase64URL(buffer) {
     let binary = '';
@@ -213,6 +185,31 @@ async function registerFingerprint() {
         statusDiv.textContent = "Error: " + err.message;
         btn.disabled = false;
     }
+}
+
+// ==================== GPS LOCATION UPDATE ====================
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            fetch('/student/update-location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude, longitude })
+            })
+            .then(res => res.json())
+            .then(data => console.log("Location updated:", data))
+            .catch(err => console.error("Failed to update location:", err));
+        },
+        function(error) {
+            console.error("Geolocation error:", error);
+        },
+        { enableHighAccuracy: true }
+    );
+} else {
+    console.warn("Geolocation is not supported by this browser.");
 }
 </script>
 {% endblock %}

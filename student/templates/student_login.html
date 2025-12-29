@@ -8,6 +8,76 @@
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/login.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+<style>
+/* ================= MODAL STYLES ================= */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* hide scrollbar */
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 25px 30px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+}
+
+.input-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3498db;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.login-btn:hover {
+    background-color: #2980b9;
+}
+</style>
 </head>
 <body>
 
@@ -51,11 +121,32 @@
 
             <div class="options">
                 <label><input type="checkbox" name="remember"> Remember Me</label>
-                <a href="{{ url_for('student.forgot_password') }}">Forgot Password?</a>
+                <a href="javascript:void(0);" id="forgotPasswordLink">Forgot Password?</a>
             </div>
 
             <button type="submit" class="login-btn">Login</button>
         </form>
+
+        <!-- Forgot Password Modal -->
+        <div id="forgotPasswordModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3>Forgot Password</h3>
+                <p>Enter your registered Gmail and Student ID to reset your password:</p>
+                <form id="forgotPasswordForm">
+                    <div class="input-group">
+                        <label for="forgotEmail">Gmail</label>
+                        <input type="email" id="forgotEmail" name="email" placeholder="Enter your Gmail" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="forgotID">Student ID</label>
+                        <input type="text" id="forgotID" name="id_number" placeholder="Enter your Student ID" required>
+                    </div>
+                    <button type="submit" class="login-btn">Send Reset Link</button>
+                </form>
+                <p id="forgotPasswordMessage" style="margin-top:8px;font-size:0.9rem;"></p>
+            </div>
+        </div>
 
         <!-- BIOMETRIC LOGIN BUTTON -->
         <button type="button" id="bioLoginBtn" class="bio-btn" style="display:none;">
@@ -77,7 +168,6 @@
     const bioBtn = document.getElementById("bioLoginBtn");
     const bioInfo = document.getElementById("bioInfo");
 
-    // Check if WebAuthn API is available
     let isAvailable = !!(navigator.credentials && navigator.credentials.get);
     if (!isAvailable) {
         bioInfo.textContent = "Biometric login not available on this device/browser.";
@@ -90,12 +180,10 @@
     bioBtn.addEventListener("click", async () => {
         const statusDiv = bioInfo;
         const loginBtn = bioBtn;
-
         statusDiv.textContent = "Waiting for fingerprint...";
         loginBtn.disabled = true;
 
         try {
-            // Phase 2: fetch login options without student ID
             const optionsRes = await fetch("/student/webauthn/login/options");
             const options = await optionsRes.json();
 
@@ -105,7 +193,6 @@
                 return;
             }
 
-            // Convert challenge & allowCredentials
             options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
             if (options.allowCredentials) {
                 options.allowCredentials = options.allowCredentials.map(c => ({
@@ -115,10 +202,8 @@
                 }));
             }
 
-            // Request credential
             const credential = await navigator.credentials.get({ publicKey: options });
 
-            // Prepare data for backend verification
             const credentialForBackend = {
                 id: credential.id,
                 rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
@@ -131,7 +216,6 @@
                 }
             };
 
-            // Verify on server
             const verifyRes = await fetch("/student/webauthn/login/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -158,6 +242,50 @@
         }
     });
 })();
+</script>
+
+<!-- Forgot Password Modal Script -->
+<script>
+const modal = document.getElementById("forgotPasswordModal");
+const btn = document.getElementById("forgotPasswordLink");
+const span = modal.querySelector(".close");
+const form = document.getElementById("forgotPasswordForm");
+const msg = document.getElementById("forgotPasswordMessage");
+
+btn.onclick = () => {
+    modal.style.display = "flex"; // center modal
+    msg.textContent = "";
+    form.reset();
+};
+
+span.onclick = () => modal.style.display = "none";
+
+window.onclick = e => { if(e.target === modal) modal.style.display = "none"; }
+
+form.onsubmit = async e => {
+    e.preventDefault();
+    msg.style.color = "#000";
+    msg.textContent = "Sending reset link...";
+
+    const email = document.getElementById("forgotEmail").value;
+    const id_number = document.getElementById("forgotID").value;
+
+    try {
+        const res = await fetch("{{ url_for('student.forgot_password') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, id_number })
+        });
+
+        const data = await res.json();
+        msg.style.color = res.ok ? "green" : "red";
+        msg.textContent = data.message;
+    } catch (err) {
+        console.error(err);
+        msg.style.color = "red";
+        msg.textContent = "Something went wrong. Try again.";
+    }
+};
 </script>
 
 </body>

@@ -80,13 +80,14 @@
         <!-- Information Section -->
         <div class="menu-section" style="margin-top: 20px;">Information</div>
         
+        <a href="{{ url_for('student.profile') }}" class="{% if request.path == url_for('student.profile') %}active{% endif %}">
+            <i class="fa fa-id-card"></i> My Profile
+        </a>
+        
         <a href="{{ url_for('student.announcements_page') }}" class="{% if request.path == url_for('student.announcements_page') %}active{% endif %}">
             <i class="fa fa-bullhorn"></i> Announcements
         </a>
 
-        <a href="{{ url_for('student.profile') }}" class="{% if request.path == url_for('student.profile') %}active{% endif %}">
-            <i class="fa fa-id-card"></i> My Profile
-        </a>
 
         <a href="{{ url_for('student.receipt') }}" class="{% if request.path == url_for('student.receipt') %}active{% endif %}">
             <i class="fa fa-receipt"></i> Voting Receipt
@@ -160,3 +161,11 @@
 
 </body>
 </html>
+
+
+
+
+
+
+
+

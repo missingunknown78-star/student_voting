@@ -149,6 +149,7 @@ def verify_otp():
 
     return render_template('verify_otp.html')
 
+
 # ==================== LOGIN (merged traditional + WebAuthn page) ====================
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -172,7 +173,8 @@ def login():
 
             # ---------------- Log login history ----------------
             try:
-                
+                from user_agents import parse
+                import requests
 
                 user_agent = parse(request.headers.get('User-Agent'))
 
@@ -182,14 +184,36 @@ def login():
                 elif user_agent.is_tablet:
                     device_type = "Tablet"
 
-                ip = request.remote_addr or "Unknown"
+                ip = request.headers.get('X-Forwarded-For', request.remote_addr) or "Unknown"
                 browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
+
+                # ----------- Get IP-based location -----------
+                city = region = country = None
+                latitude = longitude = None
+
+                try:
+                    res = requests.get(f"http://ip-api.com/json/{ip}")
+                    data = res.json()
+                    if data.get("status") == "success":
+                        city = data.get("city")
+                        region = data.get("regionName")
+                        country = data.get("country")
+                        latitude = data.get("lat")
+                        longitude = data.get("lon")
+                except Exception as loc_err:
+                    print("IP location fetch failed:", loc_err)
+                # --------------------------------------------
 
                 login_record = LoginHistory(
                     user_id=student.id,
                     device=device_type,
                     ip_address=ip,
-                    browser=browser
+                    browser=browser,
+                    city=city,
+                    region=region,
+                    country=country,
+                    latitude=latitude,
+                    longitude=longitude
                 )
                 db.session.add(login_record)
                 db.session.commit()
@@ -203,6 +227,70 @@ def login():
             return render_template('student_login.html')
 
     return render_template('student_login.html')
+
+
+
+# ------------------- FORGOT PASSWORD -------------------
+import secrets
+@student_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    email = (data.get('email') or "").strip().lower()
+    id_number = (data.get('id_number') or "").strip()
+
+    student = Student.query.filter_by(email=email, id_number=id_number).first()
+    if not student:
+        return jsonify({"message": "No student found with this Gmail and Student ID"}), 404
+
+    # Generate reset token
+    token = secrets.token_urlsafe(32)
+    student.reset_token = token
+    db.session.commit()
+
+    # Create reset link
+    reset_url = url_for('student.reset_password', token=token, _external=True)
+
+    # Send email using Flask-Mail
+    subject = "Reset Your Student Account Password"
+    body = f"""
+    Hello {student.first_name},
+
+    You requested to reset your password. Click the link below to reset it:
+
+    {reset_url}
+
+    If you did not request a password reset, you can ignore this email.
+    """
+
+    try:
+        msg = Message(subject=subject, recipients=[student.email], body=body)
+        mail.send(msg)
+        return jsonify({"message": "Reset link sent to your Gmail."}), 200
+    except Exception as e:
+        print("Failed to send email:", e)
+        return jsonify({"message": "Failed to send email. Try again later."}), 500
+
+@student_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    student = Student.query.filter_by(reset_token=token).first()
+    if not student:
+        flash("Invalid or expired token", "danger")
+        return redirect(url_for('student.login'))
+
+    if request.method == 'POST':
+        new_password = request.form.get('password', '').strip()
+        if not new_password:
+            flash("Password cannot be empty", "danger")
+            return render_template('student_reset_password.html', token=token)
+
+        student.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        student.reset_token = None
+        db.session.commit()
+        flash("Password successfully reset! You can now login.", "success")
+        return redirect(url_for('student.login'))
+
+    return render_template('student_reset_password.html', token=token)
+
 
 
 
@@ -278,9 +366,53 @@ from flask_login import login_required, current_user
 @student_bp.route('/login-history')
 @login_required
 def login_history():
-    # Use current_user.id instead of session
-    history = LoginHistory.query.filter_by(user_id=current_user.id).order_by(LoginHistory.timestamp.desc()).all()
+    # Query login history
+    history_records = LoginHistory.query.filter_by(user_id=current_user.id)\
+                        .order_by(LoginHistory.timestamp.desc()).all()
+
+    # Convert each SQLAlchemy object to a plain dict
+    history = []
+    for record in history_records:
+        history.append({
+            "device": record.device,
+            "ip_address": record.ip_address,
+            "browser": record.browser,
+            "city": record.city,
+            "region": record.region,
+            "country": record.country,
+            "latitude": record.latitude,
+            "longitude": record.longitude,
+            # Convert timestamp to string for both table & JS
+            "timestamp": record.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        })
+
     return render_template('login_history.html', history=history)
+
+
+
+from flask import request, jsonify
+from flask_login import login_required, current_user
+
+@student_bp.route('/student/update-location', methods=['POST'])
+@login_required
+def update_location():
+    data = request.get_json()
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    print(f"Received GPS coords: {latitude}, {longitude}")  # DEBUG
+
+    last_login = LoginHistory.query.filter_by(user_id=current_user.id)\
+                   .order_by(LoginHistory.timestamp.desc()).first()
+
+    if last_login and latitude is not None and longitude is not None:
+        last_login.latitude = latitude
+        last_login.longitude = longitude
+        db.session.commit()
+        print("Location updated successfully")  # DEBUG
+        return jsonify({"status": "success"}), 200
+
+    print("Failed to update location")  # DEBUG
+    return jsonify({"status": "failed"}), 400
 
 
 # ------------------- VOTING -------------------
@@ -435,15 +567,8 @@ def profile():
 
 
 
-# ------------------- FORGOT PASSWORD -------------------
-@student_bp.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        flash(f'Password reset instructions sent to {email}.', 'info')
-        return redirect(url_for('student.login'))
 
-    return render_template('forgot_password.html')
+
 
 # ------------------- LOGOUT -------------------
 
