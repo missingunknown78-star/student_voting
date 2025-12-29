@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .env
 *.log
+admin_access.log
+student_voting.sql
