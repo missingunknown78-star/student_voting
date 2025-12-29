@@ -14,9 +14,16 @@ import logging
 import time
 import pyotp
 from datetime import timedelta
+from flask import render_template, request, jsonify, Response
+from sqlalchemy import or_
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
+
 
 
 # ---------------------- Secure Admin Required Decorator ---------------------- #
@@ -265,12 +272,171 @@ def dashboard():
         now=now
     )
 
-# ---------------------- Manage Students ---------------------- #
+
+
+# ---------------------- MANAGE STUDENTS PAGE ---------------------- #
 @admin_bp.route('/students')
 @admin_required
 def manage_students():
-    students = Student.query.all()
-    return render_template('manage_students.html', students=students)
+    # Query all departments and courses
+    departments = Department.query.all()
+    courses = Course.query.all()
+
+    # Convert to plain dicts for JSON serialization
+    departments_data = [{"id": d.id, "name": d.name} for d in departments]
+    courses_data = [{"id": c.id, "name": c.course_name} for c in courses]  # <-- FIX
+
+    return render_template(
+        'manage_students.html',
+        departments=departments_data,
+        courses=courses_data
+    )
+
+
+# ---------------------- AJAX STUDENT DATA ---------------------- #
+@admin_bp.route('/students/data')
+@admin_required
+def students_data():
+    filter_type = request.args.get('filter_type', 'all')
+    filter_id = request.args.get('filter_id')
+    search = request.args.get('search', '')
+    page = int(request.args.get('page', 1))
+    per_page = 10
+
+    query = Student.query
+
+    # Apply filters
+    if filter_type == 'department' and filter_id:
+        query = query.filter(Student.department_id == int(filter_id))
+
+    if filter_type == 'course' and filter_id:
+        query = query.filter(Student.course_id == int(filter_id))
+
+    # Apply search
+    if search:
+        query = query.filter(
+            or_(
+                Student.id_number.ilike(f'%{search}%'),
+                Student.first_name.ilike(f'%{search}%'),
+                Student.last_name.ilike(f'%{search}%'),
+                Student.course.ilike(f'%{search}%')
+            )
+        )
+
+    # Pagination
+    pagination = query.order_by(Student.last_name).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    # Convert students to simple dicts
+    students = [{
+        "id": s.id,
+        "id_number": s.id_number,
+        "first_name": s.first_name,
+        "last_name": s.last_name,
+        "course": s.course,
+        "year_level": getattr(s, 'year_level', '')
+    } for s in pagination.items]
+
+    return jsonify({
+        "students": students,
+        "total_pages": pagination.pages,
+        "current_page": pagination.page
+    })
+
+
+@admin_bp.route('/students/export-excel')
+@admin_required
+def export_students_excel():
+    # Get same filters as AJAX
+    filter_type = request.args.get('filter_type', 'all')
+    filter_id = request.args.get('filter_id')
+    search = request.args.get('search', '')
+
+    query = Student.query
+
+    # Apply filters
+    if filter_type == 'department' and filter_id:
+        query = query.filter(Student.department_id == int(filter_id))
+
+    if filter_type == 'course' and filter_id:
+        query = query.filter(Student.course_id == int(filter_id))
+
+    # Apply search
+    if search:
+        query = query.filter(
+            or_(
+                Student.id_number.ilike(f'%{search}%'),
+                Student.first_name.ilike(f'%{search}%'),
+                Student.last_name.ilike(f'%{search}%'),
+                Student.course.ilike(f'%{search}%')
+            )
+        )
+
+    students = query.order_by(Student.last_name).all()
+
+    # ---------------- EXCEL ---------------- #
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Students"
+
+    headers = ["Student ID", "First Name", "Last Name", "Course", "Year Level"]
+    ws.append(headers)
+
+    for s in students:
+        ws.append([
+            s.id_number,
+            s.first_name,
+            s.last_name,
+            s.course,
+            getattr(s, 'year_level', '')
+        ])
+
+    # Auto-fit column widths
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = max_length + 2
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return Response(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=students.xlsx"}
+    )
+
+
+# ---------------------- DELETE STUDENT ---------------------- #
+@admin_bp.route('/students/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_student(id):
+    student = Student.query.get_or_404(id)
+    db.session.delete(student)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+# ---------------------- EDIT STUDENT ---------------------- #
+@admin_bp.route('/students/edit/<int:id>', methods=['POST'])
+@admin_required
+def edit_student(id):
+    student = Student.query.get_or_404(id)
+
+    student.first_name = request.form.get('first_name')
+    student.last_name = request.form.get('last_name')
+    student.course = request.form.get('course')
+
+    db.session.commit()
+    return jsonify({"success": True})
+
 
 # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
@@ -525,7 +691,6 @@ def delete_candidate(id):
 
 
 # ---------------------- Create Department Election ---------------------- #
-# ---------------------- Create Department Election ---------------------- #
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])
 @admin_required
 def create_department_election():
@@ -537,6 +702,7 @@ def create_department_election():
     departments = Department.query.order_by(Department.name).all()
 
     if request.method == 'POST':
+        # ------------------ POST DATA ------------------ #
         title = request.form.get('title', '').strip()
         election_type = request.form.get('election_type', '').strip()
         department_id_str = request.form.get('department_id')
@@ -547,39 +713,35 @@ def create_department_election():
         # Convert department_id to int if provided
         department_id = int(department_id_str) if department_id_str else None
 
-        # Validation
+        # ------------------ VALIDATION ------------------ #
         if not title or not election_type or not start_date_str or not end_date_str:
-            flash('All required fields must be filled.', 'danger')
+            flash('All required fields must be filled.', 'election')
             return redirect(url_for('admin.create_department_election'))
 
         if election_type == 'Department' and not department_id:
-            flash('Department is required for Department Elections.', 'danger')
+            flash('Department is required for Department Elections.', 'election')
             return redirect(url_for('admin.create_department_election'))
 
-        # Parse datetime with timezone
+        # ------------------ PARSE DATES ------------------ #
         tz = pytz.timezone('Asia/Manila')
         try:
             start_date = tz.localize(datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M'))
             end_date = tz.localize(datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M'))
         except ValueError:
-            flash('Invalid date format.', 'danger')
+            flash('Invalid date format.', 'election')
             return redirect(url_for('admin.create_department_election'))
 
         if end_date <= start_date:
-            flash('End date must be later than start date.', 'danger')
+            flash('End date must be later than start date.', 'election')
             return redirect(url_for('admin.create_department_election'))
 
-        # Get department name if Department election
+        # ------------------ DEPARTMENT NAME ------------------ #
         department_name = None
         if election_type == 'Department' and department_id:
             dept_obj = Department.query.get(department_id)
             department_name = dept_obj.name if dept_obj else None
-        else:
-            # SSG election: no department assigned
-            department_id = None
-            department_name = None
 
-        # Create the new election
+        # ------------------ CREATE ELECTION ------------------ #
         new_election = Election(
             title=title,
             election_type=election_type,
@@ -593,9 +755,10 @@ def create_department_election():
         db.session.add(new_election)
         db.session.commit()
 
-        flash('Election created successfully!', 'success')
+        flash('Election created successfully!', 'election')
         return redirect(url_for('admin.create_department_election'))
 
+    # ------------------ GET REQUEST ------------------ #
     return render_template('create_department_election.html', departments=departments)
 
 
@@ -673,6 +836,7 @@ def admin_profile():
     return render_template('admin_profile.html', admin=admin,
                            total_elections=total_elections,
                            total_votes=total_votes)
+
 
 
 # ---------------------- Logout ---------------------- #

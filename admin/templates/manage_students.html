@@ -3,9 +3,20 @@
 {% block title %}Manage Students{% endblock %}
 
 {% block extra_head %}
-
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_students.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+.pagination {
+    margin-top: 15px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.pagination button {
+    padding: 6px 10px;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -16,11 +27,27 @@
 </div>
 
 <div class="table-container">
-    <div class="table-header">
-        <input type="text" id="searchInput" placeholder="Search by Student ID, Name, or Course..." onkeyup="searchTable()">
-        <button class="add-btn"><i class="fa-solid fa-plus"></i> Add Student</button>
+
+    <!-- ================= FILTER BAR ================= -->
+    <div class="table-header" style="gap:10px; flex-wrap:wrap">
+
+        <select id="filterType">
+            <option value="all">All Students</option>
+            <option value="department">By Department</option>
+            <option value="course">By Course</option>
+        </select>
+
+        <select id="filterValue" style="display:none"></select>
+
+        <input type="text" id="searchInput"
+               placeholder="Search by ID, name, or course...">
+
+        <button class="add-btn" onclick="exportExcel()">
+            <i class="fa-solid fa-file-excel"></i> Export Excel
+        </button>
     </div>
 
+    <!-- ================= TABLE ================= -->
     <table class="students-table">
         <thead>
             <tr>
@@ -32,42 +59,134 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
-            {% for student in students %}
-            <tr>
-                <td>{{ student.id_number }}</td> <!-- Corrected field -->
-                <td>{{ student.first_name }}</td>
-                <td>{{ student.last_name }}</td>
-                <td>{{ student.course }}</td>
-                <td>{{ student.year_level }}</td>
-                <td>
-                    <button class="edit-btn"><i class="fa-solid fa-pen"></i></button>
-                    <button class="delete-btn"><i class="fa-solid fa-trash"></i></button>
-                </td>
-            </tr>
-            {% endfor %}
+        <tbody id="studentsBody">
+            <!-- AJAX CONTENT -->
         </tbody>
     </table>
+
+    <div class="pagination" id="pagination"></div>
 </div>
 
-<script>
-function searchTable() {
-    const input = document.getElementById("searchInput").value.toLowerCase();
-    const table = document.querySelector(".students-table tbody");
-    const rows = table.getElementsByTagName("tr");
+<!-- ================= SAFE JSON DATA ================= -->
+<script type="application/json" id="departments-data">
+{{ departments | tojson }}
+</script>
 
-    for (let i = 0; i < rows.length; i++) {
-        const cells = rows[i].getElementsByTagName("td");
-        let match = false;
-        for (let j = 0; j < cells.length - 1; j++) { // exclude actions column
-            if (cells[j].innerText.toLowerCase().includes(input)) {
-                match = true;
-                break;
-            }
-        }
-        rows[i].style.display = match ? "" : "none";
+<script type="application/json" id="courses-data">
+{{ courses | tojson }}
+</script>
+
+<!-- ================= JAVASCRIPT ================= -->
+<script>
+const departments = JSON.parse(
+    document.getElementById("departments-data").textContent
+);
+
+const courses = JSON.parse(
+    document.getElementById("courses-data").textContent
+);
+
+let currentPage = 1;
+
+/* ================= LOAD STUDENTS ================= */
+function loadStudents(page = 1) {
+    currentPage = page;
+
+    const search = document.getElementById("searchInput").value;
+    const filterType = document.getElementById("filterType").value;
+    const filterValue = document.getElementById("filterValue").value;
+
+    let url = `/admin/students/data?page=${page}&search=${encodeURIComponent(search)}`;
+
+    if (filterType !== "all" && filterValue) {
+        url += `&filter_type=${filterType}&filter_id=${filterValue}`;
     }
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            const body = document.getElementById("studentsBody");
+            const pagination = document.getElementById("pagination");
+
+            body.innerHTML = "";
+            pagination.innerHTML = "";
+
+            data.students.forEach(s => {
+                body.innerHTML += `
+                <tr>
+                    <td>${s.id_number || ""}</td>
+                    <td>${s.first_name || ""}</td>
+                    <td>${s.last_name || ""}</td>
+                    <td>${s.course || ""}</td>
+                    <td>${s.year_level || ""}</td>
+                    <td>
+                        <button class="edit-btn">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="delete-btn">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            for (let i = 1; i <= data.total_pages; i++) {
+                pagination.innerHTML += `
+                    <button onclick="loadStudents(${i})"
+                        ${i === data.current_page ? "disabled" : ""}>
+                        ${i}
+                    </button>`;
+            }
+        });
 }
+
+/* ================= FILTER DROPDOWN LOGIC ================= */
+const filterTypeEl = document.getElementById("filterType");
+const filterValueEl = document.getElementById("filterValue");
+
+filterTypeEl.addEventListener("change", () => {
+    filterValueEl.innerHTML = "";
+
+    if (filterTypeEl.value === "all") {
+        filterValueEl.style.display = "none";
+        loadStudents(1);
+        return;
+    }
+
+    filterValueEl.style.display = "inline-block";
+
+    const data = filterTypeEl.value === "department"
+        ? departments
+        : courses;
+
+    data.forEach(item => {
+        filterValueEl.innerHTML +=
+            `<option value="${item.id}">${item.name}</option>`;
+    });
+
+    loadStudents(1);
+});
+
+filterValueEl.addEventListener("change", () => loadStudents(1));
+document.getElementById("searchInput").addEventListener("keyup", () => loadStudents(1));
+
+/* ================= EXPORT ================= */
+function exportExcel() {
+    const filterType = document.getElementById("filterType").value;
+    const filterValue = document.getElementById("filterValue").value;
+    const search = document.getElementById("searchInput").value;
+
+    let url = `/admin/students/export-excel?search=${encodeURIComponent(search)}`;
+
+    if (filterType !== "all" && filterValue) {
+        url += `&filter_type=${filterType}&filter_id=${filterValue}`;
+    }
+
+    window.location.href = url;
+}
+
+/* ================= INIT ================= */
+document.addEventListener("DOMContentLoaded", () => loadStudents());
 </script>
 
 {% endblock %}

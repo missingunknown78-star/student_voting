@@ -677,3 +677,126 @@ body.sidebar-open {
     color: #1a5bb8;
     gap: 12px;
 }
+
+
+
+/* ==========================================================================
+   FINGERPRINT REGISTER BUTTON (DASHBOARD)
+   ========================================================================== */
+
+   .fingerprint-wrapper {
+    position: relative;
+    padding-top: 15px;
+}
+
+/* Fingerprint Button */
+.fingerprint-btn {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--secondary);
+
+    transition: var(--transition);
+}
+
+.fingerprint-btn i {
+    font-size: 30px;
+    color: var(--primary);
+    margin-bottom: 4px;
+    transition: var(--transition);
+}
+
+.fingerprint-btn span {
+    white-space: nowrap;
+}
+
+/* Hover */
+.fingerprint-btn:hover i {
+    color: var(--primary-dark);
+    transform: scale(1.1);
+}
+
+/* Disabled */
+.fingerprint-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Status Text */
+.fp-status {
+    position: absolute;
+    top: 72px;
+    right: 20px;
+
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray);
+
+    max-width: 140px;
+    text-align: center;
+}
+
+/* Success State */
+.fingerprint-btn.success i {
+    color: var(--success);
+}
+
+/* ==========================================================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================================================== */
+
+@media screen and (max-width: 767px) {
+    .fingerprint-btn {
+        position: static;
+        margin-bottom: 10px;
+    }
+
+    .fp-status {
+        position: static;
+        margin-bottom: 10px;
+    }
+
+    .profile-card {
+        padding-top: 20px;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .fingerprint-btn {
+        position: static;       /* remove absolute */
+        margin: 10px auto 10px; /* top/bottom 10px, auto left/right to center */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .fp-status {
+        position: static;
+        margin: 0 auto 10px;    /* center text */
+        text-align: center;
+    }
+
+    .profile-card {
+        padding-top: 20px;
+    }
+
+    .voted-badge {
+        margin-bottom: 10px;
+        display: inline-block;
+        text-align: center;
+        width: 100%;
+    }
+}

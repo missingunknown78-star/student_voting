@@ -11,24 +11,40 @@
     top: 20px;
     right: 20px;
     z-index: 9999;
+    pointer-events: none; /* clicks pass through */
 }
-
 .toast {
     min-width: 200px;
     margin-bottom: 10px;
     padding: 10px 20px;
-    color: #fff;
     border-radius: 5px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     font-family: Arial, sans-serif;
     font-size: 14px;
     opacity: 0;
     transition: opacity 0.5s ease;
+
+    /* Remove default white text color */
+    color: inherit; 
 }
-.toast-success { background-color: #28a745; }
-.toast-danger  { background-color: #dc3545; }
-.toast-warning { background-color: #ffc107; color: #000; }
-.toast-info    { background-color: #17a2b8; }
+
+/* Background & text color for each category */
+.toast-success { 
+    background-color: #28a745; 
+    color: #fff; 
+}
+.toast-danger  { 
+    background-color: #dc3545; 
+    color: #fff; 
+}
+.toast-warning { 
+    background-color: #ffc107; 
+    color: #000; /* dark text on yellow background */ 
+}
+.toast-info    { 
+    background-color: #17a2b8; 
+    color: #fff; 
+}
 </style>
 {% endblock %}
 
@@ -89,38 +105,40 @@
 
 <!-- Flash messages JSON -->
 <script type="application/json" id="flash-messages">
-{{ get_flashed_messages(with_categories=true)|tojson }}
-</script>
-
-<script>
-// Department field toggle
-const electionType = document.getElementById('election_type');
-const departmentField = document.getElementById('department_field');
-departmentField.style.display = 'none';
-electionType.addEventListener('change', () => {
-    departmentField.style.display = electionType.value === 'Department' ? 'block' : 'none';
-});
-
-// Toast notifications
-function showNotification(message, category='info') {
-    const toastContainer = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    toast.className = `toast toast-${category}`;
-    toastContainer.appendChild(toast);
-
-    // Fade in
-    setTimeout(() => toast.style.opacity = 1, 50);
-
-    // Auto remove after 3s
-    setTimeout(() => {
-        toast.style.opacity = 0;
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
-}
-
-// Load Flask flash messages
-const flashMessages = JSON.parse(document.getElementById('flash-messages').textContent || '[]');
-flashMessages.forEach(([category, message]) => showNotification(message, category));
-</script>
+    {{ get_flashed_messages(with_categories=true, category_filter=['election']) | tojson }}
+    </script>
+    
+    <script>
+    // Department field toggle
+    const electionType = document.getElementById('election_type');
+    const departmentField = document.getElementById('department_field');
+    departmentField.style.display = 'none';
+    electionType.addEventListener('change', () => {
+        departmentField.style.display = electionType.value === 'Department' ? 'block' : 'none';
+    });
+    
+    // Toast notifications
+    function showNotification(message, category='info') {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.className = `toast toast-${category}`;
+        toastContainer.appendChild(toast);
+    
+        // Fade in
+        setTimeout(() => toast.style.opacity = 1, 50);
+    
+        // Auto remove after 3s
+        setTimeout(() => {
+            toast.style.opacity = 0;
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
+    }
+    
+    // Load Flask flash messages
+    const flashMessages = JSON.parse(document.getElementById('flash-messages').textContent || '[]');
+    flashMessages.forEach(([category, message]) => showNotification(message, category));
+    </script>
+    
+    
 {% endblock %}
