@@ -104,21 +104,21 @@
 
         <!-- NORMAL LOGIN FORM -->
         <form method="POST">
-            <div class="input-group">
+            <div class="input-group floating">
+                <input type="email" id="email" name="email" required placeholder=" " />
                 <label for="email">Gmail</label>
-                <input type="email" id="email" name="email" placeholder="Enter your Gmail" required>
-            </div>
+            </div>            
 
-            <div class="input-group">
+            <div class="input-group floating">
+                <input type="text" id="id_number" name="id_number" required placeholder=" " />
                 <label for="id_number">Student ID</label>
-                <input type="text" id="id_number" name="id_number" placeholder="Enter your Student ID" required>
-            </div>
+            </div>            
 
-            <div class="input-group">
+            <div class="input-group floating">
+                <input type="password" id="password" name="password" required placeholder=" " />
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
             </div>
-
+            
             <div class="options">
                 <label><input type="checkbox" name="remember"> Remember Me</label>
                 <a href="javascript:void(0);" id="forgotPasswordLink">Forgot Password?</a>
@@ -150,7 +150,7 @@
 
         <!-- BIOMETRIC LOGIN BUTTON -->
         <button type="button" id="bioLoginBtn" class="bio-btn" style="display:none;">
-            <i class="fa-solid fa-fingerprint"></i> Login with Fingerprint
+            <i class="fa-solid fa-fingerprint"></i> Login with Biometric
         </button>
         
         <p id="bioInfo" style="font-size:0.9rem;color:#666;margin-top:8px;"></p>
@@ -175,7 +175,7 @@
     }
 
     bioBtn.style.display = "inline-block";
-    bioInfo.textContent = "Optional: Click to login with fingerprint (no ID required).";
+    bioInfo.textContent = "Click to login with fingerprint.";
 
     bioBtn.addEventListener("click", async () => {
         const statusDiv = bioInfo;

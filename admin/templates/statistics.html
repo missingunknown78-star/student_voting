@@ -1,0 +1,164 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Past Election Statistics{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/statistics.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="stats-page">
+    <h1>Past Election Results</h1>
+
+    <!-- ------------------- Filter Dropdown ------------------- -->
+    <div class="filter-container">
+        <label for="filter-election-type"><strong>Filter by Election Type:</strong></label>
+        <select id="filter-election-type">
+            <option value="all">All</option>
+            <option value="Department">Department</option>
+            <option value="Wide">Wide (SSG)</option>
+        </select>
+
+        <!-- Department Dropdown (hidden initially) -->
+        <select id="filter-department" style="display:none; margin-left:10px;">
+            <option value="all">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.name }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% for election in election_stats %}
+    <div class="stat-card" 
+         data-election-type="{{ election['election_type'] }}" 
+         data-department="{{ election['department'] or '' }}">
+        <h2>{{ election['title'] }}</h2>
+        <p><strong>Winner:</strong> {{ election['winner'] }}</p>
+
+        <!-- Election metadata -->
+        <p><strong>Election Type:</strong> {{ election['election_type'] }}</p>
+        {% if election['department'] %}
+        <p><strong>Department:</strong> {{ election['department'] }}</p>
+        {% endif %}
+        {% if election['course'] %}
+        <p><strong>Course:</strong> {{ election['course'] }}</p>
+        {% endif %}
+        <p><strong>Start Date:</strong> {{ election['start_date'] }}</p>
+        <p><strong>End Date:</strong> {{ election['end_date'] }}</p>
+
+        <!-- Candidate votes list -->
+        <ul class="vote-list">
+            {% for candidate, votes in election['votes'].items() %}
+            <li class="{% if candidate == election['winner'] %}winner{% endif %}">
+                {{ candidate }}: {{ votes }} votes
+            </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Chart -->
+        <div class="chart-container">
+            <canvas id="chart-{{ loop.index }}"></canvas>
+        </div>
+
+        <!-- Hidden JSON for chart -->
+        <script type="application/json" id="election-data-{{ loop.index }}">
+            {{ election['votes']|tojson }}
+        </script>
+    </div>
+    {% else %}
+    <p>No past election results available.</p>
+    {% endfor %}
+</div>
+
+<!-- ------------------- JavaScript ------------------- -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ----------- Charts Rendering -----------
+    const elections = document.querySelectorAll('script[type="application/json"]');
+    elections.forEach((el, idx) => {
+        const votesData = JSON.parse(el.textContent);
+        const labels = Object.keys(votesData);
+        const data = Object.values(votesData);
+
+        const colors = labels.map((label, i) => {
+            const winner = document.querySelectorAll('.stat-card')[idx].querySelector('.winner');
+            if (winner && winner.textContent.includes(label)) {
+                return 'rgba(241, 196, 15, 0.8)'; // gold for winner
+            }
+            const r = Math.floor(Math.random() * 200 + 30);
+            const g = Math.floor(Math.random() * 200 + 30);
+            const b = Math.floor(Math.random() * 200 + 30);
+            return `rgba(${r}, ${g}, ${b}, 0.7)`;
+        });
+
+        const ctx = document.getElementById(`chart-${idx+1}`).getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Votes',
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: '#2c7be5',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        precision: 0,
+                        ticks: { stepSize: 1 }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    });
+
+    // ----------- Filter Functionality -----------
+    const filterType = document.getElementById('filter-election-type');
+    const filterDept = document.getElementById('filter-department');
+    filterType.addEventListener('change', function() {
+        const selected = this.value;
+
+        // Show/hide department dropdown
+        if (selected === 'Department') {
+            filterDept.style.display = 'inline-block';
+        } else {
+            filterDept.style.display = 'none';
+            filterDept.value = 'all';
+        }
+
+        applyFilter();
+    });
+
+    filterDept.addEventListener('change', applyFilter);
+
+    function applyFilter() {
+        const type = filterType.value;
+        const dept = filterDept.value;
+
+        document.querySelectorAll('.stat-card').forEach(card => {
+            const cardType = card.getAttribute('data-election-type');
+            const cardDept = card.getAttribute('data-department');
+
+            let show = false;
+
+            if (type === 'all') {
+                show = true;
+            } else if (type === 'Wide' && cardType.toLowerCase() === 'ssg') {
+                show = true;
+            } else if (type === 'Department' && cardType === 'Department') {
+                if (dept === 'all' || dept === cardDept) show = true;
+            }
+
+            card.style.display = show ? 'block' : 'none';
+        });
+    }
+});
+</script>
+{% endblock %}

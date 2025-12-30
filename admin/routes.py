@@ -839,6 +839,54 @@ def admin_profile():
 
 
 
+
+# In admin routes
+from flask import render_template
+from datetime import datetime
+import pytz
+
+@admin_bp.route('/statistics')
+@admin_required
+def statistics():
+    tz = pytz.timezone('Asia/Manila')
+    
+    # Get all elections that have ended
+    all_elections = Election.query.all()
+    past_elections = [e for e in all_elections if e.status == "Ended"]
+
+    election_stats = []
+    for election in past_elections:
+        candidates = election.candidates  # relationship from your Candidate model
+
+        # Prepare votes per candidate
+        votes_per_candidate = {}
+        for c in candidates:
+            full_name = f"{c.first_name} {c.last_name}"
+            votes_per_candidate[full_name] = len(c.votes)
+
+        # Determine winner
+        winner = max(votes_per_candidate, key=votes_per_candidate.get) if votes_per_candidate else "No votes"
+
+        election_stats.append({
+            'title': election.title,
+            'election_type': election.election_type,
+            'department': election.department,  # department name
+            'course': getattr(election.course_rel, 'name', None) if election.course_rel else None,
+            'start_date': election.start_date.strftime('%Y-%m-%d %H:%M'),
+            'end_date': election.end_date.strftime('%Y-%m-%d %H:%M'),
+            'votes': votes_per_candidate,
+            'winner': winner
+        })
+
+    # Get all departments for the filter dropdown
+    departments = Department.query.order_by(Department.name).all()
+
+    return render_template('statistics.html', 
+                           election_stats=election_stats,
+                           departments=departments)
+
+
+
 # ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')
 @admin_required

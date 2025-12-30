@@ -2,6 +2,7 @@ from extensions import db
 from flask_login import UserMixin
 from datetime import datetime
 
+
 class Student(db.Model, UserMixin):
     __tablename__ = 'students'
     
@@ -77,11 +78,15 @@ class LoginHistory(db.Model):
 
 
 
+class TrustedDevice(db.Model):
+    __tablename__ = 'trusted_devices'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    ip_address = db.Column(db.String(50))
+    browser = db.Column(db.String(255))
+    device_name = db.Column(db.String(255))
+    trusted = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime, default=datetime.utcnow)  # <-- FIXED
 
-
-
-
-
-
-
+    student = db.relationship('Student', backref='trusted_devices')
 

@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Registration</title>
+
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- WebAuthn Browser JS (kept for other pages like profile) -->
+<!-- WebAuthn Browser JS -->
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
 </head>
 <body>
@@ -34,26 +35,31 @@
 
         <form id="registrationForm" method="POST">
 
-            <div class="input-group">
+            <!-- First Name -->
+            <div class="input-group floating">
+                <input type="text" id="first_name" name="first_name" required placeholder=" ">
                 <label for="first_name">First Name</label>
-                <input type="text" id="first_name" name="first_name" placeholder="First Name" required>
             </div>
 
-            <div class="input-group">
+            <!-- Middle Name -->
+            <div class="input-group floating">
+                <input type="text" id="middle_name" name="middle_name" placeholder=" ">
                 <label for="middle_name">Middle Name</label>
-                <input type="text" id="middle_name" name="middle_name" placeholder="Middle Name">
             </div>
 
-            <div class="input-group">
+            <!-- Last Name -->
+            <div class="input-group floating">
+                <input type="text" id="last_name" name="last_name" required placeholder=" ">
                 <label for="last_name">Last Name</label>
-                <input type="text" id="last_name" name="last_name" placeholder="Last Name" required>
             </div>
 
-            <div class="input-group">
+            <!-- Suffix -->
+            <div class="input-group floating">
+                <input type="text" id="suffix" name="suffix" placeholder=" ">
                 <label for="suffix">Suffix</label>
-                <input type="text" id="suffix" name="suffix" placeholder="Suffix (Optional)">
             </div>
 
+            <!-- Department / Course (NO FLOATING) -->
             <div class="input-group">
                 <label for="course">Department / Course</label>
                 <select id="course" name="course" required>
@@ -61,54 +67,56 @@
                     {% for dept_name, courses in courses_by_department.items() %}
                         <optgroup label="{{ dept_name }}">
                             {% for course in courses %}
-                                 <option value="{{ course.id }}"
+                                <option value="{{ course.id }}"
                                     {% if session.registration_data and session.registration_data.course_id == course.id %}
-                                      selected
-                                      {% endif %}>
+                                        selected
+                                    {% endif %}>
                                     {{ course.course_name }}
                                 </option>
-                        
                             {% endfor %}
                         </optgroup>
                     {% endfor %}
                 </select>
             </div>
-            
 
+            <!-- Birth Date (NO FLOATING) -->
             <div class="input-group">
                 <label for="birth_date">Birth Date</label>
                 <input type="date" id="birth_date" name="birth_date" required>
             </div>
 
-            <div class="input-group">
+            <!-- Email -->
+            <div class="input-group floating">
+                <input type="email" id="email" name="email" required placeholder=" ">
                 <label for="email">Email</label>
-                <input type="email" id="email" name="email" placeholder="Email Address" required>
             </div>
 
-            <div class="input-group">
+            <!-- Username -->
+            <div class="input-group floating">
+                <input type="text" id="username" name="username" required placeholder=" ">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Username" required>
             </div>
 
-            <div class="input-group">
+            <!-- Password -->
+            <div class="input-group floating">
+                <input type="password" id="password" name="password" required minlength="8" placeholder=" ">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password"
-                       placeholder="Password" required minlength="8">
             </div>
 
-            <div class="input-group">
+            <!-- ID Number -->
+            <div class="input-group floating">
+                <input type="text" id="id_number" name="id_number" required placeholder=" ">
                 <label for="id_number">ID Number</label>
-                <input type="text" id="id_number" name="id_number"
-                       placeholder="Enter your Student ID" required>
             </div>
 
             <button type="submit" class="register-btn">Register</button>
         </form>
 
-
         <p class="login-text">
-            Already have an account? <a href="{{ url_for('student.login') }}">Login Here</a>
+            Already have an account?
+            <a href="{{ url_for('student.login') }}">Login Here</a>
         </p>
+
     </div>
 </div>
 

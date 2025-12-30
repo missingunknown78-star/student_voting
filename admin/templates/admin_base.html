@@ -59,6 +59,12 @@
                class="{% if request.endpoint == 'admin.announcements' %}active{% endif %}">
                <i class="fa-solid fa-bullhorn"></i> Announcements
             </a>
+
+            <a href="{{ url_for('admin.statistics') }}"
+                class="{% if request.endpoint == 'admin.statistics' %}active{% endif %}">
+                <i class="fa-solid fa-chart-bar"></i> Statistics
+            </a>
+
         
             <a href="{{ url_for('admin.logout') }}">
                <i class="fa-solid fa-right-from-bracket"></i> Logout

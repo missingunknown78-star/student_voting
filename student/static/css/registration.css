@@ -151,36 +151,34 @@ h2 {
 
 
 
-/* Dropdown */
+/* ===== DROPDOWN MATCH INPUT SIZE ===== */
 .input-group select {
     width: 100%;
-    padding: 10px 12px;
+    padding: 10px 12px;          /* SAME as input */
     border: 1px solid #ccc;
     border-radius: 8px;
     outline: none;
     font-size: 14px;
+    box-sizing: border-box;
     background-color: #fff;
-    appearance: none; /* Remove default arrow on some browsers */
+
+    /* remove default browser styles */
+    appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    cursor: pointer;
-    box-sizing: border-box;
-    transition: border-color 0.3s, box-shadow 0.3s;
-}
 
-.input-group select:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
-}
-
-/* Optional: add a down arrow icon inside the dropdown */
-.input-group select {
-    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%27http://www.w3.org/2000/svg%27%20width%3D%2710%27%20height%3D%275%27%3E%3Cpath%20fill%3D%27%23333%27%20d%3D%27M0%200l5%205%205-5z%27/%3E%3C/svg%3E");
+    /* arrow icon */
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='5'%3E%3Cpath fill='%23333' d='M0 0l5 5 5-5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     background-size: 10px 5px;
 }
 
+/* Focus effect (same as input) */
+.input-group select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
 
 /* Optgroup styling */
 .input-group select optgroup {
@@ -200,4 +198,49 @@ h2 {
 /* Hover effect on options (supported in some browsers) */
 .input-group select option:hover {
     background-color: #e6f0fa;
+}
+
+
+
+/* ===== FLOATING LABEL INPUTS (REGISTRATION) ===== */
+
+.input-group.floating {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+.input-group.floating input {
+    width: 100%;
+    padding: 14px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    background: transparent;
+}
+
+.input-group.floating label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #fff;
+    padding: 0 6px;
+    color: #777;
+    font-size: 14px;
+    pointer-events: none;
+    transition: 0.25s ease;
+}
+
+/* Float effect */
+.input-group.floating input:focus + label,
+.input-group.floating input:not(:placeholder-shown) + label {
+    top: 0;
+    font-size: 11px;
+    color: #4a90e2;
+}
+
+/* Focus glow (matches your theme) */
+.input-group.floating input:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }

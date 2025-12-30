@@ -154,3 +154,48 @@ h2 {
     color: #343a40;
     text-align: center;
 }
+
+
+/* ===== FLOATING LABEL INPUTS ===== */
+
+.input-group.floating {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+.input-group.floating input {
+    width: 100%;
+    padding: 14px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: transparent;
+}
+
+.input-group.floating label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #fff;
+    padding: 0 5px;
+    color: #6c757d;
+    font-size: 0.95rem;
+    pointer-events: none;
+    transition: 0.25s ease;
+}
+
+/* When focused OR has text */
+.input-group.floating input:focus + label,
+.input-group.floating input:not(:placeholder-shown) + label {
+    top: 0;
+    font-size: 0.75rem;
+    color: #007bff;
+}
+
+/* Keep your existing focus glow */
+.input-group.floating input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0,123,255,0.3);
+}
