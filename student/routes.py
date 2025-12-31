@@ -9,15 +9,9 @@ from flask_mail import Message
 import hashlib, time, random
 from datetime import datetime
 import pytz
-from student.models import LoginHistory
-from user_agents import parse  # pip install user-agents
 from student.utils import is_device_trusted
 from student.models import TrustedDevice
 from student.utils import generate_device_fingerprint
-
-
-
-
 
 
 
@@ -155,6 +149,7 @@ def verify_otp():
 
 #=======================STOP HERE WHEN UNDO===========================
 # ==================== LOGIN (merged traditional + WebAuthn page) ====================
+# ==================== LOGIN (merged traditional + WebAuthn page) ====================
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -205,57 +200,8 @@ def login():
             login_user(student)
             flash('Login successful!', 'success')
 
-            # ---------------- Log login history ----------------
-            try:
-                from user_agents import parse
-                import requests
-
-                user_agent = parse(request.headers.get('User-Agent'))
-
-                device_type = "PC"
-                if user_agent.is_mobile:
-                    device_type = "Mobile"
-                elif user_agent.is_tablet:
-                    device_type = "Tablet"
-
-                ip = request.headers.get('X-Forwarded-For', request.remote_addr) or "Unknown"
-                browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
-
-                # ----------- Get IP-based location ----------- 
-                city = region = country = None
-                latitude = longitude = None
-
-                try:
-                    res = requests.get(f"http://ip-api.com/json/{ip}")
-                    data = res.json()
-                    if data.get("status") == "success":
-                        city = data.get("city")
-                        region = data.get("regionName")
-                        country = data.get("country")
-                        latitude = data.get("lat")
-                        longitude = data.get("lon")
-                except Exception as loc_err:
-                    print("IP location fetch failed:", loc_err)
-                # --------------------------------------------
-
-                login_record = LoginHistory(
-                    user_id=student.id,
-                    device=device_type,
-                    ip_address=ip,
-                    browser=browser,
-                    city=city,
-                    region=region,
-                    country=country,
-                    latitude=latitude,
-                    longitude=longitude
-                )
-                db.session.add(login_record)
-                db.session.commit()
-            except Exception as e:
-                print("Login history logging failed:", e)
-            # ----------------------------------------------------
-
             return redirect(url_for('student.dashboard'))
+
         else:
             flash('Incorrect password', 'danger')
             return render_template('student_login.html')
@@ -439,60 +385,6 @@ def help_page():
         {"q": "Who to contact for issues?", "a": "Election Committee: comelec@example.edu"}
     ]
     return render_template('help_page.html', faqs=faqs)
-
-
-from flask_login import login_required, current_user
-
-@student_bp.route('/login-history')
-@login_required
-def login_history():
-    # Query login history
-    history_records = LoginHistory.query.filter_by(user_id=current_user.id)\
-                        .order_by(LoginHistory.timestamp.desc()).all()
-
-    # Convert each SQLAlchemy object to a plain dict
-    history = []
-    for record in history_records:
-        history.append({
-            "device": record.device,
-            "ip_address": record.ip_address,
-            "browser": record.browser,
-            "city": record.city,
-            "region": record.region,
-            "country": record.country,
-            "latitude": record.latitude,
-            "longitude": record.longitude,
-            # Convert timestamp to string for both table & JS
-            "timestamp": record.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        })
-
-    return render_template('login_history.html', history=history)
-
-
-
-from flask import request, jsonify
-from flask_login import login_required, current_user
-
-@student_bp.route('/student/update-location', methods=['POST'])
-@login_required
-def update_location():
-    data = request.get_json()
-    latitude = data.get('latitude')
-    longitude = data.get('longitude')
-    print(f"Received GPS coords: {latitude}, {longitude}")  # DEBUG
-
-    last_login = LoginHistory.query.filter_by(user_id=current_user.id)\
-                   .order_by(LoginHistory.timestamp.desc()).first()
-
-    if last_login and latitude is not None and longitude is not None:
-        last_login.latitude = latitude
-        last_login.longitude = longitude
-        db.session.commit()
-        print("Location updated successfully")  # DEBUG
-        return jsonify({"status": "success"}), 200
-
-    print("Failed to update location")  # DEBUG
-    return jsonify({"status": "failed"}), 400
 
 
 # ------------------- VOTING -------------------
@@ -688,21 +580,20 @@ def toggle_trust_device():
 @student_bp.route('/verify-device', methods=['GET'])
 def verify_device():
     student_id = session.get('pending_login_student')
-    if not student_id:
+    fingerprint = session.get('pending_device_fp')
+
+    if not student_id or not fingerprint:
         flash("No pending device verification.", "danger")
         return redirect(url_for('student.login'))
 
     student = Student.query.get(student_id)
-    fingerprint = session.get('pending_device_fp')
 
-    # Check if the device is already in the database (prevents duplicates)
     device = TrustedDevice.query.filter_by(
         student_id=student.id,
         device_fingerprint=fingerprint
     ).first()
 
     if not device:
-        # Save a temporary TrustedDevice entry (untrusted)
         device = TrustedDevice(
             student_id=student.id,
             device_fingerprint=fingerprint,
@@ -714,11 +605,38 @@ def verify_device():
         db.session.add(device)
         db.session.commit()
 
-    # Send verification email
+    # ✅ NO EMAIL HERE
+    return render_template('verify_device.html', student=student)
+
+
+
+@student_bp.route('/verify-device/resend', methods=['POST'])
+def resend_verify_device():
+    student_id = session.get('pending_login_student')
+    fingerprint = session.get('pending_device_fp')
+
+    if not student_id or not fingerprint:
+        flash("No pending verification to resend.", "danger")
+        return redirect(url_for('student.login'))
+
+    student = Student.query.get(student_id)
+
+    device = TrustedDevice.query.filter_by(
+        student_id=student.id,
+        device_fingerprint=fingerprint,
+        trusted=False
+    ).first()
+
+    if not device:
+        flash("Device already verified or missing.", "info")
+        return redirect(url_for('student.login'))
+
     from student.utils import send_new_device_email
     send_new_device_email(student, device)
 
-    return "✅ Verification email sent! Please check your inbox and click the button to confirm login."
+    flash("Verification email resent. Please check your inbox.", "success")
+    return redirect(url_for('student.verify_device'))
+
 
 
 @student_bp.route('/verify-device/<token>')
@@ -750,33 +668,11 @@ def verify_device_email(token):  # <--- the function name becomes the endpoint b
 @student_bp.route('/logout')
 def logout():
     if current_user.is_authenticated:
-        try:
-            # Log the logout in login_history table
-            user_agent = parse(request.headers.get('User-Agent'))
-            device_type = "PC"
-            if user_agent.is_mobile:
-                device_type = "Mobile"
-            elif user_agent.is_tablet:
-                device_type = "Tablet"
-
-            ip = request.remote_addr or "Unknown"
-            browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
-
-            logout_record = LoginHistory(
-                user_id=current_user.id,
-                device=device_type,
-                ip_address=ip,
-                browser=browser,
-                action="logout"  # optional: you can have an 'action' column
-            )
-            db.session.add(logout_record)
-            db.session.commit()
-        except Exception as e:
-            print("Logout history logging failed:", e)
-
         logout_user()
         flash("You have been logged out.", "success")
+
     return redirect(url_for('student.login'))
+
 
 # ------------------- CONTEXT PROCESSOR -------------------
 @student_bp.app_context_processor

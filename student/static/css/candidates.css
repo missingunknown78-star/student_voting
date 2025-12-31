@@ -1,55 +1,105 @@
+/* ========================== Candidates Page - Mobile-first 2 Columns ========================== */
+
 .page-title {
     text-align: center;
-    font-size: 2rem;
-    margin-bottom: 30px;
+    font-size: 1.8rem;
+    margin-bottom: 25px;
     color: #333;
+    padding: 0 10px;
 }
 
 .candidates-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 20px;
+    gap: 10px;
+    padding: 0 10px;
+
+    /* Add space from top so it's not hidden under sidebar header */
+    padding-top: 25px; /* Adjust depending on your sidebar header height */
 }
 
 .candidate-card {
-    width: 250px;
+    flex: 0 0 calc(50% - 10px); /* 2 cards per row on mobile */
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
     overflow: hidden;
     text-align: center;
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 10px; /* vertical spacing between rows */
 }
 
 .candidate-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
 
 .candidate-photo {
     width: 100%;
-    height: 200px;
+    height: 140px;
     object-fit: cover;
     border-bottom: 2px solid #eee;
 }
 
 .candidate-info {
-    padding: 15px;
+    padding: 10px 8px;
 }
 
 .candidate-name {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
 
 .candidate-position,
 .candidate-platform {
-    font-size: 0.95rem;
-    margin-bottom: 5px;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
     color: #555;
 }
 
 .candidate-platform em {
     color: #999;
+}
+
+/* ================= Larger Screens ================= */
+@media (min-width: 768px) {
+    .candidate-card {
+        flex: 0 0 calc(33.33% - 15px); /* ~3 cards per row on tablets */
+        margin-bottom: 15px;
+    }
+
+    .candidate-photo {
+        height: 160px;
+    }
+
+    .candidate-name {
+        font-size: 1.1rem;
+    }
+
+    .candidate-position,
+    .candidate-platform {
+        font-size: 0.9rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .candidate-card {
+        flex: 0 0 calc(25% - 20px); /* ~4 cards per row on desktop */
+        margin-bottom: 20px;
+    }
+
+    .candidate-photo {
+        height: 180px;
+    }
+
+    .candidate-name {
+        font-size: 1.2rem;
+    }
+
+    .candidate-position,
+    .candidate-platform {
+        font-size: 0.95rem;
+    }
 }

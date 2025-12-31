@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Verify New Device</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f4f6fb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.card {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 28px 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+h1 {
+    font-size: 1.4rem;
+    margin: 10px 0;
+    color: #1f2937;
+}
+
+p {
+    font-size: 0.95rem;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.email {
+    font-weight: 600;
+    color: #111827;
+    word-break: break-all;
+}
+
+.divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 20px 0;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.timer {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 10px;
+}
+
+.back-link {
+    display: block;
+    margin-top: 18px;
+    font-size: 0.9rem;
+    color: #2563eb; /* blue clickable text */
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 360px) {
+    .card {
+        padding: 22px 18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <div class="icon">🔐</div>
+
+    <h1>Verify New Device</h1>
+
+    <p>
+        We detected a login from a new device.
+        For your security, we sent a verification link to:
+    </p>
+
+    <p class="email">
+        {% set email = student.email %}
+        {% set name, domain = email.split('@', 1) %}
+        {% if name|length > 2 %}
+            {{ name[0] }}{{ '*' * (name|length - 2) }}{{ name[-1] }}@{{ domain }}
+        {% elif name|length == 2 %}
+            {{ name[0] }}*@{{ domain }}
+        {% else %}
+            {{ email }}
+        {% endif %}
+    </p>
+
+    <p>
+        Open the email and tap the button to confirm this login.
+    </p>
+
+    <div class="divider"></div>
+
+    <form method="POST" action="{{ url_for('student.resend_verify_device') }}" id="resendForm">
+        <button id="resendBtn" type="submit">Resend Verification Email</button>
+    </form>
+
+    <div id="timerText" class="timer"></div>
+
+    <a class="back-link" href="{{ url_for('student.login') }}">
+        Back to Login
+    </a>
+</div>
+
+<script>
+const btn = document.getElementById('resendBtn');
+const form = document.getElementById('resendForm');
+const timerText = document.getElementById('timerText');
+
+// Cooldown only after click (form submit)
+form.addEventListener('submit', (e) => {
+    // Start 30-second cooldown immediately
+    btn.disabled = true;
+    let seconds = 30;
+    btn.textContent = `Resend available in ${seconds}s`;
+    timerText.textContent = 'Please wait before requesting another email.';
+
+    const countdown = setInterval(() => {
+        seconds--;
+        btn.textContent = `Resend available in ${seconds}s`;
+        if (seconds <= 0) {
+            clearInterval(countdown);
+            btn.disabled = false;
+            btn.textContent = 'Resend Verification Email';
+            timerText.textContent = 'You can now request another verification email.';
+        }
+    }, 1000);
+});
+</script>
+
+</body>
+</html>

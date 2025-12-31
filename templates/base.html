@@ -22,19 +22,8 @@
         <span class="nav-title">Menu</span>
     </div>
 
-    <!-- Right icons container -->
-    <div class="nav-right">
-        <!-- Settings/History -->
-        <div class="settings-icon">
-            <a href="{{ url_for('student.login_history') }}">
-                <i class="fa fa-history"></i>
-            </a>
-        </div>
-
     </div>
 </header>
-
-
 
 
 <!-- OVERLAY FOR MOBILE (Hidden by default) -->
@@ -62,7 +51,7 @@
         <div class="menu-section">Navigation</div>
         
         <a href="{{ url_for('student.dashboard') }}" class="{% if request.path == url_for('student.dashboard') %}active{% endif %}">
-            <i class="fa fa-home"></i> Dashboard
+            <i class="fa fa-home"></i> Home
         </a>
 
         <a href="{{ url_for('student.available_elections') }}" class="{% if request.path == url_for('student.available_elections') %}active{% endif %}">
