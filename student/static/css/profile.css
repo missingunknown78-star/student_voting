@@ -74,9 +74,48 @@
     border-radius: 6px;
     text-decoration: none;
     font-weight: 500;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .button-group .btn:hover {
     background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+/* ================== Trust Device Button ================== */
+.profile-section form button.btn {
+    width: 100%;
+    text-align: center;
+    font-weight: 600;
+    font-size: 16px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: #fff;
+}
+
+/* Green gradient: not trusted yet */
+.profile-section form button.btn.not-trusted {
+    background: linear-gradient(135deg, #4caf50, #43a047);
+}
+
+.profile-section form button.btn.not-trusted:hover {
+    background: linear-gradient(135deg, #66bb6a, #5aa85c);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+/* Red gradient: already trusted */
+.profile-section form button.btn.trusted {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+}
+
+.profile-section form button.btn.trusted:hover {
+    background: linear-gradient(135deg, #ef5350, #c62828);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
 }

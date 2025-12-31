@@ -4,11 +4,104 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+<style>
+/* Modal styles */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6); 
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f4f7 100%);
+    margin: 10% auto; 
+    padding: 30px 20px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 450px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    transform: scale(0.9);
+    animation: popIn 0.3s forwards;
+}
+
+@keyframes popIn {
+    to { transform: scale(1); }
+}
+
+.modal-content .close {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-content .close:hover {
+    color: #333;
+}
+
+.modal h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.modal p {
+    font-size: 16px;
+    margin-bottom: 25px;
+    color: #555;
+}
+
+.modal button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    margin: 5px;
+}
+
+.modal .btn-success {
+    background-color: #4caf50;
+    color: #fff;
+}
+
+.modal .btn-success:hover {
+    background-color: #45a049;
+}
+
+.modal .btn-secondary {
+    background-color: #ccc;
+    color: #333;
+}
+
+.modal .btn-secondary:hover {
+    background-color: #b3b3b3;
+}
+</style>
 {% endblock %}
 
 {% block content %}
 
-<div class="dashboard-container">
+<div class="dashboard-container" data-trust-prompt="{{ trust_prompt|tojson }}">
 <!-- PROFILE CARD -->
 <div class="card profile-card fingerprint-wrapper">
 
@@ -29,7 +122,7 @@
             </span>
         {% endif %}
 
-        <!-- Fingerprint Button (NOW CORRECT POSITION) -->
+        <!-- Fingerprint Button -->
         <button class="fingerprint-btn" onclick="registerFingerprint()">
             <i class="fa fa-fingerprint"></i>
             <span>Register Fingerprint</span>
@@ -42,60 +135,73 @@
     </div>
 </div>
 
-    <!-- GUIDELINES BOX -->
-    <div class="card guidelines-box">
-        <h2 class="section-title">Before You Start</h2>
-        <p>
-            Please read the official guidelines carefully before participating
-            in the Student Government Election.
-        </p>
-        <a href="{{ url_for('student.guidelines') }}" class="guidelines-link">
-            See Guidelines <i class="fa fa-arrow-right"></i>
-        </a>
-    </div>
+<!-- MODAL FOR TRUST DEVICE -->
+<div id="trustModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeTrustModal()">&times;</span>
+    <h3>Do you want to trust this device?</h3>
+    <p>You can enable “Trust this device” so you won't be asked for verification on this device again.</p>
+    <form method="POST" action="{{ url_for('student.trust_current_device') }}">
+        <button type="submit" class="btn btn-success" style="margin-right:10px;">Yes, trust this device</button>
+        <button type="button" class="btn btn-secondary" onclick="closeTrustModal()">No</button>
+    </form>
+  </div>
+</div>
 
-    <!-- QUICK REMINDER CARD -->
-    <div class="card">
-        <h2 class="section-title">Important Reminders</h2>
-        <ul style="padding-left: 18px; margin: 0;">
-            <li>Make sure your information is correct before voting.</li>
-            <li>You can vote only once per election.</li>
-            <li>Keep your student ID confidential and secure.</li>
-        </ul>
-    </div>
+<!-- GUIDELINES BOX -->
+<div class="card guidelines-box">
+    <h2 class="section-title">Before You Start</h2>
+    <p>
+        Please read the official guidelines carefully before participating
+        in the Student Government Election.
+    </p>
+    <a href="{{ url_for('student.guidelines') }}" class="guidelines-link">
+        See Guidelines <i class="fa fa-arrow-right"></i>
+    </a>
+</div>
 
-    <!-- ANNOUNCEMENTS PREVIEW -->
-    <div class="card announcements-card">
-        <h2 class="section-title">Latest Announcements</h2>
+<!-- QUICK REMINDER CARD -->
+<div class="card">
+    <h2 class="section-title">Important Reminders</h2>
+    <ul style="padding-left: 18px; margin: 0;">
+        <li>Make sure your information is correct before voting.</li>
+        <li>You can vote only once per election.</li>
+        <li>Keep your student ID confidential and secure.</li>
+    </ul>
+</div>
 
-        {% if announcements and announcements|length > 0 %}
-            {% for ann in announcements[:3] %}
-                <div class="announcement-item">
-                    <h4>{{ ann.title }}</h4>
-                    <p>{{ ann.content }}</p>
-                    <small>{{ ann.date.strftime('%b %d, %Y') }}</small>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No announcements available.</p>
-        {% endif %}
+<!-- ANNOUNCEMENTS PREVIEW -->
+<div class="card announcements-card">
+    <h2 class="section-title">Latest Announcements</h2>
 
-        <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
-            View all announcements <i class="fa fa-arrow-right"></i>
-        </a>
-    </div>
+    {% if announcements and announcements|length > 0 %}
+        {% for ann in announcements[:3] %}
+            <div class="announcement-item">
+                <h4>{{ ann.title }}</h4>
+                <p>{{ ann.content }}</p>
+                <small>{{ ann.date.strftime('%b %d, %Y') }}</small>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No announcements available.</p>
+    {% endif %}
 
-    <!-- HELP & SUPPORT CARD -->
-    <div class="card help-box">
-        <h2 class="section-title">Need Help?</h2>
-        <p>
-            If you experience any problems with logging in, voting, or using the system,
-            you can visit the Help & Support page for guidance.
-        </p>
-        <a href="{{ url_for('student.help_page') }}" class="help-link">
-            Help & Support <i class="fa fa-arrow-right"></i>
-        </a>
-    </div>
+    <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
+        View all announcements <i class="fa fa-arrow-right"></i>
+    </a>
+</div>
+
+<!-- HELP & SUPPORT CARD -->
+<div class="card help-box">
+    <h2 class="section-title">Need Help?</h2>
+    <p>
+        If you experience any problems with logging in, voting, or using the system,
+        you can visit the Help & Support page for guidance.
+    </p>
+    <a href="{{ url_for('student.help_page') }}" class="help-link">
+        Help & Support <i class="fa fa-arrow-right"></i>
+    </a>
+</div>
 
 </div>
 
@@ -176,7 +282,6 @@ async function registerFingerprint() {
         if (result.status === "Fingerprint registered!") {
             btn.innerHTML = '<i class="fa fa-check"></i><span>Registered</span>';
             btn.classList.add("success");
-
         } else {
             btn.disabled = false;
         }
@@ -211,5 +316,23 @@ if (navigator.geolocation) {
 } else {
     console.warn("Geolocation is not supported by this browser.");
 }
+
+// ==================== TRUST DEVICE MODAL ====================
+function openTrustModal() {
+    const modal = document.getElementById("trustModal");
+    modal.style.display = "block";
+}
+
+function closeTrustModal() {
+    const modal = document.getElementById("trustModal");
+    modal.style.display = "none";
+}
+
+// Trigger modal if needed
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.dashboard-container');
+    const trustPrompt = container.dataset.trustPrompt === 'true';
+    if (trustPrompt) openTrustModal();
+});
 </script>
 {% endblock %}

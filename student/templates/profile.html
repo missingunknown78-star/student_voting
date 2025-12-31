@@ -66,6 +66,22 @@
             <a href="{{ url_for('student.edit_profile') }}" class="btn">Edit Profile</a>
             {% endif %}
         </div>
+        <!-- Security Settings -->
+<div class="profile-section">
+    <h3>Security</h3>
+
+    <form method="POST" action="{{ url_for('student.toggle_trust_device') }}">
+        <button type="submit" class="btn {% if device_trusted %}trusted{% else %}not-trusted{% endif %}">
+            {% if device_trusted %}
+                🔒 This device is trusted (Remove trust)
+            {% else %}
+                🔓 Trust this device
+            {% endif %}
+        </button>
+    </form>
+    
+</div>
+
 
     </div>
 </div>

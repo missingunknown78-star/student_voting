@@ -11,6 +11,9 @@ from datetime import datetime
 import pytz
 from student.models import LoginHistory
 from user_agents import parse  # pip install user-agents
+from student.utils import is_device_trusted
+from student.models import TrustedDevice
+from student.utils import generate_device_fingerprint
 
 
 
@@ -150,6 +153,7 @@ def verify_otp():
     return render_template('verify_otp.html')
 
 
+#=======================STOP HERE WHEN UNDO===========================
 # ==================== LOGIN (merged traditional + WebAuthn page) ====================
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -168,6 +172,36 @@ def login():
             return render_template('student_login.html')
 
         if bcrypt.check_password_hash(student.password, password):
+
+            # 🔐 ================= DEVICE TRUST CHECK =================
+            from student.utils import is_device_trusted, generate_device_fingerprint
+
+            trusted_device = is_device_trusted(student.id)
+            any_trusted_device = TrustedDevice.query.filter_by(
+                student_id=student.id,
+                trusted=True
+            ).first()
+
+            if not trusted_device:
+                # New / untrusted device
+                if any_trusted_device:
+                    # There are already trusted devices → trigger email verification
+                    session['pending_login_student'] = student.id
+                    session['pending_device_fp'] = generate_device_fingerprint()
+
+                    flash(
+                        "New device detected. Please check your email to confirm this login.",
+                        "warning"
+                    )
+                    return redirect(url_for('student.verify_device'))
+                else:
+                    # FIRST login, no trusted devices yet → normal login
+                    login_user(student)
+                    flash('Login successful!', 'success')
+                    return redirect(url_for('student.dashboard', trust_prompt=True))
+            # 🔐 =======================================================
+
+            # ✅ Trusted device → proceed with normal login
             login_user(student)
             flash('Login successful!', 'success')
 
@@ -187,7 +221,7 @@ def login():
                 ip = request.headers.get('X-Forwarded-For', request.remote_addr) or "Unknown"
                 browser = f"{user_agent.browser.family} {user_agent.browser.version_string}"
 
-                # ----------- Get IP-based location -----------
+                # ----------- Get IP-based location ----------- 
                 city = region = country = None
                 latitude = longitude = None
 
@@ -227,6 +261,7 @@ def login():
             return render_template('student_login.html')
 
     return render_template('student_login.html')
+
 
 
 
@@ -295,24 +330,23 @@ def reset_password(token):
 
 
 # ==================== DASHBOARD ====================
+from student.utils import generate_device_fingerprint, is_device_trusted
+from student.models import TrustedDevice
 
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # Total students and votes
+    # ---------------- Existing logic ----------------
     total_students = Student.query.count()
     total_votes = Vote.query.count()
-    
-    # Check if current student has voted
+
     has_voted = Vote.query.filter_by(student_id=current_user.id).first() is not None
 
-    # Fetch announcements for this student's department or all departments
     announcements = Announcement.query.filter(
         (Announcement.department_id == current_user.department_id) | 
         (Announcement.department_id == None)  # None means "All"
     ).order_by(Announcement.date.desc()).all()
 
-    # Leading candidates by vote count
     leading_candidates = (
         db.session.query(Candidate, func.count(Vote.id).label("vote_count"))
         .outerjoin(Vote, Candidate.id == Vote.candidate_id)
@@ -322,6 +356,20 @@ def dashboard():
         .all()
     )
 
+    # ---------------- New: trust-device prompt ----------------
+    fingerprint = generate_device_fingerprint()
+
+    device = TrustedDevice.query.filter_by(
+        student_id=current_user.id,
+        device_fingerprint=fingerprint
+    ).first()
+
+    trust_prompt = False
+    if device is None:
+        # No device recorded yet → show prompt in dashboard
+        trust_prompt = True
+
+    # ---------------- Render template ----------------
     return render_template(
         'student_dashboard.html',
         total_students=total_students,
@@ -329,9 +377,41 @@ def dashboard():
         has_voted=has_voted,
         announcements=announcements,
         leading_candidates=leading_candidates,
- 
+        trust_prompt=trust_prompt  # <-- new variable
     )
 
+
+
+@student_bp.route('/trust-current-device', methods=['POST'])
+@login_required
+def trust_current_device():
+    # Generate fingerprint for this device
+    fingerprint = generate_device_fingerprint()
+
+    # Check if the device already exists (safety check)
+    existing_device = TrustedDevice.query.filter_by(
+        student_id=current_user.id,
+        device_fingerprint=fingerprint
+    ).first()
+
+    if existing_device:
+        flash("This device is already trusted.", "info")
+    else:
+        # Create new trusted device record
+        new_device = TrustedDevice(
+            student_id=current_user.id,
+            device_fingerprint=fingerprint,
+            ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+            browser=request.headers.get('User-Agent'),
+            device_name="Unknown",  # Optional: you can capture actual device name later
+            trusted=True,
+            last_login=datetime.utcnow()
+        )
+        db.session.add(new_device)
+        db.session.commit()
+        flash("This device is now trusted!", "success")
+
+    return redirect(url_for('student.dashboard'))
 
 
 
@@ -559,11 +639,106 @@ def receipt():
     return render_template('receipt.html', vote=vote, receipt_code=receipt_code, timestamp=timestamp)
 
 # ==================== PROFILE ====================
+
 @student_bp.route('/profile')
 @login_required
 def profile():
-    fingerprint_registered = bool(current_user.passkey_id)  # True if fingerprint exists
-    return render_template('profile.html', student=current_user, fingerprint_registered=fingerprint_registered)
+    device = is_device_trusted(current_user.id)
+
+    return render_template(
+        'profile.html',
+        student=current_user,
+        device_trusted=bool(device)
+    )
+
+
+@student_bp.route('/trust-device', methods=['POST'])
+@login_required
+def toggle_trust_device():
+    fingerprint = generate_device_fingerprint()
+
+    device = TrustedDevice.query.filter_by(
+        student_id=current_user.id,
+        device_fingerprint=fingerprint
+    ).first()
+
+    if device:
+        # Untrust this device
+        db.session.delete(device)
+        flash("This device is no longer trusted.", "info")
+    else:
+        # Trust this device
+        device = TrustedDevice(
+            student_id=current_user.id,
+            device_fingerprint=fingerprint,
+            ip_address=request.remote_addr,
+            browser=request.headers.get('User-Agent'),
+            device_name=request.headers.get('User-Agent')[:100],
+            trusted=True,
+            last_login=datetime.utcnow()
+        )
+        db.session.add(device)
+        flash("This device is now trusted.", "success")
+
+    db.session.commit()
+    return redirect(url_for('student.profile'))
+
+
+
+@student_bp.route('/verify-device', methods=['GET'])
+def verify_device():
+    student_id = session.get('pending_login_student')
+    if not student_id:
+        flash("No pending device verification.", "danger")
+        return redirect(url_for('student.login'))
+
+    student = Student.query.get(student_id)
+    fingerprint = session.get('pending_device_fp')
+
+    # Check if the device is already in the database (prevents duplicates)
+    device = TrustedDevice.query.filter_by(
+        student_id=student.id,
+        device_fingerprint=fingerprint
+    ).first()
+
+    if not device:
+        # Save a temporary TrustedDevice entry (untrusted)
+        device = TrustedDevice(
+            student_id=student.id,
+            device_fingerprint=fingerprint,
+            ip_address=request.remote_addr,
+            browser=request.headers.get('User-Agent'),
+            device_name=request.headers.get('User-Agent')[:100],
+            trusted=False
+        )
+        db.session.add(device)
+        db.session.commit()
+
+    # Send verification email
+    from student.utils import send_new_device_email
+    send_new_device_email(student, device)
+
+    return "✅ Verification email sent! Please check your inbox and click the button to confirm login."
+
+
+@student_bp.route('/verify-device/<token>')
+def verify_device_email(token):  # <--- the function name becomes the endpoint by default
+    device = TrustedDevice.query.filter_by(verification_token=token).first()
+    if not device:
+        flash("Invalid or expired verification link.", "danger")
+        return redirect(url_for('student.login'))
+
+    # Mark device as trusted
+    device.trusted = True
+    device.verification_token = None
+    db.session.commit()
+
+    # Complete login
+    student = device.student
+    login_user(student)
+    flash("Device verified and logged in successfully!", "success")
+    return redirect(url_for('student.dashboard'))
+
 
 
 

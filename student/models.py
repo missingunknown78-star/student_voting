@@ -82,11 +82,13 @@ class TrustedDevice(db.Model):
     __tablename__ = 'trusted_devices'
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    device_fingerprint = db.Column(db.String(255), nullable=False)
     ip_address = db.Column(db.String(50))
     browser = db.Column(db.String(255))
     device_name = db.Column(db.String(255))
     trusted = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime, default=datetime.utcnow)  # <-- FIXED
+    verification_token = db.Column(db.String(100), nullable=True)
 
     student = db.relationship('Student', backref='trusted_devices')
 
