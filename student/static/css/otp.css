@@ -1,0 +1,129 @@
+/* MAIN OTP PAGE CONTAINER */
+.otp-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 0 15px; /* margin on mobile */
+    background: linear-gradient(120deg, #f5f7fa, #c3cfe2);
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* OTP BOX (MAIN CONTAINER) */
+.otp-box {
+    background: #fff;
+    padding: 30px 25px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 380px; /* slightly smaller max width */
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* HEADER */
+.otp-box h2 {
+    margin-bottom: 10px;
+    color: #333;
+    font-weight: bold;
+}
+
+.otp-box p {
+    margin-bottom: 20px;
+    color: #555;
+    font-size: 14px;
+}
+
+/* ALERTS */
+.alert {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.alert-success { background: #d4edda; color: #155724; }
+.alert-danger { background: #f8d7da; color: #721c24; }
+
+/* OTP INPUTS */
+.otp-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px; /* space between each input */
+    margin-bottom: 15px;
+}
+
+.otp-container input {
+    width: 38px;       /* smaller width */
+    height: 45px;      /* smaller height */
+    font-size: 20px;   /* smaller text */
+    text-align: center;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    outline: none;
+    transition: 0.2s;
+}
+
+.otp-container input:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74,144,226,0.5);
+}
+
+/* ERROR TEXT */
+.field-error-text {
+    color: #d9534f;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+/* VERIFY BUTTON */
+.register-btn {
+    width: 100%;
+    padding: 12px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-top: 10px;
+}
+
+.register-btn:hover {
+    background: #357abd;
+}
+
+/* RESEND TEXT */
+.resend-text {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.resend-text a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.resend-text a:hover {
+    text-decoration: underline;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 400px) {
+    .otp-container input {
+        width: 32px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .otp-box {
+        padding: 25px 20px;
+    }
+}

@@ -251,19 +251,9 @@ body {
     color: var(--secondary);
     margin-bottom: 20px;
     padding-bottom: 12px;
-    border-bottom: 2px solid var(--light-gray);
     position: relative;
 }
 
-.section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
-}
 
 /* ==========================================================================
    PROFILE CARD - Enhanced
@@ -308,28 +298,68 @@ body {
     font-size: 0.95rem;
 }
 
-/* Badges */
-.voted-badge {
-    display: inline-block;
-    margin-top: 15px;
-    padding: 10px 20px;
-    border-radius: 30px;
+
+/* ========================================================================== 
+   GUIDELINES BOX - Header touching top edges
+   ========================================================================== */
+   .guidelines-box {
+    background: #fff; 
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    position: relative; /* for absolute header positioning */
+    overflow: hidden;
+    padding-top: 60px; /* space for the header so content won't be covered */
+}
+
+/* Header / Title bar spanning full width and touching top edges */
+.guidelines-box .section-title {
+    background: var(--primary);
+    color: #fff;
+    margin: 0;
+    padding: 15px 20px;
+    font-size: 1.3rem;
     font-weight: 600;
+
+    position: absolute;   /* stick to top edges */
+    top: 0;
+    left: 0;
+    width: 100%;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+/* Paragraph text inside the card */
+.guidelines-box p {
+    padding: 45px 5px 10px 5px; /* top:45px to clear header, bottom:10px, left/right:5px */
+    line-height: 1.6;
+    color: var(--dark);
+    position: relative;
+    z-index: 0;
+}
+
+/* Read More link */
+.guidelines-box .guidelines-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 5px; /* horizontal padding only */
+    margin-top: 0;  /* optional: small space already handled by paragraph bottom padding */
+    color: var(--primary);
     text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
     transition: var(--transition);
-    font-size: 0.95rem;
-    letter-spacing: 0.3px;
 }
 
-.voted-badge {
-    background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);
-    color: white;
-    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+.guidelines-box .guidelines-link:hover {
+    gap: 5px;
+    color: var(--primary-dark);
 }
 
-.voted-badge[style*="background:#f39c12"] {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-}
+
 
 /* ==========================================================================
    ANNOUNCEMENTS PREVIEW
@@ -367,21 +397,42 @@ body {
     color: var(--primary-dark);
 }
 
-
-/* ==========================================================================
-   HELP BOX
+/* ========================================================================== 
+   HELP BOX - Header Full Width & Touches Top
    ========================================================================== */
-.help-box {
-    border-left: 5px solid var(--warning);
-    background: linear-gradient(90deg, rgba(243, 156, 18, 0.05) 0%, rgba(230, 126, 34, 0.03) 100%);
+   .help-box {
+    background: #fff; /* card content white */
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    overflow: hidden; /* ensures top corners stay rounded */
+    margin-bottom: 15px;
+    padding: 0; /* remove padding so header touches top */
 }
 
+/* Header / Title bar spanning full width and at top of card */
+.help-box h2.section-title {
+    background: #f39c12; /* orange header */
+    color: #fff;
+    margin: 0;            /* remove margin */
+    padding: 15px 20px;   /* inner padding for text */
+    font-size: 1.3rem;
+
+    border-top-left-radius: 12px;  /* round corners at top */
+    border-top-right-radius: 12px;
+    width: 100%;        /* full width of card */
+    display: block;
+}
+
+/* Content below header */
 .help-box p {
-    margin-bottom: 15px;
+    padding: 15px 20px;   
+    margin: 0 0 15px 0;
     line-height: 1.6;
     color: var(--dark);
+    background: #fff;     
 }
 
+/* Help link styling */
 .help-link {
     display: inline-flex;
     align-items: center;
@@ -391,13 +442,46 @@ body {
     font-weight: 600;
     font-size: 1.1rem;
     transition: var(--transition);
-    padding: 10px 0;
+    padding: 0 20px 15px 20px; 
 }
 
 .help-link:hover {
     gap: 15px;
     color: #e67e22;
 }
+/* ========================================================================== 
+   HELP BOX - Full-width Header Touching Container Edges (No line)
+   ========================================================================== */
+   .help-box {
+    background: #fff; /* card content white */
+    border-radius: 12px; /* card corners */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    overflow: hidden; /* ensures header border-radius works */
+    margin-bottom: 15px;
+    padding: 0; /* remove padding so header can span full width */
+    position: relative;
+}
+
+/* Header / Title bar spanning entire top of container */
+.help-box h2.section-title {
+    background: #f39c12; /* orange header */
+    color: #fff;
+    margin: 0;            /* remove margin */
+    padding: 15px 20px;   /* vertical and horizontal padding */
+    font-size: 1.3rem;
+
+    width: 100%;          /* full width of parent container */
+    border-bottom: none;  /* remove any bottom border / line */
+    border-top-left-radius: 0;   
+    border-top-right-radius: 0;
+}
+
+/* Content below header */
+.help-box .help-content {
+    padding: 15px 20px; /* inner padding for text */
+    background: #fff;
+}
+
 
 /* ==========================================================================
    RESPONSIVE DESIGN
@@ -406,9 +490,9 @@ body {
 /* Mobile (Default) - Sidebar is hidden */
 @media screen and (max-width: 767px) {
     .dashboard-container {
-        margin-left: 15px;
-        margin-right: 15px;
-        padding: 15px;
+        margin-left: 7px;
+        margin-right: 7px;
+        padding: 7px;
     }
     
     .top-nav {
@@ -598,40 +682,7 @@ body.sidebar-open {
 }
 
 
-/* ==========================================================================
-   GUIDELINES BOX
-   ========================================================================== */
-   .guidelines-box {
-    border-left: 5px solid var(--primary);
-    background: linear-gradient(
-        90deg,
-        rgba(52, 152, 219, 0.05) 0%,
-        rgba(41, 128, 185, 0.03) 100%
-    );
-}
 
-.guidelines-box p {
-    margin-bottom: 15px;
-    line-height: 1.6;
-    color: var(--dark);
-}
-
-.guidelines-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--primary);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 1.1rem;
-    transition: var(--transition);
-    padding: 10px 0;
-}
-
-.guidelines-link:hover {
-    gap: 15px;
-    color: var(--primary-dark);
-}
 
 
 /* ==========================================================================
@@ -643,7 +694,7 @@ body.sidebar-open {
     padding: 20px;
     margin-bottom: 15px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    border-left: 5px solid #2c7be5; /* same blue accent as guidelines */
+
 }
 
 .announcements-card h2.section-title {
@@ -677,6 +728,107 @@ body.sidebar-open {
     color: #1a5bb8;
     gap: 12px;
 }
+
+/* ========================================================================== 
+   ANNOUNCEMENT CARD
+   ========================================================================== */
+   .announcements-card {
+    background: #fff; /* card background remains white */
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    overflow: hidden; /* for header rounded corners */
+    margin-bottom: 15px;
+
+    /* Remove horizontal padding so header spans full width */
+    padding: 0; 
+}
+
+/* Header / Title bar - full width */
+.announcements-card h2.section-title {
+    background: #2c7be5; /* full-width blue header */
+    color: #fff;
+    margin: 0;            /* remove default margin */
+    padding: 15px 20px;   /* top/bottom padding + some left/right padding for text */
+    font-size: 1.3rem;
+    border-bottom: 1px solid #1a5bb8; /* subtle darker line under header */
+}
+
+/* Announcement content container */
+.announcements-card .announcement-item {
+    padding: 15px 20px;   /* inner content padding */
+    background: #fff;     /* keep announcement content white */
+    transition: var(--transition);
+}
+
+/* Mobile separator between items */
+@media screen and (max-width: 767px) {
+    .announcements-card .announcement-item {
+        position: relative;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #ddd; /* line between items */
+    }
+
+    .announcements-card .announcement-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+}
+
+.announcements-card .announcement-item h4 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.announcements-card .announcement-item p {
+    font-size: 0.95rem;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.announcements-card .announcement-item small {
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.announcements-card .view-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 15px;
+    color: #2c7be5;
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+    padding: 8px 20px;
+}
+
+.announcements-card .view-all-link:hover {
+    color: #1a5bb8;
+    gap: 12px;
+}
+
+
+/* ======================= MOBILE SEPARATOR BETWEEN ANNOUNCEMENTS ======================= */
+@media screen and (max-width: 767px) {
+    .announcements-card .announcement-item {
+        position: relative;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #ddd; /* line between items */
+    }
+
+    /* Remove border for last item */
+    .announcements-card .announcement-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+}
+
 
 
 
@@ -769,7 +921,7 @@ body.sidebar-open {
     }
 
     .profile-card {
-        padding-top: 10px;
+        padding-top: 5px;
     }
 }
 
@@ -790,7 +942,7 @@ body.sidebar-open {
     }
 
     .profile-card {
-        padding-top: 20px;
+        padding-top: 10px;
     }
 
     .voted-badge {
@@ -798,5 +950,22 @@ body.sidebar-open {
         display: inline-block;
         text-align: center;
         width: 100%;
+    }
+}
+
+
+/* MOBILE SEPARATOR LINE */
+.mobile-separator {
+    display: none; /* default hidden */
+    width: 100%;
+    height: 1px;
+    background-color: #ddd;
+    margin: 15px 0;
+}
+
+/* Show only on small screens */
+@media (max-width: 768px) {
+    .mobile-separator {
+        display: block;
     }
 }

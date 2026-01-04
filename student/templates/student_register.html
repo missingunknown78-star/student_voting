@@ -7,17 +7,16 @@
 
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- WebAuthn Browser JS -->
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
 </head>
+
 <body>
 
 <div class="registration-container">
     <div class="registration-box">
 
         <div class="logo-header-vertical">
-            <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
+            <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" class="logo">
             <div class="university-name">
                 Cebu Technological University Moalboal Campus
             </div>
@@ -26,87 +25,81 @@
         <h2>Register as a Student</h2>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
         {% endwith %}
 
-        <form id="registrationForm" method="POST">
+        <!-- ✅ FORM ID IS REQUIRED -->
+        <form id="registrationForm" method="POST" novalidate>
 
-            <!-- First Name -->
+            <!-- FIRST NAME -->
             <div class="input-group floating">
-                <input type="text" id="first_name" name="first_name" required placeholder=" ">
-                <label for="first_name">First Name</label>
+                <input type="text" name="first_name" required placeholder=" ">
+                <label>First Name</label>
             </div>
 
-            <!-- Middle Name -->
+            <!-- MIDDLE NAME -->
             <div class="input-group floating">
-                <input type="text" id="middle_name" name="middle_name" placeholder=" ">
-                <label for="middle_name">Middle Name</label>
+                <input type="text" name="middle_name" placeholder=" ">
+                <label>Middle Name</label>
             </div>
 
-            <!-- Last Name -->
+            <!-- LAST NAME -->
             <div class="input-group floating">
-                <input type="text" id="last_name" name="last_name" required placeholder=" ">
-                <label for="last_name">Last Name</label>
+                <input type="text" name="last_name" required placeholder=" ">
+                <label>Last Name</label>
             </div>
 
-            <!-- Suffix -->
+            <!-- SUFFIX -->
             <div class="input-group floating">
-                <input type="text" id="suffix" name="suffix" placeholder=" ">
-                <label for="suffix">Suffix</label>
+                <input type="text" name="suffix" placeholder=" ">
+                <label>Suffix</label>
             </div>
 
-            <!-- Department / Course (NO FLOATING) -->
+            <!-- COURSE -->
             <div class="input-group">
-                <label for="course">Department / Course</label>
-                <select id="course" name="course" required>
+                <label>Department / Course</label>
+                <select name="course" required>
                     <option value="">-- Select Course --</option>
-                    {% for dept_name, courses in courses_by_department.items() %}
-                        <optgroup label="{{ dept_name }}">
+                    {% for dept, courses in courses_by_department.items() %}
+                        <optgroup label="{{ dept }}">
                             {% for course in courses %}
-                                <option value="{{ course.id }}"
-                                    {% if session.registration_data and session.registration_data.course_id == course.id %}
-                                        selected
-                                    {% endif %}>
-                                    {{ course.course_name }}
-                                </option>
+                                <option value="{{ course.id }}">{{ course.course_name }}</option>
                             {% endfor %}
                         </optgroup>
                     {% endfor %}
                 </select>
             </div>
 
-            <!-- Birth Date (NO FLOATING) -->
+            <!-- BIRTH DATE -->
             <div class="input-group">
-                <label for="birth_date">Birth Date</label>
-                <input type="date" id="birth_date" name="birth_date" required>
+                <label>Birth Date</label>
+                <input type="date" name="birth_date" required>
             </div>
 
-            <!-- Email -->
+            <!-- EMAIL -->
             <div class="input-group floating">
-                <input type="email" id="email" name="email" required placeholder=" ">
-                <label for="email">Email</label>
+                <input type="email" name="email" required placeholder=" ">
+                <label>Email</label>
             </div>
 
-            <!-- Username -->
+            <!-- USERNAME -->
             <div class="input-group floating">
-                <input type="text" id="username" name="username" required placeholder=" ">
-                <label for="username">Username</label>
+                <input type="text" name="username" required placeholder=" ">
+                <label>Username</label>
             </div>
 
-            <!-- Password -->
+            <!-- PASSWORD -->
             <div class="input-group floating">
-                <input type="password" id="password" name="password" required minlength="8" placeholder=" ">
-                <label for="password">Password</label>
+                <input type="password" name="password" required minlength="8" placeholder=" ">
+                <label>Password</label>
             </div>
 
-            <!-- ID Number -->
+            <!-- ID NUMBER -->
             <div class="input-group floating">
-                <input type="text" id="id_number" name="id_number" required placeholder=" ">
-                <label for="id_number">ID Number</label>
+                <input type="text" name="id_number" required placeholder=" ">
+                <label>ID Number</label>
             </div>
 
             <button type="submit" class="register-btn">Register</button>
@@ -119,6 +112,46 @@
 
     </div>
 </div>
+
+<!-- ================= AJAX VALIDATION ================= -->
+<script>
+document.getElementById('registrationForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    // Remove old errors
+    document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+    document.querySelectorAll('.field-error-text').forEach(el => el.remove());
+
+    const form = this;
+    const formData = new FormData(form);
+
+    const response = await fetch("{{ url_for('student.ajax_validate_register') }}", {
+        method: "POST",
+        body: formData
+    });
+
+    const errors = await response.json();
+
+    if (Object.keys(errors).length > 0) {
+        for (const field in errors) {
+            const input = form.querySelector(`[name="${field}"]`);
+            if (!input) continue;
+
+            const wrapper = input.closest('.input-group');
+            wrapper.classList.add('input-error');
+
+            const error = document.createElement('div');
+            error.className = 'field-error-text';
+            error.textContent = errors[field];
+            wrapper.appendChild(error);
+        }
+        return; // ❌ stop submit
+    }
+
+    // ✅ No validation errors → submit normally
+    form.submit();
+});
+</script>
 
 </body>
 </html>

@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify OTP</title>
-    <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify OTP</title>
+
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/otp.css') }}">
 </head>
 <body>
 
-<div class="registration-container">
-    <div class="registration-box">
-
+<div class="otp-page-container">
+    <div class="otp-box">
         <h2>Verify Your Registration</h2>
         <p>An OTP has been sent to your email. Please enter it below:</p>
 
@@ -22,21 +22,79 @@
             {% endif %}
         {% endwith %}
 
-        <form method="POST">
-            <div class="input-group">
-                <label for="otp">Enter OTP</label>
-                <input type="text" id="otp" name="otp" placeholder="6-digit OTP" required pattern="\d{6}" maxlength="6">
+        <form method="POST" id="otpForm">
+            <div class="otp-container">
+                {% for i in range(6) %}
+                <input type="text" name="otp{{i}}" maxlength="1" pattern="\d" required>
+                {% endfor %}
             </div>
+            <div id="otpError" class="field-error-text"></div>
+
+            <!-- Hidden input to hold full OTP for backend -->
+            <input type="hidden" name="otp" id="fullOtp">
 
             <button type="submit" class="register-btn">Verify OTP</button>
         </form>
 
-        <p>
-            Didn't receive an OTP? <a href="{{ url_for('student.register') }}">Resend</a>
+        <p class="resend-text">
+            Didn't receive an OTP? 
+            <a href="{{ url_for('student.resend_otp') }}">Resend</a>
         </p>
-
     </div>
 </div>
 
+<script>
+    const inputs = document.querySelectorAll('.otp-container input');
+    const fullOtpInput = document.getElementById('fullOtp');
+    const otpForm = document.getElementById('otpForm');
+    const otpError = document.getElementById('otpError');
+    
+    // Move focus and validate individual input
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            const value = e.target.value;
+            if (/^\d$/.test(value)) {
+                // Move to next input if exists
+                if (index < inputs.length - 1) inputs[index + 1].focus();
+            } else {
+                e.target.value = '';
+            }
+        });
+    
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+    
+        // ✅ Handle paste event
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = pasteData.replace(/\D/g, '').split('').slice(0, inputs.length); // max 6 digits
+            digits.forEach((digit, i) => {
+                inputs[i].value = digit;
+            });
+            // Move focus to the last filled box
+            const lastIndex = digits.length - 1;
+            if (lastIndex >= 0 && lastIndex < inputs.length - 1) {
+                inputs[lastIndex + 1].focus();
+            }
+        });
+    });
+    
+    // Combine all inputs before submit
+    otpForm.addEventListener('submit', (e) => {
+        let otp = '';
+        inputs.forEach(i => otp += i.value);
+        if (otp.length !== inputs.length) {
+            e.preventDefault();
+            otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
+        } else {
+            fullOtpInput.value = otp;
+        }
+    });
+    </script>
+    
 </body>
 </html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student E-Voting Dashboard</title>
+
+<style>
+/* ================= BASE ================= */
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f4f6f9;
+    color: #333;
+    font-size: 14px;
+}
+
+/* ================= HEADER ================= */
+.header {
+    background: #1e3a8a;
+    color: #fff;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.profile-pic {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+}
+
+/* ================= DASHBOARD ================= */
+.dashboard {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+/* ================= CARD ================= */
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.card h2 {
+    font-size: 14px;
+    margin: 0 0 12px;
+    font-weight: 600;
+    color: #1e3a8a;
+}
+
+/* ================= ELECTIONS ================= */
+.election-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.election-item:last-child {
+    border-bottom: none;
+}
+
+.election-title {
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.vote-btn {
+    margin-top: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    background: #1e40af;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.vote-btn:hover {
+    background: #1e3a8a;
+}
+
+.see-more {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #1e40af;
+    cursor: pointer;
+    text-align: right;
+}
+
+/* ================= CANDIDATES ================= */
+.candidate {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.candidate img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+}
+
+.candidate span {
+    font-size: 13px;
+}
+
+/* ================= TEXT LIST ================= */
+.card ul {
+    padding-left: 16px;
+    margin: 0;
+}
+
+.card ul li {
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+/* ================= ANNOUNCEMENT ================= */
+.announcement {
+    font-size: 13px;
+    background: #f1f5ff;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 600px) {
+    .header h1 {
+        font-size: 14px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+<div class="header">
+    <h1>Student E-Voting Dashboard</h1>
+    <img src="https://via.placeholder.com/150" class="profile-pic" alt="Profile">
+</div>
+
+<!-- ================= DASHBOARD ================= -->
+<div class="dashboard">
+
+    <!-- Available Elections -->
+    <div class="card">
+        <h2>Available Elections</h2>
+
+        <div class="election-item">
+            <div class="election-title">Student Council President</div>
+            <button class="vote-btn">Vote</button>
+        </div>
+
+        <div class="election-item">
+            <div class="election-title">Department Representative</div>
+            <button class="vote-btn">Vote</button>
+        </div>
+
+        <!-- Hidden extra elections -->
+        <div id="more-elections" style="display:none;">
+            <div class="election-item">
+                <div class="election-title">Treasurer</div>
+                <button class="vote-btn">Vote</button>
+            </div>
+        </div>
+
+        <div class="see-more" onclick="toggleElections()">See more</div>
+    </div>
+
+    <!-- Candidate Profiles -->
+    <div class="card">
+        <h2>Candidate Profiles</h2>
+
+        <div class="candidate">
+            <img src="https://via.placeholder.com/100">
+            <span>Juan Dela Cruz – President</span>
+        </div>
+
+        <div class="candidate">
+            <img src="https://via.placeholder.com/100">
+            <span>Maria Santos – Vice President</span>
+        </div>
+    </div>
+
+    <!-- Election Guidelines -->
+    <div class="card">
+        <h2>Election Guidelines</h2>
+        <ul>
+            <li>One student, one vote</li>
+            <li>Votes are confidential</li>
+            <li>No vote changes allowed</li>
+        </ul>
+    </div>
+
+    <!-- Announcements -->
+    <div class="card">
+        <h2>Announcements</h2>
+        <div class="announcement">
+            Voting ends on October 30, 2026 at 5:00 PM.
+        </div>
+    </div>
+
+    <!-- Help & Support -->
+    <div class="card">
+        <h2>Help & Support</h2>
+        <ul>
+            <li>Email: support@school.edu</li>
+            <li>Office: Student Affairs</li>
+        </ul>
+    </div>
+
+</div>
+
+<script>
+function toggleElections() {
+    const more = document.getElementById("more-elections");
+    more.style.display = more.style.display === "none" ? "block" : "none";
+}
+</script>
+
+</body>
+</html>

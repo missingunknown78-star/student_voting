@@ -54,61 +54,111 @@ def get_origin_and_rp_id():
 def register():
     from admin.models import Department, Course
 
+    # ✅ Clear form session only if not coming from failed POST
+    if request.method == 'GET':
+        if not session.pop('keep_form', False):
+            session.pop('registration_data', None)
+            session.pop('error_fields', None)
+
     if request.method == 'POST':
-        registration_data = {
-            "first_name": request.form.get('first_name'),
-            "middle_name": request.form.get('middle_name'),
-            "last_name": request.form.get('last_name'),
-            "suffix": request.form.get('suffix'),
-            "username": request.form.get('username'),
-            "email": request.form.get('email').strip(),
-            "password": request.form.get('password'),
-            "course": request.form.get('course'),
-            "birth_date": request.form.get('birth_date'),
-            "id_number": request.form.get('id_number')
-        }
+        session['registration_data'] = request.form.to_dict()
+        session['error_fields'] = []
+        session['keep_form'] = True   # ⭐ Keep form values if errors
 
-        email = registration_data["email"]
-        id_number = registration_data["id_number"]
+        email = request.form.get('email').strip()
+        id_number = request.form.get('id_number')
+        username = request.form.get('username')
 
+        # Check duplicates
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
             flash("ID Number already registered!", "danger")
-        elif Student.query.filter_by(email=email).first():
+            session['error_fields'].append('id_number')
+
+        if Student.query.filter_by(email=email).first():
             flash("Email already registered!", "danger")
-        else:
-            course_id = registration_data["course"]
-            course_obj = Course.query.get(course_id)
-            if not course_obj:
-                flash("Selected course is invalid.", "danger")
-                return redirect(url_for('student.register'))
+            session['error_fields'].append('email')
 
-            registration_data["course"] = course_obj.course_name
-            registration_data["course_id"] = course_obj.id
-            registration_data["department_id"] = course_obj.department_id
+        if Student.query.filter_by(username=username).first():
+            flash("Username already taken!", "danger")
+            session['error_fields'].append('username')
 
-            otp = generate_otp()
-            session['otp'] = otp
-            session['registration_data'] = registration_data
+        if session['error_fields']:
+            return redirect(url_for('student.register'))
 
-            try:
-                msg = Message(subject="CTU Registration OTP", recipients=[email])
-                msg.html = f"""
-                <div style="font-family: Arial, sans-serif; text-align: center;">
-                    <h2>Cebu Technological University Moalboal Campus</h2>
-                    <p>Hello <strong>{registration_data['first_name']}</strong>,</p>
-                    <p>Your <strong>OTP code</strong> is:</p>
-                    <h3>{otp}</h3>
-                </div>
-                """
-                mail.send(msg)
-                flash('OTP has been sent to your email.', 'info')
-                return redirect(url_for('student.verify_otp'))
-            except Exception as e:
-                flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
+        # ✅ Course validation
+        course_id = request.form.get('course')
+        course_obj = Course.query.get(course_id)
+        if not course_obj:
+            flash("Selected course is invalid.", "danger")
+            session['error_fields'].append('course')
+            return redirect(url_for('student.register'))
 
+        registration_data = session['registration_data']
+        registration_data.update({
+            "course": course_obj.course_name,
+            "course_id": course_obj.id,
+            "department_id": course_obj.department_id
+        })
+
+        # Generate OTP
+        otp = generate_otp()
+        session['otp'] = otp
+
+        try:
+            # Send OTP email
+            msg = Message(
+                subject="CTU Registration OTP",
+                recipients=[email]
+            )
+            msg.html = f"""
+            <div style="font-family: Arial; text-align:center;">
+                <h2>CTU Moalboal Campus</h2>
+                <p>Hello <strong>{registration_data['first_name']}</strong></p>
+                <h3>Your OTP: {otp}</h3>
+            </div>
+            """
+            mail.send(msg)
+
+            # ✅ Do NOT clear session yet — keep registration_data for OTP verification & resend
+            flash("OTP has been sent to your email.", "info")
+            return redirect(url_for('student.verify_otp'))
+
+        except Exception as e:
+            flash(f"Failed to send OTP email: {str(e)}", "danger")
+
+    # Load departments & courses
     departments = Department.query.order_by(Department.name).all()
-    courses_by_department = {dept.name: Course.query.filter_by(department_id=dept.id).all() for dept in departments}
-    return render_template('student_register.html', courses_by_department=courses_by_department)
+    courses_by_department = {
+        dept.name: Course.query.filter_by(department_id=dept.id).all()
+        for dept in departments
+    }
+
+    return render_template(
+        'student_register.html',
+        courses_by_department=courses_by_department
+    )
+
+
+# ==================== AJAX VALIDATION ====================
+@student_bp.route('/register/validate', methods=['POST'])
+def ajax_validate_register():
+    errors = {}
+
+    email = request.form.get('email', '').strip()
+    id_number = request.form.get('id_number')
+    username = request.form.get('username')
+
+    if Student.query.filter(func.trim(Student.id_number) == id_number).first():
+        errors['id_number'] = 'ID Number already registered'
+
+    if Student.query.filter_by(email=email).first():
+        errors['email'] = 'Email already registered'
+
+    if Student.query.filter_by(username=username).first():
+        errors['username'] = 'Username already taken'
+
+    return jsonify(errors)
+
 
 # ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])
@@ -136,15 +186,54 @@ def verify_otp():
 
             db.session.add(new_student)
             db.session.commit()
+
+            # ✅ Clear session only after registration is successful
             session.pop('otp', None)
             session.pop('registration_data', None)
+            session.pop('error_fields', None)
+            session.pop('keep_form', None)
+
             flash('Registration successful! You may now log in.', 'success')
             return redirect(url_for('student.login'))
-
         else:
             flash('Invalid OTP.', 'danger')
 
     return render_template('verify_otp.html')
+
+
+# ==================== RESEND OTP ====================
+@student_bp.route('/resend-otp', methods=['GET'])
+def resend_otp():
+    registration_data = session.get('registration_data')
+    if not registration_data:
+        flash("No registration data found. Please register first.", "danger")
+        return redirect(url_for('student.register'))
+
+    # Generate new OTP
+    otp = generate_otp()
+    session['otp'] = otp
+
+    try:
+        msg = Message(
+            subject="CTU Registration OTP",
+            recipients=[registration_data['email']]
+        )
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif; text-align: center;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <p>Hello <strong>{registration_data['first_name']}</strong>,</p>
+            <p>Your <strong>OTP code</strong> is:</p>
+            <h3>{otp}</h3>
+        </div>
+        """
+        mail.send(msg)
+        flash("A new OTP has been sent to your email.", "info")
+    except Exception as e:
+        flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
+
+    return redirect(url_for('student.verify_otp'))
+
+
 
 
 #=======================STOP HERE WHEN UNDO===========================
