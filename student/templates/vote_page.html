@@ -31,7 +31,6 @@
 
         {% for position, candidates in candidates_by_position.items() %}
         <div class="position-group">
-            <!-- Use the key directly -->
             <h3 class="position-title">{{ position }}</h3>
             <div class="position-candidates">
                 {% for candidate in candidates %}
@@ -40,7 +39,7 @@
                          alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
                          class="candidate-photo">
                     <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
-                    <!-- Replace spaces in position for valid radio name -->
+                    <!-- Radio button with unique name per position -->
                     <input type="radio" name="candidate_{{ position|replace(' ', '_') }}" value="{{ candidate.id }}" required>
                 </label>
                 {% endfor %}

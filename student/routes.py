@@ -847,7 +847,7 @@ from admin.models import Election, Candidate
 from collections import defaultdict
 
 
-@student_bp.route('/vote/<int:election_id>', methods=['GET', 'POST'])
+@student_bp.route('/vote/<int:election_id>', methods=['GET'])
 @login_required
 def vote_page(election_id):
     local_tz = pytz.timezone("Asia/Manila")
@@ -858,10 +858,7 @@ def vote_page(election_id):
         flash("Election not found.", "danger")
         return redirect(url_for('student.available_elections'))
 
-    start_date = election.start_date
-    end_date = election.end_date
-
-    if not (start_date <= now <= end_date):
+    if not (election.start_date <= now <= election.end_date):
         flash("This election is not currently open.", "warning")
         return redirect(url_for('student.available_elections'))
 
@@ -883,13 +880,16 @@ def vote_page(election_id):
         candidates_by_position=candidates_by_position
     )
 
-
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
 def submit_vote(election_id):
-    candidate_id = request.form.get('candidate_id')
-    if not candidate_id:
-        flash("Please select a candidate before submitting.", "warning")
+    # Get all selected candidates from the form
+    selected_candidates = {
+        key: value for key, value in request.form.items() if key.startswith('candidate_')
+    }
+
+    if not selected_candidates:
+        flash("Please select at least one candidate before submitting.", "warning")
         return redirect(url_for('student.vote_page', election_id=election_id))
 
     # Prevent duplicate voting
@@ -898,13 +898,15 @@ def submit_vote(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Record the vote
-    vote = Vote(student_id=current_user.id, candidate_id=candidate_id, election_id=election_id)
-    db.session.add(vote)
-    db.session.commit()
+    # Record votes for each position
+    for position_name, candidate_id in selected_candidates.items():
+        vote = Vote(student_id=current_user.id, candidate_id=int(candidate_id), election_id=election_id)
+        db.session.add(vote)
 
+    db.session.commit()
     flash("Your vote has been submitted successfully!", "success")
     return redirect(url_for('student.available_elections'))
+
 
 
 from sqlalchemy import or_

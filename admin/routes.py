@@ -274,32 +274,38 @@ def dashboard():
 
 
 
-# ---------------------- MANAGE STUDENTS PAGE ---------------------- #
+# ---------------------- MANAGE STUDENTS PAGE (ENHANCED) ---------------------- #
 @admin_bp.route('/students')
 @admin_required
 def manage_students():
-    # Query all departments and courses
-    departments = Department.query.all()
-    courses = Course.query.all()
+    # -------------------- Fetch Departments & Courses -------------------- #
+    departments = Department.query.order_by(Department.name).all()
+    courses = Course.query.order_by(Course.course_name).all()
 
-    # Convert to plain dicts for JSON serialization
     departments_data = [{"id": d.id, "name": d.name} for d in departments]
-    courses_data = [{"id": c.id, "name": c.course_name} for c in courses]  # <-- FIX
+    courses_data = [{"id": c.id, "name": c.course_name} for c in courses]
 
+    # -------------------- Fetch Elections -------------------- #
+    elections = Election.query.order_by(Election.start_date.desc()).all()
+    elections_data = [{"id": e.id, "title": e.title} for e in elections]
+
+    # -------------------- Render Template -------------------- #
     return render_template(
         'manage_students.html',
         departments=departments_data,
-        courses=courses_data
+        courses=courses_data,
+        elections=elections_data
     )
 
 
-# ---------------------- AJAX STUDENT DATA ---------------------- #
+# ---------------------- AJAX STUDENT DATA (with voting status) ---------------------- #
 @admin_bp.route('/students/data')
 @admin_required
 def students_data():
     filter_type = request.args.get('filter_type', 'all')
     filter_id = request.args.get('filter_id')
     search = request.args.get('search', '')
+    election_id = request.args.get('election_id')  # NEW: get selected election
     page = int(request.args.get('page', 1))
     per_page = 10
 
@@ -331,14 +337,22 @@ def students_data():
     )
 
     # Convert students to simple dicts
-    students = [{
-        "id": s.id,
-        "id_number": s.id_number,
-        "first_name": s.first_name,
-        "last_name": s.last_name,
-        "course": s.course,
-        "year_level": getattr(s, 'year_level', '')
-    } for s in pagination.items]
+    students = []
+    for s in pagination.items:
+        # Check voting status if election_id is provided
+        has_voted = False
+        if election_id and election_id != "all":
+            has_voted = Vote.query.filter_by(student_id=s.id, election_id=int(election_id)).first() is not None
+
+        students.append({
+            "id": s.id,
+            "id_number": s.id_number,
+            "first_name": s.first_name,
+            "last_name": s.last_name,
+            "course": s.course,
+            "year_level": getattr(s, 'year_level', ''),
+            "has_voted": has_voted  # NEW: send voting status to frontend
+        })
 
     return jsonify({
         "students": students,
@@ -346,25 +360,29 @@ def students_data():
         "current_page": pagination.page
     })
 
+from flask import Response, request
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+from sqlalchemy import or_
 
 @admin_bp.route('/students/export-excel')
 @admin_required
 def export_students_excel():
-    # Get same filters as AJAX
+    # ------------------- GET FILTERS ------------------- #
     filter_type = request.args.get('filter_type', 'all')
     filter_id = request.args.get('filter_id')
     search = request.args.get('search', '')
+    election_id = request.args.get('election_id')
 
+    # ------------------- QUERY STUDENTS ------------------- #
     query = Student.query
 
-    # Apply filters
     if filter_type == 'department' and filter_id:
         query = query.filter(Student.department_id == int(filter_id))
-
     if filter_type == 'course' and filter_id:
         query = query.filter(Student.course_id == int(filter_id))
-
-    # Apply search
     if search:
         query = query.filter(
             or_(
@@ -377,32 +395,91 @@ def export_students_excel():
 
     students = query.order_by(Student.last_name).all()
 
-    # ---------------- EXCEL ---------------- #
+    # ------------------- FETCH SELECTED ELECTION ------------------- #
+    election = None
+    if election_id and election_id != "all":
+        election = Election.query.get(int(election_id))
+
+    # ------------------- CREATE EXCEL ------------------- #
     wb = Workbook()
     ws = wb.active
     ws.title = "Students"
 
-    headers = ["Student ID", "First Name", "Last Name", "Course", "Year Level"]
-    ws.append(headers)
+    # ------------------- HEADER STYLES ------------------- #
+    mustard_fill = PatternFill(start_color='F1C40F', end_color='F1C40F', fill_type='solid')
+    header_font = Font(name='Calibri', bold=True, color='FFFFFF')
+    center_alignment = Alignment(horizontal='center', vertical='center')
 
-    for s in students:
-        ws.append([
+    max_col = 6  # A–F
+
+    # Row 1: Election Title
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
+    ws.cell(row=1, column=1, value=f"{election.title if election else 'All Elections'}")
+    ws.cell(row=1, column=1).font = header_font
+    ws.cell(row=1, column=1).fill = mustard_fill
+    ws.cell(row=1, column=1).alignment = center_alignment
+
+    # Row 2: Department
+    department_text = election.department if election and election.department else '-'
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
+    ws.cell(row=2, column=1, value=f"{department_text}")
+    ws.cell(row=2, column=1).font = header_font
+    ws.cell(row=2, column=1).fill = mustard_fill
+    ws.cell(row=2, column=1).alignment = center_alignment
+
+    # Row 3: Course
+    course_text = election.course_rel.course_name if election and election.course_rel else '-'
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
+    ws.cell(row=3, column=1, value=f"{course_text}")
+    ws.cell(row=3, column=1).font = header_font
+    ws.cell(row=3, column=1).fill = mustard_fill
+    ws.cell(row=3, column=1).alignment = center_alignment
+
+    # ------------------- COLUMN HEADERS ------------------- #
+    headers = ["Student ID", "First Name", "Last Name", "Course", "Year Level", "Status"]
+    for col_num, header in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col_num, value=header)
+        cell.font = Font(name='Calibri', bold=True, color='FFFFFF')
+        cell.fill = PatternFill(start_color='2980b9', end_color='2980b9', fill_type='solid')
+        cell.alignment = center_alignment
+
+    # ------------------- ADD STUDENTS ------------------- #
+    for idx, s in enumerate(students, start=5):
+        has_voted = False
+        if election:
+            has_voted = Vote.query.filter_by(student_id=s.id, election_id=election.id).first() is not None
+        status_text = "Voted" if has_voted else "Not Voted"
+
+        row_values = [
             s.id_number,
             s.first_name,
             s.last_name,
             s.course,
-            getattr(s, 'year_level', '')
-        ])
+            getattr(s, 'year_level', ''),
+            status_text
+        ]
 
-    # Auto-fit column widths
+        for col_num, value in enumerate(row_values, start=1):
+            cell = ws.cell(row=idx, column=col_num, value=value)
+            cell.alignment = Alignment(horizontal='left', vertical='center')
+            if col_num == 6:  # Status column
+                if has_voted:
+                    cell.fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
+                    cell.font = Font(color='006100')
+                else:
+                    cell.fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+                    cell.font = Font(color='9C0006')
+
+    # ------------------- AUTO FIT COLUMNS ------------------- #
     for col in ws.columns:
         max_length = 0
         col_letter = get_column_letter(col[0].column)
         for cell in col:
             if cell.value:
-                max_length = max(max_length, len(str(cell.value)))
-        ws.column_dimensions[col_letter].width = max_length + 2
+                max_length = max(max_length, len(str(cell.value)) + 2)
+        ws.column_dimensions[col_letter].width = max_length
 
+    # ------------------- RETURN EXCEL ------------------- #
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -412,6 +489,7 @@ def export_students_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=students.xlsx"}
     )
+
 
 
 # ---------------------- DELETE STUDENT ---------------------- #

@@ -1,9 +1,9 @@
-/* Statistics Dashboard */
+/* ==================== Statistics Dashboard ==================== */
 .stats-page {
     margin-left: 280px;
-    padding: 2.5rem 1.875rem;
+    padding: .5rem 1.875rem;
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%);
+    background: #f0f2f5;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
@@ -11,12 +11,14 @@
 @media (max-width: 1024px) { .stats-page { margin-left: 250px; } }
 @media (max-width: 768px) { .stats-page { margin-left: 0; padding: 1.25rem 0.938rem; } }
 
-/* Header */
+/* Page Header */
 .stats-page h1 {
     font-size: clamp(1.75rem, 3vw, 2rem);
     margin-bottom: 2rem;
     color: #1a2332;
     font-weight: 700;
+    border-bottom: 2px solid #d0d7e2;
+    padding-bottom: 0.5rem;
 }
 
 /* ------------------- Filter Dropdown ------------------- */
@@ -29,13 +31,11 @@
     color: #1a2332;
 }
 
-.filter-container label {
-    font-weight: 600;
-}
+.filter-container label { font-weight: 600; }
 
 .filter-container select {
     padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
+    border-radius: 0; /* sharp edges */
     border: 1px solid #d0d7e2;
     background: #ffffff;
     font-size: 0.95rem;
@@ -46,29 +46,29 @@
 
 .filter-container select:hover {
     border-color: #2c7be5;
-    box-shadow: 0 2px 6px rgba(44, 123, 229, 0.15);
+    box-shadow: none;
 }
 
 .filter-container select:focus {
     outline: none;
     border-color: #2c7be5;
-    box-shadow: 0 0 0 3px rgba(44, 123, 229, 0.2);
+    box-shadow: none;
 }
 
-/* Cards */
+/* ------------------- Stat Cards ------------------- */
 .stat-card {
-    background: white;
+    background: #ffffff;
     padding: 1.875rem;
-    border-radius: 1rem;
     margin-bottom: 1.875rem;
     border: 1px solid #e8edf2;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: all 0.25s ease;
+    border-radius: 0; /* sharp edges */
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
     border-color: #d0d7e2;
 }
 
@@ -77,34 +77,30 @@
     font-size: 1.375rem;
     font-weight: 600;
     color: #2c3e50;
-    border-bottom: 2px solid #f0f2f5;
-    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #d0d7e2;
+    padding-bottom: 0.5rem;
 }
 
-/* Metadata */
-.meta-item {
-    margin: 0.5rem 0;
+/* ------------------- Metadata ------------------- */
+.stat-card p {
+    margin: 0.25rem 0;
     font-size: 0.95rem;
-    display: flex;
-    gap: 0.75rem;
     color: #5a6c7d;
 }
 
-.meta-item strong {
+.stat-card p strong {
     color: #2c7be5;
-    min-width: 120px;
 }
 
-/* Votes List */
+/* ------------------- Votes List ------------------- */
 .vote-list {
-    margin: 1.25rem 0;
+    margin: 1rem 0;
     border: 1px solid #edf2f7;
-    border-radius: 0.75rem;
     overflow: hidden;
 }
 
 .vote-list li {
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -113,33 +109,29 @@
     transition: background 0.2s;
 }
 
-.vote-list li:hover {
-    background: #edf2f7;
-}
-
-.vote-list li:last-child {
-    border-bottom: none;
-}
+.vote-list li:hover { background: #edf2f7; }
+.vote-list li:last-child { border-bottom: none; }
 
 .vote-list li.winner {
-    background: linear-gradient(90deg, #fff7e6 0%, #fff3e0 100%);
+    background: #fff7e6;
     border-left: 4px solid #f59e0b;
     font-weight: 600;
     color: #92400e;
 }
 
+/* Vote count styling */
 .vote-count {
     font-weight: 500;
     color: #2c7be5;
 }
 
-/* Charts */
+/* ------------------- Chart Containers ------------------- */
 .chart-container {
-    margin-top: 1.5rem;
-    padding: 1.25rem;
+    margin-top: 1rem;
+    padding: 1rem;
     background: #f8fafc;
-    border-radius: 0.875rem;
     border: 1px solid #e2e8f0;
+    border-radius: 0; /* sharp edges */
 }
 
 .chart-container canvas {
@@ -147,18 +139,16 @@
     height: 300px !important;
 }
 
+/* ------------------- Responsive ------------------- */
 @media (max-width: 768px) {
-    .stat-card { padding: 1.5rem; }
-    .meta-item { flex-direction: column; gap: 0.25rem; }
-    .meta-item strong { min-width: auto; }
+    .stat-card { padding: 1.25rem; }
+    .vote-list li { padding: 0.5rem 0.75rem; }
     .chart-container canvas { height: 250px !important; }
 
-    /* Filter adjustments for mobile */
     .filter-container {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-
     .filter-container select { width: 100%; }
 }

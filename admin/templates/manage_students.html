@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
+/* ---------------- Pagination ---------------- */
 .pagination {
     margin-top: 15px;
     display: flex;
@@ -15,12 +16,82 @@
 }
 .pagination button {
     padding: 6px 10px;
+    border: 1px solid #ccc;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.pagination button:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+.pagination button:disabled {
+    background-color: #dcdcdc;
+    cursor: default;
+}
+
+/* ---------------- Status Badge ---------------- */
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.status-badge.voted {
+    background-color: #27ae60;
+    color: #fff;
+}
+
+.status-badge.not-voted {
+    background-color: #c0392b;
+    color: #fff;
+}
+
+/* ---------------- Action Buttons ---------------- */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.edit-btn,
+.delete-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 32px;
+}
+
+.edit-btn {
+    background-color: #2980b9;
+    color: #fff;
+}
+
+.edit-btn:hover {
+    background-color: #3498db;
+}
+
+.delete-btn {
+    background-color: #c0392b;
+    color: #fff;
+}
+
+.delete-btn:hover {
+    background-color: #e74c3c;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-
 <div class="dashboard-header">
     <h1>Manage Students</h1>
     <p>View and manage registered students efficiently.</p>
@@ -29,7 +100,14 @@
 <div class="table-container">
 
     <!-- ================= FILTER BAR ================= -->
-    <div class="table-header" style="gap:10px; flex-wrap:wrap">
+    <div class="table-header">
+        <!-- Election Filter -->
+        <select id="filterElection">
+            <option value="all">All Elections</option>
+            {% for election in elections %}
+            <option value="{{ election.id }}">{{ election.title }}</option>
+            {% endfor %}
+        </select>
 
         <select id="filterType">
             <option value="all">All Students</option>
@@ -39,8 +117,7 @@
 
         <select id="filterValue" style="display:none"></select>
 
-        <input type="text" id="searchInput"
-               placeholder="Search by ID, name, or course...">
+        <input type="text" id="searchInput" placeholder="Search by ID, name, or course...">
 
         <button class="add-btn" onclick="exportExcel()">
             <i class="fa-solid fa-file-excel"></i> Export Excel
@@ -56,6 +133,7 @@
                 <th>Last Name</th>
                 <th>Course</th>
                 <th>Year Level</th>
+                <th>Status</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -68,39 +146,32 @@
 </div>
 
 <!-- ================= SAFE JSON DATA ================= -->
-<script type="application/json" id="departments-data">
-{{ departments | tojson }}
-</script>
-
-<script type="application/json" id="courses-data">
-{{ courses | tojson }}
-</script>
+<script type="application/json" id="departments-data">{{ departments | tojson }}</script>
+<script type="application/json" id="courses-data">{{ courses | tojson }}</script>
 
 <!-- ================= JAVASCRIPT ================= -->
 <script>
-const departments = JSON.parse(
-    document.getElementById("departments-data").textContent
-);
-
-const courses = JSON.parse(
-    document.getElementById("courses-data").textContent
-);
+const departments = JSON.parse(document.getElementById("departments-data").textContent);
+const courses = JSON.parse(document.getElementById("courses-data").textContent);
 
 let currentPage = 1;
+
+const filterElectionEl = document.getElementById("filterElection");
+const filterTypeEl = document.getElementById("filterType");
+const filterValueEl = document.getElementById("filterValue");
 
 /* ================= LOAD STUDENTS ================= */
 function loadStudents(page = 1) {
     currentPage = page;
 
     const search = document.getElementById("searchInput").value;
-    const filterType = document.getElementById("filterType").value;
-    const filterValue = document.getElementById("filterValue").value;
+    const filterType = filterTypeEl.value;
+    const filterValue = filterValueEl.value;
+    const electionId = filterElectionEl.value;
 
     let url = `/admin/students/data?page=${page}&search=${encodeURIComponent(search)}`;
-
-    if (filterType !== "all" && filterValue) {
-        url += `&filter_type=${filterType}&filter_id=${filterValue}`;
-    }
+    if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
+    if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
 
     fetch(url)
         .then(res => res.json())
@@ -112,6 +183,9 @@ function loadStudents(page = 1) {
             pagination.innerHTML = "";
 
             data.students.forEach(s => {
+                const statusClass = s.has_voted ? "voted" : "not-voted";
+                const statusText = s.has_voted ? "Voted" : "Not Voted";
+
                 body.innerHTML += `
                 <tr>
                     <td>${s.id_number || ""}</td>
@@ -119,21 +193,19 @@ function loadStudents(page = 1) {
                     <td>${s.last_name || ""}</td>
                     <td>${s.course || ""}</td>
                     <td>${s.year_level || ""}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>
-                        <button class="edit-btn">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button class="delete-btn">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                        <div class="action-buttons">
+                            <button class="edit-btn"><i class="fa-solid fa-pen"></i></button>
+                            <button class="delete-btn"><i class="fa-solid fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>`;
             });
 
             for (let i = 1; i <= data.total_pages; i++) {
                 pagination.innerHTML += `
-                    <button onclick="loadStudents(${i})"
-                        ${i === data.current_page ? "disabled" : ""}>
+                    <button onclick="loadStudents(${i})" ${i === data.current_page ? "disabled" : ""}>
                         ${i}
                     </button>`;
             }
@@ -141,9 +213,6 @@ function loadStudents(page = 1) {
 }
 
 /* ================= FILTER DROPDOWN LOGIC ================= */
-const filterTypeEl = document.getElementById("filterType");
-const filterValueEl = document.getElementById("filterValue");
-
 filterTypeEl.addEventListener("change", () => {
     filterValueEl.innerHTML = "";
 
@@ -155,32 +224,26 @@ filterTypeEl.addEventListener("change", () => {
 
     filterValueEl.style.display = "inline-block";
 
-    const data = filterTypeEl.value === "department"
-        ? departments
-        : courses;
-
-    data.forEach(item => {
-        filterValueEl.innerHTML +=
-            `<option value="${item.id}">${item.name}</option>`;
-    });
+    const data = filterTypeEl.value === "department" ? departments : courses;
+    data.forEach(item => filterValueEl.innerHTML += `<option value="${item.id}">${item.name}</option>`);
 
     loadStudents(1);
 });
 
 filterValueEl.addEventListener("change", () => loadStudents(1));
 document.getElementById("searchInput").addEventListener("keyup", () => loadStudents(1));
+filterElectionEl.addEventListener("change", () => loadStudents(1));
 
 /* ================= EXPORT ================= */
 function exportExcel() {
-    const filterType = document.getElementById("filterType").value;
-    const filterValue = document.getElementById("filterValue").value;
+    const filterType = filterTypeEl.value;
+    const filterValue = filterValueEl.value;
     const search = document.getElementById("searchInput").value;
+    const electionId = filterElectionEl.value;
 
     let url = `/admin/students/export-excel?search=${encodeURIComponent(search)}`;
-
-    if (filterType !== "all" && filterValue) {
-        url += `&filter_type=${filterType}&filter_id=${filterValue}`;
-    }
+    if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
+    if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
 
     window.location.href = url;
 }
@@ -188,5 +251,4 @@ function exportExcel() {
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => loadStudents());
 </script>
-
 {% endblock %}

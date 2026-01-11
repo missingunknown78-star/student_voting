@@ -1,6 +1,13 @@
 /* =================== Layout Variables =================== */
 :root {
-    --content-gap: 20px; /* space between sidebar and content */
+    --sidebar-width: 280px;
+    --content-gap: 20px;
+    --primary-color: #2980b9;
+    --secondary-color: #27ae60;
+    --danger-color: #c0392b;
+    --light-bg: #f5f7fa;
+    --table-bg: #ffffff;
+    --text-color: #2c3e50;
 }
 
 /* =================== Dashboard Header =================== */
@@ -12,7 +19,7 @@
 
 .dashboard-header h1 {
     font-size: 28px;
-    color: #2c3e50;
+    color: var(--text-color);
     margin-bottom: 5px;
 }
 
@@ -25,8 +32,8 @@
 .table-container {
     margin-left: calc(var(--sidebar-width) + var(--content-gap));
     margin-right: 30px;
-    background-color: #ffffff;
-    border-radius: 12px;
+    background-color: var(--table-bg);
+    border-radius: 0px;
     padding: 22px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     overflow-x: auto;
@@ -36,35 +43,48 @@
 /* =================== Table Header =================== */
 .table-header {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 10px;
     margin-bottom: 18px;
-    gap: 12px;
 }
 
+.table-header select,
 .table-header input[type="text"] {
-    padding: 9px 14px;
-    border-radius: 8px;
-    border: 1px solid #dcdcdc;
-    width: 260px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
     font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
+.table-header select:hover,
+.table-header input[type="text"]:hover {
+    border-color: var(--primary-color);
+}
+
+.table-header select:focus,
 .table-header input[type="text"]:focus {
     outline: none;
-    border-color: #2c7be5;
-    box-shadow: 0 0 0 2px rgba(44, 123, 229, 0.15);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 4px rgba(41, 128, 185, 0.3);
 }
 
+#searchInput {
+    flex-grow: 1;
+}
+
+/* =================== Add / Export Buttons =================== */
 .add-btn {
-    padding: 9px 16px;
-    background-color: #27ae60;
-    color: #fff;
+    padding: 8px 14px;
+    background-color: var(--secondary-color);
     border: none;
-    border-radius: 8px;
+    color: white;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.9rem;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     transition: 0.2s ease;
@@ -78,22 +98,24 @@
 .students-table {
     width: 100%;
     border-collapse: collapse;
+    min-width: 720px;
 }
 
 .students-table th,
 .students-table td {
-    padding: 13px 16px;
+    padding: 12px 16px;
     text-align: left;
     border-bottom: 1px solid #ededed;
+    font-size: 0.9rem;
 }
 
 .students-table th {
-    background-color: #2980b9;
+    background-color: var(--primary-color);
     color: #ffffff;
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.8rem;
     letter-spacing: 0.4px;
+    font-size: 0.8rem;
 }
 
 .students-table tr:nth-child(even) {
@@ -104,22 +126,49 @@
     background-color: #f2f6fa;
 }
 
+/* =================== Status Badge =================== */
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.status-badge.voted {
+    background-color: var(--secondary-color);
+    color: #fff;
+}
+
+.status-badge.not-voted {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
 /* =================== Action Buttons =================== */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .edit-btn,
 .delete-btn {
-    padding: 7px 10px;
+    padding: 6px 12px;
     border: none;
-    border-radius: 6px;
+    border-radius: 0px;
     font-size: 0.85rem;
     cursor: pointer;
     transition: 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 60px;
+    height: 32px;
 }
 
 .edit-btn {
-    background-color: #2980b9;
+    background-color: var(--primary-color);
     color: #fff;
 }
 
@@ -128,7 +177,7 @@
 }
 
 .delete-btn {
-    background-color: #c0392b;
+    background-color: var(--danger-color);
     color: #fff;
 }
 
@@ -136,7 +185,33 @@
     background-color: #e74c3c;
 }
 
-/* =================== Responsive (SYNCED WITH SIDEBAR) =================== */
+/* =================== Pagination =================== */
+.pagination {
+    margin-top: 15px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pagination button {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+
+.pagination button:disabled {
+    background-color: #dcdcdc;
+    cursor: default;
+}
+
+/* =================== Responsive =================== */
 @media (max-width: 1024px) {
     .dashboard-header,
     .table-container {
@@ -158,101 +233,12 @@
         align-items: stretch;
     }
 
-    .table-header input[type="text"] {
+    .table-header input[type="text"],
+    .table-header select {
         width: 100%;
     }
-}
 
-
-/* ---------------- Pagination ---------------- */
-.pagination {
-    margin-top: 15px;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.pagination button {
-    padding: 6px 10px;
-    border: 1px solid #ccc;
-    background-color: #f5f5f5;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-.pagination button:hover:not(:disabled) {
-    background-color: #e0e0e0;
-}
-.pagination button:disabled {
-    background-color: #dcdcdc;
-    cursor: default;
-}
-
-/* ---------------- Dropdown Filter Bar ---------------- */
-.table-header select {
-    padding: 6px 10px;
-    margin-right: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #fff;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.table-header select:hover {
-    border-color: #888;
-}
-
-.table-header select:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
-}
-
-/* Optional: style the hidden dropdown when it becomes visible */
-#filterValue {
-    min-width: 150px;
-}
-
-/* ---------------- Search Input ---------------- */
-#searchInput {
-    padding: 6px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-    flex-grow: 1;
-}
-
-#searchInput:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
-}
-
-/* ---------------- Add / Export Buttons ---------------- */
-.add-btn {
-    padding: 6px 12px;
-    background-color: #27ae60;
-    border: none;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: background 0.2s;
-}
-
-.add-btn:hover {
-    background-color: #219150;
-}
-
-/* Optional: make table header filters wrap nicely on small screens */
-.table-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
+    .students-table {
+        min-width: 100%;
+    }
 }
