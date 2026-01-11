@@ -21,7 +21,7 @@
     background-color: rgba(0,0,0,0.5);
     justify-content: center;
     align-items: center;
-    overflow: hidden; /* hide scrollbar */
+    overflow: hidden;
 }
 
 .modal-content {
@@ -86,7 +86,9 @@
 
         <div class="logo-header-vertical">
             <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
-            <div class="university-name">Cebu Technological University <br> Moalboal Campus</div>
+            <div class="university-name">
+                Cebu Technological University <br> Moalboal Campus
+            </div>
         </div>
 
         <h2>Student Login</h2>
@@ -107,18 +109,21 @@
             <div class="input-group floating">
                 <input type="email" id="email" name="email" required placeholder=" " />
                 <label for="email">Gmail</label>
-            </div>            
+            </div>
 
             <div class="input-group floating">
                 <input type="text" id="id_number" name="id_number" required placeholder=" " />
                 <label for="id_number">Student ID</label>
-            </div>            
+            </div>
 
             <div class="input-group floating">
                 <input type="password" id="password" name="password" required placeholder=" " />
                 <label for="password">Password</label>
             </div>
-            
+
+            <!-- 🔐 DEVICE FINGERPRINT (STEP 1 – ADDED ONLY) -->
+            <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
+
             <div class="options">
                 <label><input type="checkbox" name="remember"> Remember Me</label>
                 <a href="javascript:void(0);" id="forgotPasswordLink">Forgot Password?</a>
@@ -152,17 +157,18 @@
         <button type="button" id="bioLoginBtn" class="bio-btn" style="display:none;">
             <i class="fa-solid fa-fingerprint"></i> Login with Biometric
         </button>
-        
+
         <p id="bioInfo" style="font-size:0.9rem;color:#666;margin-top:8px;"></p>
 
         <p class="register-text">
-            Don't have an account? <a href="{{ url_for('student.register') }}">Register</a>
+            Don't have an account?
+            <a href="{{ url_for('student.register') }}">Register</a>
         </p>
 
     </div>
 </div>
 
-<!-- BIOMETRIC SCRIPT -->
+<!-- ================= BIOMETRIC SCRIPT (UNCHANGED) ================= -->
 <script>
 (async function() {
     const bioBtn = document.getElementById("bioLoginBtn");
@@ -193,10 +199,17 @@
                 return;
             }
 
-            options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+            options.challenge = Uint8Array.from(
+                atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')),
+                c => c.charCodeAt(0)
+            );
+
             if (options.allowCredentials) {
                 options.allowCredentials = options.allowCredentials.map(c => ({
-                    id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), x => x.charCodeAt(0)),
+                    id: Uint8Array.from(
+                        atob(c.id.replace(/-/g,'+').replace(/_/g,'/')),
+                        x => x.charCodeAt(0)
+                    ),
                     type: "public-key",
                     transports: c.transports || ["internal"]
                 }));
@@ -206,13 +219,20 @@
 
             const credentialForBackend = {
                 id: credential.id,
-                rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId)))
+                    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
                 type: credential.type,
                 response: {
-                    authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                    clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                    signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
-                    userHandle: credential.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(credential.response.userHandle))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : null
+                    authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData)))
+                        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                    clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON)))
+                        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                    signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature)))
+                        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+                    userHandle: credential.response.userHandle
+                        ? btoa(String.fromCharCode(...new Uint8Array(credential.response.userHandle)))
+                            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+                        : null
                 }
             };
 
@@ -226,25 +246,24 @@
 
             if (verifyRes.ok && verifyData.status === "Login successful!") {
                 statusDiv.textContent = "Login successful! Redirecting...";
-                statusDiv.className = "status-success";
-                setTimeout(() => window.location.href = "{{ url_for('student.dashboard') }}", 1000);
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('student.dashboard') }}";
+                }, 1000);
             } else {
                 statusDiv.textContent = verifyData.message || verifyData.status || "Biometric login failed.";
-                statusDiv.className = "status-error";
                 loginBtn.disabled = false;
             }
 
         } catch (err) {
             console.error("Biometric login error:", err);
             statusDiv.textContent = "Biometric login failed. Use normal login instead.";
-            statusDiv.className = "status-error";
             loginBtn.disabled = false;
         }
     });
 })();
 </script>
 
-<!-- Forgot Password Modal Script -->
+<!-- ================= FORGOT PASSWORD SCRIPT (UNCHANGED) ================= -->
 <script>
 const modal = document.getElementById("forgotPasswordModal");
 const btn = document.getElementById("forgotPasswordLink");
@@ -253,14 +272,16 @@ const form = document.getElementById("forgotPasswordForm");
 const msg = document.getElementById("forgotPasswordMessage");
 
 btn.onclick = () => {
-    modal.style.display = "flex"; // center modal
+    modal.style.display = "flex";
     msg.textContent = "";
     form.reset();
 };
 
 span.onclick = () => modal.style.display = "none";
 
-window.onclick = e => { if(e.target === modal) modal.style.display = "none"; }
+window.onclick = e => {
+    if (e.target === modal) modal.style.display = "none";
+};
 
 form.onsubmit = async e => {
     e.preventDefault();
@@ -286,6 +307,39 @@ form.onsubmit = async e => {
         msg.textContent = "Something went wrong. Try again.";
     }
 };
+</script>
+
+<!-- ================= DEVICE FINGERPRINT SCRIPT (STEP 1 – NEW, ISOLATED) ================= -->
+<script>
+async function generateDeviceFingerprint() {
+    const data = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screen: screen.width + "x" + screen.height,
+        cores: navigator.hardwareConcurrency || "unknown",
+        touch: navigator.maxTouchPoints || 0
+    };
+
+    const text = JSON.stringify(data);
+
+    const hashBuffer = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(text)
+    );
+
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+generateDeviceFingerprint().then(fp => {
+    const input = document.getElementById("deviceFingerprint");
+    if (input) {
+        input.value = fp;
+    }
+});
 </script>
 
 </body>

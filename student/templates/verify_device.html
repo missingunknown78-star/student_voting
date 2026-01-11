@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Verify New Device</title>
 
 <style>
@@ -88,12 +87,37 @@ button:disabled {
     display: block;
     margin-top: 18px;
     font-size: 0.9rem;
-    color: #2563eb; /* blue clickable text */
+    color: #2563eb;
     text-decoration: none;
 }
 
 .back-link:hover {
     text-decoration: underline;
+}
+
+/* toast notifications */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #16a34a;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    display: none;
+    animation: slideIn 0.4s ease;
+    z-index: 9999;
+}
+
+.toast.reject {
+    background: #e53935; /* red for rejected */
+}
+
+@keyframes slideIn {
+    from { transform: translateX(50px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
 @media (max-width: 360px) {
@@ -108,7 +132,6 @@ button:disabled {
 
 <div class="card">
     <div class="icon">🔐</div>
-
     <h1>Verify New Device</h1>
 
     <p>
@@ -129,7 +152,7 @@ button:disabled {
     </p>
 
     <p>
-        Open the email and tap the button to confirm this login.
+        Open the email and click <strong>Yes, it’s me</strong> or <strong>No, it’s not me</strong>.
     </p>
 
     <div class="divider"></div>
@@ -145,30 +168,67 @@ button:disabled {
     </a>
 </div>
 
+<!-- Toast notifications -->
+<div id="toast" class="toast">✅ Device confirmed. Logging you in...</div>
+<div id="toastReject" class="toast reject">❌ Device rejected. Redirecting to login...</div>
+
 <script>
 const btn = document.getElementById('resendBtn');
 const form = document.getElementById('resendForm');
 const timerText = document.getElementById('timerText');
 
-// Cooldown only after click (form submit)
+// 30s resend cooldown
 form.addEventListener('submit', (e) => {
-    // Start 30-second cooldown immediately
+    e.preventDefault();
     btn.disabled = true;
     let seconds = 30;
-    btn.textContent = `Resend available in ${seconds}s`;
-    timerText.textContent = 'Please wait before requesting another email.';
 
     const countdown = setInterval(() => {
-        seconds--;
         btn.textContent = `Resend available in ${seconds}s`;
-        if (seconds <= 0) {
+        timerText.textContent = 'Please wait before requesting another email.';
+        seconds--;
+        if (seconds < 0) {
             clearInterval(countdown);
             btn.disabled = false;
             btn.textContent = 'Resend Verification Email';
             timerText.textContent = 'You can now request another verification email.';
         }
     }, 1000);
+
+    // Send email in background without reload
+    fetch(form.action, { method: 'POST' })
+        .then(() => console.log("Verification email resent"))
+        .catch(err => console.error(err));
 });
+</script>
+
+<script>
+// Polling for device verification or rejection
+function checkVerification() {
+    fetch("/student/verify-device/status")
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "verified") {
+                const toast = document.getElementById("toast");
+                toast.style.display = "block";
+
+                setTimeout(() => {
+                    window.location.href = "/student/dashboard";
+                }, 1500);
+            } else if (data.status === "rejected") {
+                const toastReject = document.getElementById("toastReject");
+                toastReject.style.display = "block";
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    window.location.href = "/student/login";
+                }, 2000);
+            }
+        });
+}
+
+// poll every 3 seconds
+setInterval(checkVerification, 3000);
 </script>
 
 </body>

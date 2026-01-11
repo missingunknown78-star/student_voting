@@ -61,6 +61,8 @@ class Vote(db.Model):
 
 
 
+from datetime import datetime
+
 class TrustedDevice(db.Model):
     __tablename__ = 'trusted_devices'
     id = db.Column(db.Integer, primary_key=True)
@@ -70,8 +72,9 @@ class TrustedDevice(db.Model):
     browser = db.Column(db.String(255))
     device_name = db.Column(db.String(255))
     trusted = db.Column(db.Boolean, default=True)
-    last_login = db.Column(db.DateTime, default=datetime.utcnow)  # <-- FIXED
+    last_login = db.Column(db.DateTime, default=datetime.utcnow)
     verification_token = db.Column(db.String(100), nullable=True)
+    verification_sent_at = db.Column(db.DateTime, nullable=True)  # <-- NEW COLUMN
 
     student = db.relationship('Student', backref='trusted_devices')
 

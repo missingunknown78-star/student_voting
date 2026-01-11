@@ -17,6 +17,7 @@ from student.utils import generate_device_fingerprint
 
 
 
+
 # WebAuthn imports
 from webauthn import (
     generate_registration_options,
@@ -245,6 +246,8 @@ def login():
         email = request.form.get('email', '').strip().lower()
         id_number = request.form.get('id_number', '').strip()
         password = request.form.get('password', '').strip()
+        device_fp = request.form.get('device_fingerprint')
+        print("DEVICE FINGERPRINT:", device_fp)
 
         student = Student.query.filter(
             func.lower(Student.email) == email,
@@ -258,9 +261,15 @@ def login():
         if bcrypt.check_password_hash(student.password, password):
 
             # 🔐 ================= DEVICE TRUST CHECK =================
-            from student.utils import is_device_trusted, generate_device_fingerprint
 
-            trusted_device = is_device_trusted(student.id)
+            # Check if THIS EXACT device is trusted
+            trusted_device = TrustedDevice.query.filter_by(
+                student_id=student.id,
+                device_fingerprint=device_fp,
+                trusted=True
+            ).first()
+
+            # Check if ANY trusted device exists
             any_trusted_device = TrustedDevice.query.filter_by(
                 student_id=student.id,
                 trusted=True
@@ -270,25 +279,45 @@ def login():
                 # New / untrusted device
                 if any_trusted_device:
                     # There are already trusted devices → trigger email verification
-                    session['pending_login_student'] = student.id
-                    session['pending_device_fp'] = generate_device_fingerprint()
+                    from student.utils import send_new_device_email
 
-                    flash(
-                        "New device detected. Please check your email to confirm this login.",
-                        "warning"
+                    # 1️⃣ Save new device in DB as untrusted
+                    new_device = TrustedDevice(
+                        student_id=student.id,
+                        device_fingerprint=device_fp,
+                        ip_address=request.remote_addr,
+                        browser=request.headers.get('User-Agent'),
+                        device_name=request.headers.get('User-Agent')[:100],
+                        trusted=False
                     )
+                    db.session.add(new_device)
+                    db.session.commit()
+
+                    # 2️⃣ Send verification email
+                    send_new_device_email(student, new_device)
+
+                    # 3️⃣ Store info in session for resend / verify page
+                    session['pending_login_student'] = student.id
+                    session['pending_device_fp'] = device_fp
+
+                    # ❌ Removed this flash
+                    # flash(
+                    #     "New device detected. A verification email has been sent. Please check your inbox.",
+                    #     "warning"
+                    # )
+
                     return redirect(url_for('student.verify_device'))
                 else:
                     # FIRST login, no trusted devices yet → normal login
                     login_user(student)
                     flash('Login successful!', 'success')
                     return redirect(url_for('student.dashboard', trust_prompt=True))
+
             # 🔐 =======================================================
 
             # ✅ Trusted device → proceed with normal login
             login_user(student)
             flash('Login successful!', 'success')
-
             return redirect(url_for('student.dashboard'))
 
         else:
@@ -297,6 +326,338 @@ def login():
 
     return render_template('student_login.html')
 
+
+
+
+@student_bp.route('/trust-device', methods=['POST'])
+@login_required
+def toggle_trust_device():
+    fingerprint = generate_device_fingerprint()
+
+    device = TrustedDevice.query.filter_by(
+        student_id=current_user.id,
+        device_fingerprint=fingerprint
+    ).first()
+
+    if device:
+        # Untrust this device
+        db.session.delete(device)
+        flash("This device is no longer trusted.", "info")
+    else:
+        # Trust this device
+        device = TrustedDevice(
+            student_id=current_user.id,
+            device_fingerprint=fingerprint,
+            ip_address=request.remote_addr,
+            browser=request.headers.get('User-Agent'),
+            device_name=request.headers.get('User-Agent')[:100],
+            trusted=True,
+            last_login=datetime.utcnow()
+        )
+        db.session.add(device)
+        flash("This device is now trusted.", "success")
+
+    db.session.commit()
+    return redirect(url_for('student.profile'))
+
+
+
+@student_bp.route('/verify-device', methods=['GET'])
+def verify_device():
+    student_id = session.get('pending_login_student')
+    fingerprint = session.get('pending_device_fp')
+
+    if not student_id or not fingerprint:
+        flash("No pending device verification.", "danger")
+        return redirect(url_for('student.login'))
+
+    student = Student.query.get(student_id)
+
+    device = TrustedDevice.query.filter_by(
+        student_id=student.id,
+        device_fingerprint=fingerprint
+    ).first()
+
+    if not device:
+        device = TrustedDevice(
+            student_id=student.id,
+            device_fingerprint=fingerprint,
+            ip_address=request.remote_addr,
+            browser=request.headers.get('User-Agent'),
+            device_name=request.headers.get('User-Agent')[:100],
+            trusted=False
+        )
+        db.session.add(device)
+        db.session.commit()
+
+    # ✅ NO EMAIL HERE
+    return render_template('verify_device.html', student=student)
+
+
+
+@student_bp.route('/verify-device/resend', methods=['POST'])
+def resend_verify_device():
+    student_id = session.get('pending_login_student')
+    fingerprint = session.get('pending_device_fp')
+
+    if not student_id or not fingerprint:
+        flash("No pending verification to resend.", "danger")
+        return redirect(url_for('student.login'))
+
+    student = Student.query.get(student_id)
+
+    device = TrustedDevice.query.filter_by(
+        student_id=student.id,
+        device_fingerprint=fingerprint,
+        trusted=False
+    ).first()
+
+    if not device:
+        flash("Device already verified or missing.", "info")
+        return redirect(url_for('student.login'))
+
+    from student.utils import send_new_device_email
+    send_new_device_email(student, device)
+
+    flash("Verification email resent. Please check your inbox.", "success")
+    return redirect(url_for('student.verify_device'))
+
+
+
+from datetime import datetime, timedelta
+from flask import jsonify
+
+@student_bp.route('/verify-device/<token>', methods=['GET'])
+def verify_device_email(token):
+    device = TrustedDevice.query.filter_by(verification_token=token).first()
+    if not device:
+        flash("Invalid or expired verification link.", "danger")
+        return redirect(url_for('student.login'))
+
+    # Check if token expired (5 minutes)
+    if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=5):
+        db.session.delete(device)  # remove unverified device
+        db.session.commit()
+        flash("Verification link expired.", "danger")
+        return redirect(url_for('student.login'))
+
+    # ✅ Mark device as trusted
+    device.trusted = True
+    device.verification_token = None
+    db.session.commit()
+
+    student = device.student
+
+    # Render the verify_device.html page again with a success message
+    return render_template(
+        'verify_device.html',
+        student=student,
+        message="Device verified successfully! Redirecting to dashboard...",
+        redirect_after=3  # seconds
+    )
+
+
+
+@student_bp.route('/verify-device/confirm/<token>')
+def confirm_device(token):
+    from datetime import datetime, timedelta
+
+    device = TrustedDevice.query.filter_by(verification_token=token).first()
+
+    if not device:
+        return "Invalid or expired link", 400
+
+    # Check expiry (5 minutes)
+    if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=5):
+        db.session.delete(device)
+        db.session.commit()
+        return "Link expired"
+
+    # Mark device as trusted
+    device.trusted = True
+    device.verification_token = None
+    device.verification_sent_at = None
+    db.session.commit()
+
+    # Return a styled confirmation page
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Verified</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f4f6fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .card {
+            background: #ffffff;
+            padding: 30px 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            text-align: center;
+            max-width: 400px;
+        }
+        .icon {
+            font-size: 50px;
+            color: #16a34a;
+            margin-bottom: 15px;
+        }
+        h2 {
+            margin: 0 0 12px 0;
+            color: #111827;
+            font-size: 1.5rem;
+        }
+        p {
+            color: #4b5563;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+        a:hover {
+            background: #1d4ed8;
+        }
+    </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">✅</div>
+            <h2>Device Verified!</h2>
+            <p>Your device has been successfully confirmed.<br>
+            You can now return to your browser to complete login.</p>
+            <a href="#" onclick="window.close()">Close Window</a>
+        </div>
+    </body>
+    </html>
+    """
+
+
+
+@student_bp.route('/verify-device/status')
+def verify_device_status():
+    from flask_login import login_user
+    student_id = session.get('pending_login_student')
+    fingerprint = session.get('pending_device_fp')
+
+    if not student_id or not fingerprint:
+        return jsonify({"status": "no_session"})
+
+    # Check trusted
+    device = TrustedDevice.query.filter_by(
+        student_id=student_id,
+        device_fingerprint=fingerprint,
+        trusted=True
+    ).first()
+    if device:
+        student = device.student
+        login_user(student)
+        return jsonify({"status": "verified"})
+
+    # Check if device record exists at all
+    device_any = TrustedDevice.query.filter_by(
+        student_id=student_id,
+        device_fingerprint=fingerprint
+    ).first()
+    if device_any is None:
+        return jsonify({"status": "rejected"})  # deleted = rejected
+
+    return jsonify({"status": "pending"})
+
+
+
+
+
+
+@student_bp.route('/verify-device/reject/<token>')
+def reject_device(token):
+    from datetime import datetime
+    device = TrustedDevice.query.filter_by(verification_token=token).first()
+    if device:
+        db.session.delete(device)
+        db.session.commit()
+
+    # Return a small notification page (optional)
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Device Rejected</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #f4f6fb;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+            .card {
+                background: #ffffff;
+                padding: 30px 25px;
+                border-radius: 16px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+                text-align: center;
+                max-width: 400px;
+            }
+            .icon {
+                font-size: 50px;
+                color: #e53935; /* red */
+                margin-bottom: 15px;
+            }
+            h2 {
+                margin: 0 0 12px 0;
+                color: #111827;
+                font-size: 1.5rem;
+            }
+            p {
+                color: #4b5563;
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+            a {
+                display: inline-block;
+                margin-top: 20px;
+                padding: 10px 20px;
+                background: #2563eb;
+                color: white;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">❌</div>
+            <h2>Device Rejected</h2>
+            <p>No device info was saved. Please return to your browser.</p>
+            <a href="#" onclick="window.close()">Close Window</a>
+        </div>
+    </body>
+    </html>
+    """
 
 
 
@@ -631,122 +992,6 @@ def profile():
         student=current_user,
         device_trusted=bool(device)
     )
-
-
-@student_bp.route('/trust-device', methods=['POST'])
-@login_required
-def toggle_trust_device():
-    fingerprint = generate_device_fingerprint()
-
-    device = TrustedDevice.query.filter_by(
-        student_id=current_user.id,
-        device_fingerprint=fingerprint
-    ).first()
-
-    if device:
-        # Untrust this device
-        db.session.delete(device)
-        flash("This device is no longer trusted.", "info")
-    else:
-        # Trust this device
-        device = TrustedDevice(
-            student_id=current_user.id,
-            device_fingerprint=fingerprint,
-            ip_address=request.remote_addr,
-            browser=request.headers.get('User-Agent'),
-            device_name=request.headers.get('User-Agent')[:100],
-            trusted=True,
-            last_login=datetime.utcnow()
-        )
-        db.session.add(device)
-        flash("This device is now trusted.", "success")
-
-    db.session.commit()
-    return redirect(url_for('student.profile'))
-
-
-
-@student_bp.route('/verify-device', methods=['GET'])
-def verify_device():
-    student_id = session.get('pending_login_student')
-    fingerprint = session.get('pending_device_fp')
-
-    if not student_id or not fingerprint:
-        flash("No pending device verification.", "danger")
-        return redirect(url_for('student.login'))
-
-    student = Student.query.get(student_id)
-
-    device = TrustedDevice.query.filter_by(
-        student_id=student.id,
-        device_fingerprint=fingerprint
-    ).first()
-
-    if not device:
-        device = TrustedDevice(
-            student_id=student.id,
-            device_fingerprint=fingerprint,
-            ip_address=request.remote_addr,
-            browser=request.headers.get('User-Agent'),
-            device_name=request.headers.get('User-Agent')[:100],
-            trusted=False
-        )
-        db.session.add(device)
-        db.session.commit()
-
-    # ✅ NO EMAIL HERE
-    return render_template('verify_device.html', student=student)
-
-
-
-@student_bp.route('/verify-device/resend', methods=['POST'])
-def resend_verify_device():
-    student_id = session.get('pending_login_student')
-    fingerprint = session.get('pending_device_fp')
-
-    if not student_id or not fingerprint:
-        flash("No pending verification to resend.", "danger")
-        return redirect(url_for('student.login'))
-
-    student = Student.query.get(student_id)
-
-    device = TrustedDevice.query.filter_by(
-        student_id=student.id,
-        device_fingerprint=fingerprint,
-        trusted=False
-    ).first()
-
-    if not device:
-        flash("Device already verified or missing.", "info")
-        return redirect(url_for('student.login'))
-
-    from student.utils import send_new_device_email
-    send_new_device_email(student, device)
-
-    flash("Verification email resent. Please check your inbox.", "success")
-    return redirect(url_for('student.verify_device'))
-
-
-
-@student_bp.route('/verify-device/<token>')
-def verify_device_email(token):  # <--- the function name becomes the endpoint by default
-    device = TrustedDevice.query.filter_by(verification_token=token).first()
-    if not device:
-        flash("Invalid or expired verification link.", "danger")
-        return redirect(url_for('student.login'))
-
-    # Mark device as trusted
-    device.trusted = True
-    device.verification_token = None
-    db.session.commit()
-
-    # Complete login
-    student = device.student
-    login_user(student)
-    flash("Device verified and logged in successfully!", "success")
-    return redirect(url_for('student.dashboard'))
-
-
 
 
 
