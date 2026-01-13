@@ -24,6 +24,8 @@ class Student(db.Model, UserMixin):
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
 
+    year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
+
     birth_date = db.Column(db.Date)
     id_number = db.Column(db.String(50), unique=True)
 
@@ -77,4 +79,7 @@ class TrustedDevice(db.Model):
     verification_sent_at = db.Column(db.DateTime, nullable=True)  # <-- NEW COLUMN
 
     student = db.relationship('Student', backref='trusted_devices')
+
+
+
 

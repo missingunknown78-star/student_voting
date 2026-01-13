@@ -22,7 +22,7 @@
             </div>
         </div>
 
-        <h2>Register as a Student</h2>
+        <h2>Register as a Voter</h2>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
@@ -68,6 +68,17 @@
                                 <option value="{{ course.id }}">{{ course.course_name }}</option>
                             {% endfor %}
                         </optgroup>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- ✅ YEAR LEVEL -->
+            <div class="input-group">
+                <label>Year Level</label>
+                <select name="year_level" required>
+                    <option value="">-- Select Year Level --</option>
+                    {% for year in year_levels %}
+                        <option value="{{ year.id }}">{{ year.year_name }}</option>
                     {% endfor %}
                 </select>
             </div>

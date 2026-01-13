@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session, jsonify, Response
 from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
@@ -14,16 +14,15 @@ import logging
 import time
 import pyotp
 from datetime import timedelta
-from flask import render_template, request, jsonify, Response
 from sqlalchemy import or_
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font, PatternFill, Alignment
 
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
-
 
 
 # ---------------------- Secure Admin Required Decorator ---------------------- #
@@ -69,8 +68,6 @@ def admin_required(f):
 
         return f(*args, **kwargs)
     return decorated_function
-
-
 
 
 
@@ -230,31 +227,51 @@ def dashboard():
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
 
+    # ================================
     # KPI counts
+    # ================================
     total_students = Student.query.count()
     total_candidates = Candidate.query.count()
     total_elections = Election.query.count()
     total_votes = Vote.query.count()
 
-    # Candidates and votes for charts
-    candidates = Candidate.query.all()
-    vote_labels = [f"{c.first_name} {c.last_name}" for c in candidates]
-    vote_counts = [len(c.votes) for c in candidates]
+    # ================================
+    # Per-election chart data
+    # ================================
+    election_data = []
 
-    # All elections ordered by start_date desc
-    recent_elections_all = Election.query.order_by(Election.start_date.desc()).all()
+    elections = Election.query.order_by(Election.start_date.desc()).all()
+    for e in elections:
+        labels = []
+        votes = []
+        positions = []
 
-    # Ensure timezone-awareness
+        for c in e.candidates:
+            labels.append(f"{c.first_name} {c.last_name}")
+            votes.append(len(c.votes))
+            positions.append(c.position.name if c.position else "Unknown")  # fetch position
+
+        election_data.append({
+            "id": e.id,
+            "title": e.title,
+            "labels": labels,
+            "votes": votes,
+            "positions": positions  # send positions to JS
+        })
+
+    # ================================
+    # Recent elections table
+    # ================================
+    recent_elections_all = elections
+
+    # Localize timezone if naive
     for election in recent_elections_all:
         if election.start_date.tzinfo is None:
             election.start_date = tz.localize(election.start_date)
         if election.end_date.tzinfo is None:
             election.end_date = tz.localize(election.end_date)
 
-    # Only show 5 in table by default
     recent_elections = recent_elections_all[:5]
-
-    # Count ongoing elections using status property
     ongoing_elections = sum(1 for e in recent_elections_all if e.status == 'Open')
 
     return render_template(
@@ -265,12 +282,14 @@ def dashboard():
         total_elections=total_elections,
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
-        vote_labels=vote_labels,
-        vote_counts=vote_counts,
+        elections_json=election_data,
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
         now=now
     )
+
+
+
 
 
 
@@ -360,12 +379,7 @@ def students_data():
         "current_page": pagination.page
     })
 
-from flask import Response, request
-from io import BytesIO
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
-from openpyxl.utils import get_column_letter
-from sqlalchemy import or_
+
 
 @admin_bp.route('/students/export-excel')
 @admin_required
@@ -772,9 +786,6 @@ def delete_candidate(id):
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])
 @admin_required
 def create_department_election():
-    from admin.models import Department, Election
-    from datetime import datetime
-    import pytz
 
     # Get all departments
     departments = Department.query.order_by(Department.name).all()
@@ -918,10 +929,6 @@ def admin_profile():
 
 
 
-# In admin routes
-from flask import render_template
-from datetime import datetime
-import pytz
 
 @admin_bp.route('/statistics')
 @admin_required

@@ -145,3 +145,11 @@ class Announcement(db.Model):
         return f"<Announcement {self.title} - {self.date}>"
     
 
+class YearLevel(db.Model):
+    __tablename__ = 'year_levels'
+
+    id = db.Column(db.Integer, primary_key=True)
+    year_name = db.Column(db.String(50), unique=True, nullable=False)
+
+    # Relationship (future-proof)
+    students = db.relationship('Student', backref='year_level', lazy=True)

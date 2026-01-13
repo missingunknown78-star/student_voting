@@ -1,7 +1,7 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from student.models import Student, Vote
-from admin.models import Candidate, Election, Course, Department, Announcement
+from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import func, or_
@@ -134,10 +134,15 @@ def register():
         for dept in departments
     }
 
+    year_levels = YearLevel.query.order_by(YearLevel.id).all()
+
     return render_template(
         'student_register.html',
-        courses_by_department=courses_by_department
+        courses_by_department=courses_by_department,
+        year_levels=year_levels
     )
+
+
 
 
 # ==================== AJAX VALIDATION ====================
