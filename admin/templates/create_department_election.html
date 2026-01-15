@@ -1,144 +1,157 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Create Election{% endblock %}
+{% block title %}Manage Elections{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
 <style>
-/* Toast Notifications */
-#toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    pointer-events: none; /* clicks pass through */
-}
-.toast {
-    min-width: 200px;
-    margin-bottom: 10px;
-    padding: 10px 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-
-    /* Remove default white text color */
-    color: inherit; 
+/* Stack Title + Type closer and align Description */
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem; /* closer spacing between title and type */
+    flex: 1;
 }
 
-/* Background & text color for each category */
-.toast-success { 
-    background-color: #28a745; 
-    color: #fff; 
+.description-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
-.toast-danger  { 
-    background-color: #dc3545; 
-    color: #fff; 
+
+.description-column textarea {
+    flex: 1; /* stretch to match left column */
 }
-.toast-warning { 
-    background-color: #ffc107; 
-    color: #000; /* dark text on yellow background */ 
-}
-.toast-info    { 
-    background-color: #17a2b8; 
-    color: #fff; 
+
+/* Optional: adjust top row spacing */
+.form-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="election-form-container">
-    <h2>Create Election</h2>
-    <form method="POST">
-        <!-- Election Title -->
-        <div class="election-form-group">
-            <label for="title">Election Title</label>
-            <input type="text" id="title" name="title" placeholder="Enter election title" required>
-        </div>
+    <h2>Manage Elections</h2>
 
-        <!-- Election Type -->
-        <div class="election-form-group">
-            <label for="election_type">Election Type</label>
-            <select id="election_type" name="election_type" required>
-                <option value="" disabled selected>Select Election Type</option>
-                <option value="Department">Department Election</option>
-                <option value="SSG">Supreme Student Government (SSG)</option>
-            </select>
-        </div>
-
-        <!-- Department Dropdown -->
-        <div class="election-form-group" id="department_field">
-            <label for="department">Select Department</label>
-            <select id="department" name="department_id">
-                <option value="" disabled selected>Select a Department</option>
-                {% for dept in departments %}
-                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(category_filter=["election"]) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <p style="color: #e74c3c; margin-bottom: 1rem;">{{ message }}</p>
                 {% endfor %}
-            </select>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Desktop-style Form -->
+    <form method="POST" class="desktop-form">
+        <!-- Row 1: Title + Type and Description -->
+        <div class="form-row">
+            <!-- Left column: Title + Type -->
+            <div class="form-column">
+                <div class="election-form-group">
+                    <label for="title">Election Title</label>
+                    <input type="text" id="title" name="title" placeholder="Enter election title" required>
+                </div>
+                <div class="election-form-group">
+                    <label for="election_type">Election Type</label>
+                    <select id="election_type" name="election_type" required onchange="toggleDepartment()">
+                        <option value="">Select type</option>
+                        <option value="General">General</option>
+                        <option value="Department">Department</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Right column: Description -->
+            <div class="description-column election-form-group">
+                <label for="description">Description (optional)</label>
+                <textarea id="description" name="description" placeholder="Enter description..."></textarea>
+            </div>
         </div>
 
-        <!-- Description -->
-        <div class="election-form-group">
-            <label for="description">Description</label>
-            <textarea id="description" name="description" rows="4" placeholder="Optional description of election"></textarea>
+        <!-- Row 2: Department -->
+        <div class="form-row">
+            <div class="election-form-group" id="department_group" style="display: none;">
+                <label for="department_id">Department</label>
+                <select id="department_id" name="department_id">
+                    <option value="">Select department</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
-        <!-- Start & End Date -->
-        <div class="election-form-group">
-            <label for="start_date">Start Date & Time</label>
-            <input type="datetime-local" id="start_date" name="start_date" required>
+        <!-- Row 3: Start & End Date -->
+        <div class="form-row">
+            <div class="election-form-group">
+                <label for="start_date">Start Date & Time</label>
+                <input type="datetime-local" id="start_date" name="start_date" required>
+            </div>
+            <div class="election-form-group">
+                <label for="end_date">End Date & Time</label>
+                <input type="datetime-local" id="end_date" name="end_date" required>
+            </div>
         </div>
 
-        <div class="election-form-group">
-            <label for="end_date">End Date & Time</label>
-            <input type="datetime-local" id="end_date" name="end_date" required>
-        </div>
-
+        <!-- Submit button -->
         <button type="submit" class="create-election-btn">Create Election</button>
     </form>
+
+    <hr>
+
+    <!-- Upcoming Elections -->
+    <h3>Upcoming Elections</h3>
+    <div class="election-list">
+        {% if upcoming %}
+            {% for election in upcoming %}
+                <div class="election-card">
+                    <strong>{{ election.title }}</strong>
+                    {% if election.election_type %} ({{ election.election_type }}) {% endif %}<br>
+                    {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
+                    {% if election.department %}- {{ election.department }}{% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No upcoming elections.</p>
+        {% endif %}
+    </div>
+
+    <!-- Active Elections -->
+    <h3>Active Elections</h3>
+    <div class="election-list">
+        {% if active %}
+            {% for election in active %}
+                <div class="election-card active">
+                    <strong>{{ election.title }}</strong>
+                    {% if election.election_type %} ({{ election.election_type }}) {% endif %}<br>
+                    {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
+                    {% if election.department %}- {{ election.department }}{% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No active elections.</p>
+        {% endif %}
+    </div>
 </div>
 
-<!-- Toast Container -->
-<div id="toast-container"></div>
-
-<!-- Flash messages JSON -->
-<script type="application/json" id="flash-messages">
-    {{ get_flashed_messages(with_categories=true, category_filter=['election']) | tojson }}
-    </script>
-    
-    <script>
-    // Department field toggle
-    const electionType = document.getElementById('election_type');
-    const departmentField = document.getElementById('department_field');
-    departmentField.style.display = 'none';
-    electionType.addEventListener('change', () => {
-        departmentField.style.display = electionType.value === 'Department' ? 'block' : 'none';
-    });
-    
-    // Toast notifications
-    function showNotification(message, category='info') {
-        const toastContainer = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.className = `toast toast-${category}`;
-        toastContainer.appendChild(toast);
-    
-        // Fade in
-        setTimeout(() => toast.style.opacity = 1, 50);
-    
-        // Auto remove after 3s
-        setTimeout(() => {
-            toast.style.opacity = 0;
-            setTimeout(() => toast.remove(), 500);
-        }, 3000);
+<!-- JS to toggle Department dropdown -->
+<script>
+function toggleDepartment() {
+    const electionType = document.getElementById('election_type').value;
+    const deptGroup = document.getElementById('department_group');
+    if (electionType === 'Department') {
+        deptGroup.style.display = 'block';
+    } else {
+        deptGroup.style.display = 'none';
+        document.getElementById('department_id').value = '';
     }
-    
-    // Load Flask flash messages
-    const flashMessages = JSON.parse(document.getElementById('flash-messages').textContent || '[]');
-    flashMessages.forEach(([category, message]) => showNotification(message, category));
-    </script>
-    
-    
+}
+</script>
+
 {% endblock %}

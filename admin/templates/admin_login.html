@@ -25,26 +25,65 @@
     </div>
 
     <!-- Login Form -->
-    <form action="{{ url_for('admin.login') }}" method="POST" class="login-form">
+    <form action="{{ url_for('admin.login') }}" method="POST" class="login-form" autocomplete="off">
+
         <h3>Admin Login</h3>
 
+        <!-- Input groups with label AFTER input -->
         <div class="input-group">
+            <input 
+                type="text" 
+                name="username"
+                placeholder=" "
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="none"
+                spellcheck="false"
+                required
+            >
             <label>Username</label>
-            <input type="text" name="username" required>
         </div>
-
+        
         <div class="input-group">
+            <input 
+                type="password" 
+                name="password"
+                placeholder=" "
+                autocomplete="new-password"
+                required
+            >
             <label>Password</label>
-            <input type="password" name="password" required>
         </div>
-
+        
         <button type="submit" class="login-btn">Login</button>
 
         {% if error %}
             <p class="error-msg">{{ error }}</p>
         {% endif %}
+
     </form>
 </div>
+
+<!-- JS for Floating Labels -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const inputs = document.querySelectorAll('.input-group input');
+
+    inputs.forEach(input => {
+        // Float label on page load if value exists
+        if(input.value.trim() !== '') input.classList.add('filled');
+
+        // Toggle 'filled' class when user types
+        input.addEventListener('input', () => {
+            if(input.value.trim() !== '') {
+                input.classList.add('filled');
+            } else {
+                input.classList.remove('filled');
+            }
+        });
+    });
+});
+</script>
 
 </body>
 </html>

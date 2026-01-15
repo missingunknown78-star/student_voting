@@ -387,3 +387,61 @@ h1.page-title::after {
         height: 40px;
     }
 }
+
+
+/* ================= TWO-COLUMN MODAL FORM LAYOUT ================= */
+
+/* Widen the modal so two columns fit */
+.lightbox-content {
+    max-width: 850px !important;
+}
+
+/* Turn the form into a grid */
+.lightbox-content form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 30px;
+    row-gap: 20px;
+}
+
+/* Make every field fill its column */
+.lightbox-content .form-group {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* Make buttons span full width */
+.lightbox-content .button-group {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Make titles span full width */
+.lightbox-content h2 {
+    grid-column: 1 / -1;
+}
+
+/* Photo upload should span both columns */
+.lightbox-content .form-group:last-of-type {
+    grid-column: 1 / -1;
+}
+
+/* Prevent scrolling unless screen is small */
+.lightbox-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* MOBILE: back to single column */
+@media (max-width: 768px) {
+    .lightbox-content form {
+        grid-template-columns: 1fr;
+    }
+
+    .lightbox-content {
+        max-width: 95%;
+    }
+}

@@ -15,7 +15,6 @@
     <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
     <form method="GET" class="filter-form" id="filterForm">
 
-        <!-- Election Type -->
         <select name="election_type" id="filter_election_type">
             <option value="">All Election Types</option>
             <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
@@ -26,7 +25,6 @@
             </option>
         </select>
 
-        <!-- Department Dropdown (hidden by default) -->
         <select name="department_id" id="filter_department" style="display:none;">
             <option value="">All Departments</option>
             {% for dept in departments %}
@@ -37,7 +35,6 @@
         </select>
     </form>
 
-    <!-- Candidates Table -->
     <table class="candidates-table">
         <thead>
             <tr>
@@ -88,7 +85,6 @@
     </table>
 </div>
 
-<!-- PHOTO LIGHTBOX -->
 <div id="lightbox" onclick="closeLightbox()">
     <img id="lightbox-img">
 </div>
@@ -100,16 +96,18 @@
         <h2>Add Candidate</h2>
 
         <form method="POST" enctype="multipart/form-data"
-              action="{{ url_for('admin.manage_candidates') }}">
+              action="{{ url_for('admin.manage_candidates') }}" autocomplete="off">
 
             <div class="form-group">
                 <label>First Name</label>
-                <input type="text" name="first_name" required>
+                <input type="text" name="first_name" required 
+                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
             </div>
 
             <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" name="last_name" required>
+                <input type="text" name="last_name" required 
+                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
             </div>
 
             <div class="form-group">
@@ -159,8 +157,7 @@
 
             <div class="button-group">
                 <button type="submit" class="add-btn">Add</button>
-                <button type="button" class="cancel-btn"
-                        onclick="closeAddCandidateModal()">Cancel</button>
+                <button type="button" class="cancel-btn" onclick="closeAddCandidateModal()">Cancel</button>
             </div>
         </form>
     </div>
@@ -172,17 +169,19 @@
         <span class="close" onclick="closeEditModal()">&times;</span>
         <h2>Edit Candidate</h2>
 
-        <form id="editCandidateForm" method="POST" enctype="multipart/form-data">
+        <form id="editCandidateForm" method="POST" enctype="multipart/form-data" autocomplete="off">
             <input type="hidden" id="edit_id">
 
             <div class="form-group">
                 <label>First Name</label>
-                <input type="text" name="first_name" id="edit_first" required>
+                <input type="text" name="first_name" id="edit_first" required 
+                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
             </div>
 
             <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" name="last_name" id="edit_last" required>
+                <input type="text" name="last_name" id="edit_last" required 
+                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
             </div>
 
             <div class="form-group">
@@ -231,8 +230,7 @@
 
             <div class="button-group">
                 <button type="submit" class="edit-btn">Update</button>
-                <button type="button" class="cancel-btn"
-                        onclick="closeEditModal()">Cancel</button>
+                <button type="button" class="cancel-btn" onclick="closeEditModal()">Cancel</button>
             </div>
         </form>
     </div>
@@ -292,7 +290,6 @@ addDepartmentField.style.display = 'none';
 addElectionType.addEventListener('change', () => {
     addDepartmentField.style.display = addElectionType.value === 'Department' ? 'block' : 'none';
 
-    // Filter election options dynamically
     Array.from(addElectionSelect.options).forEach(opt => {
         if(addElectionType.value === 'Department') {
             opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
@@ -302,10 +299,9 @@ addElectionType.addEventListener('change', () => {
             opt.style.display = 'block';
         }
     });
-    addElectionSelect.value = ""; // reset selection
+    addElectionSelect.value = "";
 });
 
-/* EDIT CANDIDATE Department field & election filter */
 const editElectionType = document.getElementById('edit_election_type');
 const editDepartmentField = document.getElementById('edit_department_field');
 const editElectionSelect = document.getElementById('edit_election');
@@ -323,7 +319,7 @@ editElectionType.addEventListener('change', () => {
             opt.style.display = 'block';
         }
     });
-    editElectionSelect.value = ""; // reset selection
+    editElectionSelect.value = "";
 });
 
 /* FILTER: election type & department dependent dropdown */

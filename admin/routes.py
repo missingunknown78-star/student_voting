@@ -790,19 +790,18 @@ def create_department_election():
     # Get all departments
     departments = Department.query.order_by(Department.name).all()
 
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+
     if request.method == 'POST':
-        # ------------------ POST DATA ------------------ #
         title = request.form.get('title', '').strip()
         election_type = request.form.get('election_type', '').strip()
         department_id_str = request.form.get('department_id')
         description = request.form.get('description', '').strip()
         start_date_str = request.form.get('start_date', '').strip()
         end_date_str = request.form.get('end_date', '').strip()
-
-        # Convert department_id to int if provided
         department_id = int(department_id_str) if department_id_str else None
 
-        # ------------------ VALIDATION ------------------ #
         if not title or not election_type or not start_date_str or not end_date_str:
             flash('All required fields must be filled.', 'election')
             return redirect(url_for('admin.create_department_election'))
@@ -811,8 +810,7 @@ def create_department_election():
             flash('Department is required for Department Elections.', 'election')
             return redirect(url_for('admin.create_department_election'))
 
-        # ------------------ PARSE DATES ------------------ #
-        tz = pytz.timezone('Asia/Manila')
+        # Parse dates
         try:
             start_date = tz.localize(datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M'))
             end_date = tz.localize(datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M'))
@@ -824,13 +822,13 @@ def create_department_election():
             flash('End date must be later than start date.', 'election')
             return redirect(url_for('admin.create_department_election'))
 
-        # ------------------ DEPARTMENT NAME ------------------ #
+        # Department name
         department_name = None
         if election_type == 'Department' and department_id:
             dept_obj = Department.query.get(department_id)
             department_name = dept_obj.name if dept_obj else None
 
-        # ------------------ CREATE ELECTION ------------------ #
+        # Create election
         new_election = Election(
             title=title,
             election_type=election_type,
@@ -840,16 +838,33 @@ def create_department_election():
             start_date=start_date,
             end_date=end_date
         )
-
         db.session.add(new_election)
         db.session.commit()
-
         flash('Election created successfully!', 'election')
         return redirect(url_for('admin.create_department_election'))
 
-    # ------------------ GET REQUEST ------------------ #
-    return render_template('create_department_election.html', departments=departments)
+    # GET request: fetch elections
+    elections_all = Election.query.order_by(Election.start_date).all()
 
+    # Ensure datetime are timezone-aware
+    for e in elections_all:
+        if e.start_date.tzinfo is None:
+            e.start_date = tz.localize(e.start_date)
+        if e.end_date.tzinfo is None:
+            e.end_date = tz.localize(e.end_date)
+
+    # Filter elections in Python (reliable!)
+    upcoming_elections = [e for e in elections_all if e.start_date > now]
+    active_elections = [e for e in elections_all if e.start_date <= now <= e.end_date]
+
+    return render_template(
+        'create_department_election.html',
+        departments=departments,
+        elections=upcoming_elections + active_elections,  # Optional: show all if you like
+        upcoming=upcoming_elections,
+        active=active_elections,
+        now=now
+    )
 
 
 
