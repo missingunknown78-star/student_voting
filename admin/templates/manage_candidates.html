@@ -14,7 +14,6 @@
 
     <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
     <form method="GET" class="filter-form" id="filterForm">
-
         <select name="election_type" id="filter_election_type">
             <option value="">All Election Types</option>
             <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
@@ -40,7 +39,7 @@
             <tr>
                 <th>Photo</th>
                 <th>Student Name</th>
-                <th>Course</th>
+                <th>Department</th>
                 <th>Position</th>
                 <th>Actions</th>
             </tr>
@@ -58,7 +57,7 @@
                     {% endif %}
                 </td>
                 <td>{{ c.first_name }} {{ c.last_name }}</td>
-                <td>{{ c.course }}</td>
+                <td>{{ c.department.name if c.department else '' }}</td>
                 <td>{{ c.position.name }}</td>
                 <td>
                     <a href="#"
@@ -68,7 +67,7 @@
                        data-last="{{ c.last_name }}"
                        data-position="{{ c.position_id }}"
                        data-election="{{ c.election_id }}"
-                       data-department="{{ c.course }}"
+                       data-department="{{ c.department.name if c.department else '' }}"
                        data-election_type="{{ c.election.election_type }}">
                        Edit
                     </a>
@@ -95,19 +94,15 @@
         <span class="close" onclick="closeAddCandidateModal()">&times;</span>
         <h2>Add Candidate</h2>
 
-        <form method="POST" enctype="multipart/form-data"
-              action="{{ url_for('admin.manage_candidates') }}" autocomplete="off">
-
+        <form id="addCandidateForm" method="POST" enctype="multipart/form-data" autocomplete="off">
             <div class="form-group">
                 <label>First Name</label>
-                <input type="text" name="first_name" required 
-                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
+                <input type="text" name="first_name" required placeholder=" ">
             </div>
 
             <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" name="last_name" required 
-                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
+                <input type="text" name="last_name" required placeholder=" ">
             </div>
 
             <div class="form-group">
@@ -163,7 +158,7 @@
     </div>
 </div>
 
-<!-- EDIT CANDIDATE MODAL -->
+<!-- EDIT CANDIDATE MODAL (unchanged) -->
 <div id="editCandidateModal" class="lightbox-modal">
     <div class="lightbox-content">
         <span class="close" onclick="closeEditModal()">&times;</span>
@@ -174,14 +169,12 @@
 
             <div class="form-group">
                 <label>First Name</label>
-                <input type="text" name="first_name" id="edit_first" required 
-                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
+                <input type="text" name="first_name" id="edit_first" required placeholder=" ">
             </div>
 
             <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" name="last_name" id="edit_last" required 
-                       autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder=" ">
+                <input type="text" name="last_name" id="edit_last" required placeholder=" ">
             </div>
 
             <div class="form-group">
@@ -284,20 +277,13 @@ function closeEditModal() {
 const addElectionType = document.getElementById('add_election_type');
 const addDepartmentField = document.getElementById('add_department_field');
 const addElectionSelect = document.getElementById('add_election');
-
 addDepartmentField.style.display = 'none';
-
 addElectionType.addEventListener('change', () => {
     addDepartmentField.style.display = addElectionType.value === 'Department' ? 'block' : 'none';
-
     Array.from(addElectionSelect.options).forEach(opt => {
-        if(addElectionType.value === 'Department') {
-            opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
-        } else if(addElectionType.value === 'SSG') {
-            opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
-        } else {
-            opt.style.display = 'block';
-        }
+        if(addElectionType.value === 'Department') opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
+        else if(addElectionType.value === 'SSG') opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
+        else opt.style.display = 'block';
     });
     addElectionSelect.value = "";
 });
@@ -305,19 +291,13 @@ addElectionType.addEventListener('change', () => {
 const editElectionType = document.getElementById('edit_election_type');
 const editDepartmentField = document.getElementById('edit_department_field');
 const editElectionSelect = document.getElementById('edit_election');
-
 editDepartmentField.style.display = 'none';
 editElectionType.addEventListener('change', () => {
     editDepartmentField.style.display = editElectionType.value === 'Department' ? 'block' : 'none';
-
     Array.from(editElectionSelect.options).forEach(opt => {
-        if(editElectionType.value === 'Department') {
-            opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
-        } else if(editElectionType.value === 'SSG') {
-            opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
-        } else {
-            opt.style.display = 'block';
-        }
+        if(editElectionType.value === 'Department') opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
+        else if(editElectionType.value === 'SSG') opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
+        else opt.style.display = 'block';
     });
     editElectionSelect.value = "";
 });
@@ -326,24 +306,75 @@ editElectionType.addEventListener('change', () => {
 const filterForm = document.getElementById('filterForm');
 const filterElectionType = document.getElementById('filter_election_type');
 const filterDepartment = document.getElementById('filter_department');
-
 function updateFilterDepartment() {
-    if (filterElectionType.value === 'Department') {
-        filterDepartment.style.display = 'inline-block';
-    } else {
-        filterDepartment.style.display = 'none';
-        filterDepartment.value = "";
-    }
+    if (filterElectionType.value === 'Department') filterDepartment.style.display = 'inline-block';
+    else { filterDepartment.style.display = 'none'; filterDepartment.value = ""; }
 }
-
-// Initial load
 updateFilterDepartment();
-
-// Auto-submit on change
-filterElectionType.addEventListener('change', () => {
-    updateFilterDepartment();
-    filterForm.submit();
-});
+filterElectionType.addEventListener('change', () => { updateFilterDepartment(); filterForm.submit(); });
 filterDepartment.addEventListener('change', () => filterForm.submit());
+
+/* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
+/* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
+const addCandidateForm = document.getElementById('addCandidateForm');
+const addBtn = addCandidateForm.querySelector('.add-btn');
+
+addCandidateForm.addEventListener('submit', function(e) {
+    e.preventDefault(); // prevent normal submit
+
+    // Disable button & show spinner
+    addBtn.disabled = true;
+    const originalText = addBtn.innerHTML;
+    addBtn.innerHTML = `<span class="spinner"></span> Adding...`;
+
+    const formData = new FormData(this);
+
+    fetch("{{ url_for('admin.manage_candidates') }}", {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('Candidate added!');
+            this.reset();
+
+            // Append new candidate to table
+            const tbody = document.querySelector('.candidates-table tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${data.photo ? `<img src="${data.photo}" class="candidate-photo clickable-photo">` : 'No Photo'}</td>
+                <td>${data.first_name} ${data.last_name}</td>
+                <td>${data.department}</td>
+                <td>${data.position}</td>
+                <td>
+                    <a href="#" class="edit-btn openEditModal" 
+                       data-id="${data.id}" data-first="${data.first_name}" data-last="${data.last_name}" 
+                       data-position="${data.position_id}" data-election="${data.election_id}" 
+                       data-department="${data.department}" data-election_type="${data.election_type}">Edit</a>
+                    <a href="${data.delete_url}" class="delete-btn" onclick="return confirm('Are you sure?')">Delete</a>
+                </td>
+            `;
+            tbody.appendChild(tr);
+
+            // Add click for new photo
+            tr.querySelector('.clickable-photo')?.addEventListener('click', e => {
+                document.getElementById('lightbox').style.display = 'flex';
+                document.getElementById('lightbox-img').src = e.target.src;
+            });
+
+        } else {
+            alert(data.error || 'Something went wrong.');
+        }
+    })
+    .catch(err => { console.error(err); alert('Error submitting form.'); })
+    .finally(() => {
+        // Restore button
+        addBtn.disabled = false;
+        addBtn.innerHTML = originalText;
+    });
+});
+
 </script>
 {% endblock %}

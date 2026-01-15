@@ -31,7 +31,7 @@
         
             <a href="{{ url_for('admin.manage_students') }}"
                 class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
-                  <i class="fa-solid fa-users"></i> Student Management
+                  <i class="fa-solid fa-users"></i> Manage Students
             </a>
         
             <a href="{{ url_for('admin.manage_departments') }}"
@@ -46,7 +46,7 @@
         
             <a href="{{ url_for('admin.manage_candidates') }}"
                class="{% if request.endpoint == 'admin.manage_candidates' %}active{% endif %}">
-               <i class="fa-solid fa-user-check"></i> Candidate Management
+               <i class="fa-solid fa-user-check"></i> Manage Candidates
             </a>
         
             <a href="{{ url_for('admin.manage_positions') }}"

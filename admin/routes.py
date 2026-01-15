@@ -720,6 +720,24 @@ def manage_candidates():
 
         db.session.add(new_candidate)
         db.session.commit()
+
+        # ---------- AJAX RESPONSE ----------
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                "success": True,
+                "id": new_candidate.id,
+                "first_name": new_candidate.first_name,
+                "last_name": new_candidate.last_name,
+                "department": new_candidate.department.name if new_candidate.department else '',
+                "position": new_candidate.position.name,
+                "position_id": new_candidate.position_id,
+                "election_id": new_candidate.election_id,
+                "election_type": new_candidate.election.election_type,
+                "photo": url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None,
+                "delete_url": url_for('admin.delete_candidate', id=new_candidate.id)
+            })
+
+        # fallback for normal submit
         flash('Candidate added successfully!', 'success')
         return redirect(url_for('admin.manage_candidates'))
 
@@ -739,7 +757,6 @@ def manage_candidates():
         selected_department=selected_department,
         selected_election_type=selected_election_type
     )
-
 
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
