@@ -663,6 +663,8 @@ def manage_candidates():
     # ================= FILTER =================
     selected_election_type = request.args.get('election_type', default=None)
     department_id = request.args.get('department_id', type=int)
+    page = request.args.get('page', 1, type=int)  # <--- pagination
+    per_page = 10  # number of candidates per page
     selected_department = None
 
     query = Candidate.query.join(Election, Candidate.election_id == Election.id)
@@ -677,7 +679,9 @@ def manage_candidates():
         if selected_department:
             query = query.filter(Candidate.department_id == department_id)
 
-    candidates = query.all()
+    # ---------------- PAGINATE ----------------
+    candidates_pagination = query.order_by(Candidate.id.desc()).paginate(page=page, per_page=per_page)
+    candidates = candidates_pagination.items
     # ==========================================
 
     # ---------- ADD CANDIDATE ----------
@@ -742,13 +746,13 @@ def manage_candidates():
         return redirect(url_for('admin.manage_candidates'))
 
     # ----------------- Filter elections for modals -----------------
-    # Prepare election lists for Add/Edit modal dropdowns
     department_elections = [e for e in elections if e.election_type == 'Department']
     ssg_elections = [e for e in elections if e.election_type == 'SSG']
 
     return render_template(
         'manage_candidates.html',
         candidates=candidates,
+        candidates_pagination=candidates_pagination,  # <--- pass pagination object
         positions=positions,
         departments=departments,
         elections=elections,  # all elections
@@ -761,7 +765,7 @@ def manage_candidates():
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
 @admin_required
-def update_candidate(id):   # 👈 renamed
+def update_candidate(id):
     candidate = Candidate.query.get_or_404(id)
 
     candidate.first_name = request.form.get('first_name')
@@ -796,7 +800,6 @@ def delete_candidate(id):
     db.session.commit()
     flash('Candidate deleted successfully!', 'success')
     return redirect(url_for('admin.manage_candidates'))
-
 
 
 # ---------------------- Create Department Election ---------------------- #

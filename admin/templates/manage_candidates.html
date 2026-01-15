@@ -82,6 +82,38 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- PAGINATION -->
+    {% if candidates_pagination.pages > 1 %}
+    <div class="pagination">
+        {% if candidates_pagination.has_prev %}
+            <a href="{{ url_for('admin.manage_candidates', page=candidates_pagination.prev_num, 
+                                election_type=selected_election_type, 
+                                department_id=selected_department.id if selected_department else None) }}">&laquo; Prev</a>
+        {% else %}
+            <span class="disabled">&laquo; Prev</span>
+        {% endif %}
+
+        {% for p in range(1, candidates_pagination.pages + 1) %}
+            {% if p == candidates_pagination.page %}
+                <span class="current">{{ p }}</span>
+            {% else %}
+                <a href="{{ url_for('admin.manage_candidates', page=p, 
+                                    election_type=selected_election_type, 
+                                    department_id=selected_department.id if selected_department else None) }}">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if candidates_pagination.has_next %}
+            <a href="{{ url_for('admin.manage_candidates', page=candidates_pagination.next_num, 
+                                election_type=selected_election_type, 
+                                department_id=selected_department.id if selected_department else None) }}">Next &raquo;</a>
+        {% else %}
+            <span class="disabled">Next &raquo;</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
 </div>
 
 <div id="lightbox" onclick="closeLightbox()">
@@ -158,7 +190,7 @@
     </div>
 </div>
 
-<!-- EDIT CANDIDATE MODAL (unchanged) -->
+<!-- EDIT CANDIDATE MODAL -->
 <div id="editCandidateModal" class="lightbox-modal">
     <div class="lightbox-content">
         <span class="close" onclick="closeEditModal()">&times;</span>
@@ -315,7 +347,6 @@ filterElectionType.addEventListener('change', () => { updateFilterDepartment(); 
 filterDepartment.addEventListener('change', () => filterForm.submit());
 
 /* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
-/* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
 const addCandidateForm = document.getElementById('addCandidateForm');
 const addBtn = addCandidateForm.querySelector('.add-btn');
 
@@ -375,6 +406,5 @@ addCandidateForm.addEventListener('submit', function(e) {
         addBtn.innerHTML = originalText;
     });
 });
-
 </script>
 {% endblock %}

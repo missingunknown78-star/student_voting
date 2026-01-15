@@ -466,3 +466,70 @@ h1.page-title::after {
     100% { transform: rotate(360deg); }
   }
   
+
+
+  /* ================= Pagination Styling ================= */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+    font-family: var(--font-family);
+}
+
+.pagination a,
+.pagination span {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+    min-width: 38px;
+    text-align: center;
+}
+
+.pagination a {
+    background: var(--light);
+    color: var(--dark);
+    border: 1px solid var(--gray-light);
+}
+
+.pagination a:hover {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+.pagination .current {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+.pagination .disabled {
+    background: #e9ecef;
+    color: var(--gray);
+    cursor: default;
+    border: 1px solid var(--gray-light);
+}
+
+/* MOBILE RESPONSIVE PAGINATION */
+@media (max-width: 768px) {
+    .pagination {
+        gap: 4px;
+    }
+
+    .pagination a,
+    .pagination span {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        min-width: 32px;
+    }
+}
