@@ -973,29 +973,41 @@ def statistics():
     # Get all elections that have ended
     all_elections = Election.query.all()
     past_elections = [e for e in all_elections if e.status == "Ended"]
+    
+    # Sort by end date (newest first)
+    past_elections.sort(key=lambda x: x.end_date, reverse=True)
 
     election_stats = []
     for election in past_elections:
-        candidates = election.candidates  # relationship from your Candidate model
-
+        candidates = election.candidates
+        
         # Prepare votes per candidate
         votes_per_candidate = {}
+        total_votes = 0
         for c in candidates:
             full_name = f"{c.first_name} {c.last_name}"
-            votes_per_candidate[full_name] = len(c.votes)
-
+            vote_count = len(c.votes)
+            votes_per_candidate[full_name] = vote_count
+            total_votes += vote_count
+        
         # Determine winner
         winner = max(votes_per_candidate, key=votes_per_candidate.get) if votes_per_candidate else "No votes"
+        
+        # Calculate winning percentage
+        winning_votes = votes_per_candidate.get(winner, 0)
+        winning_percentage = (winning_votes / total_votes * 100) if total_votes > 0 else 0
 
         election_stats.append({
             'title': election.title,
             'election_type': election.election_type,
-            'department': election.department,  # department name
+            'department': election.department,
             'course': getattr(election.course_rel, 'name', None) if election.course_rel else None,
-            'start_date': election.start_date.strftime('%Y-%m-%d %H:%M'),
-            'end_date': election.end_date.strftime('%Y-%m-%d %H:%M'),
+            'start_date': election.start_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
+            'end_date': election.end_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
             'votes': votes_per_candidate,
-            'winner': winner
+            'winner': winner,
+            'total_votes': total_votes,
+            'winning_percentage': round(winning_percentage, 1)
         })
 
     # Get all departments for the filter dropdown

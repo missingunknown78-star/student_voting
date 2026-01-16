@@ -15,12 +15,9 @@
     <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
     <form method="GET" class="filter-form" id="filterForm">
         <select name="election_type" id="filter_election_type">
-            <option value="">All Election Types</option>
+            <option value="">General</option>
             <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
                 Department Election
-            </option>
-            <option value="SSG" {% if selected_election_type=='SSG' %}selected{% endif %}>
-                Supreme Student Government (SSG)
             </option>
         </select>
 

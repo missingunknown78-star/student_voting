@@ -3,604 +3,753 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Candidates - Student Government Elections</title>
+    <title>E-Voting System - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary: #2563eb;
-            --secondary: #64748b;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --light: #f8fafc;
-            --dark: #1e293b;
-            --border: #e2e8f0;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background: #f1f5f9; color: var(--dark); line-height: 1.6; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 2px solid var(--border); margin-bottom: 30px; }
-        h1 { color: var(--primary); font-size: 28px; }
-        h2 { color: var(--dark); margin-bottom: 20px; font-size: 22px; }
-        .actions-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-secondary { background: var(--secondary); color: white; }
-        .btn-secondary:hover { background: #475569; }
-        .btn-success { background: var(--success); color: white; }
-        .btn-success:hover { background: #0da271; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-danger:hover { background: #dc2626; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-warning:hover { background: #d97706; }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--dark); }
-        .btn-outline:hover { background: #f8fafc; }
-        .btn-sm { padding: 6px 12px; font-size: 14px; }
-        .btn-lg { padding: 12px 24px; font-size: 16px; }
-        .search-filter { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
-        label { font-weight: 600; color: var(--dark); }
-        input, select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; }
-        input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
-        .candidates-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px; }
-        .candidate-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s; }
-        .candidate-card:hover { transform: translateY(-5px); }
-        .candidate-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .candidate-status { padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-        .status-active { background: #d1fae5; color: #065f46; }
-        .status-inactive { background: #fee2e2; color: #991b1b; }
-        .candidate-body { padding: 20px; }
-        .candidate-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border); margin-bottom: 15px; }
-        .candidate-name { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
-        .candidate-id { color: var(--secondary); font-size: 14px; margin-bottom: 15px; }
-        .candidate-details { margin-top: 15px; }
-        .detail-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); }
-        .detail-label { font-weight: 600; color: var(--secondary); }
-        .candidate-actions { padding: 15px 20px; background: #f8fafc; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: white; border-radius: 10px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 20px; }
-        .modal-footer { padding: 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
-        .close-modal { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--secondary); }
-        .form-row { display: flex; gap: 20px; margin-bottom: 20px; }
-        .form-column { flex: 1; }
-        .stats-bar { display: flex; gap: 20px; margin-bottom: 30px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .stat-card { flex: 1; text-align: center; padding: 15px; border-radius: 8px; background: #f8fafc; }
-        .stat-value { font-size: 32px; font-weight: 700; color: var(--primary); }
-        .stat-label { color: var(--secondary); font-size: 14px; margin-top: 5px; }
-        .table-container { overflow-x: auto; margin-bottom: 30px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background: #f1f5f9; font-weight: 700; color: var(--dark); }
-        tr:hover { background: #f8fafc; }
-        .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-left: auto; }
-        .view-btn { padding: 8px 16px; background: white; border: none; cursor: pointer; }
-        .view-btn.active { background: var(--primary); color: white; }
-        .bulk-actions { display: flex; gap: 10px; align-items: center; margin-right: 20px; }
-        .select-all { margin-right: 10px; }
-        .audit-log { font-size: 12px; color: var(--secondary); margin-top: 5px; }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 3px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .logo h2 {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+        }
+
+        .logo h2 i {
+            margin-right: 10px;
+            color: #4dabf7;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-left: 4px solid #4dabf7;
+        }
+
+        .nav-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e6ef;
+        }
+
+        .header h1 {
+            color: #2a5298;
+            display: flex;
+            align-items: center;
+        }
+
+        .header h1 i {
+            margin-right: 10px;
+            color: #2a5298;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #2a5298;
+        }
+
+        .welcome-section {
+            background: linear-gradient(135deg, #2a5298, #1e3c72);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(42, 82, 152, 0.2);
+        }
+
+        .welcome-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            opacity: 0.9;
+            max-width: 600px;
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-right: 15px;
+            color: white;
+        }
+
+        .stat-info h3 {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2a5298;
+        }
+
+        /* Dashboard Sections */
+        .dashboard-sections {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-title {
+            font-size: 1.2rem;
+            color: #2a5298;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dashboard-title i {
+            margin-right: 10px;
+        }
+
+        .view-all {
+            font-size: 0.9rem;
+            color: #4dabf7;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .view-all:hover {
+            text-decoration: underline;
+        }
+
+        /* Active Elections */
+        .election-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #eef2f7;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .election-item:last-child {
+            border-bottom: none;
+        }
+
+        .election-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .election-info p {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .election-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-upcoming {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-closed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Recent Activity */
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #eef2f7;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .activity-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+
+        .activity-info p {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: #adb5bd;
+            margin-top: 5px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .action-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #2a5298, #1e3c72);
+            color: white;
+        }
+
+        .action-card:hover .action-icon {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .action-card:hover h3 {
+            color: white;
+        }
+
+        .action-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 1.8rem;
+            color: #2a5298;
+            background-color: #f0f7ff;
+        }
+
+        .action-card h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #2a5298;
+        }
+
+        .action-card p {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .action-card:hover p {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #e0e6ef;
+            margin-top: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1100px) {
+            .dashboard-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
-            .form-row, .stats-bar { flex-direction: column; }
-            .candidates-container { grid-template-columns: 1fr; }
-            .actions-bar, .search-filter { flex-direction: column; }
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 10px 0;
+            }
+            
+            .nav-menu {
+                display: flex;
+                overflow-x: auto;
+            }
+            
+            .nav-item {
+                padding: 10px 15px;
+                white-space: nowrap;
+            }
+            
+            .quick-stats, .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .main-content {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .quick-stats, .quick-actions {
+                grid-template-columns: 1fr;
+            }
+            
+            .welcome-section {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>📋 Manage Candidates</h1>
-            <div class="view-toggle">
-                <button class="view-btn active" id="cardViewBtn">Card View</button>
-                <button class="view-btn" id="tableViewBtn">Table View</button>
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h2><i class="fas fa-vote-yea"></i> E-Voting System</h2>
             </div>
-        </header>
-
-        <div class="stats-bar">
-            <div class="stat-card">
-                <div class="stat-value" id="totalCandidates">12</div>
-                <div class="stat-label">Total Candidates</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="activeCandidates">9</div>
-                <div class="stat-label">Active Candidates</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="positionsCount">4</div>
-                <div class="stat-label">Different Positions</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="pendingApprovals">3</div>
-                <div class="stat-label">Pending Approval</div>
-            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </li>
+                <li class="nav-item">
+                    <a href="statistics.html" class="nav-item" style="display: flex; align-items: center; text-decoration: none; color: white;">
+                        <i class="fas fa-chart-bar"></i> Statistics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <i class="fas fa-users"></i> Manage Voters
+                </li>
+                <li class="nav-item">
+                    <i class="fas fa-user-tie"></i> Manage Candidates
+                </li>
+                <li class="nav-item">
+                    <i class="fas fa-vote-yea"></i> Elections
+                </li>
+                <li class="nav-item">
+                    <i class="fas fa-cog"></i> Settings
+                </li>
+                <li class="nav-item">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </li>
+            </ul>
         </div>
 
-        <div class="actions-bar">
-            <div class="bulk-actions">
-                <input type="checkbox" class="select-all" id="selectAll">
-                <button class="btn btn-outline btn-sm">Bulk Actions ▼</button>
-            </div>
-            <button class="btn btn-primary" id="addCandidateBtn">
-                <span>➕</span> Add Candidate
-            </button>
-            <button class="btn btn-success" id="bulkImportBtn">
-                <span>📥</span> Bulk Import
-            </button>
-            <button class="btn btn-warning" id="uploadPhotosBtn">
-                <span>🖼️</span> Upload Photos
-            </button>
-            <button class="btn btn-secondary" id="lockCandidatesBtn">
-                <span>🔒</span> Lock Candidate List
-            </button>
-            <button class="btn btn-outline" id="viewAuditBtn">
-                <span>📋</span> View Audit Trail
-            </button>
-        </div>
-
-        <div class="search-filter">
-            <div class="form-group">
-                <label for="searchInput">Search Candidates</label>
-                <input type="text" id="searchInput" placeholder="Search by name or ID...">
-            </div>
-            <div class="form-group">
-                <label for="positionFilter">Filter by Position</label>
-                <select id="positionFilter">
-                    <option value="">All Positions</option>
-                    <option value="President">President</option>
-                    <option value="Vice President">Vice President</option>
-                    <option value="Secretary">Secretary</option>
-                    <option value="Treasurer">Treasurer</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="statusFilter">Filter by Status</label>
-                <select id="statusFilter">
-                    <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="pending">Pending Approval</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="sortBy">Sort By</label>
-                <select id="sortBy">
-                    <option value="name">Name (A-Z)</option>
-                    <option value="name-desc">Name (Z-A)</option>
-                    <option value="position">Position</option>
-                    <option value="votes">Votes (High to Low)</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="candidates-container" id="candidatesContainer">
-            <!-- Candidate cards will be generated here -->
-        </div>
-
-        <div class="table-container" id="tableView" style="display: none;">
-            <table>
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" class="select-all-table"></th>
-                        <th>Name</th>
-                        <th>Student ID</th>
-                        <th>Position</th>
-                        <th>Affiliation</th>
-                        <th>Status</th>
-                        <th>Votes</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="candidatesTableBody">
-                    <!-- Table rows will be generated here -->
-                </tbody>
-            </table>
-        </div>
-
-        <div id="addCandidateModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Add New Candidate</h2>
-                    <button class="close-modal" data-modal="addCandidateModal">&times;</button>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+                <div class="user-info">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Admin">
+                    <div>
+                        <div style="font-weight: 600;">Admin User</div>
+                        <div style="font-size: 0.85rem; color: #6c757d;">Administrator</div>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <div class="form-row">
-                        <div class="form-column">
-                            <div class="form-group">
-                                <label for="candidateName">Full Name *</label>
-                                <input type="text" id="candidateName" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="studentId">Student ID *</label>
-                                <input type="text" id="studentId" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="candidatePhoto">Photo URL</label>
-                                <input type="text" id="candidatePhoto" placeholder="https://example.com/photo.jpg">
-                            </div>
+            </div>
+
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <h2>Welcome back, Admin!</h2>
+                <p>You have 3 active elections, 247 pending voter registrations, and 1 election starting tomorrow. The system is running smoothly with 99.8% uptime.</p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="quick-stats">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #4dabf7;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Voters</h3>
+                        <div class="stat-value">1,847</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #20c997;">
+                        <i class="fas fa-vote-yea"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Active Votes</h3>
+                        <div class="stat-value">892</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #ff922b;">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Active Elections</h3>
+                        <div class="stat-value">3</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: #e64980;">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Verified Today</h3>
+                        <div class="stat-value">47</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="#" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <h3>Create Election</h3>
+                    <p>Start a new voting process</p>
+                </a>
+
+                <a href="#" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h3>Add Voters</h3>
+                    <p>Register new voters</p>
+                </a>
+
+                <a href="#" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-file-export"></i>
+                    </div>
+                    <h3>Generate Report</h3>
+                    <p>Export election data</p>
+                </a>
+
+                <a href="statistics.html" class="action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>View Analytics</h3>
+                    <p>Detailed statistics</p>
+                </a>
+            </div>
+
+            <!-- Dashboard Sections -->
+            <div class="dashboard-sections">
+                <!-- Active Elections -->
+                <div class="dashboard-card">
+                    <div class="dashboard-title">
+                        <span><i class="fas fa-vote-yea"></i> Active Elections</span>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+                    
+                    <div class="election-item">
+                        <div class="election-info">
+                            <h4>Student Council President 2023</h4>
+                            <p>Ends: Nov 30, 2023 • 892 votes cast</p>
                         </div>
-                        <div class="form-column">
-                            <div class="form-group">
-                                <label for="candidatePosition">Position *</label>
-                                <select id="candidatePosition" required>
-                                    <option value="">Select Position</option>
-                                    <option value="President">President</option>
-                                    <option value="Vice President">Vice President</option>
-                                    <option value="Secretary">Secretary</option>
-                                    <option value="Treasurer">Treasurer</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="candidateAffiliation">Party / Affiliation</label>
-                                <input type="text" id="candidateAffiliation">
-                            </div>
-                            <div class="form-group">
-                                <label for="electionTerm">Election Term / Year *</label>
-                                <input type="text" id="electionTerm" value="2023-2024" required>
-                            </div>
+                        <div class="election-status status-active">Active</div>
+                    </div>
+
+                    <div class="election-item">
+                        <div class="election-info">
+                            <h4>Cultural Fest Coordinator</h4>
+                            <p>Ends: Dec 5, 2023 • 432 votes cast</p>
                         </div>
+                        <div class="election-status status-active">Active</div>
                     </div>
-                    <div class="form-group">
-                        <label for="candidateManifesto">Description / Manifesto</label>
-                        <textarea id="candidateManifesto" rows="4" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px;"></textarea>
+
+                    <div class="election-item">
+                        <div class="election-info">
+                            <h4>Sports Committee Head</h4>
+                            <p>Ended: Nov 5, 2023 • 1,104 votes cast</p>
+                        </div>
+                        <div class="election-status status-closed">Closed</div>
                     </div>
-                    <div class="form-group">
-                        <label for="candidateStatus">Initial Status</label>
-                        <select id="candidateStatus">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="pending">Pending Approval</option>
-                        </select>
+
+                    <div class="election-item">
+                        <div class="election-info">
+                            <h4>Library Committee Head</h4>
+                            <p>Starts: Dec 5, 2023 • 0 votes cast</p>
+                        </div>
+                        <div class="election-status status-upcoming">Upcoming</div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-outline" data-modal="addCandidateModal">Cancel</button>
-                    <button class="btn btn-success" id="saveCandidateBtn">Save Candidate</button>
+
+                <!-- Recent Activity -->
+                <div class="dashboard-card">
+                    <div class="dashboard-title">
+                        <span><i class="fas fa-history"></i> Recent Activity</span>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+                    
+                    <ul class="activity-list">
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background-color: #4dabf7;">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="activity-info">
+                                <h4>47 voters verified</h4>
+                                <p>New voter registrations approved</p>
+                                <div class="activity-time">10 minutes ago</div>
+                            </div>
+                        </li>
+
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background-color: #20c997;">
+                                <i class="fas fa-vote-yea"></i>
+                            </div>
+                            <div class="activity-info">
+                                <h4>128 new votes cast</h4>
+                                <p>Student Council President election</p>
+                                <div class="activity-time">1 hour ago</div>
+                            </div>
+                        </li>
+
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background-color: #ff922b;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="activity-info">
+                                <h4>System alert resolved</h4>
+                                <p>Database connection restored</p>
+                                <div class="activity-time">3 hours ago</div>
+                            </div>
+                        </li>
+
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background-color: #e64980;">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="activity-info">
+                                <h4>New candidate added</h4>
+                                <p>John Smith added to Cultural Fest election</p>
+                                <div class="activity-time">5 hours ago</div>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
             </div>
-        </div>
 
-        <div id="bulkImportModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Bulk Import Candidates</h2>
-                    <button class="close-modal" data-modal="bulkImportModal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p>Upload a CSV or Excel file with candidate data. <a href="#">Download template</a></p>
-                    <div class="form-group">
-                        <label for="fileUpload">Select File</label>
-                        <input type="file" id="fileUpload" accept=".csv,.xlsx,.xls">
-                    </div>
-                    <div style="background:#f8fafc; padding:15px; border-radius:6px; margin-top:20px;">
-                        <p><strong>File format should include columns:</strong></p>
-                        <p>Name, Student ID, Position, Affiliation, Election Term, Status</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-outline" data-modal="bulkImportModal">Cancel</button>
-                    <button class="btn btn-success">Import Candidates</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="auditModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Audit Trail</h2>
-                    <button class="close-modal" data-modal="auditModal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Action</th>
-                                <th>User</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>2023-10-15 14:30</td><td>Added Candidate</td><td>admin@university.edu</td><td>John Doe (ID: S12345)</td></tr>
-                            <tr><td>2023-10-15 13:22</td><td>Edited Candidate</td><td>admin@university.edu</td><td>Jane Smith - Updated manifesto</td></tr>
-                            <tr><td>2023-10-14 09:15</td><td>Status Changed</td><td>election_officer@university.edu</td><td>Mark Johnson → Activated</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <!-- Footer -->
+            <div class="footer">
+                <p>Student E-Voting System &copy; 2023 | Dashboard v2.1</p>
+                <p>Last updated: Today, 11:30 AM | System Status: <span style="color: #20c997; font-weight: 600;">● Operational</span></p>
             </div>
         </div>
     </div>
 
     <script>
-        // Sample candidate data
-        const candidates = [
-            { id: 1, name: "Alex Johnson", studentId: "S12345", photo: "https://i.pravatar.cc/150?img=1", position: "President", affiliation: "Student Alliance", term: "2023-2024", manifesto: "Improve campus facilities and student engagement.", status: "active", votes: 245 },
-            { id: 2, name: "Maria Garcia", studentId: "S12346", photo: "https://i.pravatar.cc/150?img=2", position: "Vice President", affiliation: "Progressive Students", term: "2023-2024", manifesto: "Focus on mental health and academic support.", status: "active", votes: 198 },
-            { id: 3, name: "David Chen", studentId: "S12347", photo: "https://i.pravatar.cc/150?img=3", position: "Secretary", affiliation: "Independent", term: "2023-2024", manifesto: "Transparent communication and efficient administration.", status: "active", votes: 176 },
-            { id: 4, name: "Sarah Williams", studentId: "S12348", photo: "https://i.pravatar.cc/150?img=4", position: "Treasurer", affiliation: "Student Alliance", term: "2023-2024", manifesto: "Responsible budgeting and funding for student clubs.", status: "inactive", votes: 0 },
-            { id: 5, name: "James Wilson", studentId: "S12349", photo: "https://i.pravatar.cc/150?img=5", position: "President", affiliation: "Campus Unity", term: "2023-2024", manifesto: "Bridge gaps between different student groups.", status: "active", votes: 187 },
-            { id: 6, name: "Lisa Park", studentId: "S12350", photo: "https://i.pravatar.cc/150?img=6", position: "Vice President", affiliation: "Independent", term: "2023-2024", manifesto: "Enhance career services and industry connections.", status: "pending", votes: 0 }
-        ];
-
-        // DOM Elements
-        const candidatesContainer = document.getElementById('candidatesContainer');
-        const candidatesTableBody = document.getElementById('candidatesTableBody');
-        const searchInput = document.getElementById('searchInput');
-        const positionFilter = document.getElementById('positionFilter');
-        const statusFilter = document.getElementById('statusFilter');
-        const sortBy = document.getElementById('sortBy');
-        const cardViewBtn = document.getElementById('cardViewBtn');
-        const tableViewBtn = document.getElementById('tableViewBtn');
-        const tableView = document.getElementById('tableView');
-
-        // Initialize
-        function init() {
-            renderCandidates();
-            updateStats();
-            setupEventListeners();
-        }
-
-        // Render candidate cards
-        function renderCandidates(filteredCandidates = candidates) {
-            candidatesContainer.innerHTML = '';
-            candidatesTableBody.innerHTML = '';
-            
-            filteredCandidates.forEach(candidate => {
-                // Create card view
-                const card = document.createElement('div');
-                card.className = 'candidate-card';
-                card.innerHTML = `
-                    <div class="candidate-header">
-                        <span class="candidate-status ${candidate.status === 'active' ? 'status-active' : candidate.status === 'inactive' ? 'status-inactive' : 'status-pending'}">
-                            ${candidate.status.charAt(0).toUpperCase() + candidate.status.slice(1)}
-                        </span>
-                        <span class="audit-log">Added: 2023-10-10</span>
-                    </div>
-                    <div class="candidate-body">
-                        <img src="${candidate.photo}" alt="${candidate.name}" class="candidate-photo">
-                        <div class="candidate-name">${candidate.name}</div>
-                        <div class="candidate-id">${candidate.studentId}</div>
-                        <div class="candidate-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Position:</span>
-                                <span>${candidate.position}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Affiliation:</span>
-                                <span>${candidate.affiliation}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Term:</span>
-                                <span>${candidate.term}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Votes:</span>
-                                <span><strong>${candidate.votes}</strong></span>
-                            </div>
-                        </div>
-                        <p style="margin-top:15px; font-size:14px; color:#64748b;">${candidate.manifesto}</p>
-                    </div>
-                    <div class="candidate-actions">
-                        <button class="btn btn-outline btn-sm" onclick="editCandidate(${candidate.id})">✏️ Edit</button>
-                        <button class="btn btn-outline btn-sm" onclick="viewDetails(${candidate.id})">👁️ View</button>
-                        <button class="btn btn-outline btn-sm" onclick="toggleStatus(${candidate.id})">
-                            ${candidate.status === 'active' ? '⏸️ Deactivate' : '▶️ Activate'}
-                        </button>
-                        <button class="btn btn-outline btn-sm" onclick="deleteCandidate(${candidate.id})">🗑️ Delete</button>
-                        <button class="btn btn-outline btn-sm" onclick="viewAnalytics(${candidate.id})">📊 Analytics</button>
-                    </div>
-                `;
-                candidatesContainer.appendChild(card);
-
-                // Create table row
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="checkbox" class="candidate-checkbox" data-id="${candidate.id}"></td>
-                    <td><strong>${candidate.name}</strong></td>
-                    <td>${candidate.studentId}</td>
-                    <td>${candidate.position}</td>
-                    <td>${candidate.affiliation}</td>
-                    <td><span class="candidate-status ${candidate.status === 'active' ? 'status-active' : candidate.status === 'inactive' ? 'status-inactive' : 'status-pending'}">${candidate.status.charAt(0).toUpperCase() + candidate.status.slice(1)}</span></td>
-                    <td><strong>${candidate.votes}</strong></td>
-                    <td>
-                        <button class="btn btn-outline btn-sm" onclick="editCandidate(${candidate.id})">Edit</button>
-                        <button class="btn btn-outline btn-sm" onclick="deleteCandidate(${candidate.id})">Delete</button>
-                    </td>
-                `;
-                candidatesTableBody.appendChild(row);
-            });
-        }
-
-        // Update statistics
-        function updateStats() {
-            const total = candidates.length;
-            const active = candidates.filter(c => c.status === 'active').length;
-            const positions = [...new Set(candidates.map(c => c.position))].length;
-            const pending = candidates.filter(c => c.status === 'pending').length;
-            
-            document.getElementById('totalCandidates').textContent = total;
-            document.getElementById('activeCandidates').textContent = active;
-            document.getElementById('positionsCount').textContent = positions;
-            document.getElementById('pendingApprovals').textContent = pending;
-        }
-
-        // Filter and sort candidates
-        function filterAndSortCandidates() {
-            let filtered = [...candidates];
-            
-            // Search filter
-            const searchTerm = searchInput.value.toLowerCase();
-            if (searchTerm) {
-                filtered = filtered.filter(c => 
-                    c.name.toLowerCase().includes(searchTerm) || 
-                    c.studentId.toLowerCase().includes(searchTerm)
-                );
-            }
-            
-            // Position filter
-            const position = positionFilter.value;
-            if (position) {
-                filtered = filtered.filter(c => c.position === position);
-            }
-            
-            // Status filter
-            const status = statusFilter.value;
-            if (status) {
-                filtered = filtered.filter(c => c.status === status);
-            }
-            
-            // Sort
-            const sort = sortBy.value;
-            switch(sort) {
-                case 'name': filtered.sort((a, b) => a.name.localeCompare(b.name)); break;
-                case 'name-desc': filtered.sort((a, b) => b.name.localeCompare(a.name)); break;
-                case 'position': filtered.sort((a, b) => a.position.localeCompare(b.position)); break;
-                case 'votes': filtered.sort((a, b) => b.votes - a.votes); break;
-            }
-            
-            renderCandidates(filtered);
-        }
-
-        // Setup event listeners
-        function setupEventListeners() {
-            searchInput.addEventListener('input', filterAndSortCandidates);
-            positionFilter.addEventListener('change', filterAndSortCandidates);
-            statusFilter.addEventListener('change', filterAndSortCandidates);
-            sortBy.addEventListener('change', filterAndSortCandidates);
-            
-            // View toggle
-            cardViewBtn.addEventListener('click', () => {
-                cardViewBtn.classList.add('active');
-                tableViewBtn.classList.remove('active');
-                candidatesContainer.style.display = 'grid';
-                tableView.style.display = 'none';
-            });
-            
-            tableViewBtn.addEventListener('click', () => {
-                tableViewBtn.classList.add('active');
-                cardViewBtn.classList.remove('active');
-                candidatesContainer.style.display = 'none';
-                tableView.style.display = 'block';
-            });
-            
-            // Modal handling
-            document.querySelectorAll('.close-modal, .btn-outline[data-modal]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const modalId = e.target.getAttribute('data-modal');
-                    document.getElementById(modalId).style.display = 'none';
-                });
-            });
-            
-            // Add candidate button
-            document.getElementById('addCandidateBtn').addEventListener('click', () => {
-                document.getElementById('addCandidateModal').style.display = 'flex';
-            });
-            
-            // Bulk import button
-            document.getElementById('bulkImportBtn').addEventListener('click', () => {
-                document.getElementById('bulkImportModal').style.display = 'flex';
-            });
-            
-            // Audit trail button
-            document.getElementById('viewAuditBtn').addEventListener('click', () => {
-                document.getElementById('auditModal').style.display = 'flex';
-            });
-            
-            // Save candidate
-            document.getElementById('saveCandidateBtn').addEventListener('click', () => {
-                alert('Candidate saved successfully!');
-                document.getElementById('addCandidateModal').style.display = 'none';
-            });
-            
-            // Lock candidates button
-            document.getElementById('lockCandidatesBtn').addEventListener('click', () => {
-                const isLocked = confirm('Locking the candidate list will prevent any further changes. Are you sure?');
-                if (isLocked) {
-                    alert('Candidate list has been locked.');
-                    document.getElementById('lockCandidatesBtn').innerHTML = '<span>🔓</span> Unlock Candidate List';
-                }
-            });
-            
-            // Upload photos button
-            document.getElementById('uploadPhotosBtn').addEventListener('click', () => {
-                alert('Photo upload functionality would open a file dialog here.');
-            });
-            
-            // Select all checkboxes
-            document.querySelectorAll('.select-all, .select-all-table').forEach(checkbox => {
-                checkbox.addEventListener('change', (e) => {
-                    document.querySelectorAll('.candidate-checkbox').forEach(cb => {
-                        cb.checked = e.target.checked;
-                    });
-                });
-            });
-            
-            // Close modal when clicking outside
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.style.display = 'none';
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Nav item functionality
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Don't prevent default if it's a link to statistics page
+                    if (!this.querySelector('.fa-sign-out-alt') && !this.href) {
+                        e.preventDefault();
+                        navItems.forEach(nav => nav.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        // In a real app, you would navigate to the selected page
+                        console.log(`Navigating to: ${this.textContent}`);
                     }
                 });
             });
-        }
 
-        // Candidate actions
-        function editCandidate(id) {
-            const candidate = candidates.find(c => c.id === id);
-            if (candidate) {
-                document.getElementById('candidateName').value = candidate.name;
-                document.getElementById('studentId').value = candidate.studentId;
-                document.getElementById('candidatePhoto').value = candidate.photo;
-                document.getElementById('candidatePosition').value = candidate.position;
-                document.getElementById('candidateAffiliation').value = candidate.affiliation;
-                document.getElementById('electionTerm').value = candidate.term;
-                document.getElementById('candidateManifesto').value = candidate.manifesto;
-                document.getElementById('candidateStatus').value = candidate.status;
-                document.getElementById('addCandidateModal').style.display = 'flex';
-            }
-        }
+            // Quick action cards functionality
+            const actionCards = document.querySelectorAll('.action-card');
+            actionCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (!this.href) {
+                        e.preventDefault();
+                        const action = this.querySelector('h3').textContent;
+                        console.log(`Action clicked: ${action}`);
+                        
+                        // Show a quick feedback
+                        const originalText = this.querySelector('p').textContent;
+                        this.querySelector('p').textContent = 'Processing...';
+                        
+                        setTimeout(() => {
+                            this.querySelector('p').textContent = originalText;
+                        }, 1000);
+                    }
+                });
+            });
 
-        function viewDetails(id) {
-            const candidate = candidates.find(c => c.id === id);
-            if (candidate) {
-                alert(`Candidate Details:\n\nName: ${candidate.name}\nID: ${candidate.studentId}\nPosition: ${candidate.position}\nAffiliation: ${candidate.affiliation}\nStatus: ${candidate.status}\nVotes: ${candidate.votes}\n\nManifesto:\n${candidate.manifesto}`);
-            }
-        }
+            // Election status updates
+            const electionItems = document.querySelectorAll('.election-item');
+            electionItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const electionName = this.querySelector('h4').textContent;
+                    console.log(`Viewing details for: ${electionName}`);
+                    
+                    // In a real app, this would navigate to election details
+                });
+            });
 
-        function toggleStatus(id) {
-            const candidate = candidates.find(c => c.id === id);
-            if (candidate) {
-                candidate.status = candidate.status === 'active' ? 'inactive' : 'active';
-                renderCandidates();
-                updateStats();
-                filterAndSortCandidates();
-                alert(`Candidate ${candidate.name} status changed to ${candidate.status}`);
-            }
-        }
-
-        function deleteCandidate(id) {
-            if (confirm('Are you sure you want to delete this candidate?')) {
-                const index = candidates.findIndex(c => c.id === id);
-                if (index !== -1) {
-                    candidates.splice(index, 1);
-                    renderCandidates();
-                    updateStats();
-                    filterAndSortCandidates();
-                    alert('Candidate deleted successfully.');
+            // Update dashboard time
+            function updateDashboardTime() {
+                const now = new Date();
+                const options = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                const timeString = now.toLocaleDateString('en-US', options);
+                
+                // Update footer time
+                const timeElement = document.querySelector('.footer p:nth-child(2)');
+                if (timeElement) {
+                    timeElement.innerHTML = `Last updated: ${timeString} | System Status: <span style="color: #20c997; font-weight: 600;">● Operational</span>`;
                 }
             }
-        }
-
-        function viewAnalytics(id) {
-            const candidate = candidates.find(c => c.id === id);
-            if (candidate) {
-                alert(`Analytics for ${candidate.name}:\n\nVotes: ${candidate.votes}\nRank: #${candidates.sort((a,b) => b.votes - a.votes).findIndex(c => c.id === id) + 1} of ${candidates.length}\n\nEligibility: All registered students can vote for this position.\nVoting Period: Oct 15-20, 2023`);
-            }
-        }
-
-        // Initialize the application
-        init();
+            
+            // Update time initially and every minute
+            updateDashboardTime();
+            setInterval(updateDashboardTime, 60000);
+        });
     </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Past Election Statistics{% endblock %}
+{% block title %}Election Statistics{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/statistics.css') }}">
@@ -9,156 +9,313 @@
 
 {% block content %}
 <div class="stats-page">
-    <h1>Past Election Results</h1>
-
-    <!-- ------------------- Filter Dropdown ------------------- -->
-    <div class="filter-container">
-        <label for="filter-election-type"><strong>Filter by Election Type:</strong></label>
-        <select id="filter-election-type">
-            <option value="all">All</option>
-            <option value="Department">Department</option>
-            <option value="Wide">Wide (SSG)</option>
-        </select>
-
-        <!-- Department Dropdown (hidden initially) -->
-        <select id="filter-department" style="display:none; margin-left:10px;">
-            <option value="all">All Departments</option>
-            {% for dept in departments %}
-            <option value="{{ dept.name }}">{{ dept.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    {% for election in election_stats %}
-    <div class="stat-card" 
-         data-election-type="{{ election['election_type'] }}" 
-         data-department="{{ election['department'] or '' }}">
-        <h2>{{ election['title'] }}</h2>
-        <p><strong>Winner:</strong> {{ election['winner'] }}</p>
-
-        <!-- Election metadata -->
-        <p><strong>Election Type:</strong> {{ election['election_type'] }}</p>
-        {% if election['department'] %}
-        <p><strong>Department:</strong> {{ election['department'] }}</p>
-        {% endif %}
-        {% if election['course'] %}
-        <p><strong>Course:</strong> {{ election['course'] }}</p>
-        {% endif %}
-        <p><strong>Start Date:</strong> {{ election['start_date'] }}</p>
-        <p><strong>End Date:</strong> {{ election['end_date'] }}</p>
-
-        <!-- Candidate votes list -->
-        <ul class="vote-list">
-            {% for candidate, votes in election['votes'].items() %}
-            <li class="{% if candidate == election['winner'] %}winner{% endif %}">
-                {{ candidate }}: {{ votes }} votes
-            </li>
-            {% endfor %}
-        </ul>
-
-        <!-- Chart -->
-        <div class="chart-container">
-            <canvas id="chart-{{ loop.index }}"></canvas>
+    <div class="stats-header">
+        <h1><i class="fas fa-chart-bar"></i> Election Analytics</h1>
+        <div class="header-actions">
+            <div class="period-selector">
+                <button class="period-btn active" data-period="all">All</button>
+                <button class="period-btn" data-period="year">Year</button>
+                <button class="period-btn" data-period="month">Month</button>
+                <button class="period-btn" data-period="week">Week</button>
+            </div>
+            <button class="export-btn" id="exportReport"><i class="fas fa-file-export"></i> Export</button>
         </div>
-
-        <!-- Hidden JSON for chart -->
-        <script type="application/json" id="election-data-{{ loop.index }}">
-            {{ election['votes']|tojson }}
-        </script>
     </div>
-    {% else %}
-    <p>No past election results available.</p>
-    {% endfor %}
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#4dabf7"><i class="fas fa-vote-yea"></i></div>
+            <div class="kpi-value" id="totalElections">{{ election_stats|length }}</div>
+            <div class="kpi-label">Total Elections</div>
+            <div class="kpi-change change-positive" id="electionChange">{{ election_stats|length }} total</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#20c997"><i class="fas fa-users"></i></div>
+            <div class="kpi-value" id="totalVotes">0</div>
+            <div class="kpi-label">Total Votes</div>
+            <div class="kpi-change change-positive" id="votesChange">Loading...</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#ff922b"><i class="fas fa-percentage"></i></div>
+            <div class="kpi-value" id="avgParticipation">0%</div>
+            <div class="kpi-label">Avg Participation</div>
+            <div class="kpi-change change-neutral" id="participationChange">--</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#e64980"><i class="fas fa-trophy"></i></div>
+            <div class="kpi-value" id="closestMargin">0%</div>
+            <div class="kpi-label">Closest Margin</div>
+            <div class="kpi-change change-negative" id="marginChange">--</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-container">
+        <div class="filter-group">
+            <label for="filter-election-type"><i class="fas fa-filter"></i> Filter Type:</label>
+            <select id="filter-election-type">
+                <option value="all">All</option>
+                <option value="Department">Department</option>
+                <option value="Wide">Wide (SSG)</option>
+            </select>
+            <select id="filter-department" style="display:none">
+                <option value="all">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.name }}">{{ dept.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="sort-by"><i class="fas fa-sort"></i> Sort by:</label>
+            <select id="sort-by">
+                <option value="date">Newest</option>
+                <option value="date-oldest">Oldest</option>
+                <option value="votes">Most Votes</option>
+                <option value="margin">Closest Margin</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <div class="chart-header"><h3><i class="fas fa-chart-pie"></i> Election Types</h3></div>
+            <div class="chart-wrapper"><canvas id="typeDistributionChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header"><h3><i class="fas fa-chart-line"></i> Voting Trend</h3></div>
+            <div class="chart-wrapper"><canvas id="participationChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="insights-panel">
+        <h3><i class="fas fa-lightbulb"></i> Key Insights</h3>
+        <div class="insights-grid">
+            <div class="insight-item">
+                <div class="insight-icon"><i class="fas fa-calendar-check"></i></div>
+                <div class="insight-content">
+                    <h4>Most Active</h4>
+                    <p class="insight-value" id="mostActiveMonth">--</p>
+                    <p class="insight-desc">Highest elections month</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon"><i class="fas fa-user-friends"></i></div>
+                <div class="insight-content">
+                    <h4>Largest</h4>
+                    <p class="insight-value" id="largestElection">--</p>
+                    <p class="insight-desc">Most votes cast</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon"><i class="fas fa-balance-scale"></i></div>
+                <div class="insight-content">
+                    <h4>Avg Margin</h4>
+                    <p class="insight-value" id="avgMargin">--</p>
+                    <p class="insight-desc">Winning margin</p>
+                </div>
+            </div>
+            <div class="insight-item">
+                <div class="insight-icon"><i class="fas fa-chart-bar"></i></div>
+                <div class="insight-content">
+                    <h4>Avg Candidates</h4>
+                    <p class="insight-value" id="avgCandidates">--</p>
+                    <p class="insight-desc">Per election</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Election Results -->
+    <div class="detailed-stats">
+        <h2><i class="fas fa-poll"></i> Detailed Results</h2>
+
+        {% for election in election_stats %}
+        {% set total_votes = election['votes'].values()|sum|default(0) %}
+        <div class="stat-card" data-type="{{ election['election_type'] }}" data-dept="{{ election['department'] or '' }}" data-votes="{{ total_votes }}" data-date="{{ election['end_date'] }}" data-candidates="{{ election['votes']|length }}">
+            <div class="election-header">
+                <h3>{{ election['title'] }}</h3>
+                <span class="election-badge {{ 'department' if election['election_type'] == 'Department' else 'wide' }}">{{ election['election_type'] }}</span>
+            </div>
+
+            <div class="election-meta">
+                <div class="meta-item"><i class="fas fa-trophy"></i><strong>Winner:</strong> {{ election['winner'] }}</div>
+                <div class="meta-item"><i class="fas fa-calendar"></i><strong>Ended:</strong> {{ election['end_date'] }}</div>
+                {% if election['department'] %}
+                <div class="meta-item"><i class="fas fa-building"></i><strong>Department:</strong> {{ election['department'] }}</div>
+                {% endif %}
+                <div class="meta-item"><i class="fas fa-users"></i><strong>Candidates:</strong> {{ election['votes']|length }}</div>
+            </div>
+
+            <div class="vote-summary">
+                <div class="summary-item"><div class="summary-label">Total Votes</div><div class="summary-value">{{ total_votes }}</div></div>
+                <div class="summary-item"><div class="summary-label">Winner Votes</div><div class="summary-value">{{ election['votes'][election['winner']] }}</div></div>
+                <div class="summary-item"><div class="summary-label">Winner %</div><div class="summary-value">
+                    {% if total_votes > 0 %}{{ ((election['votes'][election['winner']] / total_votes) * 100)|round(1) }}%{% else %}0%{% endif %}
+                </div></div>
+            </div>
+
+            <div class="candidates-list">
+                {% for candidate, votes in election['votes'].items() %}
+                {% set pct = ((votes / total_votes) * 100)|round(1) if total_votes > 0 else 0 %}
+                <div class="candidate-row {% if candidate == election['winner'] %}winner{% endif %}">
+                    <div class="candidate-info">
+                        <span class="candidate-name">{{ candidate }}</span>
+                        <span class="candidate-votes">{{ votes }} votes ({{ pct }}%)</span>
+                    </div>
+                    <div class="vote-progress">
+                        <div class="vote-progress-bar" style="width: {{ pct }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="chart-container"><canvas id="chart-{{ loop.index }}"></canvas></div>
+        </div>
+        {% else %}
+        <div class="no-data"><i class="fas fa-chart-bar fa-3x"></i><h3>No past election results</h3><p>Statistics will appear here once elections end.</p></div>
+        {% endfor %}
+    </div>
 </div>
 
-<!-- ------------------- JavaScript ------------------- -->
+<script id="electionData" type="application/json">{{ election_stats|tojson }}</script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // ----------- Charts Rendering -----------
-    const elections = document.querySelectorAll('script[type="application/json"]');
-    elections.forEach((el, idx) => {
-        const votesData = JSON.parse(el.textContent);
-        const labels = Object.keys(votesData);
-        const data = Object.values(votesData);
+document.addEventListener('DOMContentLoaded', ()=>{
+    const data = JSON.parse(document.getElementById('electionData').textContent);
+    init(data);
+});
 
-        const colors = labels.map((label, i) => {
-            const winner = document.querySelectorAll('.stat-card')[idx].querySelector('.winner');
-            if (winner && winner.textContent.includes(label)) {
-                return 'rgba(241, 196, 15, 0.8)'; // gold for winner
-            }
-            const r = Math.floor(Math.random() * 200 + 30);
-            const g = Math.floor(Math.random() * 200 + 30);
-            const b = Math.floor(Math.random() * 200 + 30);
-            return `rgba(${r}, ${g}, ${b}, 0.7)`;
+function init(e){
+    // KPI Stats
+    const totalVotes = e.reduce((s,el)=>s+Object.values(el.votes).reduce((a,b)=>a+b,0),0);
+    document.getElementById('totalVotes').textContent = totalVotes;
+    document.getElementById('votesChange').textContent = `${totalVotes} votes`;
+
+    // Charts
+    if(e.length){
+        // Type Distribution
+        const types = e.reduce((a,el)=>{a[el.election_type]=(a[el.election_type]||0)+1; return a}, {});
+        new Chart(document.getElementById('typeDistributionChart').getContext('2d'),{
+            type:'doughnut',
+            data:{labels:Object.keys(types),datasets:[{data:Object.values(types),backgroundColor:['#4dabf7','#20c997','#ff922b']}]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{position:'bottom'}}}
         });
 
-        const ctx = document.getElementById(`chart-${idx+1}`).getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Votes',
-                    data: data,
-                    backgroundColor: colors,
-                    borderColor: '#2c7be5',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        precision: 0,
-                        ticks: { stepSize: 1 }
-                    }
-                },
-                plugins: { legend: { display: false } }
-            }
+        // Participation Trend
+        const months = e.reduce((a,el)=>{const m=el.end_date.substring(0,7); a[m]=(a[m]||0)+Object.values(el.votes).reduce((s,v)=>s+v,0); return a;},{});
+        const sorted = Object.keys(months).sort();
+        new Chart(document.getElementById('participationChart').getContext('2d'),{
+            type:'line',
+            data:{labels:sorted,datasets:[{label:'Votes',data:sorted.map(m=>months[m]),borderColor:'#4dabf7',backgroundColor:'rgba(77,171,247,0.1)',fill:true,tension:0.4}]},
+            options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
         });
-    });
 
-    // ----------- Filter Functionality -----------
-    const filterType = document.getElementById('filter-election-type');
-    const filterDept = document.getElementById('filter-department');
-    filterType.addEventListener('change', function() {
-        const selected = this.value;
-
-        // Show/hide department dropdown
-        if (selected === 'Department') {
-            filterDept.style.display = 'inline-block';
-        } else {
-            filterDept.style.display = 'none';
-            filterDept.value = 'all';
-        }
-
-        applyFilter();
-    });
-
-    filterDept.addEventListener('change', applyFilter);
-
-    function applyFilter() {
-        const type = filterType.value;
-        const dept = filterDept.value;
-
-        document.querySelectorAll('.stat-card').forEach(card => {
-            const cardType = card.getAttribute('data-election-type');
-            const cardDept = card.getAttribute('data-department');
-
-            let show = false;
-
-            if (type === 'all') {
-                show = true;
-            } else if (type === 'Wide' && cardType.toLowerCase() === 'ssg') {
-                show = true;
-            } else if (type === 'Department' && cardType === 'Department') {
-                if (dept === 'all' || dept === cardDept) show = true;
-            }
-
-            card.style.display = show ? 'block' : 'none';
+        // Individual Charts
+        document.querySelectorAll('.chart-container canvas').forEach((c,i)=>{
+            if(!e[i]) return;
+            const l = Object.keys(e[i].votes), d = Object.values(e[i].votes), w = e[i].winner;
+            new Chart(c.getContext('2d'),{
+                type:'bar',
+                data:{labels:l,datasets:[{data:d,backgroundColor:l.map(x=>x===w?'rgba(241,196,15,0.8)':'rgba(77,171,247,0.7)')}]},
+                options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}
+            });
         });
     }
-});
+
+    // Filters
+    const fType=document.getElementById('filter-election-type'), fDept=document.getElementById('filter-department');
+    fType.addEventListener('change', ()=>{
+        fDept.style.display = fType.value==='Department'?'inline-block':'none';
+        filterCards();
+    });
+    fDept.addEventListener('change', filterCards);
+
+    // Period Selector
+    document.querySelectorAll('.period-btn').forEach(b=>{
+        b.addEventListener('click', function(){
+            document.querySelectorAll('.period-btn').forEach(btn=>btn.classList.remove('active'));
+            this.classList.add('active');
+            filterPeriod(this.dataset.period);
+        });
+    });
+
+    // Sorting
+    document.getElementById('sort-by').addEventListener('change', function(){
+        const c = Array.from(document.querySelectorAll('.stat-card'));
+        c.sort((a,b)=>{
+            switch(this.value){
+                case'date': return new Date(b.dataset.date)-new Date(a.dataset.date);
+                case'date-oldest': return new Date(a.dataset.date)-new Date(b.dataset.date);
+                case'votes': return b.dataset.votes-a.dataset.votes;
+                case'margin': return (a.dataset.votes/a.dataset.candidates)-(b.dataset.votes/b.dataset.candidates);
+            }
+            return 0;
+        });
+        c.forEach(card=>document.querySelector('.detailed-stats').appendChild(card));
+    });
+
+    // Export
+    document.getElementById('exportReport').addEventListener('click', function(){
+        const o = this.innerHTML;
+        this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        setTimeout(()=>{
+            const r={generatedAt:new Date().toISOString(),total:e.length,totalVotes:totalVotes};
+            const blob = new Blob([JSON.stringify(r,null,2)],{type:'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `election-report-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            this.innerHTML = o;
+
+            const msg = document.createElement('div');
+            msg.innerHTML='<i class="fas fa-check-circle"></i> Report downloaded!';
+            msg.style.cssText='position:fixed;top:20px;right:20px;padding:10px 15px;background:#20c997;color:white;border-radius:6px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+            document.body.appendChild(msg);
+            setTimeout(()=>document.body.removeChild(msg),3000);
+        },1000);
+    });
+
+    // Insights
+    if(e.length){
+        const months = e.reduce((a,el)=>{const m=el.end_date.substring(0,7); a[m]=(a[m]||0)+1; return a;}, {});
+        const most = Object.entries(months).reduce((a,b)=>a[1]>b[1]?a:b,['--',0])[0];
+        document.getElementById('mostActiveMonth').textContent = most;
+
+        const largest = e.reduce((a,b)=>Object.values(a.votes).reduce((x,y)=>x+y,0)>Object.values(b.votes).reduce((x,y)=>x+y,0)?a:b).title;
+        document.getElementById('largestElection').textContent = largest;
+    }
+}
+
+function filterCards(){
+    const t = document.getElementById('filter-election-type').value, d = document.getElementById('filter-department').value;
+    document.querySelectorAll('.stat-card').forEach(c=>{
+        const ct=c.dataset.type, cd=c.dataset.dept;
+        let s=false;
+        if(t==='all') s=true;
+        else if(t==='Wide' && ct.toLowerCase()==='ssg') s=true;
+        else if(t==='Department' && ct==='Department') s=(d==='all'||d===cd);
+        c.style.display = s?'block':'none';
+    });
+}
+
+function filterPeriod(p){
+    const now = new Date(), cards = document.querySelectorAll('.stat-card');
+    cards.forEach(c=>{
+        const d = new Date(c.dataset.date);
+        let s=false;
+        switch(p){
+            case 'all': s=true; break;
+            case 'year': s=d>=new Date(now.getFullYear()-1, now.getMonth(), now.getDate()); break;
+            case 'month': s=d>=new Date(now.getFullYear(), now.getMonth()-1, now.getDate()); break;
+            case 'week': s=d>=new Date(now.getFullYear(), now.getMonth(), now.getDate()-7); break;
+        }
+        c.style.display = s?'block':'none';
+    });
+}
 </script>
 {% endblock %}
