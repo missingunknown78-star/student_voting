@@ -29,12 +29,13 @@
 
         <h3>Admin Login</h3>
 
-        <!-- Input groups with label AFTER input -->
+        <!-- Username -->
         <div class="input-group">
             <input 
                 type="text" 
                 name="username"
                 placeholder=" "
+                value="{{ request.form.get('username', '') }}"
                 autocomplete="off"
                 autocorrect="off"
                 autocapitalize="none"
@@ -44,6 +45,7 @@
             <label>Username</label>
         </div>
         
+        <!-- Password -->
         <div class="input-group">
             <input 
                 type="password" 
@@ -54,9 +56,24 @@
             >
             <label>Password</label>
         </div>
+
+        <!-- Role Selection Dropdown -->
+        <div class="input-group">
+            <select name="role" required>
+                <option value="">Select Role</option>
+                {% for r in roles %}
+                    <option value="{{ r.name }}" {% if request.form.get('role') == r.name %}selected{% endif %}>
+                        {{ r.name }}
+                    </option>
+                {% endfor %}
+            </select>
+       
+        </div>
         
+        <!-- Submit Button -->
         <button type="submit" class="login-btn">Login</button>
 
+        <!-- Error Message -->
         {% if error %}
             <p class="error-msg">{{ error }}</p>
         {% endif %}
@@ -67,14 +84,21 @@
 <!-- JS for Floating Labels -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const inputs = document.querySelectorAll('.input-group input');
+    const inputs = document.querySelectorAll('.input-group input, .input-group select');
 
     inputs.forEach(input => {
         // Float label on page load if value exists
         if(input.value.trim() !== '') input.classList.add('filled');
 
-        // Toggle 'filled' class when user types
+        // Toggle 'filled' class when user types/selects
         input.addEventListener('input', () => {
+            if(input.value.trim() !== '') {
+                input.classList.add('filled');
+            } else {
+                input.classList.remove('filled');
+            }
+        });
+        input.addEventListener('change', () => {
             if(input.value.trim() !== '') {
                 input.classList.add('filled');
             } else {

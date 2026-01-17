@@ -81,7 +81,7 @@ body::before {
 }
 
 /* ===============================
-   FLOATING INPUT SYSTEM
+   FLOATING INPUT SYSTEM (USERNAME & PASSWORD)
 ================================ */
 
 .input-group {
@@ -137,7 +137,77 @@ input:-webkit-autofill {
     box-shadow: 0 0 0px 1000px transparent inset !important;
 }
 
-/* --- Login Button --- */
+/* ===============================
+   ROLE DROPDOWN STYLE
+================================ */
+.input-group select {
+    width: 100%;
+    padding: 12px 40px 12px 10px;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.input-group select option {
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+}
+
+.input-group select option[value=""] {
+    color: rgba(255,255,255,0.5);
+}
+
+/* Floating label for select */
+.input-group select + label {
+    position: absolute;
+    left: 10px;
+    top: -8px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 600;
+    pointer-events: none;
+    background: rgba(255,255,255,0.1);
+    padding: 0 4px;
+}
+
+/* Arrow only for role dropdown */
+.input-group select::-ms-expand {
+    display: none;
+}
+
+.input-group select::after {
+    content: '';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23fff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
+    pointer-events: none;
+}
+
+/* Focus state for select */
+.input-group select:focus {
+    border-color: #fff;
+    background: rgba(255,255,255,0.1);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+}
+
+/* ===============================
+   LOGIN BUTTON & ERROR
+================================ */
+
 .login-btn {
     width: 100%;
     padding: 15px;
@@ -157,7 +227,6 @@ input:-webkit-autofill {
     box-shadow: 0 12px 25px rgba(0,0,0,0.3);
 }
 
-/* --- Error Message --- */
 .error-msg {
     margin-top: 12px;
     text-align: center;
@@ -190,8 +259,9 @@ input:-webkit-autofill {
         margin-bottom: 20px;
     }
 
-    .input-group input {
-        padding: 12px 4px;
+    .input-group input,
+    .input-group select {
+        padding: 12px 10px;
         font-size: 14px;
     }
 

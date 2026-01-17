@@ -3,7 +3,7 @@ from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
 from functools import wraps
-from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course
+from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, AdminRole
 from student.models import Student, Vote
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -19,6 +19,8 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill, Alignment
+from werkzeug.security import generate_password_hash
+
 
 
 # ---------------------- Blueprint ---------------------- #
@@ -34,7 +36,6 @@ logging.basicConfig(filename='admin_access.log', level=logging.WARNING,
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Track failed attempts per IP
         ip = request.remote_addr
         attempts = session.get(f'admin_attempts_{ip}', 0)
         cooldown = session.get(f'admin_cooldown_{ip}', 0)
@@ -44,11 +45,14 @@ def admin_required(f):
             flash(f"Too many failed attempts. Try again in {int(cooldown - time.time())} seconds.", "admin-warning")
             return redirect(url_for('admin.login'))
 
-        # Check if user is authenticated and admin
-        if not current_user.is_authenticated or getattr(current_user, 'user_type', None) != 'admin':
+        # Get valid roles from the roles table
+        valid_roles = [r.name for r in AdminRole.query.all()]
+
+        # Check if user is authenticated and has a valid admin role
+        if not current_user.is_authenticated or getattr(current_user, 'role', None) not in valid_roles:
             logging.warning(f"Unauthorized admin access attempt from IP: {ip}")
-            
-            # Increase failed attempts
+
+            # Increment failed attempts
             attempts += 1
             session[f'admin_attempts_{ip}'] = attempts
 
@@ -59,17 +63,15 @@ def admin_required(f):
                 flash("Too many failed attempts. Admin login temporarily locked.", "admin-warning")
             else:
                 flash("Please log in as admin to access this page.", "admin-warning")
-            
+
             return redirect(url_for('admin.login'))
 
-        # Reset failed attempts on successful admin login
+        # Reset failed attempts on successful admin access
         session[f'admin_attempts_{ip}'] = 0
         session[f'admin_cooldown_{ip}'] = 0
 
         return f(*args, **kwargs)
     return decorated_function
-
-
 
 
 # ------------------- Configuration ------------------- #
@@ -81,42 +83,43 @@ TWO_FA_COOLDOWN = 300     # cooldown for 2FA in seconds
 # ------------------- Admin Login Route ------------------- #
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated and getattr(current_user, 'user_type', None) == 'admin':
-        return redirect(url_for('admin.dashboard'))
-
     ip = request.remote_addr
     attempts = session.get(f'login_attempts_{ip}', 0)
     cooldown = session.get(f'login_cooldown_{ip}', 0)
+
+    # Redirect already logged-in admins to dashboard
+    if current_user.is_authenticated and getattr(current_user, 'role', None) in [r.name for r in AdminRole.query.all()]:
+        return redirect(url_for('admin.dashboard'))
 
     # Check cooldown
     if time.time() < cooldown:
         remaining = int(cooldown - time.time())
         error = f'Too many failed attempts. Try again in {remaining} seconds.'
-        return render_template('admin_login.html', error=error)
+        roles = AdminRole.query.all()
+        return render_template('admin_login.html', error=error, roles=roles)
 
     error = None
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        role_selected = request.form.get('role')
 
         admin = Admin.query.filter_by(username=username).first()
-        if admin and bcrypt.check_password_hash(admin.password, password):
+
+        if admin and bcrypt.check_password_hash(admin.password, password) and admin.role == role_selected:
             # Reset failed attempts
             session[f'login_attempts_{ip}'] = 0
             session[f'login_cooldown_{ip}'] = 0
-
-            # Set session permanent
             session.permanent = True
 
-            # If admin has TOTP secret, require 2FA verification
-            if getattr(admin, 'totp_secret', None):
-                session['pre_2fa_admin_id'] = admin.id
-                return redirect(url_for('admin.verify_2fa'))
-
-            # If no TOTP secret, require 2FA setup first
-            else:
+            # Redirect to 2FA setup if no totp_secret
+            if not getattr(admin, 'totp_secret', None):
                 session['pre_2fa_admin_id'] = admin.id
                 return redirect(url_for('admin.setup_2fa'))
+            else:
+                session['pre_2fa_admin_id'] = admin.id
+                return redirect(url_for('admin.verify_2fa'))
 
         else:
             # Increment failed attempts
@@ -126,11 +129,13 @@ def login():
             if attempts >= MAX_ATTEMPTS:
                 session[f'login_cooldown_{ip}'] = time.time() + COOLDOWN_TIME
                 session[f'login_attempts_{ip}'] = 0
-                error = 'Too many failed attempts. Admin login temporarily locked.'
+                error = 'Invalid credentials or role. Admin login temporarily locked.'
             else:
-                error = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
+                error = f'Invalid username, password, or role. Attempt {attempts} of {MAX_ATTEMPTS}.'
 
-    return render_template('admin_login.html', error=error)
+    # Pass roles to template
+    roles = AdminRole.query.all()
+    return render_template('admin_login.html', error=error, roles=roles)
 
 
 # ------------------- Admin 2FA Verification ------------------- #
@@ -157,11 +162,13 @@ def verify_2fa():
 
     error = None
     if request.method == 'POST':
-        code = request.form.get('code')
-        totp = pyotp.TOTP(admin.totp_secret)
+        # ✅ Ensure totp_secret is generated
+        totp_secret = generate_2fa_secret(admin)
+        totp = pyotp.TOTP(totp_secret)
 
+        code = request.form.get('code')
         if totp.verify(code):
-            # ✅ Success: log in the user
+            # Success: log in the user
             login_user(admin)
             session.permanent = True
 
@@ -174,6 +181,7 @@ def verify_2fa():
             return redirect(url_for('admin.dashboard'))
 
         else:
+            # Increment failed 2FA attempts
             attempts += 1
             session[f'2fa_attempts_{ip}'] = attempts
 
@@ -187,37 +195,37 @@ def verify_2fa():
     return render_template('admin_2fa_verify.html', error=error)
 
 
-
+# ------------------- 2FA Secret Generation ------------------- #
 def generate_2fa_secret(admin):
     if not getattr(admin, 'totp_secret', None):
-        secret = pyotp.random_base32()
-        admin.totp_secret = secret
+        admin.totp_secret = pyotp.random_base32()
         db.session.commit()
     return admin.totp_secret
 
+
+# ------------------- Admin 2FA Setup ------------------- #
 @admin_bp.route('/2fa/setup', methods=['GET', 'POST'])
 @admin_required
 def setup_2fa():
     admin = current_user
     secret = generate_2fa_secret(admin)
     totp = pyotp.TOTP(secret)
-    
+
     if request.method == 'POST':
         code = request.form.get('code')
         if totp.verify(code):
-            admin.is_2fa_enabled = True  # you might need to add this column
+            admin.is_2fa_enabled = True  # keep your original logic
             db.session.commit()
             flash("Two-factor authentication enabled!", "success")
             return redirect(url_for('admin.dashboard'))
         else:
             flash("Invalid code. Try again.", "error")
-    
+
     totp_uri = totp.provisioning_uri(
         name=admin.email,
         issuer_name="CTU-COMELEC Admin"
     )
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
-
 
 
 # ---------------------- DASHBOARD ---------------------- #
@@ -963,61 +971,222 @@ def admin_profile():
 
 
 
-
-
 @admin_bp.route('/statistics')
 @admin_required
 def statistics():
+    import pytz
     tz = pytz.timezone('Asia/Manila')
-    
-    # Get all elections that have ended
+
+    # Get all ended elections
     all_elections = Election.query.all()
     past_elections = [e for e in all_elections if e.status == "Ended"]
-    
-    # Sort by end date (newest first)
     past_elections.sort(key=lambda x: x.end_date, reverse=True)
 
     election_stats = []
+
+    # Global metrics
+    total_voted_students_all = 0
+    all_margins = []
+    candidate_counts = []
+    month_count = {}
+    largest_election = None
+    largest_voters = 0
+
     for election in past_elections:
-        candidates = election.candidates
-        
-        # Prepare votes per candidate
         votes_per_candidate = {}
+        candidate_roles = {}  # Store the role/position
+        voter_ids = set()
         total_votes = 0
-        for c in candidates:
-            full_name = f"{c.first_name} {c.last_name}"
-            vote_count = len(c.votes)
+
+        for candidate in election.candidates:
+            full_name = f"{candidate.first_name} {candidate.last_name}"
+            vote_count = len(candidate.votes)
             votes_per_candidate[full_name] = vote_count
             total_votes += vote_count
-        
-        # Determine winner
-        winner = max(votes_per_candidate, key=votes_per_candidate.get) if votes_per_candidate else "No votes"
-        
-        # Calculate winning percentage
-        winning_votes = votes_per_candidate.get(winner, 0)
-        winning_percentage = (winning_votes / total_votes * 100) if total_votes > 0 else 0
+
+            # Store role/position as string (JSON serializable)
+            candidate_roles[full_name] = candidate.position.name if candidate.position else 'Other'
+
+            # Collect unique student_ids
+            for vote in candidate.votes:
+                voter_ids.add(vote.student_id)
+
+        total_voted_students = len(voter_ids)
+        total_voted_students_all += total_voted_students
+
+        # Determine winner (for info)
+        if votes_per_candidate and total_votes > 0:
+            winner = max(votes_per_candidate, key=votes_per_candidate.get)
+            winning_votes = votes_per_candidate[winner]
+            winning_percentage = round((winning_votes / total_votes) * 100, 1)
+        else:
+            winner = "No votes"
+            winning_percentage = 0
 
         election_stats.append({
             'title': election.title,
             'election_type': election.election_type,
             'department': election.department,
-            'course': getattr(election.course_rel, 'name', None) if election.course_rel else None,
+            'course': getattr(election.course_rel, 'course_name', None) if election.course_rel else None,
             'start_date': election.start_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
             'end_date': election.end_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
             'votes': votes_per_candidate,
+            'candidate_roles': candidate_roles,  # <- key matches JS now
             'winner': winner,
-            'total_votes': total_votes,
-            'winning_percentage': round(winning_percentage, 1)
+            'total_voters': total_voted_students,
+            'winning_percentage': winning_percentage
         })
 
-    # Get all departments for the filter dropdown
+        candidate_counts.append(len(votes_per_candidate))
+
+        # Margin (top 2 candidates)
+        if len(votes_per_candidate) > 1 and total_votes > 0:
+            sorted_votes = sorted(votes_per_candidate.values(), reverse=True)
+            margin = ((sorted_votes[0] - sorted_votes[1]) / total_votes) * 100
+            all_margins.append(round(margin, 1))
+
+        # Most active month
+        month = election.end_date.strftime('%Y-%m')
+        month_count[month] = month_count.get(month, 0) + 1
+
+        # Largest election
+        if total_voted_students > largest_voters:
+            largest_voters = total_voted_students
+            largest_election = election.title
+
+    # Final KPIs
+    avg_participation = round(total_voted_students_all / len(past_elections), 1) if past_elections else 0
+    closest_margin = round(min(all_margins), 1) if all_margins else 0
+    avg_candidates = round(sum(candidate_counts) / len(candidate_counts), 1) if candidate_counts else 0
+    most_active_month = max(month_count.items(), key=lambda x: x[1])[0] if month_count else '--'
+    largest_election = largest_election or '--'
+
+    # Departments for filter
     departments = Department.query.order_by(Department.name).all()
 
-    return render_template('statistics.html', 
-                           election_stats=election_stats,
-                           departments=departments)
+    # Courses (colleges) for dependent dropdown
+    colleges = Course.query.all()
+    college_data = [{
+        'id': c.id,
+        'course_name': c.course_name,
+        'department': {
+            'id': c.department.id,
+            'name': c.department.name
+        } if c.department else None
+    } for c in colleges]
+
+    return render_template(
+        'statistics.html',
+        election_stats=election_stats,
+        departments=departments,
+        collegeData=college_data,
+        avg_participation=avg_participation,
+        closest_margin=closest_margin,
+        avg_candidates=avg_candidates,
+        most_active_month=most_active_month,
+        largest_election=largest_election
+    )
 
 
+
+
+@admin_bp.route('/users', methods=['GET', 'POST'])
+@admin_required
+def users():
+    # Get all roles for dropdown
+    roles = AdminRole.query.order_by(AdminRole.name.asc()).all()
+
+    if request.method == 'POST':
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        username = request.form['username']
+        email = request.form['email']
+        role = request.form['role']
+        password = request.form['password']
+
+        # Validate role exists
+        if not AdminRole.query.filter_by(name=role).first():
+            flash('Invalid role selected.', 'danger')
+            return redirect(url_for('admin.users'))
+
+        # Check username/email duplication
+        if Admin.query.filter((Admin.email == email) | (Admin.username == username)).first():
+            flash('Email or username already exists.', 'danger')
+            return redirect(url_for('admin.users'))
+
+        new_user = Admin(
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            email=email,
+            role=role,
+            password=generate_password_hash(password),
+            status='Active'
+        )
+
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Admin user created successfully.', 'success')
+        return redirect(url_for('admin.users'))
+
+    users = Admin.query.order_by(Admin.created_at.desc()).all()
+    return render_template('users.html', users=users, roles=roles)
+
+# ------------------- Add Admin Role Route ------------------- #
+@admin_bp.route('/users/add_role', methods=['POST'])
+@admin_required
+def add_role():
+    role_name = request.form.get('role_name', '').strip()
+
+    if not role_name:
+        flash("Role name cannot be empty.", "error")
+        return redirect(url_for('admin.users'))
+
+    # Check if role already exists
+    existing_role = AdminRole.query.filter_by(name=role_name).first()
+    if existing_role:
+        flash(f"Role '{role_name}' already exists.", "error")
+        return redirect(url_for('admin.users'))
+
+    # Create and save new role
+    new_role = AdminRole(name=role_name)
+    db.session.add(new_role)
+    db.session.commit()
+
+    flash(f"Role '{role_name}' added successfully!", "success")
+    return redirect(url_for('admin.users'))
+
+
+
+# Edit Role
+@admin_bp.route('/roles/edit/<int:role_id>', methods=['POST'])
+@admin_required
+def edit_role(role_id):
+    role = AdminRole.query.get_or_404(role_id)
+    new_name = request.form.get('role_name', '').strip()
+    if not new_name:
+        flash("Role name cannot be empty.", "error")
+        return redirect(url_for('admin.users'))
+
+    if AdminRole.query.filter(AdminRole.id != role_id, AdminRole.name == new_name).first():
+        flash(f"Role '{new_name}' already exists.", "error")
+        return redirect(url_for('admin.users'))
+
+    role.name = new_name
+    db.session.commit()
+    flash(f"Role updated to '{new_name}'!", "success")
+    return redirect(url_for('admin.users'))
+
+
+# Delete Role
+@admin_bp.route('/roles/delete/<int:role_id>', methods=['POST'])
+@admin_required
+def delete_role(role_id):
+    role = AdminRole.query.get_or_404(role_id)
+    db.session.delete(role)
+    db.session.commit()
+    flash(f"Role '{role.name}' deleted!", "success")
+    return redirect(url_for('admin.users'))
 
 # ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')

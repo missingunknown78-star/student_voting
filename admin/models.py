@@ -14,8 +14,20 @@ class Admin(db.Model, UserMixin):
     password = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
-    user_type = db.Column(db.String(20), default='admin')
-    totp_secret = db.Column(db.String(32), nullable=True)
+
+    role = db.Column(db.String(50), nullable=False, default='Admin')  # link to admin_roles
+    status = db.Column(db.String(20), default='Active')
+    
+    # ✅ Add this line back for 2FA
+    totp_secret = db.Column(db.String(32), nullable=True)  # 32-char base32 key
+
+
+class AdminRole(db.Model):
+    __tablename__ = 'admin_roles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
 
 
@@ -153,3 +165,4 @@ class YearLevel(db.Model):
 
     # Relationship (future-proof)
     students = db.relationship('Student', backref='year_level', lazy=True)
+

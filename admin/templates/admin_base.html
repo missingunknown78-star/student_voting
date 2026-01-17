@@ -14,67 +14,93 @@
 
 <div class="dashboard-container">
 
-    <!-- ---------------------- SIDEBAR ---------------------- -->
+    <!-- ====================== SIDEBAR ====================== -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}" 
+            <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}"
                  alt="School Logo" class="logo">
             <h2>Cebu Technological University</h2>
-            <p style="color:#ecf0f1; font-size:0.85rem; margin:0;">Moalboal Campus</p>
+            <p style="color:#ecf0f1; font-size:0.85rem; margin:0;">
+                Moalboal Campus
+            </p>
         </div>
 
         <nav class="sidebar-nav">
+
+            <!-- DASHBOARD -->
             <a href="{{ url_for('admin.dashboard') }}"
                class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
                <i class="fa-solid fa-house"></i> Dashboard
             </a>
-        
+
+            <!-- STUDENTS / VOTERS -->
             <a href="{{ url_for('admin.manage_students') }}"
-                class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
-                  <i class="fa-solid fa-users"></i> Manage Students
+               class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
+               <i class="fa-solid fa-users"></i> Manage Students
             </a>
-        
+
+            <!-- COLLEGES / DEPARTMENTS -->
             <a href="{{ url_for('admin.manage_departments') }}"
-                class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
-                <i class="fa-solid fa-building"></i> Departments & Courses
-           </a>
-         
+               class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
+               <i class="fa-solid fa-building"></i> Colleges
+            </a>
+
+            <!-- ELECTIONS -->
             <a href="{{ url_for('admin.create_department_election') }}"
                class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
                <i class="fa-solid fa-building-columns"></i> Create Elections
             </a>
-        
+
+            <!-- CANDIDATES -->
             <a href="{{ url_for('admin.manage_candidates') }}"
                class="{% if request.endpoint == 'admin.manage_candidates' %}active{% endif %}">
                <i class="fa-solid fa-user-check"></i> Manage Candidates
             </a>
-        
+
+            <!-- POSITIONS -->
             <a href="{{ url_for('admin.manage_positions') }}"
                class="{% if request.endpoint == 'admin.manage_positions' %}active{% endif %}">
                <i class="fa-solid fa-clipboard-list"></i> Positions
             </a>
-        
-            <!-- ======== ANNOUNCEMENTS BUTTON ======== -->
+
+            <!-- ANNOUNCEMENTS -->
             <a href="{{ url_for('admin.announcements') }}"
                class="{% if request.endpoint == 'admin.announcements' %}active{% endif %}">
                <i class="fa-solid fa-bullhorn"></i> Announcements
             </a>
 
-            <a href="{{ url_for('admin.statistics') }}"
-                class="{% if request.endpoint == 'admin.statistics' %}active{% endif %}">
-                <i class="fa-solid fa-chart-bar"></i> Statistics
+            <!-- RESULTS (still display-only) -->
+            <a href="#" class="disabled-link">
+               <i class="fa-solid fa-trophy"></i> Results
             </a>
 
-        
+            <!-- STATISTICS -->
+            <a href="{{ url_for('admin.statistics') }}"
+               class="{% if request.endpoint == 'admin.statistics' %}active{% endif %}">
+               <i class="fa-solid fa-chart-bar"></i> Statistics
+            </a>
+
+            <!-- ✅ USERS (NOW CONNECTED) -->
+            <a href="{{ url_for('admin.users') }}"
+               class="{% if request.endpoint == 'admin.users' %}active{% endif %}">
+               <i class="fa-solid fa-user-shield"></i> Users
+            </a>
+
+            <!-- AUDIT LOGS (still display-only) -->
+            <a href="#" class="disabled-link">
+               <i class="fa-solid fa-file-lines"></i> Audit Logs
+            </a>
+
+            <!-- LOGOUT -->
             <a href="{{ url_for('admin.logout') }}">
                <i class="fa-solid fa-right-from-bracket"></i> Logout
             </a>
-        </nav>
-        
-    </aside>
-    <!-- ---------------------------------------------------- -->
 
-    <!-- MAIN page content -->
+        </nav>
+    </aside>
+    <!-- ===================================================== -->
+
+    <!-- MAIN CONTENT -->
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
