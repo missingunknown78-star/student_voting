@@ -322,101 +322,366 @@
     }
 }
 
-/* ----------- MESSAGE ICON & TOP NAV FIX ------ */
-.top-nav {
+
+
+
+/* ==========================================================================
+   BOTTOM NAVIGATION FOOTER (MOBILE ONLY) - LIGHT BLUE DESIGN WITH BLACK ICONS
+   ========================================================================== */
+   .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #e6f0ff; /* Pure light blue background */
+    border-top: 1px solid #c2d6ff;
     display: flex;
+    justify-content: space-around;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background-color: var(--primary, #4361ee);
-    color: #fff;
-    position: relative;
-    width: 100%;
+    padding: 12px 5px;
     z-index: 1000;
+    box-shadow: 0 -5px 25px rgba(67, 97, 238, 0.15);
+    display: none;
+    height: 75px;
+    backdrop-filter: blur(10px);
+    background: #e6f0ff; /* Solid light blue */
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
 }
 
-
-.nav-left {
-    display: flex;
-    align-items: center;
-    gap: 4px; /* very close to hamburger */
+/* Light blue gradient accent at top */
+.bottom-nav::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        #8ab4f8 25%, 
+        #64b5f6 50%, 
+        #8ab4f8 75%, 
+        transparent 100%);
+    animation: navGlow 3s infinite ease-in-out;
 }
 
-.hamburger {
-    cursor: pointer;
+@keyframes navGlow {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+/* Nav items - 7 items = ~14.28% each */
+.nav-item {
     display: flex;
     flex-direction: column;
-    justify-content: center; /* center bars vertically with text */
-}
-
-.hamburger span {
-    display: block;
-    width: 25px;
-    height: 3px;
-    margin: 3px 0; /* slightly smaller margin for tighter look */
-    background-color: #fff;
-    transition: 0.3s;
-}
-
-.nav-title {
-    font-size: 1.2rem;
-    font-weight: bold;
-    line-height: 1; /* vertically align with hamburger */
-}
-
-.messages-icon {
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #333333; /* Black text for labels */
+    font-size: 10px;
+    flex: 1;
+    padding: 10px 5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
+    border-radius: 15px;
+    margin: 0 3px;
     position: relative;
+    overflow: hidden;
+    z-index: 1;
+    max-width: 14.28%;
+    background: rgba(255, 255, 255, 0.5); /* Semi-transparent white overlay */
+}
+
+/* Hover effect */
+.nav-item:hover {
+    color: #000000; /* Black on hover */
+    background: rgba(255, 255, 255, 0.9); /* More opaque white on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(67, 97, 238, 0.2);
+}
+
+/* Active state - Blue highlight with black text */
+.nav-item.active {
+    color: #000000; /* Black text for active items */
+    background: white; /* White background for active items */
+    box-shadow: 0 5px 20px rgba(67, 97, 238, 0.3);
+    transform: translateY(-5px);
+    border: 1px solid #90caf9; /* Light blue border */
+}
+
+.nav-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 2;
+    color: #333333; /* Black icons */
+}
+
+/* Active icon styling */
+.nav-item.active .nav-icon {
+    transform: translateY(-5px) scale(1.15);
+    color: #000000; /* Black for active icons */
+}
+
+.nav-item:hover .nav-icon {
+    transform: translateY(-2px);
+    color: #000000; /* Black on hover */
+}
+
+.nav-label {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: 100%;
+    font-size: 10px;
+    letter-spacing: 0.1px;
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+    padding: 0 2px;
+    color: #333333; /* Black text for labels */
+}
+
+.nav-item.active .nav-label {
+    color: #000000; /* Black for active labels */
+    font-weight: 700;
+}
+
+/* Blue dot indicator for active item */
+.nav-item.active .nav-icon::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background: #3d6bc8; /* Blue dot indicator */
+    border-radius: 50%;
+    animation: floatDot 2s infinite ease-in-out;
+}
+
+@keyframes floatDot {
+    0%, 100% { 
+        transform: translateX(-50%) translateY(0); 
+    }
+    50% { 
+        transform: translateX(-50%) translateY(-3px); 
+    }
+}
+
+/* Inactive "Results" item style */
+.nav-item[style*="cursor: default;"] {
+    color: #666666; /* Gray for inactive Results */
+    cursor: default !important;
+}
+
+.nav-item[style*="cursor: default;"]:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: none;
+    color: #666666;
+    box-shadow: none;
+}
+
+.nav-item[style*="cursor: default;"] .nav-icon {
+    color: #666666; /* Gray icon for inactive Results */
+}
+
+/* Hover effect for clickable items only */
+.nav-item:not([style*="cursor: default;"]) {
     cursor: pointer;
 }
 
-.messages-icon i {
-    font-size: 1.4rem;
-    color: #fff;
-}
-
-.messages-icon .badge {
-    position: absolute;
-    top: -5px;
-    right: -8px;
-    background-color: #ef476f;
-    color: #fff;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    font-weight: bold;
-}
-
-
-/* Right icons container */
-.nav-right {
-    display: flex;
-    align-items: center;
-    gap: 15px;       /* space between settings and mail */
-    margin-left: auto; /* push to the far right */
-}
-
-.settings-icon i,
-.messages-icon i {
-    font-size: 1.4rem;
-    color: #fff;
+/* Main content area */
+.container {
+    width: 100%;
     transition: all 0.3s ease;
 }
 
-.settings-icon:hover i,
-.messages-icon:hover i {
-    color: #2ecc71;
-    transform: scale(1.1);
+/* MOBILE STYLES - Hide header completely, show bottom nav */
+@media (max-width: 768px) {
+    .bottom-nav {
+        display: flex;
+    }
+    
+    /* Hide entire header on mobile */
+    .top-nav {
+        display: none !important;
+    }
+    
+    /* Hide sidebar completely on mobile */
+    .side-menu {
+        display: none;
+    }
+    
+    .side-menu-overlay {
+        display: none;
+    }
+    
+    /* Adjust container for mobile (no header) */
+    .container {
+        padding: 15px;
+        padding-bottom: 85px !important; /* Space for bottom nav */
+        margin-top: 0 !important;
+        min-height: calc(100vh - 65px);
+    }
+    
+    /* Hide sidebar menu sections */
+    .menu-section {
+        display: none;
+    }
 }
 
-/* Badge stays positioned on top-right of the envelope */
-.messages-icon .badge {
-    position: absolute;
-    top: -5px;
-    right: -8px;
-    background-color: #ef476f;
-    color: #fff;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    font-weight: bold;
+/* DESKTOP STYLES - Show header and sidebar, hide bottom nav */
+@media (min-width: 769px) {
+    .bottom-nav {
+        display: none;
+    }
+    
+    /* Show header on desktop */
+    .top-nav {
+        display: flex !important;
+    }
+    
+    /* Show sidebar on desktop */
+    .side-menu {
+        display: flex;
+    }
+    
+    .side-menu-overlay {
+        display: block;
+    }
+    
+    /* Adjust container for desktop (with header) */
+    .container {
+        margin-top: 70px !important; /* Space for header */
+        padding: 25px;
+        padding-bottom: 30px !important;
+        min-height: calc(100vh - 100px);
+    }
 }
+
+/* Responsive adjustments for very small screens (iPhone 5/SE) */
+@media (max-width: 320px) {
+    .nav-icon {
+        font-size: 18px;
+    }
+    
+    .nav-label {
+        font-size: 8px;
+    }
+    
+    .bottom-nav {
+        padding: 8px 1px;
+        height: 60px;
+        background: #e6f0ff; /* Solid light blue */
+    }
+    
+    .nav-item {
+        padding: 4px 0;
+        max-width: 14%;
+    }
+    
+    .container {
+        padding: 12px;
+        padding-bottom: 70px !important;
+    }
+}
+
+/* Small phones (iPhone 6/7/8) */
+@media (min-width: 321px) and (max-width: 375px) {
+    .nav-icon {
+        font-size: 19px;
+    }
+    
+    .nav-label {
+        font-size: 9px;
+    }
+    
+    .bottom-nav {
+        background: #e6f0ff;
+    }
+}
+
+/* Medium phones (iPhone 6/7/8 Plus, most Android) */
+@media (min-width: 376px) and (max-width: 414px) {
+    .nav-icon {
+        font-size: 20px;
+    }
+    
+    .nav-label {
+        font-size: 10px;
+    }
+}
+
+/* Large phones (iPhone X/11/12, larger Android) */
+@media (min-width: 415px) and (max-width: 480px) {
+    .nav-icon {
+        font-size: 22px;
+    }
+    
+    .nav-label {
+        font-size: 10px;
+    }
+    
+    .bottom-nav {
+        padding: 10px 3px;
+    }
+    
+    .nav-item {
+        padding: 6px 2px;
+        max-width: 14%;
+    }
+}
+
+/* Tablet and up */
+@media (min-width: 481px) and (max-width: 768px) {
+    .nav-icon {
+        font-size: 24px;
+    }
+    
+    .nav-label {
+        font-size: 11px;
+    }
+    
+    .container {
+        padding: 20px;
+        padding-bottom: 90px !important;
+    }
+    
+    .nav-item {
+        max-width: 14%;
+    }
+    
+    .bottom-nav {
+        background: #e6f0ff;
+    }
+}
+
+/* Animation for bottom nav items */
+@keyframes fadeInUpNav {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.nav-item {
+    animation: fadeInUpNav 0.5s ease forwards;
+    opacity: 0;
+}
+
+.nav-item:nth-child(1) { animation-delay: 0.1s; }
+.nav-item:nth-child(2) { animation-delay: 0.15s; }
+.nav-item:nth-child(3) { animation-delay: 0.2s; }
+.nav-item:nth-child(4) { animation-delay: 0.25s; }
+.nav-item:nth-child(5) { animation-delay: 0.3s; }
+.nav-item:nth-child(6) { animation-delay: 0.35s; }
+.nav-item:nth-child(7) { animation-delay: 0.4s; }

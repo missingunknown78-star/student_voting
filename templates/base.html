@@ -10,10 +10,11 @@
 
 <!-- Extra CSS for specific pages -->
 {% block extra_head %}{% endblock %}
+
 </head>
 <body>
 
-<!-- TOP NAVBAR -->
+<!-- TOP NAVBAR (Hidden on mobile, shown on desktop) -->
 <header class="top-nav">
     <div class="nav-left">
         <div class="hamburger" id="hamburger">
@@ -21,15 +22,12 @@
         </div>
         <span class="nav-title">Menu</span>
     </div>
-
-    </div>
 </header>
-
 
 <!-- OVERLAY FOR MOBILE (Hidden by default) -->
 <div class="side-menu-overlay" id="sideMenuOverlay"></div>
 
-<!-- SIDE MENU -->
+<!-- SIDE MENU (Hidden on mobile, shown on desktop) -->
 <nav class="side-menu" id="sideMenu">
     <!-- ENHANCED HEADER -->
     <div class="side-header">
@@ -77,7 +75,6 @@
             <i class="fa fa-bullhorn"></i> Announcements
         </a>
 
-
         <a href="{{ url_for('student.receipt') }}" class="{% if request.path == url_for('student.receipt') %}active{% endif %}">
             <i class="fa fa-receipt"></i> Voting Receipt
         </a>
@@ -93,6 +90,60 @@
             <i class="fa fa-sign-out-alt"></i> Logout
         </a>
     </div>
+</nav>
+
+<!-- BOTTOM NAVIGATION FOOTER (MOBILE ONLY) -->
+<nav class="bottom-nav" id="bottomNav">
+    <!-- PROFILE -->
+    <a href="{{ url_for('student.profile') }}" class="nav-item {% if request.path == url_for('student.profile') %}active{% endif %}">
+        <div class="nav-icon">
+            <i class="fa fa-user"></i>
+        </div>
+        <div class="nav-label">Profile</div>
+    </a>
+    
+    <!-- VOTE -->
+    <a href="{{ url_for('student.available_elections') }}" class="nav-item {% if request.path == url_for('student.available_elections') %}active{% endif %}">
+        <div class="nav-icon">
+            <i class="fa fa-vote-yea"></i>
+        </div>
+        <div class="nav-label">Vote</div>
+    </a>
+
+    <!-- HOME -->
+    <a href="{{ url_for('student.dashboard') }}" class="nav-item {% if request.path == url_for('student.dashboard') %}active{% endif %}">
+        <div class="nav-icon">
+            <i class="fa fa-home"></i>
+        </div>
+        <div class="nav-label">Home</div>
+    </a>
+    
+    
+    <!-- CANDIDATES -->
+    <a href="{{ url_for('student.candidates') }}" class="nav-item {% if request.path == url_for('student.candidates') %}active{% endif %}">
+        <div class="nav-icon">
+            <i class="fa fa-users"></i>
+        </div>
+        <div class="nav-label">Candidates</div>
+    </a>
+
+    <div class="nav-item" style="cursor: default;">
+        <div class="nav-icon">
+            <i class="fa fa-chart-bar"></i>
+        </div>
+        <div class="nav-label">Results</div>
+    </div>
+    
+    <!-- RECEIPT -->
+    <a href="{{ url_for('student.receipt') }}" class="nav-item {% if request.path == url_for('student.receipt') %}active{% endif %}">
+        <div class="nav-icon">
+            <i class="fa fa-receipt"></i>
+        </div>
+        <div class="nav-label">Receipt</div>
+    </a>
+
+    
+    
 </nav>
 
 <!-- MAIN CONTENT -->
@@ -114,47 +165,85 @@
     const hamburger = document.getElementById('hamburger');
     const sideMenu = document.getElementById('sideMenu');
     const sideMenuOverlay = document.getElementById('sideMenuOverlay');
+    const bottomNav = document.getElementById('bottomNav');
     
-    // Toggle sidebar
-    hamburger.addEventListener('click', () => {
-        sideMenu.classList.toggle('open');
-        sideMenuOverlay.classList.toggle('active');
-        hamburger.classList.toggle('active');
-        document.body.classList.toggle('sidebar-open');
-    });
-    
-    // Close sidebar when clicking overlay OR anywhere outside
-    document.addEventListener('click', (e) => {
-        // Only close if sidebar is open
-        if (sideMenu.classList.contains('open')) {
-            // Check if click is NOT inside sidebar and NOT on hamburger
-            if (!sideMenu.contains(e.target) && e.target !== hamburger && !hamburger.contains(e.target)) {
+    // Only add sidebar functionality on desktop
+    if (window.innerWidth >= 769) {
+        // Toggle sidebar
+        if (hamburger) {
+            hamburger.addEventListener('click', () => {
+                sideMenu.classList.toggle('open');
+                sideMenuOverlay.classList.toggle('active');
+                hamburger.classList.toggle('active');
+                document.body.classList.toggle('sidebar-open');
+            });
+        }
+        
+        // Close sidebar when clicking overlay OR anywhere outside
+        document.addEventListener('click', (e) => {
+            // Only close if sidebar is open
+            if (sideMenu.classList.contains('open')) {
+                // Check if click is NOT inside sidebar, NOT on hamburger
+                if (!sideMenu.contains(e.target) && 
+                    e.target !== hamburger && 
+                    !hamburger.contains(e.target)) {
+                    sideMenu.classList.remove('open');
+                    sideMenuOverlay.classList.remove('active');
+                    hamburger.classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
+                }
+            }
+        });
+        
+        // Close with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sideMenu.classList.contains('open')) {
                 sideMenu.classList.remove('open');
                 sideMenuOverlay.classList.remove('active');
                 hamburger.classList.remove('active');
                 document.body.classList.remove('sidebar-open');
             }
+        });
+    }
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        // If resizing to mobile, ensure sidebar is closed and cleanup
+        if (window.innerWidth <= 768) {
+            if (sideMenu) {
+                sideMenu.classList.remove('open');
+                sideMenu.style.display = 'none';
+            }
+            if (sideMenuOverlay) {
+                sideMenuOverlay.classList.remove('active');
+                sideMenuOverlay.style.display = 'none';
+            }
+            if (hamburger) {
+                hamburger.classList.remove('active');
+                hamburger.style.display = 'none';
+            }
+            document.body.classList.remove('sidebar-open');
+        } else {
+            // If resizing to desktop, show sidebar elements
+            if (sideMenu) sideMenu.style.display = 'flex';
+            if (sideMenuOverlay) sideMenuOverlay.style.display = 'block';
+            if (hamburger) hamburger.style.display = 'flex';
         }
     });
     
-    // Close with Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && sideMenu.classList.contains('open')) {
-            sideMenu.classList.remove('open');
-            sideMenuOverlay.classList.remove('active');
-            hamburger.classList.remove('active');
-            document.body.classList.remove('sidebar-open');
-        }
-    });
-    </script>
+    // Initialize display based on current screen size
+    if (window.innerWidth <= 768) {
+        // Mobile initialization
+        if (sideMenu) sideMenu.style.display = 'none';
+        if (sideMenuOverlay) sideMenuOverlay.style.display = 'none';
+        if (hamburger) hamburger.style.display = 'none';
+    } else {
+        // Desktop initialization
+        if (sideMenu) sideMenu.style.display = 'flex';
+        if (sideMenuOverlay) sideMenuOverlay.style.display = 'block';
+        if (hamburger) hamburger.style.display = 'flex';
+    }
+</script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-

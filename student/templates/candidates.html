@@ -3,7 +3,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/candidates.css') }}">
-<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {% endblock %}
 
 
@@ -12,33 +12,41 @@
 <h2 class="page-title">List of Candidates</h2>
 
 <div class="candidates-container">
-    {% for c in candidates %}
-    <div class="candidate-card">
+    {% if candidates %}
+        {% for c in candidates %}
+        <div class="candidate-card" style="--card-index: {{ loop.index0 }}">
 
-        <!-- Candidate Photo -->
-        {% if c.photo %}
-            <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
-                 class="candidate-photo" 
-                 alt="{{ c.first_name }} {{ c.last_name }}">
-        {% else %}
-            <img src="{{ url_for('student.static', filename='images/default_user.png') }}" 
-                 class="candidate-photo"
-                 alt="Default Photo">
-        {% endif %}
-
-        <!-- Candidate Info -->
-        <div class="candidate-info">
-            <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
-            <p class="candidate-position"><strong>Position:</strong> {{ c.position.name }}</p>
-            {% if c.platform %}
-            <p class="candidate-platform"><strong>Platform:</strong> {{ c.platform }}</p>
+            <!-- Candidate Photo -->
+            {% if c.photo %}
+                <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
+                     class="candidate-photo" 
+                     alt="{{ c.first_name }} {{ c.last_name }}">
             {% else %}
-            <p class="candidate-platform"><em>No platform provided</em></p>
+                <img src="{{ url_for('student.static', filename='images/default_user.png') }}" 
+                     class="candidate-photo"
+                     alt="Default Photo">
             {% endif %}
-        </div>
 
-    </div>
-    {% endfor %}
+            <!-- Candidate Info -->
+            <div class="candidate-info">
+                <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
+                <p class="candidate-position"><strong>Position:</strong> {{ c.position.name }}</p>
+                {% if c.platform %}
+                <p class="candidate-platform"><strong>Platform:</strong> {{ c.platform }}</p>
+                {% else %}
+                <p class="candidate-platform"><em>No platform provided</em></p>
+                {% endif %}
+            </div>
+
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-candidates">
+            <i class="fas fa-users fa-3x"></i>
+            <h3>No Candidates Available</h3>
+            <p>There are currently no candidates registered for the elections.</p>
+        </div>
+    {% endif %}
 </div>
 
 {% endblock %}

@@ -13,8 +13,10 @@
     <h1>COMELEC Dashboard</h1>
 
     <div class="profile-container">
-        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" 
-             alt="Admin Profile" class="profile-pic" id="profilePic">
+        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}"
+             alt="Admin Profile"
+             class="profile-pic"
+             id="profilePic">
 
         <div class="profile-menu" id="profileMenu">
             <a href="{{ url_for('admin.admin_profile') }}">Profile</a>
@@ -23,30 +25,40 @@
     </div>
 </div>
 
-<!-- KPI Cards -->
+<!-- ================= KPI CARDS ================= -->
 <div class="cards">
+
     <div class="card">
         <i class="fa-solid fa-users fa-2x card-icon"></i>
         <h2>Total Students</h2>
         <p>{{ total_students if total_students else 0 }}</p>
     </div>
+
     <div class="card">
         <i class="fa-solid fa-building-columns fa-2x card-icon"></i>
         <h2>Total Elections</h2>
         <p>{{ total_elections if total_elections else 0 }}</p>
     </div>
+
     <div class="card">
         <i class="fa-solid fa-calendar-check fa-2x card-icon"></i>
         <h2>Ongoing Elections</h2>
         <p>{{ ongoing_elections if ongoing_elections else 0 }}</p>
     </div>
+
+    <div class="card">
+        <i class="fa-solid fa-check-to-slot fa-2x card-icon"></i>
+        <h2>Voter Turnout</h2>
+        <p>{{ voter_turnout if voter_turnout else "0%" }}</p>
+    </div>
+
 </div>
 
-<!-- Charts Section: Combined Container -->
+<!-- ================= RESULTS CHART ================= -->
 <div class="chart-card combined-charts">
     <h3 id="activeChartTitle">Election Results</h3>
 
-    <div class="election-dropdown" style="margin-bottom:15px;">
+    <div class="election-dropdown">
         <label for="electionSelect">Select Election:</label>
         <select id="electionSelect">
             {% for election in elections_json %}
@@ -55,33 +67,21 @@
         </select>
     </div>
 
-    <div class="chart-container" style="position:relative;">
+    <div class="chart-container">
         <canvas id="mainBar"></canvas>
 
-        <!-- Overlay when no votes -->
-        <div id="noVotesOverlay" style="
-            display:none;
-            position:absolute;
-            inset:0;
-            background:rgba(255,255,255,0.85);
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:22px;
-            font-weight:700;
-            color:#555;
-            border-radius:12px;
-            z-index:5;">
+        <div id="noVotesOverlay">
             No votes yet
         </div>
     </div>
 
-    <div id="colorLegend" class="color-legend" style="margin-top:15px;"></div>
+    <div id="colorLegend" class="color-legend"></div>
 </div>
 
-<!-- Recent Elections Table -->
+<!-- ================= RECENT ELECTIONS ================= -->
 <div class="recent-elections-container">
     <h3>Recent Elections</h3>
+
     <table class="recent-elections-table">
         <thead>
             <tr>
@@ -104,7 +104,9 @@
                         {% if election.status == 'Open' %} bg-success
                         {% elif election.status == 'Upcoming' %} bg-warning
                         {% else %} bg-danger
-                        {% endif %}">{{ election.status }}</span>
+                        {% endif %}">
+                        {{ election.status }}
+                    </span>
                 </td>
             </tr>
         {% endfor %}
@@ -118,11 +120,12 @@
     {% endif %}
 </div>
 
-<!-- Modal for all elections -->
+<!-- ================= MODAL ================= -->
 <div id="recentElectionsModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h3 style="margin-bottom:15px; color:#333;">All Recent Elections</h3>
+        <h3>All Recent Elections</h3>
+
         <div class="modal-table-container">
             <table>
                 <thead>
@@ -146,7 +149,9 @@
                                 {% if election.status == 'Open' %} bg-success
                                 {% elif election.status == 'Upcoming' %} bg-warning
                                 {% else %} bg-danger
-                                {% endif %}">{{ election.status }}</span>
+                                {% endif %}">
+                                {{ election.status }}
+                            </span>
                         </td>
                     </tr>
                 {% endfor %}
@@ -156,128 +161,11 @@
     </div>
 </div>
 
-<script>
-const elections = JSON.parse('{{ elections_json|tojson|safe }}');
-let activeBar;
-
-// Color palette
-const positionColors = {
-    "President": "#36A2EB",
-    "Vice President": "#FF69B4",
-    "Secretary": "#FFA500",
-    "Treasurer": "#32CD32",
-    "Auditor": "#8A2BE2",
-    "PIO": "#FF4500",
-    "PRO": "#00CED1"
-};
-
-const hiddenPositionsMap = {};
-
-// Data labels plugin
-const dataLabelsPlugin = {
-    id: 'dataLabels',
-    afterDatasetsDraw(chart) {
-        const { ctx, data } = chart;
-        const meta = chart.getDatasetMeta(0);
-        ctx.save();
-        meta.data.forEach((bar, index) => {
-            const value = data.datasets[0].data[index];
-            if(value === 0) return;
-            const x = bar.x;
-            const y = bar.y - 8;
-            ctx.fillStyle = 'rgba(0,0,0,0.7)';
-            const text = value.toString();
-            const textWidth = ctx.measureText(text).width;
-            const padding = 6;
-            ctx.fillRect(x - textWidth/2 - padding, y - 16, textWidth + padding*2, 20);
-            ctx.fillStyle = '#FFF';
-            ctx.font = 'bold 12px Arial,sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, x, y-6);
-        });
-        ctx.restore();
-    }
-};
-
-function drawMain(election, electionIndex=0){
-    const overlay = document.getElementById('noVotesOverlay');
-    if(activeBar) activeBar.destroy();
-
-    const originalVotes = election.votes.slice();
-
-    if(!hiddenPositionsMap[electionIndex]){
-        hiddenPositionsMap[electionIndex] = {};
-        [...new Set(election.positions)].forEach(pos=> hiddenPositionsMap[electionIndex][pos]=false);
-    }
-
-    const displayedVotes = election.positions.map((pos,i)=>hiddenPositionsMap[electionIndex][pos]?0:originalVotes[i]);
-    overlay.style.display = displayedVotes.every(v=>v===0)?'flex':'none';
-
-    activeBar = new Chart(document.getElementById("mainBar"), {
-        type:'bar',
-        data:{ labels: election.labels, datasets:[{ data: displayedVotes, backgroundColor: election.positions.map(p=>positionColors[p]||"#888"), borderRadius:4 }] },
-        options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true }, x:{} }, plugins:{ legend:{ display:false } } },
-        plugins:[dataLabelsPlugin]
-    });
-
-    document.getElementById('activeChartTitle').innerText = election.title;
-
-    const legendContainer = document.getElementById('colorLegend');
-    legendContainer.innerHTML='';
-    [...new Set(election.positions)].forEach(pos=>{
-        const color = positionColors[pos]||"#888";
-        const item = document.createElement('span');
-        item.style.marginRight='10px';
-        item.style.cursor='pointer';
-        item.style.userSelect='none';
-        item.innerHTML=`<span class="color-box" style="background-color:${color}; display:inline-block; width:15px; height:15px; margin-right:5px;"></span>${pos}`;
-        item.style.opacity = hiddenPositionsMap[electionIndex][pos] ? '0.4':'1';
-        item.addEventListener('click',()=>{
-            hiddenPositionsMap[electionIndex][pos] = !hiddenPositionsMap[electionIndex][pos];
-            activeBar.data.datasets[0].data = originalVotes.map((v,i)=>hiddenPositionsMap[electionIndex][election.positions[i]]?0:v);
-            item.style.opacity = hiddenPositionsMap[electionIndex][pos]?'0.4':'1';
-            activeBar.update();
-            overlay.style.display = activeBar.data.datasets[0].data.every(v=>v===0)?'flex':'none';
-        });
-        legendContainer.appendChild(item);
-    });
-}
-
-document.getElementById('electionSelect').addEventListener('change', e=>{
-    drawMain(elections[e.target.value], e.target.value);
-});
-
-drawMain(elections[0],0);
-
-// Modal logic
-var modal = document.getElementById("recentElectionsModal");
-var btn = document.getElementById("seeMoreBtn");
-var span = document.getElementsByClassName("close")[0];
-
-if(btn){
-    btn.onclick = function(){
-        modal.style.display="block";
-        document.body.classList.add('modal-open');
-    }
-}
-span.onclick = function(){
-    modal.style.display="none";
-    document.body.classList.remove('modal-open');
-}
-window.onclick = function(event){
-    if(event.target==modal){
-        modal.style.display="none";
-        document.body.classList.remove('modal-open');
-    }
-}
-
-// Profile menu
-const profilePic = document.getElementById('profilePic');
-const profileMenu = document.getElementById('profileMenu');
-
-profilePic.addEventListener('click', ()=>{ profileMenu.style.display = profileMenu.style.display==='block'?'none':'block'; });
-window.addEventListener('click', e=>{ if(!profilePic.contains(e.target)&&!profileMenu.contains(e.target)) profileMenu.style.display='none'; });
-
+<!-- ================= JSON DATA (LIKE STATISTICS) ================= -->
+<script id="dashboardElectionData" type="application/json">
+{{ elections_json | tojson }}
 </script>
+
+<script src="{{ url_for('admin.static', filename='js/admin_dashboard.js') }}"></script>
+
 {% endblock %}

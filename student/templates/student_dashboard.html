@@ -119,10 +119,11 @@
         <div class="mobile-separator"></div>
 
         <!-- Fingerprint Button -->
-        <button class="fingerprint-btn" onclick="registerFingerprint()">
+        <button class="fingerprint-btn fingerprint-icon-btn" onclick="registerFingerprint()">
             <i class="fa fa-fingerprint"></i>
-            <span>Register Fingerprint</span>
         </button>
+        
+        
 
         <input type="hidden" id="username" value="{{ current_user.username }}">
         <div id="fp-status" class="fp-status">
@@ -159,7 +160,8 @@
 
 
 <!-- QUICK REMINDER CARD -->
-<div class="card">
+<!-- QUICK REMINDER CARD -->
+<div class="card quick-reminder-card">
     <h2 class="section-title">Important Reminders</h2>
     <ul style="padding-left: 18px; margin: 0;">
         <li>Make sure your information is correct before voting.</li>
@@ -167,6 +169,7 @@
         <li>Keep your student ID confidential and secure.</li>
     </ul>
 </div>
+
 
 <!-- ANNOUNCEMENTS PREVIEW -->
 <div class="card announcements-card">
@@ -197,6 +200,33 @@
         <a href="{{ url_for('student.help_page') }}" class="help-link">
             Help & Support <i class="fa fa-arrow-right"></i>
         </a>
+    </div>
+</div>
+
+
+<!-- MOBILE FLOATING MENU -->
+<div class="mobile-fab">
+    <button class="fab-btn" onclick="toggleFabMenu()">
+        <i class="fa fa-bars"></i>
+    </button>
+
+    <div class="fab-menu" id="fabMenu">
+        <button type="button" class="fab-item">
+            <i class="fa fa-list"></i> Activity Log
+        </button>
+
+        <button type="button" class="fab-item">
+            <i class="fa fa-history"></i> History
+        </button>
+
+        <button type="button" class="fab-item">
+            <i class="fa fa-cog"></i> Settings
+        </button>
+
+        <a href="{{ url_for('student.logout') }}" class="fab-item logout">
+            <i class="fa fa-sign-out-alt"></i> Logout
+        </a>
+        
     </div>
 </div>
 
@@ -278,7 +308,7 @@ async function registerFingerprint() {
         statusDiv.textContent = result.status;
 
         if (result.status === "Fingerprint registered!") {
-            btn.innerHTML = '<i class="fa fa-check"></i><span>Registered</span>';
+            btn.innerHTML = '<i class="fa fa-check"></i><span></span>';
             btn.classList.add("success");
         } else {
             btn.disabled = false;
@@ -331,6 +361,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.querySelector('.dashboard-container');
     const trustPrompt = container.dataset.trustPrompt === 'true';
     if (trustPrompt) openTrustModal();
+});
+
+function toggleFabMenu() {
+    const menu = document.getElementById("fabMenu");
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+// Close when tapping outside
+document.addEventListener("click", function(e) {
+    const fab = document.querySelector(".mobile-fab");
+    if (fab && !fab.contains(e.target)) {
+        document.getElementById("fabMenu").style.display = "none";
+    }
 });
 </script>
 {% endblock %}

@@ -1,139 +1,709 @@
 /* =========================================
-   AVAILABLE ELECTIONS – Student Portal UI
+   AVAILABLE ELECTIONS - ULTRA COMPACT
+   Forces everything to the top, minimal spacing
 ========================================= */
 
+/* ==========================================================================
+   ROOT VARIABLES
+   ========================================================================== */
 :root {
-    --primary: #4f46e5;
-    --primary-dark: #4338ca;
-    --bg: #f4f6fb;
-    --card-bg: #ffffff;
-    --text-main: #1f2937;
-    --text-muted: #6b7280;
-    --border: #e5e7eb;
-    --radius: 12px;
+    --primary: #3498db;
+    --primary-dark: #2980b9;
+    --primary-light: #ebf5fb;
+    --secondary: #2c3e50;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --light: #ffffff;
+    --dark: #2c3e50;
+    --gray: #7f8c8d;
+    --light-gray: #ecf0f1;
+    --border-color: #dfe6e9;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.2s ease;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --sidebar-width: 300px;
 }
 
-/* Page background */
+/* ==========================================================================
+   RESET & BASE STYLES - FORCE TOP ALIGNMENT
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
 body {
-    background: var(--bg);
+    background: #f8f9fa;
+    color: var(--dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.4;
+    font-size: 14px;
+    padding: 0 !important; /* NO PADDING */
 }
 
-/* Main container */
-.dashboard-container {
-    max-width: 1150px;
-    margin: 30px auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center content horizontally */
+/* ==========================================================================
+   DESKTOP HEADER WITH HAMBURGER
+   ========================================================================== */
+.top-nav {
+    display: none;
 }
 
+@media (min-width: 769px) {
+    .top-nav {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px; /* Smaller header */
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #fff;
+        align-items: center;
+        padding: 0 20px;
+        z-index: 1000;
+        box-shadow: 0 1px 3px rgba(52, 152, 219, 0.2);
+    }
 
-/* Page title */
+    .hamburger {
+        cursor: pointer;
+        margin-right: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        position: relative;
+        z-index: 1001;
+        align-self: center;
+    }
+
+    .hamburger span {
+        position: relative;
+        display: block;
+        width: 20px;
+        height: 2px;
+        background: white;
+        border-radius: 2px;
+        transition: all 0.2s ease;
+    }
+
+    .hamburger span:before,
+    .hamburger span:after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: white;
+        border-radius: 2px;
+        transition: all 0.2s ease;
+        left: 0;
+    }
+
+    .hamburger span:before {
+        top: -6px;
+    }
+
+    .hamburger span:after {
+        bottom: -6px;
+    }
+
+    .hamburger.active span {
+        background: transparent;
+    }
+
+    .hamburger.active span:before {
+        transform: rotate(45deg);
+        top: 0;
+    }
+
+    .hamburger.active span:after {
+        transform: rotate(-45deg);
+        bottom: 0;
+    }
+
+    .nav-left {
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
+
+    .nav-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        letter-spacing: 0.3px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
+}
+
+/* ==========================================================================
+   SIDEBAR OVERLAY
+   ========================================================================== */
+.side-menu-overlay {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    .side-menu-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .side-menu-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* ==========================================================================
+   PAGE TITLE - TOP ALIGNED, MINIMAL SPACING
+   ========================================================================== */
 .page-title {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: var(--text-main);
-    margin-bottom: 25px;
-
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--secondary);
+    margin: 10px auto 15px auto !important; /* Minimal top margin */
+    text-align: center;
+    position: relative;
+    padding-bottom: 8px;
+    max-width: 1200px;
+    width: 100%;
 }
 
-/* Grid layout */
+.page-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 1px;
+}
+
+/* ==========================================================================
+   ELECTION GRID - TIGHT SPACING WITH BOTTOM MARGIN
+   ========================================================================== */
 .election-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
-    gap: 24px;
-    justify-content: center; /* Center the grid items */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px !important; /* Tighter gap */
+    max-width: 1200px;
+    margin: 0 auto 100px auto !important; /* Added bottom margin for footer space */
+    padding: 0 8px !important;
     width: 100%;
-    max-width: 1100px; /* Optional: prevent stretching too wide */
 }
 
-
-/* Card */
+/* ==========================================================================
+   ELECTION CARD - COMPACT DESIGN
+   ========================================================================== */
 .election-card {
-    background: var(--card-bg);
+    background: var(--light);
     border-radius: var(--radius);
-    padding: 22px 24px 24px;
-    border: 1px solid var(--border);
+    padding: 0;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    transition: 0.25s ease;
-    overflow: hidden;
+    position: relative;
+    margin: 0 !important; /* NO MARGIN */
 }
 
 .election-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(79, 70, 229, 0.15);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
     border-color: var(--primary);
 }
 
-/* Title as card header */
+/* Card Header */
 .election-title {
+    background: var(--primary);
+    color: white;
+    padding: 12px 15px !important; /* Tighter padding */
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
     text-align: center;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #ffffff;
-    background: linear-gradient(135deg, #4f46e5, #4338ca);
-    padding: 14px 16px;
-    border-radius: 10px 10px 0 0;
-    margin: -22px -24px 15px -24px;
 }
 
-/* Details */
+/* Status Badge */
+.election-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    z-index: 1;
+}
+
+.status-active {
+    background: var(--success);
+    color: white;
+}
+
+.status-upcoming {
+    background: var(--warning);
+    color: white;
+}
+
+/* Department Badge */
+.department-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin: 10px 12px 0 !important; /* Minimal margin */
+    align-self: flex-start;
+    border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+/* Card Content */
+.election-content {
+    padding: 15px !important; /* Tighter padding */
+    flex: 1;
+}
+
 .election-card p {
-    font-size: 0.95rem;
-    color: var(--text-muted);
-    margin: 6px 0;
-    line-height: 1.5;
+    margin: 6px 0 !important; /* Minimal margin */
+    color: var(--gray);
+    font-size: 0.8rem;
+    line-height: 1.3;
+    display: flex;
+    align-items: flex-start;
 }
 
 .election-card p strong {
-    color: var(--text-main);
+    color: var(--secondary);
+    min-width: 70px;
+    display: inline-block;
+    font-weight: 600;
+    font-size: 0.8rem;
 }
 
-/* Vote button */
-.vote-button {
-    margin-top: auto;
-    display: block;
+.election-card i {
+    color: var(--primary);
+    margin-right: 6px;
+    width: 14px;
     text-align: center;
-    padding: 12px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: #fff;
-    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+/* Time Indicator */
+.time-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--light-gray);
+    color: var(--dark);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    margin: 10px 0 !important;
+    font-size: 0.75rem;
+    border-left: 3px solid var(--primary);
+}
+
+.time-icon {
+    font-size: 0.8rem;
+    color: var(--primary);
+}
+
+/* ================================
+   COUNTDOWN DESIGN (CENTERED)
+================================ */
+
+/* Base countdown container */
+.time-indicator.countdown {
+    display: flex;
+    align-items: center;
+    justify-content: center;        /* CENTER CONTENT */
+    gap: 8px;
+
+    background: linear-gradient(
+        135deg,
+        var(--primary-light),
+        #ffffff
+    );
+
+    color: var(--secondary);
+    padding: 10px 14px;
+    border-radius: 999px;           /* PILL SHAPE */
+    margin: 12px auto 8px auto !important; /* CENTER HORIZONTALLY */
+
+    font-size: 0.8rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    text-decoration: none;
+    text-align: center;
+
+    border: 1px solid rgba(52, 152, 219, 0.25);
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.15);
+    width: fit-content;
+}
+
+/* Clock icon */
+.time-indicator.countdown .time-icon {
+    color: var(--primary);
+    font-size: 0.85rem;
+}
+
+/* Countdown text */
+.countdown-text {
     letter-spacing: 0.3px;
-    transition: 0.25s ease;
+    white-space: nowrap;
+}
+
+/* Urgent state (optional – < 1 hour left) */
+.time-indicator.countdown.urgent {
+    background: linear-gradient(
+        135deg,
+        #fff5f5,
+        #ffffff
+    );
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.time-indicator.countdown.urgent .time-icon {
+    color: var(--danger);
+}
+
+/* ==========================================================================
+   VOTE BUTTON - COMPACT
+   ========================================================================== */
+.vote-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--success);
+    color: white;
+    padding: 10px 16px !important;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin: 6px 12px 12px !important; /* Minimal margin */
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
 }
 
 .vote-button:hover {
-    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+    background: var(--primary-dark);
     transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(52, 152, 219, 0.2);
 }
 
-/* Empty state */
+.vote-button:disabled {
+    background: var(--gray);
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none !important;
+}
+
+/* ==========================================================================
+   NO ELECTIONS STATE - COMPACT
+   ========================================================================== */
 .no-elections {
-    padding: 50px;
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    border: 1px dashed var(--border);
     text-align: center;
-    color: var(--text-muted);
-    font-size: 1rem;
+    padding: 30px 20px !important;
+    background: var(--light);
+    color: var(--gray);
+    border-radius: var(--radius);
+    max-width: 400px;
+    margin: 20px auto 120px auto !important; /* Added bottom margin */
+    border: 1px dashed var(--border-color);
 }
 
-/* Mobile */
-@media (max-width: 768px) {
-    .dashboard-container {
-        padding: 15px;
-    }
+.no-elections i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: var(--gray);
+}
 
+.no-elections h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: var(--secondary);
+}
+
+.no-elections p {
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN - ULTRA COMPACT
+   ========================================================================== */
+
+/* Tablet View (768px - 1024px) */
+@media (max-width: 1024px) {
     .page-title {
-        font-size: 1.6rem;
+        font-size: 1.3rem;
+        margin: 8px auto 12px auto !important;
+        padding-bottom: 6px;
     }
+    
+    .page-title::after {
+        width: 40px;
+        height: 1.5px;
+    }
+    
+    .election-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px !important;
+        padding: 0 6px !important;
+        margin: 0 auto 90px auto !important; /* Adjusted bottom margin */
+    }
+    
+    .election-title {
+        font-size: 0.95rem;
+        padding: 10px 12px !important;
+    }
+    
+    .election-content {
+        padding: 12px !important;
+    }
+    
+    .election-card p {
+        font-size: 0.75rem;
+        margin: 5px 0 !important;
+    }
+    
+    .election-card p strong {
+        min-width: 65px;
+        font-size: 0.75rem;
+    }
+    
+    .department-badge,
+    .vote-button {
+        margin-left: 10px !important;
+        margin-right: 10px !important;
+    }
+}
 
+/* MOBILE VIEW - ULTRA COMPACT (max-width: 768px) */
+@media (max-width: 768px) {
+    body {
+        background: #f8f9fa;
+        font-size: 13px;
+        padding-bottom: 85px !important; /* Space for bottom navigation */
+    }
+    
+    .page-title {
+        font-size: 1.1rem;
+        margin: 6px auto 10px auto !important;
+        padding-bottom: 5px;
+    }
+    
+    .page-title::after {
+        width: 35px;
+        height: 1.5px;
+    }
+    
+    /* Single column on mobile but still compact */
     .election-grid {
         grid-template-columns: 1fr;
+        gap: 10px !important;
+        padding: 0 4px !important;
+        margin: 0 auto 100px auto !important; /* Bigger bottom margin for mobile footer */
     }
+    
+    .election-title {
+        font-size: 0.9rem;
+        padding: 8px 10px !important;
+    }
+    
+    .election-status {
+        top: 8px;
+        right: 8px;
+        padding: 3px 6px;
+        font-size: 0.6rem;
+    }
+    
+    .department-badge {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+        margin: 8px 8px 0 !important;
+    }
+    
+    .election-content {
+        padding: 10px !important;
+    }
+    
+    .election-card p {
+        font-size: 0.7rem;
+        margin: 4px 0 !important;
+    }
+    
+    .election-card p strong {
+        min-width: 60px;
+        font-size: 0.7rem;
+    }
+    
+    .election-card i {
+        font-size: 0.7rem;
+        margin-right: 4px;
+        width: 12px;
+    }
+    
+    .time-indicator {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+        margin: 8px 0 !important;
+    }
+    
+    .vote-button {
+        padding: 8px 12px !important;
+        font-size: 0.8rem;
+        margin: 4px 8px 8px !important;
+    }
+    
+    .no-elections {
+        padding: 20px 15px !important;
+        margin: 15px auto 100px auto !important; /* Added bottom margin for mobile */
+    }
+    
+    .no-elections i {
+        font-size: 1.5rem;
+    }
+    
+    .no-elections h3 {
+        font-size: 1rem;
+    }
+    
+    .no-elections p {
+        font-size: 0.8rem;
+    }
+
+    .time-indicator.countdown {
+        font-size: 0.7rem;
+        padding: 8px 12px;
+    }
+}
+
+/* SMALL MOBILE (max-width: 480px) */
+@media (max-width: 480px) {
+    body {
+        font-size: 12px;
+        padding-bottom: 85px !important; /* Space for bottom navigation */
+    }
+    
+    .page-title {
+        font-size: 1rem;
+        margin: 4px auto 8px auto !important;
+    }
+    
+    .election-grid {
+        padding: 0 2px !important;
+        margin: 0 auto 100px auto !important; /* Bottom margin for small mobile */
+    }
+    
+    .election-card p {
+        font-size: 0.65rem;
+    }
+    
+    .election-card p strong {
+        min-width: 55px;
+        font-size: 0.65rem;
+    }
+}
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.election-card {
+    animation: fadeInUp 0.3s ease-out forwards;
+    animation-delay: calc(var(--card-index, 0) * 0.05s);
+}
+
+/* ==========================================================================
+   DESKTOP ADJUSTMENTS - TOP ALIGNED
+   ========================================================================== */
+@media (min-width: 769px) {
+    body {
+        padding-top: 70px !important; /* Smaller header compensation */
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        padding-bottom: 40px !important; /* Small bottom padding for desktop */
+    }
+    
+    .side-menu.open ~ body {
+        padding-left: calc(var(--sidebar-width) + 20px) !important;
+        transition: padding-left 0.2s ease;
+    }
+}
+
+@media (min-width: 1200px) {
+    body {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+        padding-bottom: 40px !important; /* Small bottom padding for large desktop */
+    }
+    
+    .side-menu.open ~ body {
+        padding-left: calc(var(--sidebar-width) + 30px) !important;
+        padding-right: 30px !important;
+    }
+}
+
+/* ==========================================================================
+   FORCE OVERRIDES - REMOVE ALL UNNECESSARY SPACING
+   ========================================================================== */
+* {
+    max-height: none !important;
+}
+
+body > *:first-child {
+    margin-top: 0 !important;
+}
+
+.election-grid > *:first-child {
+    margin-top: 0 !important;
+}
+
+/* Prevent any container from adding padding */
+.container, .wrapper, .main-container, .content-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
 }

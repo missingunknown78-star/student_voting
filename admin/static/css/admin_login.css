@@ -178,7 +178,7 @@ input:-webkit-autofill {
     padding: 0 4px;
 }
 
-/* Arrow only for role dropdown */
+/* Arrow ONLY for role dropdown */
 .input-group select::-ms-expand {
     display: none;
 }
