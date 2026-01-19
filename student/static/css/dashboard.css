@@ -911,3 +911,31 @@ body {
         display: block;
     }
 }
+
+
+
+/* ================= FLOATING MENU ANIMATION ================= */
+.fab-menu {
+    opacity: 0;
+    transform: translateY(-15px);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    display: block; /* keep it block for positioning */
+    pointer-events: none; /* prevent clicks when hidden */
+}
+
+.fab-menu.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto; /* allow clicks when visible */
+}
+
+/* Optional: staggered animation for items */
+.fab-menu .fab-item {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.fab-menu.show .fab-item {
+    opacity: 1;
+    transform: translateY(0);
+}

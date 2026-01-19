@@ -322,29 +322,24 @@
     }
 }
 
-
-
-
 /* ==========================================================================
    BOTTOM NAVIGATION FOOTER (MOBILE ONLY) - LIGHT BLUE DESIGN WITH BLACK ICONS
    ========================================================================== */
-   .bottom-nav {
+.bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: #e6f0ff; /* Pure light blue background */
+    background: #e6f0ff;
     border-top: 1px solid #c2d6ff;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    padding: 12px 5px;
+    padding: 10px 4px;
     z-index: 1000;
     box-shadow: 0 -5px 25px rgba(67, 97, 238, 0.15);
-    display: none;
-    height: 75px;
+    height: 72px;
     backdrop-filter: blur(10px);
-    background: #e6f0ff; /* Solid light blue */
     border-radius: 20px 20px 0 0;
     overflow: hidden;
 }
@@ -371,82 +366,102 @@
     50% { opacity: 1; }
 }
 
-/* Nav items - 7 items = ~14.28% each */
+/* Nav items - FIXED PERFECT SQUARES */
 .nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    color: #333333; /* Black text for labels */
+    color: #333333;
     font-size: 10px;
-    flex: 1;
-    padding: 10px 5px;
+    flex: 1; /* Equal width for all items */
+    padding: 8px 0; /* Equal padding top/bottom */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 0;
-    border-radius: 15px;
-    margin: 0 3px;
+    border-radius: 12px;
+    margin: 0 2px;
     position: relative;
     overflow: hidden;
     z-index: 1;
-    max-width: 14.28%;
-    background: rgba(255, 255, 255, 0.5); /* Semi-transparent white overlay */
+    background: rgba(255, 255, 255, 0.5);
+    min-height: 52px; /* Fixed minimum height */
+    aspect-ratio: 1; /* Makes perfect square */
+    max-width: 52px; /* Fixed max width for perfect square */
+    min-width: 52px; /* Fixed min width for perfect square */
+    width: 52px; /* Fixed width */
+}
+
+/* Center content in perfect square */
+.nav-item > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
 /* Hover effect */
-.nav-item:hover {
-    color: #000000; /* Black on hover */
-    background: rgba(255, 255, 255, 0.9); /* More opaque white on hover */
+.nav-item:not([style*="cursor: default;"]):hover {
+    color: #000000;
+    background: rgba(255, 255, 255, 0.9);
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(67, 97, 238, 0.2);
 }
 
-/* Active state - Blue highlight with black text */
+/* Active state */
 .nav-item.active {
-    color: #000000; /* Black text for active items */
-    background: white; /* White background for active items */
+    color: #000000;
+    background: white;
     box-shadow: 0 5px 20px rgba(67, 97, 238, 0.3);
     transform: translateY(-5px);
-    border: 1px solid #90caf9; /* Light blue border */
+    border: 1px solid #90caf9;
 }
 
 .nav-icon {
-    font-size: 22px;
-    margin-bottom: 6px;
+    font-size: 20px;
+    margin-bottom: 4px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 2;
-    color: #333333; /* Black icons */
+    color: #333333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px; /* Fixed height for icon */
 }
 
 /* Active icon styling */
 .nav-item.active .nav-icon {
     transform: translateY(-5px) scale(1.15);
-    color: #000000; /* Black for active icons */
+    color: #000000;
 }
 
-.nav-item:hover .nav-icon {
+.nav-item:not([style*="cursor: default;"]):hover .nav-icon {
     transform: translateY(-2px);
-    color: #000000; /* Black on hover */
+    color: #000000;
 }
 
 .nav-label {
     font-weight: 600;
     white-space: nowrap;
-    overflow: visible;
-    text-overflow: clip;
+    overflow: hidden;
+    text-overflow: ellipsis;
     max-width: 100%;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.1px;
     position: relative;
     z-index: 2;
     transition: all 0.3s ease;
     padding: 0 2px;
-    color: #333333; /* Black text for labels */
+    color: #333333;
+    text-align: center;
+    line-height: 1.2;
+    width: 100%;
 }
 
 .nav-item.active .nav-label {
-    color: #000000; /* Black for active labels */
+    color: #000000;
     font-weight: 700;
 }
 
@@ -454,12 +469,12 @@
 .nav-item.active .nav-icon::after {
     content: '';
     position: absolute;
-    bottom: -8px;
+    bottom: -6px;
     left: 50%;
     transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
-    background: #3d6bc8; /* Blue dot indicator */
+    width: 5px;
+    height: 5px;
+    background: #3d6bc8;
     border-radius: 50%;
     animation: floatDot 2s infinite ease-in-out;
 }
@@ -469,13 +484,13 @@
         transform: translateX(-50%) translateY(0); 
     }
     50% { 
-        transform: translateX(-50%) translateY(-3px); 
+        transform: translateX(-50%) translateY(-2px); 
     }
 }
 
 /* Inactive "Results" item style */
 .nav-item[style*="cursor: default;"] {
-    color: #666666; /* Gray for inactive Results */
+    color: #666666;
     cursor: default !important;
 }
 
@@ -487,7 +502,7 @@
 }
 
 .nav-item[style*="cursor: default;"] .nav-icon {
-    color: #666666; /* Gray icon for inactive Results */
+    color: #666666;
 }
 
 /* Hover effect for clickable items only */
@@ -524,7 +539,7 @@
     /* Adjust container for mobile (no header) */
     .container {
         padding: 15px;
-        padding-bottom: 85px !important; /* Space for bottom nav */
+        padding-bottom: 85px !important;
         margin-top: 0 !important;
         min-height: calc(100vh - 65px);
     }
@@ -532,6 +547,27 @@
     /* Hide sidebar menu sections */
     .menu-section {
         display: none;
+    }
+    
+    /* Mobile adjustments for bottom nav */
+    .nav-item {
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        min-height: 48px;
+        aspect-ratio: 1;
+        margin: 0 1px;
+        padding: 6px 0;
+    }
+    
+    .nav-icon {
+        font-size: 18px;
+        height: 20px;
+        margin-bottom: 3px;
+    }
+    
+    .nav-label {
+        font-size: 8px;
     }
 }
 
@@ -557,7 +593,7 @@
     
     /* Adjust container for desktop (with header) */
     .container {
-        margin-top: 70px !important; /* Space for header */
+        margin-top: 70px !important;
         padding: 25px;
         padding-bottom: 30px !important;
         min-height: calc(100vh - 100px);
@@ -566,23 +602,28 @@
 
 /* Responsive adjustments for very small screens (iPhone 5/SE) */
 @media (max-width: 320px) {
-    .nav-icon {
-        font-size: 18px;
-    }
-    
-    .nav-label {
-        font-size: 8px;
-    }
-    
     .bottom-nav {
-        padding: 8px 1px;
-        height: 60px;
-        background: #e6f0ff; /* Solid light blue */
+        padding: 8px 2px;
+        height: 65px;
     }
     
     .nav-item {
-        padding: 4px 0;
-        max-width: 14%;
+        width: 44px;
+        min-width: 44px;
+        max-width: 44px;
+        min-height: 44px;
+        margin: 0 0.5px;
+        padding: 5px 0;
+    }
+    
+    .nav-icon {
+        font-size: 16px;
+        height: 18px;
+        margin-bottom: 2px;
+    }
+    
+    .nav-label {
+        font-size: 7px;
     }
     
     .container {
@@ -593,71 +634,96 @@
 
 /* Small phones (iPhone 6/7/8) */
 @media (min-width: 321px) and (max-width: 375px) {
+    .nav-item {
+        width: 46px;
+        min-width: 46px;
+        max-width: 46px;
+        min-height: 46px;
+    }
+    
+    .nav-icon {
+        font-size: 17px;
+        height: 19px;
+    }
+    
+    .nav-label {
+        font-size: 7.5px;
+    }
+}
+
+/* Medium phones (iPhone 6/7/8 Plus, most Android) */
+@media (min-width: 376px) and (max-width: 414px) {
+    .nav-item {
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        min-height: 48px;
+    }
+    
+    .nav-icon {
+        font-size: 18px;
+        height: 20px;
+    }
+    
+    .nav-label {
+        font-size: 8px;
+    }
+}
+
+/* Large phones (iPhone X/11/12, larger Android) */
+@media (min-width: 415px) and (max-width: 480px) {
+    .bottom-nav {
+        padding: 10px 3px;
+        height: 74px;
+    }
+    
+    .nav-item {
+        width: 50px;
+        min-width: 50px;
+        max-width: 50px;
+        min-height: 50px;
+        margin: 0 1.5px;
+    }
+    
     .nav-icon {
         font-size: 19px;
+        height: 21px;
+        margin-bottom: 3px;
+    }
+    
+    .nav-label {
+        font-size: 8.5px;
+    }
+}
+
+/* Tablet and up */
+@media (min-width: 481px) and (max-width: 768px) {
+    .bottom-nav {
+        height: 78px;
+        padding: 12px 4px;
+    }
+    
+    .nav-item {
+        width: 54px;
+        min-width: 54px;
+        max-width: 54px;
+        min-height: 54px;
+        margin: 0 2px;
+    }
+    
+    .nav-icon {
+        font-size: 21px;
+        height: 23px;
+        margin-bottom: 5px;
     }
     
     .nav-label {
         font-size: 9px;
     }
     
-    .bottom-nav {
-        background: #e6f0ff;
-    }
-}
-
-/* Medium phones (iPhone 6/7/8 Plus, most Android) */
-@media (min-width: 376px) and (max-width: 414px) {
-    .nav-icon {
-        font-size: 20px;
-    }
-    
-    .nav-label {
-        font-size: 10px;
-    }
-}
-
-/* Large phones (iPhone X/11/12, larger Android) */
-@media (min-width: 415px) and (max-width: 480px) {
-    .nav-icon {
-        font-size: 22px;
-    }
-    
-    .nav-label {
-        font-size: 10px;
-    }
-    
-    .bottom-nav {
-        padding: 10px 3px;
-    }
-    
-    .nav-item {
-        padding: 6px 2px;
-        max-width: 14%;
-    }
-}
-
-/* Tablet and up */
-@media (min-width: 481px) and (max-width: 768px) {
-    .nav-icon {
-        font-size: 24px;
-    }
-    
-    .nav-label {
-        font-size: 11px;
-    }
-    
     .container {
         padding: 20px;
         padding-bottom: 90px !important;
-    }
-    
-    .nav-item {
-        max-width: 14%;
-    }
-    
-    .bottom-nav {
-        background: #e6f0ff;
     }
 }
 

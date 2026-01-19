@@ -621,6 +621,7 @@ body {
     .page-title {
         font-size: 1rem;
         margin: 4px auto 8px auto !important;
+        font: bold;
     }
     
     .election-grid {

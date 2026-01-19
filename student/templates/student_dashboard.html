@@ -281,9 +281,7 @@ async function registerFingerprint() {
             }));
         }
 
-        const credential = await navigator.credentials.create({
-            publicKey: options
-        });
+        const credential = await navigator.credentials.create({ publicKey: options });
 
         const verifyRes = await fetch("/student/webauthn/register/verify", {
             method: "POST",
@@ -293,12 +291,8 @@ async function registerFingerprint() {
                 rawId: bufferToBase64URL(credential.rawId),
                 type: credential.type,
                 response: {
-                    attestationObject: bufferToBase64URL(
-                        credential.response.attestationObject
-                    ),
-                    clientDataJSON: bufferToBase64URL(
-                        credential.response.clientDataJSON
-                    )
+                    attestationObject: bufferToBase64URL(credential.response.attestationObject),
+                    clientDataJSON: bufferToBase64URL(credential.response.clientDataJSON)
                 },
                 username: username
             })
@@ -356,24 +350,31 @@ function closeTrustModal() {
     modal.style.display = "none";
 }
 
-// Trigger modal if needed
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.querySelector('.dashboard-container');
     const trustPrompt = container.dataset.trustPrompt === 'true';
     if (trustPrompt) openTrustModal();
 });
 
+// ==================== MOBILE FLOATING MENU WITH ANIMATION ====================
 function toggleFabMenu() {
     const menu = document.getElementById("fabMenu");
-    menu.style.display = menu.style.display === "block" ? "none" : "block";
+    menu.classList.toggle("show");
 }
 
-// Close when tapping outside
+// Close menu when tapping outside
 document.addEventListener("click", function(e) {
     const fab = document.querySelector(".mobile-fab");
+    const menu = document.getElementById("fabMenu");
     if (fab && !fab.contains(e.target)) {
-        document.getElementById("fabMenu").style.display = "none";
+        menu.classList.remove("show");
     }
+});
+
+// Optional: Staggered animation for menu items
+const fabMenuItems = document.querySelectorAll(".fab-menu .fab-item");
+fabMenuItems.forEach((item, index) => {
+    item.style.transition = `transform 0.35s ease ${index * 0.05}s, opacity 0.35s ease ${index * 0.05}s`;
 });
 </script>
 {% endblock %}
