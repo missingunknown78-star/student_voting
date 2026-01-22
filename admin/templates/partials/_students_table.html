@@ -1,0 +1,42 @@
+{% if students.items %}
+<table class="students-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Student No</th>
+            <th>Last Name</th>
+            <th>First Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for student in students.items %}
+        <tr>
+            <td>{{ loop.index + (students.page - 1) * students.per_page }}</td>
+            <td>{{ student.student_number }}</td>
+            <td>{{ student.last_name }}</td>
+            <td>{{ student.first_name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="pagination">
+    {% if students.has_prev %}
+        <a href="#" class="page-link" data-page="{{ students.prev_num }}">&laquo; Prev</a>
+    {% endif %}
+
+    {% for p in students.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+            <a href="#" class="page-link {% if students.page == p %}active{% endif %}" data-page="{{ p }}">{{ p }}</a>
+        {% else %}
+            <span>…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if students.has_next %}
+        <a href="#" class="page-link" data-page="{{ students.next_num }}">Next &raquo;</a>
+    {% endif %}
+</div>
+{% else %}
+<p>No students found.</p>
+{% endif %}

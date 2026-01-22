@@ -1,0 +1,212 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Import Students{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/import_students.css') }}">
+<style>
+/* ------------------ Table Styling ------------------ */
+.students-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+}
+
+.students-table th,
+.students-table td {
+    border: 1px solid #ddd;
+    padding: 0.6rem 1rem;
+    text-align: left;
+}
+
+.students-table th {
+    background-color: #3498db;
+    color: white;
+}
+
+.pagination {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.pagination a {
+    padding: 0.4rem 0.8rem;
+    background: #f1f1f1;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+}
+
+.pagination a.active {
+    background: #3498db;
+    color: white;
+}
+
+.pagination a:hover {
+    background: #2980b9;
+    color: white;
+}
+
+/* Flash messages */
+.flash-message {
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    color: white;
+}
+
+.flash-message.success { background-color: #27ae60; }
+.flash-message.danger { background-color: #e74c3c; }
+.flash-message.info { background-color: #3498db; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="import-students-page">
+
+    <h2 class="page-title">Import CTU Students</h2>
+
+    <p class="page-description">
+        Upload the official Excel file containing CTU Moalboal Campus students.
+    </p>
+
+    <!-- ================= Excel Import Form ================= -->
+    <form method="POST" enctype="multipart/form-data" class="import-form">
+        <div class="form-group">
+            <label for="excel_file"><strong>Select Excel file:</strong></label><br>
+            <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
+        </div>
+
+        <button type="submit" class="import-btn">
+            <i class="fa-solid fa-file-import"></i> Import Students
+        </button>
+    </form>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ================= Display Students ================= -->
+    <div class="students-list">
+        <h3 style="margin-top:2rem;">Imported Students</h3>
+
+        <!-- Search Form -->
+        <form id="search-form" class="search-form" style="margin-bottom:1rem;">
+            <input type="text" name="q" id="search-input" placeholder="Search by Student No or Name..."
+                   value="{{ request.args.get('q','') }}"
+                   style="padding:0.4rem 0.8rem; width:250px; border:1px solid #ccc; border-radius:4px;">
+            <button type="submit" id="search-btn"
+                    style="padding:0.4rem 0.8rem; border:none; background:#3498db; color:white; border-radius:4px; cursor:pointer;">
+                <i class="fa-solid fa-magnifying-glass"></i> Search
+            </button>
+        </form>
+
+        <!-- Table container for AJAX -->
+        <div id="students-table-container">
+            {% if students.items %}
+            <table class="students-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student No</th>
+                        <th>Last Name</th>
+                        <th>First Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students.items %}
+                    <tr>
+                        <td>{{ loop.index + (students.page - 1) * students.per_page }}</td>
+                        <td>{{ student.student_number }}</td>
+                        <td>{{ student.last_name }}</td>
+                        <td>{{ student.first_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                {% if students.has_prev %}
+                    <a href="#" class="page-link" data-page="{{ students.prev_num }}">&laquo; Prev</a>
+                {% endif %}
+
+                {% for p in students.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                        <a href="#" class="page-link {% if students.page == p %}active{% endif %}" data-page="{{ p }}">{{ p }}</a>
+                    {% else %}
+                        <span>…</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if students.has_next %}
+                    <a href="#" class="page-link" data-page="{{ students.next_num }}">Next &raquo;</a>
+                {% endif %}
+            </div>
+            {% else %}
+                <p>No students found.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= AJAX Script with Loading Button ================= -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function(){
+
+    // Function to load table via AJAX
+    function loadStudents(page=1, query="") {
+        let $btn = $("#search-btn");                // search button
+        let originalContent = $btn.html();          // save original content
+
+        // Show loading spinner
+        $btn.prop("disabled", true);
+        $btn.html('<i class="fa-solid fa-spinner fa-spin"></i> Loading');
+
+        $.get("{{ url_for('admin.import_students_table') }}", {page: page, q: query})
+            .done(function(data){
+                $("#students-table-container").html(data);
+            })
+            .fail(function(){
+                alert("Failed to load data. Please try again.");
+            })
+            .always(function(){
+                // Restore original button
+                $btn.prop("disabled", false);
+                $btn.html(originalContent);
+            });
+    }
+
+    // Search form submission
+    $("#search-form").on("submit", function(e){
+        e.preventDefault();
+        let query = $("#search-input").val();
+        loadStudents(1, query);
+    });
+
+    // Pagination click
+    $("#students-table-container").on("click", ".page-link", function(e){
+        e.preventDefault();
+        let page = $(this).data("page");
+        let query = $("#search-input").val();
+        loadStudents(page, query);
+    });
+
+});
+</script>
+
+{% endblock %}

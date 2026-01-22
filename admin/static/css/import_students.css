@@ -1,0 +1,134 @@
+/* ================================
+   IMPORT STUDENTS PAGE CSS
+   Scoped so it won't affect sidebar
+   ================================ */
+
+   .import-students-page {
+    margin-left: 280px; /* match --sidebar-width */
+    padding: 30px 40px;
+    min-height: 100vh;
+    background: #f5f7fb;
+    box-sizing: border-box;
+}
+
+/* Title */
+.import-students-page .page-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+/* Description text */
+.import-students-page .page-description {
+    font-size: 0.95rem;
+    color: #6c757d;
+    margin-bottom: 25px;
+}
+
+/* Form container */
+.import-students-page .import-form {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    max-width: 500px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Form group */
+.import-students-page .form-group {
+    margin-bottom: 18px;
+}
+
+.import-students-page .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+/* File input */
+.import-students-page input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    font-size: 0.9rem;
+    background: #fafafa;
+}
+
+/* Import button */
+.import-students-page .import-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: #2c7be5;
+    border: none;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.import-students-page .import-btn:hover {
+    background: #1a5bb8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(44, 123, 229, 0.35);
+}
+
+/* Flash message container */
+.import-students-page .flash-container {
+    margin-top: 25px;
+    max-width: 500px;
+}
+
+/* Flash messages */
+.import-students-page .flash-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+/* Success */
+.import-students-page .flash-message.success {
+    background: #27ae60;
+}
+
+/* Danger / error */
+.import-students-page .flash-message.danger {
+    background: #e74c3c;
+}
+
+/* Info / default */
+.import-students-page .flash-message.info {
+    background: #3498db;
+}
+
+/* ================================
+   Responsive Fix
+   ================================ */
+
+@media (max-width: 1024px) {
+    .import-students-page {
+        margin-left: 250px; /* sidebar shrinks at this size */
+        padding: 25px 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .import-students-page {
+        margin-left: 0;
+        padding: 20px 20px;
+    }
+
+    .import-students-page .import-form {
+        width: 100%;
+        padding: 20px;
+    }
+}

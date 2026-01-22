@@ -3,7 +3,7 @@ from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
 from functools import wraps
-from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, AdminRole
+from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, AdminRole, CtuStudent
 from student.models import Student, Vote
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -297,7 +297,144 @@ def dashboard():
     )
 
 
+import pandas as pd
+from werkzeug.utils import secure_filename
+@admin_bp.route("/import_students", methods=["GET", "POST"])
+def import_students():
+    from flask import request
+    from sqlalchemy import or_
 
+    # ------------------ POST: Handle Excel Import ------------------
+    if request.method == "POST":
+        file = request.files.get("excel_file")
+
+        if not file or file.filename == "":
+            flash("No file selected.", "danger")
+            return redirect(url_for("admin.import_students"))
+
+        try:
+            import pandas as pd
+
+            # Step 1: Read Excel without assigning a header
+            df = pd.read_excel(file, header=None)
+
+            # Step 2: Find the row that contains 'StudentNo' (case-insensitive)
+            header_row_idx = None
+            for i, row in df.iterrows():
+                if row.astype(str).str.contains("StudentNo", case=False).any():
+                    header_row_idx = i
+                    break
+
+            if header_row_idx is None:
+                flash("Cannot find header row containing 'StudentNo'.", "danger")
+                return redirect(url_for("admin.import_students"))
+
+            # Step 3: Assign that row as the header
+            df.columns = df.iloc[header_row_idx]
+            df = df[header_row_idx + 1 :]  # Take rows below header
+
+            # Step 4: Normalize column names
+            df.columns = (
+                df.columns
+                .astype(str)
+                .str.strip()
+                .str.replace("\u00a0", "", regex=False)  # remove non-breaking spaces
+                .str.replace("\t", "", regex=False)      # remove tabs
+                .str.replace(" ", "", regex=False)       # remove normal spaces
+                .str.lower()
+            )
+
+            # Step 5: Check required columns
+            required_columns = ["studentno", "lastname", "firstname"]
+            for col in required_columns:
+                if col not in df.columns:
+                    flash(f"Missing required column: {col}", "danger")
+                    return redirect(url_for("admin.import_students"))
+
+            # Step 6: Loop through rows and save to database
+            imported = 0
+            skipped = 0
+
+            for _, row in df.iterrows():
+                student_number = str(row["studentno"]).strip()
+                first_name = str(row["firstname"]).strip()
+                last_name = str(row["lastname"]).strip()
+
+                if not student_number or student_number.lower() == "nan":
+                    skipped += 1
+                    continue
+
+                exists = CtuStudent.query.filter_by(
+                    student_number=student_number
+                ).first()
+
+                if exists:
+                    skipped += 1
+                    continue
+
+                s = CtuStudent(
+                    student_number=student_number,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                db.session.add(s)
+                imported += 1
+
+            db.session.commit()
+            flash(f"Imported {imported} students. Skipped {skipped}.", "success")
+            return redirect(url_for("admin.import_students"))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error importing file: {str(e)}", "danger")
+            return redirect(url_for("admin.import_students"))
+
+    # ------------------ GET: Display Students with Search & Pagination ------------------
+    page = request.args.get("page", 1, type=int)
+    search_query = request.args.get("q", "", type=str)
+
+    students_query = CtuStudent.query
+
+    if search_query:
+        search = f"%{search_query.strip()}%"
+        students_query = students_query.filter(
+            or_(
+                CtuStudent.student_number.ilike(search),
+                CtuStudent.first_name.ilike(search),
+                CtuStudent.last_name.ilike(search)
+            )
+        )
+
+    students = students_query.order_by(CtuStudent.last_name.asc()) \
+        .paginate(page=page, per_page=10)  # 10 students per page
+
+    return render_template("import_students.html", students=students)
+
+
+@admin_bp.route("/import_students_table")
+def import_students_table():
+    from flask import request
+    from sqlalchemy import or_
+
+    page = request.args.get("page", 1, type=int)
+    search_query = request.args.get("q", "", type=str)
+
+    students_query = CtuStudent.query
+
+    if search_query:
+        search = f"%{search_query.strip()}%"
+        students_query = students_query.filter(
+            or_(
+                CtuStudent.student_number.ilike(search),
+                CtuStudent.first_name.ilike(search),
+                CtuStudent.last_name.ilike(search)
+            )
+        )
+
+    students = students_query.order_by(CtuStudent.last_name.asc()) \
+        .paginate(page=page, per_page=10)
+
+    return render_template("partials/_students_table.html", students=students)
 
 
 

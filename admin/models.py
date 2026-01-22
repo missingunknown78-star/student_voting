@@ -166,3 +166,13 @@ class YearLevel(db.Model):
     # Relationship (future-proof)
     students = db.relationship('Student', backref='year_level', lazy=True)
 
+class CtuStudent(db.Model):
+    __tablename__ = "ctu_students"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_number = db.Column(db.String(50), unique=True, nullable=False)
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    course = db.Column(db.String(100))
+    email = db.Column(db.String(150))
+    is_active = db.Column(db.Boolean, default=True)
