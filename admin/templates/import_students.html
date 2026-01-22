@@ -50,22 +50,127 @@
 }
 
 /* Flash messages */
+/* Flash messages */
+.flash-container {
+    position: absolute; /* relative to parent container (.import-students-page) */
+    top: 0; /* at the very top of main content */
+    left: 50%; /* center horizontally */
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: fit-content;
+    max-width: 90%;
+    text-align: center;
+}
+
 .flash-message {
-    padding: 0.8rem;
-    margin-bottom: 0.5rem;
+    padding: 0.8rem 1.2rem;
     border-radius: 4px;
     color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    opacity: 0;
+    animation: fadeInFlash 0.5s forwards;
 }
 
 .flash-message.success { background-color: #27ae60; }
 .flash-message.danger { background-color: #e74c3c; }
 .flash-message.info { background-color: #3498db; }
+
+@keyframes fadeInFlash {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOutFlash {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Floating info button */
+.info-float-btn {
+    position: fixed;
+    top: 90px;
+    right: 25px;
+    width: 45px;
+    height: 45px;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 999;
+}
+
+.info-float-btn:hover {
+    background: #2980b9;
+}
+
+/* Modal overlay */
+.info-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+/* Modal box */
+.info-modal {
+    background: white;
+    width: 90%;
+    max-width: 450px;
+    margin: 120px auto;
+    border-radius: 8px;
+    padding: 1.2rem 1.5rem;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { transform: translateY(-10px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+.info-modal h4 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.info-modal ul {
+    padding-left: 1.2rem;
+}
+
+.info-modal li {
+    margin-bottom: 0.5rem;
+}
+
+.close-modal-btn {
+    float: right;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #888;
+}
+
+.close-modal-btn:hover {
+    color: #000;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
 <div class="import-students-page">
+
+    <!-- Floating Info Button -->
+    <button class="info-float-btn" id="open-info-modal" title="Import instructions">
+        <i class="fa-solid fa-circle-info"></i>
+    </button>
 
     <h2 class="page-title">Import CTU Students</h2>
 
@@ -80,9 +185,14 @@
             <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
         </div>
 
-        <button type="submit" class="import-btn">
-            <i class="fa-solid fa-file-import"></i> Import Students
+        <button type="submit" class="import-btn" id="import-btn">
+            <i class="fa-solid fa-file-import"></i> 
+            <span class="btn-text">Import Students</span>
+            <span class="dots" style="display:none;">
+                <span></span><span></span><span></span>
+            </span>
         </button>
+        
     </form>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -161,6 +271,27 @@
 
     </div>
 
+    <!-- Info Modal -->
+    <div class="info-modal-overlay" id="info-modal-overlay">
+        <div class="info-modal">
+            <button class="close-modal-btn" id="close-info-modal">&times;</button>
+
+            <h4>Import Instructions</h4>
+            <ul>
+                <li>Import only Excel files (.xlsx or .xls).</li>
+                <li>Make sure the file has the exact header columns:</li>
+                <ul>
+                    <li><strong>StudentNo</strong></li>
+                    <li><strong>FirstName</strong></li>
+                    <li><strong>LastName</strong></li>
+                </ul>
+                <li>Existing students will be updated automatically.</li>
+                <li>Students not found in the new file will be removed from the system.</li>
+                <li>Use the official CTU master list only.</li>
+            </ul>
+        </div>
+    </div>
+
 </div>
 
 <!-- ================= AJAX Script with Loading Button ================= -->
@@ -206,6 +337,38 @@ $(document).ready(function(){
         loadStudents(page, query);
     });
 
+    // Info modal logic
+    $("#open-info-modal").on("click", function(){
+        $("#info-modal-overlay").fadeIn(200);
+    });
+
+    $("#close-info-modal, #info-modal-overlay").on("click", function(e){
+        if (e.target.id === "info-modal-overlay" || e.target.id === "close-info-modal") {
+            $("#info-modal-overlay").fadeOut(200);
+        }
+    });
+
+    // -------------------- Import Button Loading Animation --------------------
+    $(".import-form").on("submit", function(e){
+        let $btn = $("#import-btn");
+        let $text = $btn.find(".btn-text");
+        let $dots = $btn.find(".dots");
+
+        // Show loading animation
+        $btn.prop("disabled", true);
+        $text.text("Importing");
+        $dots.show();
+
+        // Allow the form to submit normally
+    });
+
+    // -------------------- Auto-hide flash messages --------------------
+    setTimeout(function(){
+        $(".flash-message").each(function(){
+            $(this).css("animation", "fadeOutFlash 0.5s forwards");
+            setTimeout(() => { $(this).remove(); }, 500);
+        });
+    }, 5000); // 30 seconds
 });
 </script>
 

@@ -299,12 +299,13 @@ def dashboard():
 
 import pandas as pd
 from werkzeug.utils import secure_filename
+from flask import request, redirect, url_for, flash, render_template
+from sqlalchemy import or_
+
+
 @admin_bp.route("/import_students", methods=["GET", "POST"])
 def import_students():
-    from flask import request
-    from sqlalchemy import or_
 
-    # ------------------ POST: Handle Excel Import ------------------
     if request.method == "POST":
         file = request.files.get("excel_file")
 
@@ -313,75 +314,82 @@ def import_students():
             return redirect(url_for("admin.import_students"))
 
         try:
-            import pandas as pd
+            # STEP 1: Read Excel (force StudentNo as string)
+            df = pd.read_excel(file, dtype={"StudentNo": str})
 
-            # Step 1: Read Excel without assigning a header
-            df = pd.read_excel(file, header=None)
-
-            # Step 2: Find the row that contains 'StudentNo' (case-insensitive)
-            header_row_idx = None
-            for i, row in df.iterrows():
-                if row.astype(str).str.contains("StudentNo", case=False).any():
-                    header_row_idx = i
-                    break
-
-            if header_row_idx is None:
-                flash("Cannot find header row containing 'StudentNo'.", "danger")
-                return redirect(url_for("admin.import_students"))
-
-            # Step 3: Assign that row as the header
-            df.columns = df.iloc[header_row_idx]
-            df = df[header_row_idx + 1 :]  # Take rows below header
-
-            # Step 4: Normalize column names
+            # STEP 2: Clean column names
             df.columns = (
                 df.columns
                 .astype(str)
                 .str.strip()
-                .str.replace("\u00a0", "", regex=False)  # remove non-breaking spaces
-                .str.replace("\t", "", regex=False)      # remove tabs
-                .str.replace(" ", "", regex=False)       # remove normal spaces
-                .str.lower()
+                .str.replace("\u00a0", "", regex=False)
+                .str.replace("\t", "", regex=False)
             )
 
-            # Step 5: Check required columns
-            required_columns = ["studentno", "lastname", "firstname"]
+            # STEP 3: Validate columns
+            required_columns = ["StudentNo", "LastName", "FirstName"]
             for col in required_columns:
                 if col not in df.columns:
                     flash(f"Missing required column: {col}", "danger")
                     return redirect(url_for("admin.import_students"))
 
-            # Step 6: Loop through rows and save to database
+            # STEP 4: Build set of StudentNos from Excel
+            excel_student_nos = set()
+
             imported = 0
-            skipped = 0
+            updated = 0
 
             for _, row in df.iterrows():
-                student_number = str(row["studentno"]).strip()
-                first_name = str(row["firstname"]).strip()
-                last_name = str(row["lastname"]).strip()
+                student_number = str(row["StudentNo"]).strip()
+
+                # Remove trailing .0 if Excel casted it
+                if student_number.endswith(".0"):
+                    student_number = student_number[:-2]
+
+                first_name = str(row["FirstName"]).strip()
+                last_name  = str(row["LastName"]).strip()
 
                 if not student_number or student_number.lower() == "nan":
-                    skipped += 1
                     continue
+
+                excel_student_nos.add(student_number)
 
                 exists = CtuStudent.query.filter_by(
                     student_number=student_number
                 ).first()
 
                 if exists:
-                    skipped += 1
-                    continue
+                    # Update existing record
+                    exists.first_name = first_name
+                    exists.last_name = last_name
+                    db.session.add(exists)
+                    updated += 1
+                else:
+                    # Insert new record
+                    s = CtuStudent(
+                        student_number=student_number,
+                        first_name=first_name,
+                        last_name=last_name,
+                    )
+                    db.session.add(s)
+                    imported += 1
 
-                s = CtuStudent(
-                    student_number=student_number,
-                    first_name=first_name,
-                    last_name=last_name,
-                )
-                db.session.add(s)
-                imported += 1
+            # STEP 5: Delete students NOT in Excel
+            db_students = CtuStudent.query.all()
+
+            deleted = 0
+            for s in db_students:
+                if s.student_number not in excel_student_nos:
+                    db.session.delete(s)
+                    deleted += 1
 
             db.session.commit()
-            flash(f"Imported {imported} students. Skipped {skipped}.", "success")
+
+            flash(
+                f"Sync complete. "
+                f"Imported {imported}, Updated {updated}, Deleted {deleted}.",
+                "success"
+            )
             return redirect(url_for("admin.import_students"))
 
         except Exception as e:
@@ -389,7 +397,7 @@ def import_students():
             flash(f"Error importing file: {str(e)}", "danger")
             return redirect(url_for("admin.import_students"))
 
-    # ------------------ GET: Display Students with Search & Pagination ------------------
+    # ------------------ GET ------------------
     page = request.args.get("page", 1, type=int)
     search_query = request.args.get("q", "", type=str)
 
@@ -406,9 +414,12 @@ def import_students():
         )
 
     students = students_query.order_by(CtuStudent.last_name.asc()) \
-        .paginate(page=page, per_page=10)  # 10 students per page
+        .paginate(page=page, per_page=20)
 
     return render_template("import_students.html", students=students)
+
+
+
 
 
 @admin_bp.route("/import_students_table")
