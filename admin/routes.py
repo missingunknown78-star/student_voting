@@ -3,7 +3,7 @@ from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
 from functools import wraps
-from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, AdminRole, CtuStudent
+from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, CtuStudent
 from student.models import Student, Vote
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -45,11 +45,8 @@ def admin_required(f):
             flash(f"Too many failed attempts. Try again in {int(cooldown - time.time())} seconds.", "admin-warning")
             return redirect(url_for('admin.login'))
 
-        # Get valid roles from the roles table
-        valid_roles = [r.name for r in AdminRole.query.all()]
-
-        # Check if user is authenticated and has a valid admin role
-        if not current_user.is_authenticated or getattr(current_user, 'role', None) not in valid_roles:
+        # Check if user is authenticated and has role 'Admin'
+        if not current_user.is_authenticated or getattr(current_user, 'role', None) != 'Admin':
             logging.warning(f"Unauthorized admin access attempt from IP: {ip}")
 
             # Increment failed attempts
@@ -74,12 +71,14 @@ def admin_required(f):
     return decorated_function
 
 
+
 # ------------------- Configuration ------------------- #
 MAX_ATTEMPTS = 3          # max allowed failed username/password attempts
 COOLDOWN_TIME = 300       # cooldown in seconds (5 minutes)
 MAX_2FA_ATTEMPTS = 5      # max allowed failed 2FA attempts
 TWO_FA_COOLDOWN = 300     # cooldown for 2FA in seconds
 
+# ------------------- Admin Login Route ------------------- #
 # ------------------- Admin Login Route ------------------- #
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -88,26 +87,24 @@ def login():
     cooldown = session.get(f'login_cooldown_{ip}', 0)
 
     # Redirect already logged-in admins to dashboard
-    if current_user.is_authenticated and getattr(current_user, 'role', None) in [r.name for r in AdminRole.query.all()]:
+    if current_user.is_authenticated and getattr(current_user, 'role', None) == 'Admin':
         return redirect(url_for('admin.dashboard'))
 
     # Check cooldown
     if time.time() < cooldown:
         remaining = int(cooldown - time.time())
         error = f'Too many failed attempts. Try again in {remaining} seconds.'
-        roles = AdminRole.query.all()
-        return render_template('admin_login.html', error=error, roles=roles)
+        return render_template('admin_login.html', error=error)
 
     error = None
 
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        role_selected = request.form.get('role')
 
         admin = Admin.query.filter_by(username=username).first()
 
-        if admin and bcrypt.check_password_hash(admin.password, password) and admin.role == role_selected:
+        if admin and bcrypt.check_password_hash(admin.password, password) and admin.role == 'Admin':
             # Reset failed attempts
             session[f'login_attempts_{ip}'] = 0
             session[f'login_cooldown_{ip}'] = 0
@@ -129,13 +126,12 @@ def login():
             if attempts >= MAX_ATTEMPTS:
                 session[f'login_cooldown_{ip}'] = time.time() + COOLDOWN_TIME
                 session[f'login_attempts_{ip}'] = 0
-                error = 'Invalid credentials or role. Admin login temporarily locked.'
+                error = 'Invalid credentials. Admin login temporarily locked.'
             else:
-                error = f'Invalid username, password, or role. Attempt {attempts} of {MAX_ATTEMPTS}.'
+                error = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
 
-    # Pass roles to template
-    roles = AdminRole.query.all()
-    return render_template('admin_login.html', error=error, roles=roles)
+    return render_template('admin_login.html', error=error)
+
 
 
 # ------------------- Admin 2FA Verification ------------------- #
@@ -443,7 +439,7 @@ def import_students_table():
         )
 
     students = students_query.order_by(CtuStudent.last_name.asc()) \
-        .paginate(page=page, per_page=10)
+        .paginate(page=page, per_page=20)
 
     return render_template("partials/_students_table.html", students=students)
 
@@ -1238,103 +1234,6 @@ def statistics():
 
 
 
-@admin_bp.route('/users', methods=['GET', 'POST'])
-@admin_required
-def users():
-    # Get all roles for dropdown
-    roles = AdminRole.query.order_by(AdminRole.name.asc()).all()
-
-    if request.method == 'POST':
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        username = request.form['username']
-        email = request.form['email']
-        role = request.form['role']
-        password = request.form['password']
-
-        # Validate role exists
-        if not AdminRole.query.filter_by(name=role).first():
-            flash('Invalid role selected.', 'danger')
-            return redirect(url_for('admin.users'))
-
-        # Check username/email duplication
-        if Admin.query.filter((Admin.email == email) | (Admin.username == username)).first():
-            flash('Email or username already exists.', 'danger')
-            return redirect(url_for('admin.users'))
-
-        new_user = Admin(
-            first_name=first_name,
-            last_name=last_name,
-            username=username,
-            email=email,
-            role=role,
-            password=generate_password_hash(password),
-            status='Active'
-        )
-
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Admin user created successfully.', 'success')
-        return redirect(url_for('admin.users'))
-
-    users = Admin.query.order_by(Admin.created_at.desc()).all()
-    return render_template('users.html', users=users, roles=roles)
-
-# ------------------- Add Admin Role Route ------------------- #
-@admin_bp.route('/users/add_role', methods=['POST'])
-@admin_required
-def add_role():
-    role_name = request.form.get('role_name', '').strip()
-
-    if not role_name:
-        flash("Role name cannot be empty.", "error")
-        return redirect(url_for('admin.users'))
-
-    # Check if role already exists
-    existing_role = AdminRole.query.filter_by(name=role_name).first()
-    if existing_role:
-        flash(f"Role '{role_name}' already exists.", "error")
-        return redirect(url_for('admin.users'))
-
-    # Create and save new role
-    new_role = AdminRole(name=role_name)
-    db.session.add(new_role)
-    db.session.commit()
-
-    flash(f"Role '{role_name}' added successfully!", "success")
-    return redirect(url_for('admin.users'))
-
-
-
-# Edit Role
-@admin_bp.route('/roles/edit/<int:role_id>', methods=['POST'])
-@admin_required
-def edit_role(role_id):
-    role = AdminRole.query.get_or_404(role_id)
-    new_name = request.form.get('role_name', '').strip()
-    if not new_name:
-        flash("Role name cannot be empty.", "error")
-        return redirect(url_for('admin.users'))
-
-    if AdminRole.query.filter(AdminRole.id != role_id, AdminRole.name == new_name).first():
-        flash(f"Role '{new_name}' already exists.", "error")
-        return redirect(url_for('admin.users'))
-
-    role.name = new_name
-    db.session.commit()
-    flash(f"Role updated to '{new_name}'!", "success")
-    return redirect(url_for('admin.users'))
-
-
-# Delete Role
-@admin_bp.route('/roles/delete/<int:role_id>', methods=['POST'])
-@admin_required
-def delete_role(role_id):
-    role = AdminRole.query.get_or_404(role_id)
-    db.session.delete(role)
-    db.session.commit()
-    flash(f"Role '{role.name}' deleted!", "success")
-    return redirect(url_for('admin.users'))
 
 # ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')

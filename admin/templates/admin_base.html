@@ -34,10 +34,10 @@
             </a>
 
             <!-- IMPORT STUDENTS -->
-<a href="{{ url_for('admin.import_students') }}"
-class="{% if request.endpoint == 'admin.import_students' %}active{% endif %}">
-<i class="fa-solid fa-file-import"></i> Import Students
-</a>
+            <a href="{{ url_for('admin.import_students') }}"
+               class="{% if request.endpoint == 'admin.import_students' %}active{% endif %}">
+               <i class="fa-solid fa-file-import"></i> Import Students
+            </a>
 
 
             <!-- STUDENTS / VOTERS -->
@@ -85,12 +85,6 @@ class="{% if request.endpoint == 'admin.import_students' %}active{% endif %}">
             <a href="{{ url_for('admin.statistics') }}"
                class="{% if request.endpoint == 'admin.statistics' %}active{% endif %}">
                <i class="fa-solid fa-chart-bar"></i> Statistics
-            </a>
-
-            <!-- ✅ USERS (NOW CONNECTED) -->
-            <a href="{{ url_for('admin.users') }}"
-               class="{% if request.endpoint == 'admin.users' %}active{% endif %}">
-               <i class="fa-solid fa-user-shield"></i> Users
             </a>
 
             <!-- AUDIT LOGS (still display-only) -->

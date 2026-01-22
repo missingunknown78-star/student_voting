@@ -22,13 +22,6 @@ class Admin(db.Model, UserMixin):
     totp_secret = db.Column(db.String(32), nullable=True)  # 32-char base32 key
 
 
-class AdminRole(db.Model):
-    __tablename__ = 'admin_roles'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
-
 
 
 # ------------------- POSITION -------------------

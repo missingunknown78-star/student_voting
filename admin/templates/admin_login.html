@@ -56,19 +56,6 @@
             >
             <label>Password</label>
         </div>
-
-        <!-- Role Selection Dropdown -->
-        <div class="input-group">
-            <select name="role" required>
-                <option value="">Select Role</option>
-                {% for r in roles %}
-                    <option value="{{ r.name }}" {% if request.form.get('role') == r.name %}selected{% endif %}>
-                        {{ r.name }}
-                    </option>
-                {% endfor %}
-            </select>
-       
-        </div>
         
         <!-- Submit Button -->
         <button type="submit" class="login-btn">Login</button>
@@ -84,21 +71,14 @@
 <!-- JS for Floating Labels -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const inputs = document.querySelectorAll('.input-group input, .input-group select');
+    const inputs = document.querySelectorAll('.input-group input');
 
     inputs.forEach(input => {
         // Float label on page load if value exists
         if(input.value.trim() !== '') input.classList.add('filled');
 
-        // Toggle 'filled' class when user types/selects
+        // Toggle 'filled' class when user types
         input.addEventListener('input', () => {
-            if(input.value.trim() !== '') {
-                input.classList.add('filled');
-            } else {
-                input.classList.remove('filled');
-            }
-        });
-        input.addEventListener('change', () => {
             if(input.value.trim() !== '') {
                 input.classList.add('filled');
             } else {

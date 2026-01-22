@@ -50,7 +50,6 @@
 }
 
 /* Flash messages */
-/* Flash messages */
 .flash-container {
     position: absolute; /* relative to parent container (.import-students-page) */
     top: 0; /* at the very top of main content */
@@ -74,9 +73,9 @@
     animation: fadeInFlash 0.5s forwards;
 }
 
-.flash-message.success { background-color: #27ae60; }
-.flash-message.danger { background-color: #e74c3c; }
-.flash-message.info { background-color: #3498db; }
+.flash-message.import-success { background-color: #27ae60; }
+.flash-message.import-danger { background-color: #e74c3c; }
+.flash-message.import-info { background-color: #3498db; }
 
 @keyframes fadeInFlash {
     from { opacity: 0; transform: translateY(-10px); }
@@ -195,13 +194,16 @@
         
     </form>
 
+    <!-- ================= Flash messages (page-specific) ================= -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-container">
           {% for category, message in messages %}
-            <div class="flash-message {{ category }}">
-              {{ message }}
-            </div>
+            {% if category.startswith('import-') %}
+                <div class="flash-message {{ category }}">
+                  {{ message }}
+                </div>
+            {% endif %}
           {% endfor %}
         </div>
       {% endif %}
@@ -237,7 +239,7 @@
                 <tbody>
                     {% for student in students.items %}
                     <tr>
-                        <td>{{ loop.index + (students.page - 1) * students.per_page }}</td>
+                        <td>{{ ((students.page - 1) * students.per_page) + loop.index }}</td>
                         <td>{{ student.student_number }}</td>
                         <td>{{ student.last_name }}</td>
                         <td>{{ student.first_name }}</td>
@@ -301,8 +303,8 @@ $(document).ready(function(){
 
     // Function to load table via AJAX
     function loadStudents(page=1, query="") {
-        let $btn = $("#search-btn");                // search button
-        let originalContent = $btn.html();          // save original content
+        let $btn = $("#search-btn");                
+        let originalContent = $btn.html();          
 
         // Show loading spinner
         $btn.prop("disabled", true);
@@ -316,7 +318,6 @@ $(document).ready(function(){
                 alert("Failed to load data. Please try again.");
             })
             .always(function(){
-                // Restore original button
                 $btn.prop("disabled", false);
                 $btn.html(originalContent);
             });
@@ -348,27 +349,24 @@ $(document).ready(function(){
         }
     });
 
-    // -------------------- Import Button Loading Animation --------------------
+    // Import Button Loading Animation
     $(".import-form").on("submit", function(e){
         let $btn = $("#import-btn");
         let $text = $btn.find(".btn-text");
         let $dots = $btn.find(".dots");
 
-        // Show loading animation
         $btn.prop("disabled", true);
         $text.text("Importing");
         $dots.show();
-
-        // Allow the form to submit normally
     });
 
-    // -------------------- Auto-hide flash messages --------------------
+    // Auto-hide page-specific flash messages
     setTimeout(function(){
         $(".flash-message").each(function(){
             $(this).css("animation", "fadeOutFlash 0.5s forwards");
             setTimeout(() => { $(this).remove(); }, 500);
         });
-    }, 5000); // 30 seconds
+    }, 5000); // 5 seconds
 });
 </script>
 
