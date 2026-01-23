@@ -35,25 +35,29 @@
 
             <!-- FIRST NAME -->
             <div class="input-group floating">
-                <input type="text" name="first_name" required placeholder=" ">
+                <input type="text" name="first_name" required placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('first_name', '') }}">
                 <label>First Name</label>
             </div>
 
             <!-- MIDDLE NAME -->
             <div class="input-group floating">
-                <input type="text" name="middle_name" placeholder=" ">
+                <input type="text" name="middle_name" placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('middle_name', '') }}">
                 <label>Middle Name</label>
             </div>
 
             <!-- LAST NAME -->
             <div class="input-group floating">
-                <input type="text" name="last_name" required placeholder=" ">
+                <input type="text" name="last_name" required placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('last_name', '') }}">
                 <label>Last Name</label>
             </div>
 
             <!-- SUFFIX -->
             <div class="input-group floating">
-                <input type="text" name="suffix" placeholder=" ">
+                <input type="text" name="suffix" placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('suffix', '') }}">
                 <label>Suffix</label>
             </div>
 
@@ -65,20 +69,26 @@
                     {% for dept, courses in courses_by_department.items() %}
                         <optgroup label="{{ dept }}">
                             {% for course in courses %}
-                                <option value="{{ course.id }}">{{ course.course_name }}</option>
+                                <option value="{{ course.id }}"
+                                    {% if session.get('registration_data', {}).get('course')|int == course.id %}selected{% endif %}>
+                                    {{ course.course_name }}
+                                </option>
                             {% endfor %}
                         </optgroup>
                     {% endfor %}
                 </select>
             </div>
 
-            <!-- ✅ YEAR LEVEL -->
+            <!-- YEAR LEVEL 1–4 -->
             <div class="input-group">
                 <label>Year Level</label>
                 <select name="year_level" required>
                     <option value="">-- Select Year Level --</option>
-                    {% for year in year_levels %}
-                        <option value="{{ year.id }}">{{ year.year_name }}</option>
+                    {% for year in range(1,5) %}
+                        <option value="{{ year }}"
+                            {% if session.get('registration_data', {}).get('year_level')|int == year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
@@ -86,18 +96,21 @@
             <!-- BIRTH DATE -->
             <div class="input-group">
                 <label>Birth Date</label>
-                <input type="date" name="birth_date" required>
+                <input type="date" name="birth_date" required
+                       value="{{ session.get('registration_data', {}).get('birth_date', '') }}">
             </div>
 
             <!-- EMAIL -->
             <div class="input-group floating">
-                <input type="email" name="email" required placeholder=" ">
+                <input type="email" name="email" required placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('email', '') }}">
                 <label>Email</label>
             </div>
 
             <!-- USERNAME -->
             <div class="input-group floating">
-                <input type="text" name="username" required placeholder=" ">
+                <input type="text" name="username" required placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('username', '') }}">
                 <label>Username</label>
             </div>
 
@@ -109,7 +122,8 @@
 
             <!-- ID NUMBER -->
             <div class="input-group floating">
-                <input type="text" name="id_number" required placeholder=" ">
+                <input type="text" name="id_number" required placeholder=" "
+                       value="{{ session.get('registration_data', {}).get('id_number', '') }}">
                 <label>ID Number</label>
             </div>
 

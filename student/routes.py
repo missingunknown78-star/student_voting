@@ -50,10 +50,15 @@ def get_origin_and_rp_id():
     rp_id = origin.split("://")[1].split(":")[0]
     return origin, rp_id
 
+
+from admin.models import CtuStudent  # the table where admin imported students
+from sqlalchemy import func  # needed for case-insensitive comparison
+
 # ==================== REGISTER ====================
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    from admin.models import Department, Course
+    from admin.models import Department, Course, CtuStudent  # added CtuStudent
+    from sqlalchemy import func  # needed for case-insensitive comparison
 
     # ✅ Clear form session only if not coming from failed POST
     if request.method == 'GET':
@@ -66,11 +71,13 @@ def register():
         session['error_fields'] = []
         session['keep_form'] = True   # ⭐ Keep form values if errors
 
-        email = request.form.get('email').strip()
-        id_number = request.form.get('id_number')
-        username = request.form.get('username')
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip()
+        id_number = request.form.get('id_number', '').strip()
+        username = request.form.get('username', '').strip()
 
-        # Check duplicates
+        # ---------------- DUPLICATE CHECKS ----------------
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
             flash("ID Number already registered!", "danger")
             session['error_fields'].append('id_number')
@@ -83,25 +90,46 @@ def register():
             flash("Username already taken!", "danger")
             session['error_fields'].append('username')
 
-        if session['error_fields']:
-            return redirect(url_for('student.register'))
+        # ---------------- YEAR LEVEL VALIDATION ----------------
+        year_level = request.form.get('year_level')
+        if not year_level or int(year_level) not in [1, 2, 3, 4]:
+            flash("Please select a valid year level.", "danger")
+            session['error_fields'].append('year_level')
+        else:
+            session['registration_data']['year_level'] = int(year_level)
+            session['registration_data']['year_level_id'] = int(year_level)
 
-        # ✅ Course validation
+        # ---------------- COURSE VALIDATION ----------------
         course_id = request.form.get('course')
         course_obj = Course.query.get(course_id)
         if not course_obj:
             flash("Selected course is invalid.", "danger")
             session['error_fields'].append('course')
+        else:
+            session['registration_data'].update({
+                "course": course_obj.course_name,
+                "course_id": course_obj.id,
+                "department_id": course_obj.department_id
+            })
+
+        # ---------------- CTU DATABASE VERIFICATION ----------------
+        ctu_match = CtuStudent.query.filter(
+            func.lower(CtuStudent.first_name) == first_name.lower(),
+            func.lower(CtuStudent.last_name) == last_name.lower(),
+            func.lower(CtuStudent.student_number) == id_number.lower(),
+            CtuStudent.is_active == True
+        ).first()
+
+        if not ctu_match:
+            flash("You are not registered in the CTU database. Please contact the admin.", "danger")
+            session['error_fields'].append('ctu_verification')
+
+        # ---------------- HANDLE ERRORS ----------------
+        if session['error_fields']:
             return redirect(url_for('student.register'))
 
+        # ---------------- OTP GENERATION ----------------
         registration_data = session['registration_data']
-        registration_data.update({
-            "course": course_obj.course_name,
-            "course_id": course_obj.id,
-            "department_id": course_obj.department_id
-        })
-
-        # Generate OTP
         otp = generate_otp()
         session['otp'] = otp
 
@@ -120,29 +148,24 @@ def register():
             """
             mail.send(msg)
 
-            # ✅ Do NOT clear session yet — keep registration_data for OTP verification & resend
+            # ✅ Keep session for OTP verification
             flash("OTP has been sent to your email.", "info")
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
             flash(f"Failed to send OTP email: {str(e)}", "danger")
 
-    # Load departments & courses
+    # ---------------- LOAD COURSES ----------------
     departments = Department.query.order_by(Department.name).all()
     courses_by_department = {
         dept.name: Course.query.filter_by(department_id=dept.id).all()
         for dept in departments
     }
 
-    year_levels = YearLevel.query.order_by(YearLevel.id).all()
-
     return render_template(
         'student_register.html',
-        courses_by_department=courses_by_department,
-        year_levels=year_levels
+        courses_by_department=courses_by_department
     )
-
-
 
 
 # ==================== AJAX VALIDATION ====================
@@ -186,6 +209,7 @@ def verify_otp():
                 course=data.get('course'),
                 course_id=data.get('course_id'),
                 department_id=data.get('department_id'),
+                year_level_id=data.get('year_level_id'),  # added year_level saving
                 birth_date=data.get('birth_date'),
                 id_number=data.get('id_number')
             )
@@ -238,7 +262,6 @@ def resend_otp():
         flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
 
     return redirect(url_for('student.verify_otp'))
-
 
 
 

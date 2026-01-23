@@ -51,9 +51,9 @@
 
 /* Flash messages */
 .flash-container {
-    position: absolute; /* relative to parent container (.import-students-page) */
-    top: 0; /* at the very top of main content */
-    left: 50%; /* center horizontally */
+    position: absolute; 
+    top: 0;
+    left: 50%; 
     transform: translateX(-50%);
     z-index: 2000;
     display: flex;
@@ -121,7 +121,7 @@
 .info-modal {
     background: white;
     width: 90%;
-    max-width: 450px;
+    max-width: 480px;
     margin: 120px auto;
     border-radius: 8px;
     padding: 1.2rem 1.5rem;
@@ -139,12 +139,18 @@
     color: #2c3e50;
 }
 
+.info-modal p {
+    margin: 0.4rem 0;
+}
+
 .info-modal ul {
-    padding-left: 1.2rem;
+    padding-left: 1.4rem;
+    margin: 0.4rem 0 0.8rem 0;
 }
 
 .info-modal li {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
 }
 
 .close-modal-btn {
@@ -159,11 +165,14 @@
 .close-modal-btn:hover {
     color: #000;
 }
+
+/* Status text */
+.status-registered { color: green; font-weight: bold; }
+.status-not-registered { color: red; font-weight: bold; }
 </style>
 {% endblock %}
 
 {% block content %}
-
 <div class="import-students-page">
 
     <!-- Floating Info Button -->
@@ -172,29 +181,24 @@
     </button>
 
     <h2 class="page-title">Import CTU Students</h2>
-
     <p class="page-description">
         Upload the official Excel file containing CTU Moalboal Campus students.
     </p>
 
-    <!-- ================= Excel Import Form ================= -->
+    <!-- Excel Import Form -->
     <form method="POST" enctype="multipart/form-data" class="import-form">
         <div class="form-group">
             <label for="excel_file"><strong>Select Excel file:</strong></label><br>
             <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
         </div>
-
         <button type="submit" class="import-btn" id="import-btn">
             <i class="fa-solid fa-file-import"></i> 
             <span class="btn-text">Import Students</span>
-            <span class="dots" style="display:none;">
-                <span></span><span></span><span></span>
-            </span>
+            <span class="dots" style="display:none;"><span></span><span></span><span></span></span>
         </button>
-        
     </form>
 
-    <!-- ================= Flash messages (page-specific) ================= -->
+    <!-- Flash messages (success / failure) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-container">
@@ -209,7 +213,7 @@
       {% endif %}
     {% endwith %}
 
-    <!-- ================= Display Students ================= -->
+    <!-- Students Table -->
     <div class="students-list">
         <h3 style="margin-top:2rem;">Imported Students</h3>
 
@@ -224,89 +228,41 @@
             </button>
         </form>
 
-        <!-- Table container for AJAX -->
         <div id="students-table-container">
-            {% if students.items %}
-            <table class="students-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Student No</th>
-                        <th>Last Name</th>
-                        <th>First Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in students.items %}
-                    <tr>
-                        <td>{{ ((students.page - 1) * students.per_page) + loop.index }}</td>
-                        <td>{{ student.student_number }}</td>
-                        <td>{{ student.last_name }}</td>
-                        <td>{{ student.first_name }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-
-            <!-- Pagination -->
-            <div class="pagination">
-                {% if students.has_prev %}
-                    <a href="#" class="page-link" data-page="{{ students.prev_num }}">&laquo; Prev</a>
-                {% endif %}
-
-                {% for p in students.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                    {% if p %}
-                        <a href="#" class="page-link {% if students.page == p %}active{% endif %}" data-page="{{ p }}">{{ p }}</a>
-                    {% else %}
-                        <span>…</span>
-                    {% endif %}
-                {% endfor %}
-
-                {% if students.has_next %}
-                    <a href="#" class="page-link" data-page="{{ students.next_num }}">Next &raquo;</a>
-                {% endif %}
-            </div>
-            {% else %}
-                <p>No students found.</p>
-            {% endif %}
+            {% include 'partials/_students_table.html' %}
         </div>
-
     </div>
 
-    <!-- Info Modal -->
+    <!-- Info Modal (IMPROVED CONTENT ONLY) -->
     <div class="info-modal-overlay" id="info-modal-overlay">
         <div class="info-modal">
             <button class="close-modal-btn" id="close-info-modal">&times;</button>
-
             <h4>Import Instructions</h4>
+
+            <p>Import only Excel files (.xlsx or .xls).</p>
+
+            <p><strong>Make sure the file has the exact header columns:</strong></p>
             <ul>
-                <li>Import only Excel files (.xlsx or .xls).</li>
-                <li>Make sure the file has the exact header columns:</li>
-                <ul>
-                    <li><strong>StudentNo</strong></li>
-                    <li><strong>FirstName</strong></li>
-                    <li><strong>LastName</strong></li>
-                </ul>
-                <li>Existing students will be updated automatically.</li>
-                <li>Students not found in the new file will be removed from the system.</li>
-                <li>Use the official CTU master list only.</li>
+                <li>StudentNo</li>
+                <li>FirstName</li>
+                <li>LastName</li>
             </ul>
+
+            <p>Existing students will be updated automatically.</p>
+            <p>Old students not found in the new file will be removed from the system.</p>
+            <p><strong>Use the official CTU master list only.</strong></p>
         </div>
     </div>
-
 </div>
 
-<!-- ================= AJAX Script with Loading Button ================= -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function(){
 
     // Function to load table via AJAX
     function loadStudents(page=1, query="") {
-        let $btn = $("#search-btn");                
-        let originalContent = $btn.html();          
-
-        // Show loading spinner
+        let $btn = $("#search-btn");
+        let originalContent = $btn.html();
         $btn.prop("disabled", true);
         $btn.html('<i class="fa-solid fa-spinner fa-spin"></i> Loading');
 
@@ -315,7 +271,7 @@ $(document).ready(function(){
                 $("#students-table-container").html(data);
             })
             .fail(function(){
-                alert("Failed to load data. Please try again.");
+                alert("Failed to load data. Please check server console.");
             })
             .always(function(){
                 $btn.prop("disabled", false);
@@ -339,12 +295,9 @@ $(document).ready(function(){
     });
 
     // Info modal logic
-    $("#open-info-modal").on("click", function(){
-        $("#info-modal-overlay").fadeIn(200);
-    });
-
+    $("#open-info-modal").on("click", function(){ $("#info-modal-overlay").fadeIn(200); });
     $("#close-info-modal, #info-modal-overlay").on("click", function(e){
-        if (e.target.id === "info-modal-overlay" || e.target.id === "close-info-modal") {
+        if(e.target.id === "close-info-modal" || e.target.id === "info-modal-overlay"){
             $("#info-modal-overlay").fadeOut(200);
         }
     });
@@ -354,13 +307,12 @@ $(document).ready(function(){
         let $btn = $("#import-btn");
         let $text = $btn.find(".btn-text");
         let $dots = $btn.find(".dots");
-
         $btn.prop("disabled", true);
         $text.text("Importing");
         $dots.show();
     });
 
-    // Auto-hide page-specific flash messages
+    // Auto-hide flash messages
     setTimeout(function(){
         $(".flash-message").each(function(){
             $(this).css("animation", "fadeOutFlash 0.5s forwards");
@@ -369,5 +321,4 @@ $(document).ready(function(){
     }, 5000); // 5 seconds
 });
 </script>
-
 {% endblock %}

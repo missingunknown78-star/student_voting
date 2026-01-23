@@ -415,34 +415,57 @@ def import_students():
     return render_template("import_students.html", students=students)
 
 
-
-
-
 @admin_bp.route("/import_students_table")
 def import_students_table():
-    from flask import request
+    from flask import request, render_template
     from sqlalchemy import or_
+    from admin.models import CtuStudent
 
-    page = request.args.get("page", 1, type=int)
-    search_query = request.args.get("q", "", type=str)
+    try:
+        page = request.args.get("page", 1, type=int)
+        search_query = request.args.get("q", "", type=str)
 
-    students_query = CtuStudent.query
+        students_query = CtuStudent.query
 
-    if search_query:
-        search = f"%{search_query.strip()}%"
-        students_query = students_query.filter(
-            or_(
-                CtuStudent.student_number.ilike(search),
-                CtuStudent.first_name.ilike(search),
-                CtuStudent.last_name.ilike(search)
+        if search_query:
+            search = f"%{search_query.strip()}%"
+            students_query = students_query.filter(
+                or_(
+                    CtuStudent.student_number.ilike(search),
+                    CtuStudent.first_name.ilike(search),
+                    CtuStudent.last_name.ilike(search)
+                )
             )
+
+        # Prevent paginate error if page > total_pages
+        students = students_query.order_by(CtuStudent.last_name.asc()) \
+                                 .paginate(page=page, per_page=20, error_out=False)
+
+        # Ensure string comparison
+        student_numbers = [str(s.student_number) for s in students.items]
+        if student_numbers:
+            registered_students = Student.query.filter(
+                Student.id_number.in_(student_numbers)
+            ).all()
+            registered_numbers = set(str(s.id_number) for s in registered_students)
+        else:
+            registered_numbers = set()
+
+        return render_template(
+            "partials/_students_table.html",
+            students=students,
+            registered_numbers=registered_numbers
         )
 
-    students = students_query.order_by(CtuStudent.last_name.asc()) \
-        .paginate(page=page, per_page=20)
-
-    return render_template("partials/_students_table.html", students=students)
-
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        # Return a simple HTML message instead of plain text, for AJAX
+        return render_template(
+            "partials/_students_table.html",
+            students=None,
+            registered_numbers=set()
+        )
 
 
 # ---------------------- MANAGE STUDENTS PAGE (ENHANCED) ---------------------- #
