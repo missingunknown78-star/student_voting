@@ -7,101 +7,106 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-/* ---------------- Pagination ---------------- */
+/* ================= FILTER BAR: FORCE ONE LINE ================= */
+.filter-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;              /* NEVER WRAP */
+    overflow-x: auto;               /* Allow scroll if needed */
+}
+
+.filter-bar select,
+.filter-bar input,
+.filter-bar button {
+    height: 36px;                   /* Match all heights */
+    font-size: 0.9rem;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+/* Fixed widths for predictable layout */
+#filterElection { width: 200px; }
+#filterType     { width: 170px; }
+#filterValue    { width: 180px; }
+#searchInput    { width: 200px; }   /* Adjusted to prevent wrapping */
+.export-btn     { min-width: 150px; }
+
+/* ---------------- PAGINATION ---------------- */
 .pagination {
-    margin-top: 15px;
+    margin-top: 20px;
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
 }
 .pagination button {
-    padding: 6px 10px;
-    border: 1px solid #ccc;
-    background-color: #f5f5f5;
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
     cursor: pointer;
     border-radius: 4px;
-    transition: background 0.2s;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    transition: all 0.2s ease;
+    min-width: 36px;
 }
 .pagination button:hover:not(:disabled) {
-    background-color: #e0e0e0;
+    background-color: #3498db;
+    color: white;
+    border-color: #3498db;
 }
 .pagination button:disabled {
-    background-color: #dcdcdc;
+    background-color: #3498db;
+    color: white;
+    border-color: #3498db;
     cursor: default;
 }
 
-/* ---------------- Status Badge ---------------- */
+/* ---------------- STATUS BADGES ---------------- */
 .status-badge {
     display: inline-block;
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 4px;
     font-size: 0.8rem;
     font-weight: 600;
+    min-width: 80px;
     text-align: center;
 }
+.status-badge.voted { background-color: #27ae60; color: #fff; }
+.status-badge.not-voted { background-color: #c0392b; color: #fff; }
 
-.status-badge.voted {
-    background-color: #27ae60;
-    color: #fff;
-}
-
-.status-badge.not-voted {
-    background-color: #c0392b;
-    color: #fff;
-}
-
-/* ---------------- Action Buttons ---------------- */
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.edit-btn,
-.delete-btn {
+/* ---------------- ACTION BUTTONS ---------------- */
+.action-buttons { display: flex; gap: 8px; }
+.edit-btn, .delete-btn {
     padding: 6px 12px;
     border: none;
-    border-radius: 0px;
+    border-radius: 4px;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 60px;
+    min-width: 36px;
     height: 32px;
+    transition: all 0.2s ease;
 }
-
-.edit-btn {
-    background-color: #2980b9;
-    color: #fff;
-}
-
-.edit-btn:hover {
-    background-color: #3498db;
-}
-
-.delete-btn {
-    background-color: #c0392b;
-    color: #fff;
-}
-
-.delete-btn:hover {
-    background-color: #e74c3c;
-}
+.edit-btn { background-color: #2980b9; color: #fff; }
+.edit-btn:hover { background-color: #3498db; transform: translateY(-1px); }
+.delete-btn { background-color: #c0392b; color: #fff; }
+.delete-btn:hover { background-color: #e74c3c; transform: translateY(-1px); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-header">
-    <h1>Manage Students</h1>
-    <p>View and manage registered students efficiently.</p>
-</div>
+<div class="manage-students-page">
 
-<div class="table-container">
+    <h1 class="page-title">Manage Students</h1>
+    <p class="page-description">View and manage registered students efficiently.</p>
 
     <!-- ================= FILTER BAR ================= -->
-    <div class="table-header">
-        <!-- Election Filter -->
+    <div class="filter-bar">
+
         <select id="filterElection">
             <option value="all">All Elections</option>
             {% for election in elections %}
@@ -119,30 +124,34 @@
 
         <input type="text" id="searchInput" placeholder="Search by ID, name, or course...">
 
-        <button class="add-btn" onclick="exportExcel()">
+        <button class="export-btn" onclick="exportExcel()">
             <i class="fa-solid fa-file-excel"></i> Export Excel
         </button>
+
     </div>
 
     <!-- ================= TABLE ================= -->
-    <table class="students-table">
-        <thead>
-            <tr>
-                <th>Student ID</th>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Course</th>
-                <th>Year Level</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="studentsBody">
-            <!-- AJAX CONTENT -->
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table class="students-table">
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Course</th>
+                    <th>Year Level</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="studentsBody">
+                <!-- AJAX CONTENT -->
+            </tbody>
+        </table>
 
-    <div class="pagination" id="pagination"></div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+
 </div>
 
 <!-- ================= SAFE JSON DATA ================= -->
@@ -151,19 +160,18 @@
 
 <!-- ================= JAVASCRIPT ================= -->
 <script>
+// === DATA ===
 const departments = JSON.parse(document.getElementById("departments-data").textContent);
 const courses = JSON.parse(document.getElementById("courses-data").textContent);
 
 let currentPage = 1;
-
 const filterElectionEl = document.getElementById("filterElection");
 const filterTypeEl = document.getElementById("filterType");
 const filterValueEl = document.getElementById("filterValue");
 
-/* ================= LOAD STUDENTS ================= */
+// === LOAD STUDENTS ===
 function loadStudents(page = 1) {
     currentPage = page;
-
     const search = document.getElementById("searchInput").value;
     const filterType = filterTypeEl.value;
     const filterValue = filterValueEl.value;
@@ -178,7 +186,6 @@ function loadStudents(page = 1) {
         .then(data => {
             const body = document.getElementById("studentsBody");
             const pagination = document.getElementById("pagination");
-
             body.innerHTML = "";
             pagination.innerHTML = "";
 
@@ -204,29 +211,22 @@ function loadStudents(page = 1) {
             });
 
             for (let i = 1; i <= data.total_pages; i++) {
-                pagination.innerHTML += `
-                    <button onclick="loadStudents(${i})" ${i === data.current_page ? "disabled" : ""}>
-                        ${i}
-                    </button>`;
+                pagination.innerHTML += `<button onclick="loadStudents(${i})" ${i === data.current_page ? "disabled" : ""}>${i}</button>`;
             }
         });
 }
 
-/* ================= FILTER DROPDOWN LOGIC ================= */
+// === FILTER LOGIC ===
 filterTypeEl.addEventListener("change", () => {
     filterValueEl.innerHTML = "";
-
     if (filterTypeEl.value === "all") {
         filterValueEl.style.display = "none";
         loadStudents(1);
         return;
     }
-
     filterValueEl.style.display = "inline-block";
-
     const data = filterTypeEl.value === "department" ? departments : courses;
     data.forEach(item => filterValueEl.innerHTML += `<option value="${item.id}">${item.name}</option>`);
-
     loadStudents(1);
 });
 
@@ -234,7 +234,7 @@ filterValueEl.addEventListener("change", () => loadStudents(1));
 document.getElementById("searchInput").addEventListener("keyup", () => loadStudents(1));
 filterElectionEl.addEventListener("change", () => loadStudents(1));
 
-/* ================= EXPORT ================= */
+// === EXPORT ===
 function exportExcel() {
     const filterType = filterTypeEl.value;
     const filterValue = filterValueEl.value;
@@ -248,7 +248,7 @@ function exportExcel() {
     window.location.href = url;
 }
 
-/* ================= INIT ================= */
+// === INIT ===
 document.addEventListener("DOMContentLoaded", () => loadStudents());
 </script>
 {% endblock %}

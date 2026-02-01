@@ -306,7 +306,7 @@ def import_students():
         file = request.files.get("excel_file")
 
         if not file or file.filename == "":
-            flash("No file selected.", "danger")
+            flash("No file selected.", "import-danger")
             return redirect(url_for("admin.import_students"))
 
         try:
@@ -326,7 +326,7 @@ def import_students():
             required_columns = ["StudentNo", "LastName", "FirstName"]
             for col in required_columns:
                 if col not in df.columns:
-                    flash(f"Missing required column: {col}", "danger")
+                    flash(f"Missing required column: {col}", "import-danger")
                     return redirect(url_for("admin.import_students"))
 
             # STEP 4: Build set of StudentNos from Excel
@@ -384,13 +384,13 @@ def import_students():
             flash(
                 f"Sync complete. "
                 f"Imported {imported}, Updated {updated}, Deleted {deleted}.",
-                "success"
+                "import-success"
             )
             return redirect(url_for("admin.import_students"))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Error importing file: {str(e)}", "danger")
+            flash(f"Error importing file: {str(e)}", "import-danger")
             return redirect(url_for("admin.import_students"))
 
     # ------------------ GET ------------------
@@ -410,11 +410,19 @@ def import_students():
         )
 
     students = students_query.order_by(CtuStudent.last_name.asc()) \
-        .paginate(page=page, per_page=20)
+        .paginate(page=page, per_page=20, error_out=False)
 
-    return render_template("import_students.html", students=students)
+    # ------------------ TOTAL STUDENTS ------------------
+    total_students = CtuStudent.query.count()  # Always get current count
+
+    return render_template(
+        "import_students.html",
+        students=students,
+        total_students=total_students
+    )
 
 
+# import_students_table function remains EXACTLY THE SAME - no changes needed
 @admin_bp.route("/import_students_table")
 def import_students_table():
     from flask import request, render_template
@@ -491,6 +499,7 @@ def manage_students():
         elections=elections_data
     )
 
+from sqlalchemy import or_, func
 
 # ---------------------- AJAX STUDENT DATA (with voting status) ---------------------- #
 @admin_bp.route('/students/data')
@@ -519,9 +528,10 @@ def students_data():
                 Student.id_number.ilike(f'%{search}%'),
                 Student.first_name.ilike(f'%{search}%'),
                 Student.last_name.ilike(f'%{search}%'),
-                Student.course.ilike(f'%{search}%')
+                func.coalesce(Student.course, '').ilike(f'%{search}%')
             )
         )
+
 
     # Pagination
     pagination = query.order_by(Student.last_name).paginate(
@@ -544,7 +554,7 @@ def students_data():
             "first_name": s.first_name,
             "last_name": s.last_name,
             "course": s.course,
-            "year_level": getattr(s, 'year_level', ''),
+            "year_level": s.year_level_id or "",
             "has_voted": has_voted  # NEW: send voting status to frontend
         })
 
@@ -553,7 +563,6 @@ def students_data():
         "total_pages": pagination.pages,
         "current_page": pagination.page
     })
-
 
 
 @admin_bp.route('/students/export-excel')
@@ -601,6 +610,7 @@ def export_students_excel():
 
     max_col = 6  # A–F
 
+    # ------------------- HEADER ROWS ------------------- #
     # Row 1: Election Title
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
     ws.cell(row=1, column=1, value=f"{election.title if election else 'All Elections'}")
@@ -608,16 +618,30 @@ def export_students_excel():
     ws.cell(row=1, column=1).fill = mustard_fill
     ws.cell(row=1, column=1).alignment = center_alignment
 
-    # Row 2: Department
-    department_text = election.department if election and election.department else '-'
+    # Row 2: Department / All
+    department_text = "-"
+    if filter_type == "department" and filter_id:
+        dept_obj = Department.query.get(int(filter_id))
+        if dept_obj:
+            department_text = dept_obj.name
+    elif election and election.department:
+        department_text = election.department
+
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
     ws.cell(row=2, column=1, value=f"{department_text}")
     ws.cell(row=2, column=1).font = header_font
     ws.cell(row=2, column=1).fill = mustard_fill
     ws.cell(row=2, column=1).alignment = center_alignment
 
-    # Row 3: Course
-    course_text = election.course_rel.course_name if election and election.course_rel else '-'
+    # Row 3: Course / All
+    course_text = "-"
+    if filter_type == "course" and filter_id:
+        course_obj = Course.query.get(int(filter_id))
+        if course_obj:
+            course_text = course_obj.course_name
+    elif election and election.course_rel:
+        course_text = election.course_rel.course_name
+
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
     ws.cell(row=3, column=1, value=f"{course_text}")
     ws.cell(row=3, column=1).font = header_font
@@ -644,7 +668,7 @@ def export_students_excel():
             s.first_name,
             s.last_name,
             s.course,
-            getattr(s, 'year_level', ''),
+            s.year_level.year_name if s.year_level else "",
             status_text
         ]
 

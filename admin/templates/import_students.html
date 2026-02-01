@@ -4,172 +4,6 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/import_students.css') }}">
-<style>
-/* ------------------ Table Styling ------------------ */
-.students-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 2rem;
-}
-
-.students-table th,
-.students-table td {
-    border: 1px solid #ddd;
-    padding: 0.6rem 1rem;
-    text-align: left;
-}
-
-.students-table th {
-    background-color: #3498db;
-    color: white;
-}
-
-.pagination {
-    margin-top: 1rem;
-    display: flex;
-    gap: 0.3rem;
-    flex-wrap: wrap;
-}
-
-.pagination a {
-    padding: 0.4rem 0.8rem;
-    background: #f1f1f1;
-    border-radius: 4px;
-    text-decoration: none;
-    color: #333;
-}
-
-.pagination a.active {
-    background: #3498db;
-    color: white;
-}
-
-.pagination a:hover {
-    background: #2980b9;
-    color: white;
-}
-
-/* Flash messages */
-.flash-container {
-    position: absolute; 
-    top: 0;
-    left: 50%; 
-    transform: translateX(-50%);
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    width: fit-content;
-    max-width: 90%;
-    text-align: center;
-}
-
-.flash-message {
-    padding: 0.8rem 1.2rem;
-    border-radius: 4px;
-    color: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    opacity: 0;
-    animation: fadeInFlash 0.5s forwards;
-}
-
-.flash-message.import-success { background-color: #27ae60; }
-.flash-message.import-danger { background-color: #e74c3c; }
-.flash-message.import-info { background-color: #3498db; }
-
-@keyframes fadeInFlash {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeOutFlash {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-10px); }
-}
-
-/* Floating info button */
-.info-float-btn {
-    position: fixed;
-    top: 90px;
-    right: 25px;
-    width: 45px;
-    height: 45px;
-    background: #3498db;
-    color: white;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    z-index: 999;
-}
-
-.info-float-btn:hover {
-    background: #2980b9;
-}
-
-/* Modal overlay */
-.info-modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1000;
-}
-
-/* Modal box */
-.info-modal {
-    background: white;
-    width: 90%;
-    max-width: 480px;
-    margin: 120px auto;
-    border-radius: 8px;
-    padding: 1.2rem 1.5rem;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
-    animation: fadeIn 0.2s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { transform: translateY(-10px); opacity: 0; }
-    to   { transform: translateY(0); opacity: 1; }
-}
-
-.info-modal h4 {
-    margin-top: 0;
-    color: #2c3e50;
-}
-
-.info-modal p {
-    margin: 0.4rem 0;
-}
-
-.info-modal ul {
-    padding-left: 1.4rem;
-    margin: 0.4rem 0 0.8rem 0;
-}
-
-.info-modal li {
-    margin-bottom: 0.4rem;
-    font-weight: 500;
-}
-
-.close-modal-btn {
-    float: right;
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    color: #888;
-}
-
-.close-modal-btn:hover {
-    color: #000;
-}
-
-/* Status text */
-.status-registered { color: green; font-weight: bold; }
-.status-not-registered { color: red; font-weight: bold; }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -185,20 +19,35 @@
         Upload the official Excel file containing CTU Moalboal Campus students.
     </p>
 
-    <!-- Excel Import Form -->
-    <form method="POST" enctype="multipart/form-data" class="import-form">
-        <div class="form-group">
-            <label for="excel_file"><strong>Select Excel file:</strong></label><br>
-            <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
-        </div>
-        <button type="submit" class="import-btn" id="import-btn">
-            <i class="fa-solid fa-file-import"></i> 
-            <span class="btn-text">Import Students</span>
-            <span class="dots" style="display:none;"><span></span><span></span><span></span></span>
-        </button>
-    </form>
+    <!-- ================= FORM + CARD FLEX CONTAINER ================= -->
+    <div class="import-card-container">
 
-    <!-- Flash messages (success / failure) -->
+        <!-- Excel Import Form -->
+        <div class="import-form-wrapper">
+            <form method="POST" enctype="multipart/form-data" class="import-form">
+                <div class="form-group">
+                    <label for="excel_file"><strong>Select Excel file:</strong></label>
+                    <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
+                </div>
+                <button type="submit" class="import-btn" id="import-btn">
+                    <i class="fa-solid fa-file-import"></i> 
+                    <span class="btn-text">Import Students</span>
+                    <span class="dots" style="display:none;"><span></span><span></span><span></span></span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Total Students Card -->
+        <div class="total-students-card-wrapper">
+            <div class="total-students-card">
+                <h4>Total Students</h4>
+                <span class="total-number">{{ total_students or 0 }}</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-container">
@@ -233,7 +82,7 @@
         </div>
     </div>
 
-    <!-- Info Modal (IMPROVED CONTENT ONLY) -->
+    <!-- Info Modal -->
     <div class="info-modal-overlay" id="info-modal-overlay">
         <div class="info-modal">
             <button class="close-modal-btn" id="close-info-modal">&times;</button>
@@ -258,8 +107,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function(){
-
-    // Function to load table via AJAX
+    // AJAX search and pagination
     function loadStudents(page=1, query="") {
         let $btn = $("#search-btn");
         let originalContent = $btn.html();
@@ -279,19 +127,15 @@ $(document).ready(function(){
             });
     }
 
-    // Search form submission
     $("#search-form").on("submit", function(e){
         e.preventDefault();
-        let query = $("#search-input").val();
-        loadStudents(1, query);
+        loadStudents(1, $("#search-input").val());
     });
 
-    // Pagination click
     $("#students-table-container").on("click", ".page-link", function(e){
         e.preventDefault();
         let page = $(this).data("page");
-        let query = $("#search-input").val();
-        loadStudents(page, query);
+        loadStudents(page, $("#search-input").val());
     });
 
     // Info modal logic
@@ -302,7 +146,7 @@ $(document).ready(function(){
         }
     });
 
-    // Import Button Loading Animation
+    // Import button animation
     $(".import-form").on("submit", function(e){
         let $btn = $("#import-btn");
         let $text = $btn.find(".btn-text");
@@ -318,7 +162,7 @@ $(document).ready(function(){
             $(this).css("animation", "fadeOutFlash 0.5s forwards");
             setTimeout(() => { $(this).remove(); }, 500);
         });
-    }, 5000); // 5 seconds
+    }, 5000);
 });
 </script>
 {% endblock %}
