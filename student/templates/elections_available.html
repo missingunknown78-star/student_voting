@@ -1,79 +1,605 @@
 {% extends "base.html" %}
+{% set active_page = 'elections_available' %}
 
 {% block title %}Available Elections{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/elections_available.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+.department-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(67, 97, 238, 0.1);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: var(--primary);
+    margin: 12px 0;
+    font-weight: 500;
+}
+
+.badge-icon {
+    font-size: 0.9rem;
+}
+
+.department-badge.ssg {
+    background: rgba(247, 37, 133, 0.1);
+    color: var(--danger);
+}
+
+.department-badge.department {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary);
+}
+
+.no-elections-content {
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.no-elections-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.no-elections-content h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: var(--dark);
+}
+
+.no-elections-content p {
+    color: var(--gray);
+    margin-bottom: 20px;
+}
+
+.info-card {
+    background: #f8f9fa;
+    text-align: center;
+}
+
+.info-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+}
+
+.info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.election-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.election-type-badge.ssg {
+    background: rgba(247, 37, 133, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(247, 37, 133, 0.3);
+}
+
+.election-type-badge.department {
+    background: rgba(76, 201, 240, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(76, 201, 240, 0.3);
+}
+
+.course-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: rgba(76, 201, 240, 0.1);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    color: var(--success);
+    margin: 8px 0 12px 0;
+    font-weight: 500;
+}
+
+.upcoming-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-top: 15px;
+}
+
+.notice-icon {
+    font-size: 1rem;
+}
+
+.notice-text {
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.voting-progress {
+    margin-top: 15px;
+}
+
+.progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    color: var(--gray);
+}
+
+.progress-bar-container {
+    height: 8px;
+    background: var(--gray-light);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    width: 0%; /* Will be set by inline style */
+}
+
+.voter-count {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+
+.vote-count {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.total-voters {
+    font-weight: 500;
+}
+
+/* Voted Button Styles */
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    cursor: default;
+}
+
+.btn-success:disabled {
+    opacity: 0.9;
+    cursor: default;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    transform: none;
+}
+
+.voted-message {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.voted-message .detail-icon {
+    font-size: 0.9rem;
+}
+
+/* Hide voting instructions when student has voted */
+.voting-instructions {
+    transition: all 0.3s ease;
+}
+
+/* Flash message auto-dismiss styles */
+.alert-auto-dismiss {
+    animation: slideIn 0.3s ease, fadeOut 0.5s ease 4.5s forwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.alert-auto-dismiss::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(0,0,0,0.1);
+    animation: progressBar 5s linear forwards;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+        display: none;
+    }
+}
+
+@keyframes progressBar {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+/* Timestamps styles */
+.timestamps-container {
+    background: rgba(76, 201, 240, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+    border-left: 3px solid var(--success);
+}
+
+.timestamp-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+}
+
+.timestamp-item:last-child {
+    margin-bottom: 0;
+}
+
+.timestamp-label {
+    color: var(--gray);
+    font-weight: 500;
+}
+
+.timestamp-value {
+    color: var(--dark);
+    font-family: monospace;
+    font-weight: 500;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <h2 class="page-title">Available Elections</h2>
-
-    {% if elections %}
-        <div class="election-grid">
-        {% for election in elections %}
-            <div class="election-card" style="--card-index: {{ loop.index0 }}">
-
-                
-                <!-- Election Title -->
-                <h3 class="election-title">{{ election.title }}</h3>
-                
-                <!-- Department Badge -->
-                <div class="department-badge">
-                    <i class="fas fa-building"></i> {{ election.department or "All / SSG" }}
+<div class="vote-container">
+    <!-- Auto-dismiss flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-auto-dismiss">
+                    {{ message }}
                 </div>
-                
-                <!-- Card Content -->
-                <div class="election-content">
-                    <!-- Description -->
-                    <p><strong><i class="fas fa-info-circle"></i> Description:</strong> 
-                        {{ election.description or "No description available" }}</p>
-                
-                    
-                    <!-- Details -->
-                    <p><strong><i class="fas fa-calendar-start"></i> Starts:</strong> {{ election.start_date.strftime('%b %d, %Y %I:%M %p') }}</p>
-                    <p><strong><i class="fas fa-calendar-times"></i> Ends:</strong> {{ election.end_date.strftime('%b %d, %Y %I:%M %p') }}</p>
-                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-                <!-- Countdown -->
-                <div class="time-indicator countdown"
-                    data-start="{{ election.start_date.isoformat() }}"
-                    data-end="{{ election.end_date.isoformat() }}">
-                    <i class="fas fa-clock time-icon"></i>
-                    <span class="countdown-text">Loading countdown...</span>
-                </div>
-
-                <!-- Vote button -->
-                <a href="{{ url_for('student.vote_page', election_id=election.id) }}" class="vote-button">
-                    <span class="button-icon"><i class="fas fa-check"></i></span>
-                    <span>Cast Your Vote</span>
-                </a>
+    <!-- Voting Status Banner -->
+    <div class="status-banner">
+        <div class="banner-content">
+            <div class="banner-icon">🗳️</div>
+            <div class="banner-text">
+                <h3>Your Vote Matters!</h3>
+                <p>Make your voice heard in the Student Government Elections</p>
             </div>
-        {% endfor %}
         </div>
+    </div>
+
+    {% if election_data %}
+        {% for data in election_data %}
+        {% set election = data.election %}
+        <!-- Active Election Card -->
+        <div class="card election-card active" data-election-id="{{ election.id }}">
+            <div class="election-header">
+                <div class="election-status">
+                    <span class="badge badge-active">LIVE NOW</span>
+                    <span class="election-date">
+                        {{ election.start_date.strftime('%b %d') }} - {{ election.end_date.strftime('%b %d, %Y') }}
+                    </span>
+                </div>
+                <div class="election-title-section">
+                    <h2 class="election-title">
+                        {{ election.title }}
+                        <span class="election-type-badge {{ 'ssg' if election.department_id is none else 'department' }}">
+                            {{ election.election_type }}
+                        </span>
+                    </h2>
+                    <p class="election-subtitle">{{ election.description or 'Elect your student leaders' }}</p>
+                </div>
+            </div>
+
+            <!-- Department Badge -->
+            <div class="department-badge {{ 'ssg' if election.department_id is none else 'department' }}">
+                <span class="badge-icon">
+                    {% if election.department_id is none %}
+                        🌟
+                    {% else %}
+                        🏛️
+                    {% endif %}
+                </span>
+                {% if election.department_id is none %}
+                    All Departments / SSG Election
+                {% else %}
+                    {% if election.department_rel %}
+                        {{ election.department_rel.name }}
+                    {% elif election.department %}
+                        {{ election.department }}
+                    {% else %}
+                        Department: {{ election.department_id }}
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Course Information (if applicable) -->
+            {% if election.course_rel %}
+            <div class="course-badge">
+                <span class="badge-icon">📚</span>
+                Course: {{ election.course_rel.course_name }} ({{ election.course_rel.course_code }})
+            </div>
+            {% endif %}
+
+            <!-- Voting Progress -->
+            <div class="election-progress">
+                <div class="progress-info">
+                    <span class="progress-label">Voting Progress</span>
+                    <span class="progress-percent">{{ data.vote_percentage }}%</span>
+                </div>
+                
+                <!-- Voting Progress Bar -->
+                <div class="voting-progress">
+                    <div class="progress-stats">
+                        <span>Voters: {{ data.unique_voters }}</span>
+                        <span>{{ data.vote_percentage }}% Complete</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-fill" 
+                             id="vote-progress-{{ election.id }}"
+                             style="width: {{ data.vote_percentage }}%">
+                        </div>
+                    </div>
+                    <div class="voter-count">
+                        <span class="vote-count">{{ data.unique_voters }} students voted</span>
+                        <span class="total-voters">{{ data.eligible_voters }} eligible voters</span>
+                    </div>
+                </div>
+                
+                <!-- Countdown Timer -->
+                <div class="time-indicator countdown" 
+                     data-start="{{ election.start_date.isoformat() }}"
+                     data-end="{{ election.end_date.isoformat() }}"
+                     data-id="{{ election.id }}">
+                    <span class="detail-icon">⏰</span>
+                    <div class="detail-content">
+                        <span class="detail-label">Time Remaining</span>
+                        <span class="detail-value countdown-text" id="countdown-{{ election.id }}">
+                            Loading countdown...
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vote Actions -->
+            <div class="vote-actions">
+                {% if data.student_has_voted %}
+                    <!-- Student has already voted -->
+                    <button class="btn btn-success vote-button" disabled style="width: 100%;">
+                        <span class="btn-icon">✅</span>
+                        Voted
+                    </button>
+                    <div class="voted-message">
+                        <span class="detail-icon">✓</span> You have already voted in this election
+                    </div>
+                    
+                    <!-- TIMESTAMPS SECTION - ONLY SHOW IF STUDENT HAS VOTED -->
+                    {% if data.vote_timestamps %}
+                    <div class="timestamps-container">
+                        <div class="timestamp-item">
+                            <span class="timestamp-label">Time Submitted:</span>
+                            <span class="timestamp-value">
+                                {% if data.vote_timestamps.cast_time %}
+                                    {% set cast_time = data.vote_timestamps.cast_time %}
+                                    {% if cast_time.microsecond > 0 %}
+                                        {{ cast_time.replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% else %}
+                                        {{ cast_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="timestamp-item">
+                            <span class="timestamp-label">Vote Recorded:</span>
+                            <span class="timestamp-value">
+                                {% if data.vote_timestamps.recorded_time %}
+                                    {% set recorded_time = data.vote_timestamps.recorded_time %}
+                                    {% if recorded_time.microsecond > 0 %}
+                                        {{ recorded_time.replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% else %}
+                                        {{ recorded_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                {% else %}
+                    <!-- Student hasn't voted yet -->
+                    <a href="{{ url_for('student.vote_page', election_id=election.id) }}" 
+                       class="btn btn-primary vote-button vote-btn" 
+                       id="vote-btn-{{ election.id }}">
+                        <span class="btn-icon">✓</span>
+                        Vote Now
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Voting Instructions - ONLY SHOW IF STUDENT HASN'T VOTED -->
+            {% if not data.student_has_voted %}
+            <div class="voting-instructions">
+                <h4 class="instructions-title">📝 How to Vote:</h4>
+                <ol class="instructions-list">
+                    <li>Review all candidates</li>
+                    <li>Select your preferred candidate for each position</li>
+                    <li>Confirm your selections</li>
+                    <li>Submit your ballot</li>
+                    <li>Receive your receipt</li>
+                </ol>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- No Upcoming/Past Elections Message -->
+        {% if election_data|length == 1 %}
+        <div class="card info-card">
+            <div class="info-content">
+                <span class="info-icon">ℹ️</span>
+                <p>This is the only active election at the moment. Check back later for more elections.</p>
+            </div>
+        </div>
+        {% endif %}
+
     {% else %}
-        <div class="no-elections">
-            <i class="fas fa-calendar-times fa-3x"></i>
-            <h3>No Elections Available</h3>
-            <p>There are currently no active elections. Please check back later!</p>
+        <!-- No Elections Available -->
+        <div class="card election-card">
+            <div class="no-elections-content">
+                <div class="no-elections-icon">📅</div>
+                <h3>No Elections Available</h3>
+                <p>There are currently no active elections for you to vote in. Please check back later!</p>
+                <div class="upcoming-notice">
+                    <span class="notice-icon">⏳</span>
+                    <span class="notice-text">New elections will appear here when available</span>
+                </div>
+            </div>
         </div>
     {% endif %}
+
+    <!-- Voting Rules -->
+    <div class="card rules-card">
+        <h3 class="rules-title">⚖️ Voting Rules & Guidelines</h3>
+        
+        <div class="rules-list">
+            <div class="rule-item">
+                <span class="rule-number">1</span>
+                <p class="rule-text">One vote per position per voter</p>
+            </div>
+            <div class="rule-item">
+                <span class="rule-number">2</span>
+                <p class="rule-text">Votes are anonymous and confidential</p>
+            </div>
+            <div class="rule-item">
+                <span class="rule-number">3</span>
+                <p class="rule-text">No vote buying or coercion allowed</p>
+            </div>
+            <div class="rule-item">
+                <span class="rule-number">4</span>
+                <p class="rule-text">Results will be published after voting ends</p>
+            </div>
+            <div class="rule-item">
+                <span class="rule-number">5</span>
+                <p class="rule-text">You cannot change your vote after submission</p>
+            </div>
+        </div>
+        
+        <div class="rules-notice">
+            <span class="notice-icon">ℹ️</span>
+            <span class="notice-text">Violations may result in disqualification</span>
+        </div>
+    </div>
+
+    <!-- Need Help Section -->
+    <div class="card help-card">
+        <div class="help-header">
+            <span class="help-icon">❓</span>
+            <h3>Need Help Voting?</h3>
+        </div>
+        
+        <div class="help-options">
+            <a href="{{ url_for('student.help_page') }}" class="help-option">
+                <span class="option-icon">📚</span>
+                <span class="option-text">FAQ Guide</span>
+            </a>
+            <a href="{{ url_for('student.guidelines') }}" class="help-option">
+                <span class="option-icon">📖</span>
+                <span class="option-text">Guidelines</span>
+            </a>
+            <a href="{{ url_for('student.student_announcements') }}" class="help-option">
+                <span class="option-icon">📢</span>
+                <span class="option-text">Announcements</span>
+            </a>
+        </div>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Ripple effect for vote buttons
-    const voteButtons = document.querySelectorAll('.vote-button:not([disabled])');
-    voteButtons.forEach(button => {
+    // Auto-dismiss flash messages after 5 seconds
+    const flashMessages = document.querySelectorAll('.alert-auto-dismiss');
+    flashMessages.forEach(message => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            message.style.opacity = '0';
+            message.style.transform = 'translateY(-10px)';
+            
+            // Remove from DOM after fade out
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.parentNode.removeChild(message);
+                }
+            }, 500);
+        }, 5000); // 5 seconds
+    });
+
+    // Ripple effect for vote buttons (only for Vote Now buttons)
+    const voteNowButtons = document.querySelectorAll('.vote-button:not(.btn-success)');
+    voteNowButtons.forEach(button => {
         button.addEventListener('click', function(e) {
+            // Only add ripple effect to "Vote Now" buttons, not "Voted" buttons
+            if (this.classList.contains('btn-success') || this.disabled) return;
+            
+            // Create ripple element
             const ripple = document.createElement('span');
             const rect = this.getBoundingClientRect();
             const size = Math.max(rect.width, rect.height);
             const x = e.clientX - rect.left - size / 2;
             const y = e.clientY - rect.top - size / 2;
             
+            // Style the ripple
             ripple.style.cssText = `
                 position: absolute;
                 border-radius: 50%;
@@ -87,53 +613,154 @@ document.addEventListener('DOMContentLoaded', function() {
                 pointer-events: none;
             `;
             
+            // Add ripple to button
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
             this.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                if (ripple.parentNode === this) {
+                    this.removeChild(ripple);
+                }
+            }, 600);
         });
     });
 
+    // Update countdowns for each election
     function updateCountdowns() {
         document.querySelectorAll('.countdown').forEach(el => {
             const start = new Date(el.dataset.start);
             const end = new Date(el.dataset.end);
             const now = new Date();
+            const electionId = el.dataset.id;
+            const display = document.getElementById(`countdown-${electionId}`);
+            const voteBtn = document.getElementById(`vote-btn-${electionId}`);
+            const electionCard = el.closest('.election-card');
+            const votingInstructions = electionCard.querySelector('.voting-instructions');
 
-            const display = el.querySelector('.countdown-text');
+            if (!display) return;
 
             if (now < start) {
+                // Election hasn't started yet
                 display.textContent = "Starts in " + formatTime(start - now);
-            }
-            else if (now >= start && now <= end) {
+                
+                if (voteBtn) {
+                    voteBtn.style.pointerEvents = "none";
+                    voteBtn.style.opacity = "0.6";
+                    voteBtn.innerHTML = '<span class="btn-icon">⏳</span> Election Not Started';
+                    voteBtn.classList.remove('btn-primary');
+                    voteBtn.classList.add('btn-secondary');
+                }
+                
+                // Hide voting instructions if election hasn't started
+                if (votingInstructions) {
+                    votingInstructions.style.display = 'none';
+                }
+            } else if (now >= start && now <= end) {
+                // Election is active
                 display.textContent = "Ends in " + formatTime(end - now);
-            }
-            else {
+                
+                if (voteBtn) {
+                    voteBtn.style.pointerEvents = "auto";
+                    voteBtn.style.opacity = "1";
+                    voteBtn.innerHTML = '<span class="btn-icon">✓</span> Vote Now';
+                    voteBtn.classList.add('btn-primary');
+                    voteBtn.classList.remove('btn-secondary');
+                }
+                
+                // Show voting instructions (they're already conditionally shown in template)
+            } else {
+                // Election has ended
                 display.textContent = "Election ended";
+                
+                if (voteBtn) {
+                    voteBtn.style.pointerEvents = "none";
+                    voteBtn.style.opacity = "0.6";
+                    voteBtn.innerHTML = '<span class="btn-icon">📋</span> Election Ended';
+                    voteBtn.classList.remove('btn-primary');
+                    voteBtn.classList.add('btn-secondary');
+                }
+                
+                // Also update any "Voted" buttons to "Election Ended"
+                const votedButton = electionCard.querySelector('.btn-success.vote-button');
+                if (votedButton) {
+                    votedButton.innerHTML = '<span class="btn-icon">📋</span> Election Ended';
+                    votedButton.classList.remove('btn-success');
+                    votedButton.classList.add('btn-secondary');
+                    
+                    // Update the voted message
+                    const votedMessage = electionCard.querySelector('.voted-message');
+                    if (votedMessage) {
+                        votedMessage.innerHTML = '<span class="detail-icon">📋</span> Election has ended';
+                        votedMessage.style.color = 'var(--gray)';
+                    }
+                }
+                
+                // Hide voting instructions when election ends
+                if (votingInstructions) {
+                    votingInstructions.style.display = 'none';
+                }
             }
         });
     }
 
+    // Format time difference
     function formatTime(ms) {
+        if (ms <= 0) return "0d 00h 00m 00s";
+        
         let totalSeconds = Math.floor(ms / 1000);
-
         const days = Math.floor(totalSeconds / 86400);
         totalSeconds %= 86400;
-
         const hours = Math.floor(totalSeconds / 3600);
         totalSeconds %= 3600;
-
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
 
-        return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+        if (days > 0) {
+            return `${days}d ${pad(hours)}h ${pad(minutes)}m`;
+        } else if (hours > 0) {
+            return `${hours}h ${pad(minutes)}m ${pad(seconds)}s`;
+        } else {
+            return `${minutes}m ${pad(seconds)}s`;
+        }
     }
 
+    // Pad numbers with leading zeros
     function pad(num) {
         return num.toString().padStart(2, '0');
     }
 
-    updateCountdowns();               // initial run
-    setInterval(updateCountdowns, 1000); // update every second (NO reload)
-
+    // Initialize
+    updateCountdowns();
+    
+    // Update every second
+    setInterval(updateCountdowns, 1000);
+    
+    // Auto-refresh page every 30 seconds to update vote counts and status
+    setTimeout(() => {
+        location.reload();
+    }, 30000);
 });
+
+// Add CSS for ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    .btn-success {
+        cursor: default !important;
+    }
+    
+    .btn-success:hover {
+        transform: none !important;
+    }
+`;
+document.head.appendChild(style);
 </script>
 {% endblock %}

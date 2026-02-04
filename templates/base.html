@@ -1,249 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Student Voting System{% endblock %}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Student E-Voting - {% block title %}Home{% endblock %}</title>
 
-<link rel="stylesheet" href="{{ url_for('student.static', filename='css/sidebar.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Base CSS -->
+    <link rel="stylesheet" href="{{ url_for('student.static', filename='css/base.css') }}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Extra CSS for specific pages -->
+    {% block extra_head %}{% endblock %}
 
-<!-- Extra CSS for specific pages -->
-{% block extra_head %}{% endblock %}
-
+    <!-- Google Fonts -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+    </style>
 </head>
 <body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-container">
+                    <!-- CTU Logo Image -->
+                    <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" 
+                         alt="CTU Logo" 
+                         class="ctu-logo"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                    <!-- Fallback text if image fails to load -->
+                    <h1 class="logo-text">CTU - Moalboal</h1>
+                </div>
+            </div>
+        </header>
 
-<!-- TOP NAVBAR (Hidden on mobile, shown on desktop) -->
-<header class="top-nav">
-    <div class="nav-left">
-        <div class="hamburger" id="hamburger">
-            <span></span>
-        </div>
-        <span class="nav-title">Menu</span>
+        <!-- Main Content -->
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer Navigation -->
+        <footer class="footer-nav">
+            <nav class="nav-menu">
+                <!-- HOME -->
+                <a href="{{ url_for('student.dashboard') }}" 
+                   class="nav-item footer-menu-item {% if active_page == 'dashboard' %}active{% endif %}" 
+                   data-item="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </a>
+                
+                <!-- PROFILE -->
+                <a href="{{ url_for('student.profile') }}" 
+                   class="nav-item footer-menu-item {% if active_page == 'profile' %}active{% endif %}" 
+                   data-item="profile">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-label">Profile</span>
+                </a>
+                
+                <!-- VOTE -->
+                <a href="{{ url_for('student.available_elections') }}" 
+                   class="nav-item footer-menu-item {% if active_page == 'vote' %}active{% endif %}" 
+                   data-item="vote">
+                    <span class="nav-icon">🗳️</span>
+                    <span class="nav-label">Vote</span>
+                </a>
+                
+                <!-- CANDIDATES -->
+                <a href="{{ url_for('student.candidates') }}" 
+                   class="nav-item footer-menu-item {% if active_page == 'candidates' %}active{% endif %}" 
+                   data-item="candidates">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">Candidates</span>
+                </a>
+                
+                <!-- RESULTS -->
+                <a href="{{ url_for('student.results') }}" 
+                   class="nav-item footer-menu-item {% if active_page == 'results' %}active{% endif %}" 
+                   data-item="results">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Results</span>
+                </a>
+                
+                <!-- RECEIPT -->
+                <a href="{{ url_for('student.receipt') }}" 
+                   class="nav-item footer-menu-item {% if active_page == 'receipt' %}active{% endif %}" 
+                   data-item="receipt">
+                    <span class="nav-icon">🧾</span>
+                    <span class="nav-label">Receipt</span>
+                </a>
+            </nav>
+        </footer>
     </div>
-</header>
 
-<!-- OVERLAY FOR MOBILE (Hidden by default) -->
-<div class="side-menu-overlay" id="sideMenuOverlay"></div>
-
-<!-- SIDE MENU (Hidden on mobile, shown on desktop) -->
-<nav class="side-menu" id="sideMenu">
-    <!-- ENHANCED HEADER -->
-    <div class="side-header">
-        <div class="logo-container">
-            <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" 
-                 class="school-logo" 
-                 alt="CTU Moalboal Logo">
-        </div>
-        <div class="school-info">
-            <div class="school-name">CTU-Moalboal</div>
-            <div class="school-divider"></div>
-            <div class="school-subtitle">Student Voting System</div>
-        </div>
-    </div>
-
-    <!-- MENU ITEMS -->
-    <div class="menu-items">
-        <!-- Main Navigation Section -->
-        <div class="menu-section">Navigation</div>
+    <!-- JavaScript for Footer Menu Highlight -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const footerMenuItems = document.querySelectorAll('.footer-menu-item');
         
-        <a href="{{ url_for('student.dashboard') }}" class="{% if request.path == url_for('student.dashboard') %}active{% endif %}">
-            <i class="fa fa-home"></i> Home
-        </a>
-
-        <a href="{{ url_for('student.available_elections') }}" class="{% if request.path == url_for('student.available_elections') %}active{% endif %}">
-            <i class="fa fa-check-circle"></i> Available Elections
-        </a>
-
-        <a href="{{ url_for('student.candidates') }}" class="{% if request.path == url_for('student.candidates') %}active{% endif %}">
-            <i class="fa fa-users"></i> Candidates
-        </a>
-
-        <a href="{{ url_for('student.guidelines') }}" class="{% if request.path == url_for('student.guidelines') %}active{% endif %}">
-            <i class="fa fa-book"></i> Election Guidelines
-        </a>
-
-        <!-- Information Section -->
-        <div class="menu-section" style="margin-top: 20px;">Information</div>
+        // Function to set active menu item
+        function setActiveMenuItem(clickedItem) {
+            // Remove active class from all items
+            footerMenuItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to clicked item
+            clickedItem.classList.add('active');
+            
+            // Store the active item in localStorage for persistence
+            const itemId = clickedItem.getAttribute('data-item');
+            localStorage.setItem('activeFooterItem', itemId);
+            
+            // Update URL parameter if needed (optional)
+            const url = new URL(clickedItem.href);
+            const pageName = url.pathname.split('/').pop() || 'dashboard';
+            history.replaceState(null, '', `?page=${pageName}`);
+        }
         
-        <a href="{{ url_for('student.profile') }}" class="{% if request.path == url_for('student.profile') %}active{% endif %}">
-            <i class="fa fa-id-card"></i> My Profile
-        </a>
+        // Add click event listeners to all footer menu items
+        footerMenuItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                // Prevent default only if it's not a real link
+                if (this.getAttribute('href') === '#') {
+                    e.preventDefault();
+                }
+                setActiveMenuItem(this);
+            });
+            
+            // Add touch feedback for mobile
+            item.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.97)';
+                this.style.transition = 'transform 0.1s ease';
+            });
+            
+            item.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            item.addEventListener('touchcancel', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
         
-        <a href="{{ url_for('student.announcements_page') }}" class="{% if request.path == url_for('student.announcements_page') %}active{% endif %}">
-            <i class="fa fa-bullhorn"></i> Announcements
-        </a>
-
-        <a href="{{ url_for('student.receipt') }}" class="{% if request.path == url_for('student.receipt') %}active{% endif %}">
-            <i class="fa fa-receipt"></i> Voting Receipt
-        </a>
-
-        <!-- Support Section -->
-        <div class="menu-section" style="margin-top: 20px;">Support</div>
-        
-        <a href="{{ url_for('student.help_page') }}" class="{% if request.path == url_for('student.help_page') %}active{% endif %}">
-            <i class="fa fa-question-circle"></i> Help & Support
-        </a>
-
-        <a href="{{ url_for('student.logout') }}">
-            <i class="fa fa-sign-out-alt"></i> Logout
-        </a>
-    </div>
-</nav>
-
-<!-- BOTTOM NAVIGATION FOOTER (MOBILE ONLY) -->
-<nav class="bottom-nav" id="bottomNav">
-    <!-- PROFILE -->
-    <a href="{{ url_for('student.profile') }}" class="nav-item {% if request.path == url_for('student.profile') %}active{% endif %}">
-        <div class="nav-icon">
-            <i class="fa fa-user"></i>
-        </div>
-        <div class="nav-label">Profile</div>
-    </a>
-    
-    <!-- VOTE -->
-    <a href="{{ url_for('student.available_elections') }}" class="nav-item {% if request.path == url_for('student.available_elections') %}active{% endif %}">
-        <div class="nav-icon">
-            <i class="fa fa-vote-yea"></i>
-        </div>
-        <div class="nav-label">Vote</div>
-    </a>
-
-    <!-- HOME -->
-    <a href="{{ url_for('student.dashboard') }}" class="nav-item {% if request.path == url_for('student.dashboard') %}active{% endif %}">
-        <div class="nav-icon">
-            <i class="fa fa-home"></i>
-        </div>
-        <div class="nav-label">Home</div>
-    </a>
-    
-    
-    <!-- CANDIDATES -->
-    <a href="{{ url_for('student.candidates') }}" class="nav-item {% if request.path == url_for('student.candidates') %}active{% endif %}">
-        <div class="nav-icon">
-            <i class="fa fa-users"></i>
-        </div>
-        <div class="nav-label">Candidates</div>
-    </a>
-
-    <div class="nav-item" style="cursor: default;">
-        <div class="nav-icon">
-            <i class="fa fa-chart-bar"></i>
-        </div>
-        <div class="nav-label">Results</div>
-    </div>
-    
-    <!-- RECEIPT -->
-    <a href="{{ url_for('student.receipt') }}" class="nav-item {% if request.path == url_for('student.receipt') %}active{% endif %}">
-        <div class="nav-icon">
-            <i class="fa fa-receipt"></i>
-        </div>
-        <div class="nav-label">Receipt</div>
-    </a>
-
-    
-    
-</nav>
-
-<!-- MAIN CONTENT -->
-<main class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
-</main>
-
-{% block extra_js %}{% endblock %}
-
-<script>
-    const hamburger = document.getElementById('hamburger');
-    const sideMenu = document.getElementById('sideMenu');
-    const sideMenuOverlay = document.getElementById('sideMenuOverlay');
-    const bottomNav = document.getElementById('bottomNav');
-    
-    // Only add sidebar functionality on desktop
-    if (window.innerWidth >= 769) {
-        // Toggle sidebar
-        if (hamburger) {
-            hamburger.addEventListener('click', () => {
-                sideMenu.classList.toggle('open');
-                sideMenuOverlay.classList.toggle('active');
-                hamburger.classList.toggle('active');
-                document.body.classList.toggle('sidebar-open');
+        // Restore active state from localStorage on page load
+        const savedActiveItem = localStorage.getItem('activeFooterItem');
+        if (savedActiveItem) {
+            footerMenuItems.forEach(item => {
+                const itemId = item.getAttribute('data-item');
+                if (itemId === savedActiveItem) {
+                    item.classList.add('active');
+                }
             });
         }
         
-        // Close sidebar when clicking overlay OR anywhere outside
-        document.addEventListener('click', (e) => {
-            // Only close if sidebar is open
-            if (sideMenu.classList.contains('open')) {
-                // Check if click is NOT inside sidebar, NOT on hamburger
-                if (!sideMenu.contains(e.target) && 
-                    e.target !== hamburger && 
-                    !hamburger.contains(e.target)) {
-                    sideMenu.classList.remove('open');
-                    sideMenuOverlay.classList.remove('active');
-                    hamburger.classList.remove('active');
-                    document.body.classList.remove('sidebar-open');
+        // Highlight based on current page URL
+        function highlightCurrentPage() {
+            const currentPath = window.location.pathname;
+            footerMenuItems.forEach(item => {
+                const itemUrl = new URL(item.href);
+                if (itemUrl.pathname === currentPath) {
+                    item.classList.add('active');
+                    localStorage.setItem('activeFooterItem', item.getAttribute('data-item'));
                 }
-            }
-        });
-        
-        // Close with Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && sideMenu.classList.contains('open')) {
-                sideMenu.classList.remove('open');
-                sideMenuOverlay.classList.remove('active');
-                hamburger.classList.remove('active');
-                document.body.classList.remove('sidebar-open');
-            }
-        });
-    }
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        // If resizing to mobile, ensure sidebar is closed and cleanup
-        if (window.innerWidth <= 768) {
-            if (sideMenu) {
-                sideMenu.classList.remove('open');
-                sideMenu.style.display = 'none';
-            }
-            if (sideMenuOverlay) {
-                sideMenuOverlay.classList.remove('active');
-                sideMenuOverlay.style.display = 'none';
-            }
-            if (hamburger) {
-                hamburger.classList.remove('active');
-                hamburger.style.display = 'none';
-            }
-            document.body.classList.remove('sidebar-open');
-        } else {
-            // If resizing to desktop, show sidebar elements
-            if (sideMenu) sideMenu.style.display = 'flex';
-            if (sideMenuOverlay) sideMenuOverlay.style.display = 'block';
-            if (hamburger) hamburger.style.display = 'flex';
+            });
         }
+        
+        // Call on page load
+        highlightCurrentPage();
     });
-    
-    // Initialize display based on current screen size
-    if (window.innerWidth <= 768) {
-        // Mobile initialization
-        if (sideMenu) sideMenu.style.display = 'none';
-        if (sideMenuOverlay) sideMenuOverlay.style.display = 'none';
-        if (hamburger) hamburger.style.display = 'none';
-    } else {
-        // Desktop initialization
-        if (sideMenu) sideMenu.style.display = 'flex';
-        if (sideMenuOverlay) sideMenuOverlay.style.display = 'block';
-        if (hamburger) hamburger.style.display = 'flex';
-    }
-</script>
+    </script>
 
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -33,6 +33,9 @@ class Position(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
+    # Link to election
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
+
     # Relationship to candidates
     candidates = db.relationship('Candidate', backref='position', lazy=True)
 

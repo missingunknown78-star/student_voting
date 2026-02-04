@@ -1,12 +1,317 @@
 {% extends "base.html" %}
+{% set active_page = 'results' %}
+
 {% block title %}Election Results{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/results.css') }}">
+{% endblock %}
+
 {% block content %}
-<h2>Election Results</h2>
-<ul>
-    {% for candidate in candidates %}
-    <li>{{ candidate.first_name }} {{ candidate.last_name }}: {{ votes[candidate.id] }} votes</li>
-    {% endfor %}
-</ul>
-<a href="{{ url_for('student.dashboard') }}">Back to Dashboard</a>
+<div class="results-container">
+    <!-- Results Header -->
+    <div class="results-header">
+        <h1 class="results-title">
+            {% if recent_election %}
+                {{ recent_election.title }} Results
+            {% else %}
+                Election Results
+            {% endif %}
+        </h1>
+        <div class="results-meta">
+            <span class="results-status badge-verified">{{ results_status }}</span>
+            <span class="results-date">Published: {{ results_date.strftime('%b %d, %Y %I:%M %p') }}</span>
+        </div>
+        <p class="results-subtitle">
+            {% if recent_election %}
+                {{ recent_election.description }}
+            {% else %}
+                Official results certified by Student COMELEC
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Election Selection Dropdown -->
+    {% if all_elections|length > 1 %}
+    <div class="card election-selector-card">
+        <label for="election-select" class="selector-label">View Results For:</label>
+        <select id="election-select" class="form-input election-select">
+            {% for election in all_elections %}
+            <option value="{{ election.id }}" 
+                    {% if election.id == recent_election.id %}selected{% endif %}>
+                {{ election.title }} ({{ election.end_date.strftime('%b %d, %Y') }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    
+    {% if recent_election %}
+        <!-- Results Summary -->
+        <div class="card summary-card">
+            <h2 class="card-title">📊 Election Summary</h2>
+            
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <span class="stat-icon">👥</span>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ total_voters }}</span>
+                        <span class="stat-label">Registered Voters</span>
+                    </div>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-icon">🗳️</span>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ total_votes }}</span>
+                        <span class="stat-label">Votes Cast</span>
+                    </div>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-icon">📈</span>
+                    <div class="stat-content">
+                        <span class="stat-value">{{ voter_turnout }}%</span>
+                        <span class="stat-label">Voter Turnout</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="turnout-chart">
+                <div class="chart-bar">
+                    <!-- Use CSS variable -->
+                    <div class="bar-fill" style="--fill-width: {{ voter_turnout }}%;"></div>
+                </div>
+                <div class="chart-labels">
+                    <span>0%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+            
+        </div>
+
+
+        <!-- Position Results -->
+        {% for position in positions_data %}
+        <div class="position-results">
+            <h2 class="position-title">
+                <span class="position-icon">
+                    {% if 'president' in position.name|lower %}👑
+                    {% elif 'vice' in position.name|lower %}👔
+                    {% elif 'secretary' in position.name|lower %}📝
+                    {% elif 'treasurer' in position.name|lower %}💰
+                    {% elif 'auditor' in position.name|lower %}🔍
+                    {% else %}⭐{% endif %}
+                </span>
+                {{ position.name }}
+            </h2>
+            
+            {% if position.description %}
+            <p class="position-description">{{ position.description }}</p>
+            {% endif %}
+            
+            <div class="results-list">
+                {% for candidate in position.candidates %}
+                <div class="result-card {% if candidate.is_winner %}winner{% endif %}">
+                    <div class="result-header">
+                        <div class="candidate-info">
+                            <div class="candidate-photo" 
+                                 data-photo-url="{% if candidate.photo %}{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
+                                 data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                                 onclick="openCandidatePhoto(this)">
+                                {% if candidate.photo %}
+                                    <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
+                                         alt="{{ candidate.first_name }} {{ candidate.last_name }}"
+                                         class="candidate-photo-img">
+                                {% else %}
+                                    <span class="candidate-initials">
+                                        {{ candidate.first_name[0] }}{{ candidate.last_name[0] }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="candidate-details">
+                                <h3 class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</h3>
+                                <p class="candidate-course">
+                                    {% if candidate.course %}
+                                        {{ candidate.course }}
+                                        {% if candidate.year_level %}• {{ candidate.year_level }}{% endif %}
+                                    {% else %}
+                                        Student Candidate
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% if candidate.is_winner %}
+                        <div class="result-badge">WINNER</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="result-stats">
+                        <div class="vote-count">
+                            <span class="count-number">{{ candidate.vote_count }}</span>
+                            <span class="count-label">Votes</span>
+                        </div>
+                        <div class="vote-percentage">
+                            <span class="percentage-number">{{ candidate.vote_percentage }}%</span>
+                            <div class="percentage-bar">
+                                <!-- Use CSS variable -->
+                                <div class="bar-fill" style="--fill-width: {{ candidate.vote_percentage }}%;"></div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    
+                    {% if candidate.platform %}
+                    <div class="candidate-platform">
+                        <p class="platform-text">{{ candidate.platform[:150] }}{% if candidate.platform|length > 150 %}...{% endif %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Election Timeline -->
+        <div class="card timeline-card">
+            <h2 class="card-title">📅 Election Timeline</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item complete">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Campaign Period</h4>
+                        <p class="timeline-date">
+                            {{ recent_election.start_date.strftime('%b %d, %Y') }}
+                        </p>
+                        <p class="timeline-desc">Candidate campaigns and forums</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item complete">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Voting Period</h4>
+                        <p class="timeline-date">
+                            {{ recent_election.start_date.strftime('%b %d') }} - {{ recent_election.end_date.strftime('%b %d, %Y') }}
+                        </p>
+                        <p class="timeline-desc">Online and campus voting</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item current">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Results Announcement</h4>
+                        <p class="timeline-date">{{ results_date.strftime('%b %d, %Y') }}</p>
+                        <p class="timeline-desc">Final results published</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- No Results Available -->
+        <div class="card no-results-card">
+            <div class="no-results-content">
+                <div class="no-results-icon">📊</div>
+                <h3>No Election Results Available</h3>
+                <p>There are no completed elections to show results for.</p>
+                <div class="no-results-note">
+                    <span class="note-icon">⏳</span>
+                    <span class="note-text">Results will appear here after elections end</span>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Results Notice -->
+    <div class="card notice-card">
+        <div class="notice-header">
+            <span class="notice-icon">ℹ️</span>
+            <h3 class="notice-title">Important Notice</h3>
+        </div>
+        
+        <div class="notice-content">
+            <p>These are the official and final results of the Student Government Elections.</p>
+            <p>Any questions or concerns about the results must be submitted in writing to the COMELEC Office within 48 hours of publication.</p>
+        </div>
+        
+        <div class="notice-footer">
+            <span class="signature">— Student Commission on Elections (COMELEC)</span>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Modal (Reusing from candidates page) -->
+<div id="photoModal" class="modal-overlay photo-modal">
+    <div class="photo-modal-content">
+        <button class="photo-modal-close" onclick="closePhotoModal()">&times;</button>
+        <img id="photoModalImg" class="photo-modal-img">
+        <div class="photo-modal-caption" id="photoModalCaption"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Election selector functionality
+    const electionSelect = document.getElementById('election-select');
+    if (electionSelect) {
+        electionSelect.addEventListener('change', function() {
+            const electionId = this.value;
+            window.location.href = `/student/results/${electionId}`;
+        });
+    }
+
+    // Initialize any charts or interactive elements
+    initResultsPage();
+});
+
+function initResultsPage() {
+    // Any initialization code for the results page
+    console.log('Results page initialized');
+}
+
+// Photo modal functions (reused from candidates page)
+function openCandidatePhoto(element) {
+    const modal = document.getElementById('photoModal');
+    const modalImg = document.getElementById('photoModalImg');
+    const modalCaption = document.getElementById('photoModalCaption');
+    
+    const photoUrl = element.getAttribute('data-photo-url');
+    const candidateName = element.getAttribute('data-candidate-name');
+    
+    modalImg.src = photoUrl;
+    modalCaption.textContent = candidateName + ' - Candidate Photo';
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePhotoModal() {
+    const modal = document.getElementById('photoModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePhotoModal();
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('photoModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePhotoModal();
+    }
+});
+
+// Close modal when clicking close button
+document.querySelector('.photo-modal-close').addEventListener('click', closePhotoModal);
+
+// Prevent modal content clicks from closing modal
+document.querySelector('.photo-modal-content').addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+</script>
 {% endblock %}

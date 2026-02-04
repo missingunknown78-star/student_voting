@@ -1,107 +1,391 @@
 {% extends "base.html" %}
+{% set active_page = 'candidates' %}
+
 {% block title %}Candidates{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/candidates.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {% endblock %}
 
 {% block content %}
-
-<h2 class="page-title">List of Candidates</h2>
-
-{% if candidates %}
-
-    {# ===============================
-       GROUP CANDIDATES BY ELECTION
-       =============================== #}
-    {% set grouped = {} %}
-    {% for c in candidates %}
-        {% set election_title = c.election.title if c.election else 'Other Elections' %}
-        {% if election_title not in grouped %}
-            {% set _ = grouped.update({ election_title: [] }) %}
-        {% endif %}
-        {% set _ = grouped[election_title].append(c) %}
-    {% endfor %}
-
-    {# ===============================
-       DISPLAY EACH ELECTION GROUP
-       =============================== #}
-    {% for election_title, election_candidates in grouped.items() %}
-
-        <!-- Election Header -->
-        <div class="election-header">
-            <h3 class="election-title">{{ election_title }}</h3>
-
-            {% if election_candidates[0].election %}
-                <span class="election-type">
-                    {{ election_candidates[0].election.election_type }}
-                </span>
-            {% endif %}
-        </div>
-
-        <div class="candidates-container">
-            {% for c in election_candidates %}
-            <div class="candidate-card">
-
-                <!-- CLICKABLE PHOTO -->
-                <img src="{% if c.photo %}{{ url_for('admin.static', filename='images/' ~ c.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
-                     class="candidate-photo"
-                     alt="{{ c.first_name }} {{ c.last_name }}"
-                     onclick="openPhotoModal(this.src)">
-
-                <!-- Candidate Info -->
-                <div class="candidate-info">
-                    <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
-                    <p class="candidate-position">
-                        <strong>Position:</strong> {{ c.position.name }}
-                    </p>
-
-                    {% if c.platform %}
-                        <p class="candidate-platform">
-                            <strong>Platform:</strong> {{ c.platform }}
-                        </p>
-                    {% else %}
-                        <p class="candidate-platform">
-                            <em>No platform provided</em>
-                        </p>
-                    {% endif %}
+<div class="candidates-container">
+    <!-- Election Info Banner -->
+    <div class="election-info">
+        <h1 class="election-title">Student Government Candidates</h1>
+        <p class="election-subtitle">Meet your future student leaders</p>
+        
+        {% if candidates %}
+            {% set total_candidates = candidates|length %}
+            {% set positions_set = {} %}
+            {% for c in candidates %}
+                {% if c.position %}
+                    {% set _ = positions_set.update({c.position.name: true}) %}
+                {% endif %}
+            {% endfor %}
+            {% set total_positions = positions_set|length %}
+            
+            <div class="election-stats">
+                <div class="stat">
+                    <span class="stat-number">{{ total_candidates }}</span>
+                    <span class="stat-label">Candidates</span>
                 </div>
-
+                <div class="stat">
+                    <span class="stat-number">{{ total_positions }}</span>
+                    <span class="stat-label">Positions</span>
+                </div>
+                {% set grouped = {} %}
+                {% for c in candidates %}
+                    {% set election_title = c.election.title if c.election else 'Other Elections' %}
+                    {% if election_title not in grouped %}
+                        {% set _ = grouped.update({ election_title: [] }) %}
+                    {% endif %}
+                    {% set _ = grouped[election_title].append(c) %}
+                {% endfor %}
+                <div class="stat">
+                    <span class="stat-number">{{ grouped|length }}</span>
+                    <span class="stat-label">Elections</span>
+                </div>
             </div>
+        {% endif %}
+    </div>
+
+    {% if candidates %}
+        <!-- Position Tabs -->
+        <div class="position-tabs">
+            {% set positions_set = {} %}
+            {% for c in candidates %}
+                {% if c.position %}
+                    {% set _ = positions_set.update({c.position.name: c.position.name}) %}
+                {% endif %}
+            {% endfor %}
+            
+            <button class="tab-btn active" data-position="all">All Positions</button>
+            {% for position_name in positions_set.values()|sort %}
+                <button class="tab-btn" data-position="{{ position_name|lower|replace(' ', '-') }}">
+                    {{ position_name }}
+                </button>
             {% endfor %}
         </div>
 
-    {% endfor %}
+        {# ===============================
+           GROUP CANDIDATES BY ELECTION
+           =============================== #}
+        {% set grouped = {} %}
+        {% for c in candidates %}
+            {% set election_title = c.election.title if c.election else 'Other Elections' %}
+            {% if election_title not in grouped %}
+                {% set _ = grouped.update({ election_title: [] }) %}
+            {% endif %}
+            {% set _ = grouped[election_title].append(c) %}
+        {% endfor %}
 
-{% else %}
-    <div class="no-candidates">
-        <i class="fas fa-users fa-3x"></i>
-        <h3>No Candidates Available</h3>
-        <p>There are currently no candidates registered for the elections.</p>
+        {# ===============================
+           DISPLAY EACH ELECTION GROUP
+           =============================== #}
+        {% for election_title, election_candidates in grouped.items() %}
+        <div class="election-section" data-election="{{ election_title|lower|replace(' ', '-') }}">
+            <!-- Election Header -->
+            <div class="election-header-card">
+                <h2 class="election-title-section">{{ election_title }}</h2>
+                {% if election_candidates[0].election %}
+                    <span class="election-type">
+                        {{ election_candidates[0].election.election_type }}
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="candidates-grid">
+                {% for c in election_candidates %}
+                <div class="candidate-card" data-position="{{ c.position.name|lower|replace(' ', '-') }}">
+                    <!-- Candidate Header -->
+                    <div class="candidate-header">
+                        <div class="candidate-photo" 
+                             data-photo-url="{% if c.photo %}{{ url_for('admin.static', filename='images/' ~ c.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
+                             onclick="openCandidatePhoto(this)">
+                            {% if c.photo %}
+                                <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
+                                     alt="{{ c.first_name }} {{ c.last_name }}"
+                                     class="candidate-photo-img">
+                            {% else %}
+                                <span class="candidate-initials">
+                                    {{ c.first_name[0] }}{{ c.last_name[0] }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="candidate-badges">
+                            <span class="position-badge">{{ c.position.name if c.position else 'No Position' }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Candidate Info -->
+                    <div class="candidate-info">
+                        <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
+                        <p class="candidate-course">
+                            {% if c.course %}
+                                {{ c.course }} 
+                                {% if c.year_level %}• {{ c.year_level }}{% endif %}
+                            {% else %}
+                                Student Candidate
+                            {% endif %}
+                        </p>
+                        
+                        {% if c.platform %}
+                        <div class="candidate-platform">
+                            <h4 class="platform-title">Platform:</h4>
+                            <p class="platform-text">{{ c.platform[:100] }}{% if c.platform|length > 100 %}...{% endif %}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if c.election %}
+                        <div class="candidate-election">
+                            <span class="election-icon">🗳️</span>
+                            <span class="election-name">{{ c.election.title }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Candidate Actions -->
+                    <div class="candidate-actions">
+                        <button class="btn btn-secondary btn-small view-profile-btn"
+                                onclick="viewCandidateProfile('{{ c.id }}')">
+                            <span class="btn-icon">📄</span>
+                            View Profile
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Filter Options -->
+        <div class="filter-card">
+            <h3 class="filter-title">🔍 Filter Candidates</h3>
+            
+            <div class="filter-options">
+                <div class="filter-group">
+                    <label class="filter-label">By Position:</label>
+                    <div class="position-filters">
+                        <label class="position-filter active" data-position="all">
+                            <input type="radio" name="position-filter" checked>
+                            <span>All Positions</span>
+                        </label>
+                        {% for position_name in positions_set.values()|sort %}
+                        <label class="position-filter" data-position="{{ position_name|lower|replace(' ', '-') }}">
+                            <input type="radio" name="position-filter">
+                            <span>{{ position_name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                {% if grouped|length > 1 %}
+                <div class="filter-group">
+                    <label class="filter-label">By Election:</label>
+                    <div class="election-filters">
+                        <label class="election-filter active" data-election="all">
+                            <input type="radio" name="election-filter" checked>
+                            <span>All Elections</span>
+                        </label>
+                        {% for election_title in grouped.keys() %}
+                        <label class="election-filter" data-election="{{ election_title|lower|replace(' ', '-') }}">
+                            <input type="radio" name="election-filter">
+                            <span>{{ election_title }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    {% else %}
+        <!-- No Candidates Available -->
+        <div class="no-candidates-card">
+            <div class="no-candidates-icon">👥</div>
+            <h3>No Candidates Available</h3>
+            <p>There are currently no candidates registered for the elections.</p>
+            <div class="no-candidates-note">
+                <span class="note-icon">⏳</span>
+                <span class="note-text">Check back later when candidates register</span>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Voting Guide -->
+    <div class="guide-card">
+        <h3 class="guide-title">📋 How to Select Candidates</h3>
+        
+        <div class="guide-steps">
+            <div class="step">
+                <span class="step-number">1</span>
+                <div class="step-content">
+                    <h4>Review Platforms</h4>
+                    <p>Read each candidate's platform and qualifications</p>
+                </div>
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                <div class="step-content">
+                    <h4>Compare Positions</h4>
+                    <p>See how candidates differ on key issues</p>
+                </div>
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                <div class="step-content">
+                    <h4>Check Experience</h4>
+                    <p>Review their previous leadership experience</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="guide-note">
+            <span class="note-icon">💡</span>
+            <p>You can vote for one candidate per position</p>
+        </div>
     </div>
-{% endif %}
-
-<!-- ===============================
-     PHOTO-ONLY MODAL
-     =============================== -->
-<div id="photoModal" class="photo-modal" onclick="closePhotoModal()">
-    <span class="photo-close">&times;</span>
-    <img id="photoModalImg" class="photo-modal-img">
 </div>
 
-<!-- ===============================
-     MODAL SCRIPT
-     =============================== -->
+<!-- Photo Modal -->
+<div id="photoModal" class="modal-overlay photo-modal">
+    <div class="photo-modal-content">
+        <button class="photo-modal-close" onclick="closePhotoModal()">&times;</button>
+        <img id="photoModalImg" class="photo-modal-img">
+        <div class="photo-modal-caption" id="photoModalCaption"></div>
+    </div>
+</div>
+
 <script>
-function openPhotoModal(src) {
-    document.getElementById("photoModalImg").src = src;
-    document.getElementById("photoModal").style.display = "flex";
+// Tab functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Position tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all tabs
+            tabBtns.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            const position = this.dataset.position;
+            filterCandidates(position);
+        });
+    });
+
+    // Position filters
+    const positionFilters = document.querySelectorAll('.position-filter');
+    positionFilters.forEach(filter => {
+        filter.addEventListener('click', function() {
+            positionFilters.forEach(f => f.classList.remove('active'));
+            this.classList.add('active');
+            
+            const position = this.dataset.position;
+            filterCandidates(position);
+        });
+    });
+
+    // Election filters
+    const electionFilters = document.querySelectorAll('.election-filter');
+    electionFilters.forEach(filter => {
+        filter.addEventListener('click', function() {
+            electionFilters.forEach(f => f.classList.remove('active'));
+            this.classList.add('active');
+            
+            const election = this.dataset.election;
+            filterElections(election);
+        });
+    });
+
+    function filterCandidates(position) {
+        const candidateCards = document.querySelectorAll('.candidate-card');
+        const tabs = document.querySelectorAll('.tab-btn');
+        
+        // Update tab buttons
+        tabs.forEach(tab => {
+            if (tab.dataset.position === position) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+        
+        // Filter cards
+        candidateCards.forEach(card => {
+            if (position === 'all' || card.dataset.position === position) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function filterElections(election) {
+        const electionSections = document.querySelectorAll('.election-section');
+        
+        electionSections.forEach(section => {
+            if (election === 'all' || section.dataset.election === election) {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        });
+    }
+
+    // Initialize with all candidates visible
+    filterCandidates('all');
+});
+
+// Photo modal functions
+function openCandidatePhoto(element) {
+    const modal = document.getElementById('photoModal');
+    const modalImg = document.getElementById('photoModalImg');
+    const modalCaption = document.getElementById('photoModalCaption');
+    
+    const photoUrl = element.getAttribute('data-photo-url');
+    const candidateName = element.closest('.candidate-card').querySelector('.candidate-name').textContent;
+    
+    modalImg.src = photoUrl;
+    modalCaption.textContent = candidateName + ' - Profile Photo';
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
 function closePhotoModal() {
-    document.getElementById("photoModal").style.display = "none";
+    const modal = document.getElementById('photoModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
 }
-</script>
 
+// View candidate profile (placeholder function)
+function viewCandidateProfile(candidateId) {
+    alert('Candidate profile view functionality would be implemented here.\nCandidate ID: ' + candidateId);
+    // In a real implementation, this would navigate to a candidate profile page
+    // or show a modal with detailed candidate information
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePhotoModal();
+    }
+});
+
+// Close modal when clicking outside the image
+document.getElementById('photoModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePhotoModal();
+    }
+});
+
+// Close modal when clicking the close button
+document.querySelector('.photo-modal-close').addEventListener('click', closePhotoModal);
+
+// Prevent modal content clicks from closing the modal
+document.querySelector('.photo-modal-content').addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+</script>
 {% endblock %}

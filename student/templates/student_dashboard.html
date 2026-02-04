@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% set active_page = 'dashboard' %}
 
 {% block title %}Student Dashboard{% endblock %}
 
@@ -101,108 +102,145 @@
 
 {% block content %}
 
-<div class="dashboard-container" data-trust-prompt="{{ trust_prompt|tojson }}">
-<!-- PROFILE CARD -->
-<!-- PROFILE CARD -->
-<div class="card profile-card fingerprint-wrapper">
-
-    <div class="profile-icon">
-        <i class="fa fa-user"></i>
-    </div>
-
-    <div class="profile-info">
-        <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
-        <small>ID Number: {{ current_user.id_number }}</small>
-        <small>Course: {{ current_user.course }}</small>
-
-        <!-- MOBILE SEPARATOR LINE -->
-        <div class="mobile-separator"></div>
-
-        <!-- Fingerprint Button -->
-        <button class="fingerprint-btn fingerprint-icon-btn" onclick="registerFingerprint()">
-            <i class="fa fa-fingerprint"></i>
-        </button>
-        
-        
-
-        <input type="hidden" id="username" value="{{ current_user.username }}">
-        <div id="fp-status" class="fp-status">
-            Click fingerprint icon to register
+<div class="dashboard-container home-container" data-trust-prompt="{{ trust_prompt|tojson }}">
+    
+    <!-- Welcome Card -->
+    <div class="card welcome-card">
+        <div class="welcome-header">
+            <h1 class="welcome-title">Welcome, <span class="highlight">{{ current_user.first_name }} {{ current_user.last_name }}!</span></h1>
+            <div class="avatar-placeholder">👨‍🎓</div>
+        </div>
+        <p class="school-name">ID Number: {{ current_user.id_number }}</p>
+        <div class="date-display">
+            <span class="date-icon">📅</span>
+            {{ current_time.strftime('%B %d, %Y') }} • {{ current_time.strftime('%A') }}
         </div>
     </div>
-</div>
 
+
+    <!-- Fingerprint Registration -->
+    <div class="card fingerprint-card fingerprint-wrapper">
+        <div class="fingerprint-icon">🖐️</div>
+        <h2 class="card-title">Secure Voting Access</h2>
+        <p class="fingerprint-desc">Register your fingerprint for secure authentication during voting</p>
+        
+        <!-- Fingerprint Button -->
+        <button class="btn btn-primary fingerprint-btn fingerprint-icon-btn" onclick="registerFingerprint()">
+            <i class="fas fa-fingerprint"></i>&nbsp;Register Fingerprint
+        </button>
+        
+        <input type="hidden" id="username" value="{{ current_user.username }}">
+        <div id="fp-status" class="fingerprint-note">
+            Click fingerprint button to register • Takes 2 minutes
+        </div>
+    </div>
+
+    <!-- Election Status -->
+    <div class="card status-card">
+        <div class="card-header">
+            <h2 class="card-title">Active Election</h2>
+            <span class="badge badge-active">ACTIVE</span>
+        </div>
+        <h3 class="election-name">Student Government Election 2024</h3>
+        <p class="election-desc">Elect your student leaders for the 2024-2025 academic year</p>
+        <div class="election-meta">
+            <div class="meta-item">
+                <span class="meta-icon">⏳</span>
+                <span class="meta-text">Closes: Dec 15, 2024</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-icon">👥</span>
+                <span class="meta-text">{{ total_voters }} voters</span>
+            </div>
+        </div>
+    </div>
+
+ 
+
+    <!-- Announcements -->
+    <div class="card announcements-card">
+        <h2 class="card-title">📢 Latest Announcements</h2>
+        <div class="announcement-list">
+            {% if announcements and announcements|length > 0 %}
+                {% for ann in announcements[:3] %}
+                <div class="announcement-item">
+                    <div class="announcement-header">
+                        {% if loop.first %}
+                        <span class="announcement-badge">NEW</span>
+                        {% else %}
+                        <span class="announcement-badge">UPDATE</span>
+                        {% endif %}
+                        <span class="announcement-date">{{ ann.date.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    <h4 class="announcement-title">{{ ann.title }}</h4>
+                    <p class="announcement-content">{{ ann.content }}</p>
+                    <span class="announcement-source">— COMELEC</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="announcement-item">
+                    <div class="announcement-header">
+                        <span class="announcement-date">{{ current_time.strftime('%b %d, %Y') }}</span>
+                    </div>
+                    <h4 class="announcement-title">No announcements available</h4>
+                    <p class="announcement-content">Check back later for updates from COMELEC.</p>
+                    <span class="announcement-source">— Admin</span>
+                </div>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
+            View all announcements <i class="fa fa-arrow-right"></i>
+        </a>
+    </div>
+
+    <!-- Guidelines & Help Section -->
+    <div class="quick-actions">
+        <a href="{{ url_for('student.guidelines') }}" class="action-card">
+            <span class="action-icon">📖</span>
+            <span class="action-text">Guidelines</span>
+        </a>
+        <a href="{{ url_for('student.help_page') }}" class="action-card">
+            <span class="action-icon">❓</span>
+            <span class="action-text">Help & Support</span>
+        </a>
+        {% if not has_voted and active_election %}
+<a href="{{ url_for('student.available_elections', election_id=active_election.id) }}" class="action-card">
+    <span class="action-icon">🗳️</span>
+    <span class="action-text">Vote Now</span>
+</a>
+{% else %}
+<a href="{{ url_for('student.results') }}" class="action-card">
+    <span class="action-icon">📊</span>
+    <span class="action-text">Live Results</span>
+</a>
+{% endif %}
+
+    </div>
+
+    <!-- Quick Reminder Card (Mobile Only) -->
+    <div class="card quick-reminder-card mobile-only">
+        <h2 class="section-title">Important Reminders</h2>
+        <ul style="padding-left: 18px; margin: 0;">
+            <li>Make sure your information is correct before voting.</li>
+            <li>You can vote only once per election.</li>
+            <li>Keep your student ID confidential and secure.</li>
+        </ul>
+    </div>
+
+</div>
 
 <!-- MODAL FOR TRUST DEVICE -->
 <div id="trustModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeTrustModal()">&times;</span>
     <h3>Do you want to trust this device?</h3>
-    <p>You can enable “Trust this device” so you won't be asked for verification on this device again.</p>
+    <p>You can enable "Trust this device" so you won't be asked for verification on this device again.</p>
     <form method="POST" action="{{ url_for('student.trust_current_device') }}">
         <button type="submit" class="btn btn-success" style="margin-right:10px;">Yes, trust this device</button>
         <button type="button" class="btn btn-secondary" onclick="closeTrustModal()">No</button>
     </form>
   </div>
 </div>
-
-<!-- GUIDELINES BOX -->
-<div class="card guidelines-box">
-    <h2 class="section-title">Before You Start</h2>
-    <p>
-        Please read the official guidelines carefully before participating
-        in the Student Government Election.
-    </p>
-    <a href="{{ url_for('student.guidelines') }}" class="guidelines-link">
-        Read More
-    </a>
-</div>
-
-
-<!-- QUICK REMINDER CARD -->
-<!-- QUICK REMINDER CARD -->
-<div class="card quick-reminder-card">
-    <h2 class="section-title">Important Reminders</h2>
-    <ul style="padding-left: 18px; margin: 0;">
-        <li>Make sure your information is correct before voting.</li>
-        <li>You can vote only once per election.</li>
-        <li>Keep your student ID confidential and secure.</li>
-    </ul>
-</div>
-
-
-<!-- ANNOUNCEMENTS PREVIEW -->
-<div class="card announcements-card">
-    <h2 class="section-title">Latest Announcements</h2>
-
-    {% if announcements and announcements|length > 0 %}
-        {% for ann in announcements[:3] %}
-            <div class="announcement-item">
-                <h4>{{ ann.title }}</h4>
-                <p>{{ ann.content }}</p>
-                <small>{{ ann.date.strftime('%b %d, %Y') }}</small>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p>No announcements available.</p>
-    {% endif %}
-
-    <a href="{{ url_for('student.student_announcements') }}" class="view-all-link">
-        View all announcements <i class="fa fa-arrow-right"></i>
-    </a>
-</div>
-
-<!-- HELP & SUPPORT CARD -->
-<div class="help-box">
-    <h2 class="section-title">Need Help?</h2>
-    <div class="help-content">
-        <p>If you experience any problems with logging in, voting, or using the system, you can visit the Help & Support page for guidance.</p>
-        <a href="{{ url_for('student.help_page') }}" class="help-link">
-            Help & Support <i class="fa fa-arrow-right"></i>
-        </a>
-    </div>
-</div>
-
 
 <!-- MOBILE FLOATING MENU -->
 <div class="mobile-fab">
@@ -226,11 +264,7 @@
         <a href="{{ url_for('student.logout') }}" class="fab-item logout">
             <i class="fa fa-sign-out-alt"></i> Logout
         </a>
-        
     </div>
-</div>
-
-
 </div>
 
 {% endblock %}
@@ -264,6 +298,7 @@ async function registerFingerprint() {
 
     statusDiv.textContent = "Waiting for fingerprint...";
     btn.disabled = true;
+    btn.innerHTML = '<span class="btn-icon">⏳</span> Processing...';
 
     try {
         const res = await fetch(`/student/webauthn/register/options?username=${username}`);
@@ -299,17 +334,22 @@ async function registerFingerprint() {
         });
 
         const result = await verifyRes.json();
-        statusDiv.textContent = result.status;
-
+        
         if (result.status === "Fingerprint registered!") {
-            btn.innerHTML = '<i class="fa fa-check"></i><span></span>';
+            statusDiv.textContent = "Fingerprint registered successfully!";
+            statusDiv.className = "fingerprint-note success";
+            btn.innerHTML = '<span class="btn-icon">✅</span> Registered';
             btn.classList.add("success");
+            btn.disabled = true;
         } else {
+            statusDiv.textContent = result.status;
+            btn.innerHTML = '<span class="btn-icon">📱</span> Register Fingerprint';
             btn.disabled = false;
         }
 
     } catch (err) {
         statusDiv.textContent = "Error: " + err.message;
+        btn.innerHTML = '<span class="btn-icon">📱</span> Register Fingerprint';
         btn.disabled = false;
     }
 }

@@ -1,7 +1,7 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from student.models import Student, Vote
-from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel
+from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel, Position
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import func, or_
@@ -12,6 +12,7 @@ import pytz
 from student.utils import is_device_trusted
 from student.models import TrustedDevice
 from student.utils import generate_device_fingerprint
+
 
 
 
@@ -754,8 +755,14 @@ def reset_password(token):
 
 
 # ==================== DASHBOARD ====================
-from student.utils import generate_device_fingerprint, is_device_trusted
-from student.models import TrustedDevice
+from flask import render_template, flash, redirect, url_for
+from flask_login import login_required, current_user
+from collections import defaultdict
+from datetime import datetime
+import pytz
+from sqlalchemy import func
+
+from student.utils import generate_device_fingerprint
 
 @student_bp.route('/dashboard')
 @login_required
@@ -782,7 +789,6 @@ def dashboard():
 
     # ---------------- New: trust-device prompt ----------------
     fingerprint = generate_device_fingerprint()
-
     device = TrustedDevice.query.filter_by(
         student_id=current_user.id,
         device_fingerprint=fingerprint
@@ -793,6 +799,19 @@ def dashboard():
         # No device recorded yet → show prompt in dashboard
         trust_prompt = True
 
+    # ---------------- New: active election ----------------
+    local_tz = pytz.timezone("Asia/Manila")
+    now = datetime.now(local_tz).replace(tzinfo=None)
+    active_election = Election.query.filter(
+        Election.start_date <= now,
+        Election.end_date >= now
+    ).first()
+
+    # ---------------- NEW: Add missing variables ----------------
+    current_time = datetime.now()
+    days_remaining = 12  # Default value, adjust as needed
+    total_voters = total_students  # Use total_students as total_voters
+
     # ---------------- Render template ----------------
     return render_template(
         'student_dashboard.html',
@@ -801,7 +820,11 @@ def dashboard():
         has_voted=has_voted,
         announcements=announcements,
         leading_candidates=leading_candidates,
-        trust_prompt=trust_prompt  # <-- new variable
+        trust_prompt=trust_prompt,
+        current_time=current_time,
+        days_remaining=days_remaining,
+        total_voters=total_voters,
+        active_election=active_election  # <-- added for Vote URL
     )
 
 
@@ -911,6 +934,15 @@ def vote_page(election_id):
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
 def submit_vote(election_id):
+    # Record the moment when "Cast Vote" was clicked (client-side)
+    cast_timestamp_str = request.form.get('cast_timestamp')
+    cast_timestamp = None
+    if cast_timestamp_str:
+        try:
+            cast_timestamp = datetime.fromisoformat(cast_timestamp_str.replace('Z', '+00:00'))
+        except:
+            cast_timestamp = datetime.utcnow()
+    
     # Get all selected candidates from the form
     selected_candidates = {
         key: value for key, value in request.form.items() if key.startswith('candidate_')
@@ -927,14 +959,20 @@ def submit_vote(election_id):
         return redirect(url_for('student.available_elections'))
 
     # Record votes for each position
+    recorded_timestamp = datetime.utcnow()  # When vote is actually saved to DB
     for position_name, candidate_id in selected_candidates.items():
-        vote = Vote(student_id=current_user.id, candidate_id=int(candidate_id), election_id=election_id)
+        vote = Vote(
+            student_id=current_user.id, 
+            candidate_id=int(candidate_id), 
+            election_id=election_id,
+            cast_timestamp=cast_timestamp,
+            recorded_timestamp=recorded_timestamp
+        )
         db.session.add(vote)
 
     db.session.commit()
     flash("Your vote has been submitted successfully!", "success")
     return redirect(url_for('student.available_elections'))
-
 
 
 from sqlalchemy import or_
@@ -947,24 +985,78 @@ from sqlalchemy import or_
 def available_elections():
     # Philippines timezone
     local_tz = pytz.timezone("Asia/Manila")
-    now = datetime.now(local_tz)
+    now_ph = datetime.now(local_tz)
+    
+    # Convert to timezone-naive for database comparison
+    now_naive = now_ph.replace(tzinfo=None)
 
     student_department_id = current_user.department_id
+    student_id = current_user.id
 
     # Filter elections student can vote in
     elections = Election.query.filter(
-        Election.start_date <= now,
-        Election.end_date >= now,
+        Election.start_date <= now_naive,
+        Election.end_date >= now_naive,
         or_(
             Election.department_id == student_department_id,  # department-specific
             Election.department_id == None  # SSG/general
         )
     ).order_by(Election.start_date.asc()).all()
 
-    return render_template('elections_available.html', elections=elections)
+    # Calculate voting progress for each election
+    election_data = []
+    for election in elections:
+        # Count UNIQUE voters for this election (distinct student_id)
+        unique_voters_count = db.session.query(func.count(func.distinct(Vote.student_id)))\
+            .filter(Vote.election_id == election.id)\
+            .scalar() or 0
+        
+        # Check if current student has already voted in this election
+        student_vote = Vote.query.filter(
+            Vote.election_id == election.id, 
+            Vote.student_id == student_id
+        ).first()
+        
+        student_has_voted = student_vote is not None
+        
+        # Get vote timestamps if student has voted
+        vote_timestamps = None
+        if student_has_voted:
+            # Get the first vote record for timestamps (all votes for same election have same timestamps)
+            vote_timestamps = {
+                'cast_time': student_vote.cast_timestamp,
+                'recorded_time': student_vote.recorded_timestamp or student_vote.created_at
+            }
+        
+        # Determine eligible voters count
+        if election.department_id is None:
+            # SSG/General election - all students are eligible
+            eligible_voters = Student.query.count()
+        else:
+            # Department election - only students in that department
+            eligible_voters = Student.query.filter_by(
+                department_id=election.department_id
+            ).count()
+        
+        # Calculate percentage (avoid division by zero)
+        if eligible_voters > 0:
+            vote_percentage = (unique_voters_count / eligible_voters) * 100
+        else:
+            vote_percentage = 0
+        
+        election_data.append({
+            'election': election,
+            'unique_voters': unique_voters_count,
+            'eligible_voters': eligible_voters,
+            'vote_percentage': round(vote_percentage, 1),
+            'vote_percentage_int': int(vote_percentage),
+            'student_has_voted': student_has_voted,
+            'vote_timestamps': vote_timestamps  # NEW: Add timestamps
+        })
 
-
-
+    return render_template('elections_available.html', 
+                         election_data=election_data,
+                         current_time=now_ph)
 
 # ------------------- CANDIDATES -------------------
 @student_bp.route('/candidates')
@@ -972,6 +1064,115 @@ def available_elections():
 def candidates():
     candidates = Candidate.query.order_by(Candidate.last_name).all()
     return render_template('candidates.html', candidates=candidates)
+
+
+from datetime import datetime
+from sqlalchemy import func
+
+@student_bp.route('/results')
+@login_required
+def results():
+    # Get all completed elections
+    local_tz = pytz.timezone("Asia/Manila")
+    now = datetime.now(local_tz)
+    
+    # Get completed elections (ended in the past)
+    completed_elections = Election.query.filter(
+        Election.end_date < now
+    ).order_by(Election.end_date.desc()).all()
+    
+    # If no completed elections, show a message
+    if not completed_elections:
+        return render_template('results.html', 
+                             elections=[],
+                             total_voters=0,
+                             total_votes=0,
+                             voter_turnout=0)
+    
+    # Get the most recent election for detailed results
+    recent_election = completed_elections[0]
+    
+    # Calculate total registered voters (students in the department or all students for SSG)
+    if recent_election.department_id:
+        total_voters = Student.query.filter_by(
+            department_id=recent_election.department_id
+        ).count()
+    else:
+        total_voters = Student.query.count()
+    
+    # Calculate total votes cast in this election
+    total_votes = Vote.query.filter_by(
+        election_id=recent_election.id
+    ).count()
+    
+    # Calculate voter turnout percentage
+    voter_turnout = (total_votes / total_voters * 100) if total_voters > 0 else 0
+    
+    # Get all positions in this election with their candidates and vote counts
+    positions_data = []
+    positions = Position.query.filter_by(
+        election_id=recent_election.id
+    ).all()
+    
+    for position in positions:
+        # Get candidates for this position with their vote counts
+        candidates_with_votes = db.session.query(
+            Candidate,
+            func.count(Vote.id).label('vote_count')
+        ).outerjoin(
+            Vote, Candidate.id == Vote.candidate_id
+        ).filter(
+            Candidate.position_id == position.id,
+            Candidate.election_id == recent_election.id
+        ).group_by(Candidate.id).order_by(
+            func.count(Vote.id).desc()
+        ).all()
+        
+        # Calculate total votes for this position
+        position_total_votes = sum(vote_count for _, vote_count in candidates_with_votes)
+        
+        # Prepare candidate data
+        candidates_data = []
+        for candidate, vote_count in candidates_with_votes:
+            vote_percentage = (vote_count / position_total_votes * 100) if position_total_votes > 0 else 0
+            
+            candidates_data.append({
+                'id': candidate.id,
+                'first_name': candidate.first_name,
+                'last_name': candidate.last_name,
+                'photo': candidate.photo,
+                'course': candidate.course,
+                'year_level': candidate.year_level,
+                'platform': candidate.platform,
+                'vote_count': vote_count,
+                'vote_percentage': round(vote_percentage, 1),
+                'is_winner': vote_count == max([vc for _, vc in candidates_with_votes]) if candidates_with_votes else False
+            })
+        
+        positions_data.append({
+            'id': position.id,
+            'name': position.name,
+            'description': position.description,
+            'candidates': candidates_data,
+            'total_votes': position_total_votes
+        })
+    
+    # Calculate party/group performance if you have party data
+    # This is a simplified version - you might need to adjust based on your data model
+    party_performance = []
+    
+    # Group candidates by party (if you have a party field)
+    # If you don't have parties, you can skip this or use candidate groups
+    
+    return render_template('results.html',
+                         recent_election=recent_election,
+                         all_elections=completed_elections,
+                         positions_data=positions_data,
+                         total_voters=total_voters,
+                         total_votes=total_votes,
+                         voter_turnout=round(voter_turnout, 1),
+                         results_date=now,
+                         results_status="FINAL RESULTS")
 
 # ------------------- GUIDELINES -------------------
 @student_bp.route('/guidelines')
@@ -1017,12 +1218,30 @@ def receipt():
 def profile():
     device = is_device_trusted(current_user.id)
 
-    return render_template(
-        'profile.html',
+    # In your profile route, add these variables:
+    return render_template('profile.html',
         student=current_user,
-        device_trusted=bool(device)
+        device_trusted=bool(device),
+        has_fingerprint=False,  # Add your fingerprint check
+        voting_history=[],  # Add your voting history query
+        has_voted_current=False  # Add your current vote check
     )
 
+@student_bp.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    student = current_user
+
+    if request.method == 'POST':
+        # Example: update student info
+        student.first_name = request.form.get('first_name')
+        student.last_name = request.form.get('last_name')
+        student.email = request.form.get('email')
+        db.session.commit()
+        flash("Profile updated successfully!", "success")
+        return redirect(url_for('student.profile'))
+
+    return render_template('edit_profile.html', student=student)
 
 
 

@@ -27,37 +27,42 @@
     </section>
 
     <!-- Candidates Form -->
-    <form method="POST" action="{{ url_for('student.submit_vote', election_id=election.id) }}" class="candidates-form">
+    <form method="POST" action="{{ url_for('student.submit_vote', election_id=election.id) }}" 
+      class="candidates-form" 
+      onsubmit="document.getElementById('cast-timestamp').value = new Date().toISOString();">
 
-        {% for position, candidates in candidates_by_position.items() %}
-        <div class="position-group">
-            <h3 class="position-title">{{ position }}</h3>
-            <div class="position-candidates">
-                {% for candidate in candidates %}
-                <label class="candidate-row">
-                    <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
-                         alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
-                         class="candidate-photo">
-                    <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
-                    <!-- Radio button with unique name per position -->
-                    <input type="radio" name="candidate_{{ position|replace(' ', '_') }}" value="{{ candidate.id }}" required>
-                </label>
-                {% endfor %}
-            </div>
+    <!-- Hidden input to store cast timestamp -->
+    <input type="hidden" name="cast_timestamp" id="cast-timestamp">
+    
+    {% for position, candidates in candidates_by_position.items() %}
+    <div class="position-group">
+        <h3 class="position-title">{{ position }}</h3>
+        <div class="position-candidates">
+            {% for candidate in candidates %}
+            <label class="candidate-row">
+                <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
+                     alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
+                     class="candidate-photo">
+                <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
+                <!-- Radio button with unique name per position -->
+                <input type="radio" name="candidate_{{ position|replace(' ', '_') }}" value="{{ candidate.id }}" required>
+            </label>
+            {% endfor %}
         </div>
-        {% endfor %}
+    </div>
+    {% endfor %}
 
-        <!-- Voting Countdown -->
-        <div class="voting-deadline-container">
-            <h3>Voting ends in:</h3>
-            <div id="countdown" class="countdown-timer"></div>
-        </div>
+    <!-- Voting Countdown -->
+    <div class="voting-deadline-container">
+        <h3>Voting ends in:</h3>
+        <div id="countdown" class="countdown-timer"></div>
+    </div>
 
-        <!-- Submit Button -->
-        <div class="submit-vote">
-            <button type="submit" onclick="return confirm('Submit your vote?')">Cast My Vote</button>
-        </div>
-    </form>
+    <!-- Submit Button -->
+    <div class="submit-vote">
+        <button type="submit" onclick="return confirm('Submit your vote?')">Cast My Vote</button>
+    </div>
+</form>
 
 </div>
 

@@ -1,0 +1,590 @@
+/* ============================================
+   BASE STYLES - MOBILE ONLY DESIGN
+   ============================================ */
+
+   * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    /* Colors */
+    --primary: #4361ee;
+    --primary-light: #4895ef;
+    --secondary: #3f37c9;
+    --success: #4cc9f0;
+    --warning: #f72585;
+    --danger: #f72585;
+    --light: #f8f9fa;
+    --dark: #212529;
+    --gray: #6c757d;
+    --gray-light: #e9ecef;
+    
+    /* Design Tokens */
+    --border-radius: 14px;
+    --card-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    --transition: all 0.2s ease;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+}
+
+/* Body & Container - Mobile Only */
+body {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--dark);
+    background-color: #f5f7ff;
+    max-width: 100vw;
+    overflow-x: hidden;
+    padding-bottom: 70px; /* Space for fixed footer */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* Header Styles */
+.header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 100%;
+    padding: 0 4px;
+}
+
+.logo {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: -0.5px;
+}
+
+.status-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* Main Content Area */
+.main-content {
+    padding: 16px 12px;
+    padding-bottom: 80px; /* Extra space for footer */
+    max-width: 100%;
+}
+
+/* Footer Navigation - ALWAYS VISIBLE */
+/* Footer Navigation - ALWAYS VISIBLE */
+.footer-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid var(--gray-light);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    z-index: 1000;
+    width: 100%;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-menu {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    width: 100%;
+    padding: 6px 0;
+    gap: 2px;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--gray);
+    padding: 8px 2px;
+    transition: var(--transition);
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 6px;
+    margin: 0 1px;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Active state - Light Blue Highlight */
+.nav-item.active {
+    color: #007AFF; /* Blue text color */
+    background: rgba(0, 122, 255, 0.1); /* Light blue background */
+}
+
+/* Add a subtle blue dot indicator for active item */
+.nav-item.active::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #007AFF;
+}
+
+.nav-item:active {
+    background: rgba(0, 122, 255, 0.15); /* Slightly darker light blue on tap */
+    transform: scale(0.95);
+}
+
+.nav-icon {
+    font-size: 1.1rem;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    width: 24px;
+    transition: var(--transition);
+}
+
+.nav-item.active .nav-icon {
+    color: #007AFF; /* Ensure icon is blue when active */
+    transform: translateY(-1px); /* Slight lift effect */
+}
+
+.nav-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.1;
+    transition: var(--transition);
+}
+
+.nav-item.active .nav-label {
+    color: #007AFF; /* Ensure label is blue when active */
+    font-weight: 600; /* Make it slightly bolder */
+}
+
+/* If you want a more prominent light blue highlight */
+.nav-item.active {
+    /* Alternative more prominent style */
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 122, 255, 0.05));
+    border-top: 2px solid rgba(0, 122, 255, 0.3);
+}
+
+/* Touch-friendly hover states (only for devices that support hover) */
+@media (hover: hover) {
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .nav-item:hover {
+        background: rgba(0, 122, 255, 0.08);
+    }
+    
+    .nav-item.active:hover {
+        background: rgba(0, 122, 255, 0.2);
+    }
+}
+/* Alerts */
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-md);
+    font-size: 0.85rem;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    background: rgba(76, 201, 240, 0.1);
+    border-color: var(--success);
+    color: #0a58ca;
+}
+
+.alert-error {
+    background: rgba(247, 37, 133, 0.1);
+    border-color: var(--danger);
+    color: #dc3545;
+}
+
+.alert-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.alert-info {
+    background: rgba(13, 110, 253, 0.1);
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+/* Card Component */
+.card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+    width: 100%;
+}
+
+.card:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.card-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--dark);
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    text-align: center;
+    width: 100%;
+    margin: var(--spacing-sm) 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+}
+
+.btn-primary:active {
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+}
+
+.btn-secondary {
+    background: var(--gray-light);
+    color: var(--dark);
+}
+
+.btn-secondary:active {
+    background: #dee2e6;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-small {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    width: auto;
+    min-width: 120px;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-active {
+    background: rgba(76, 201, 240, 0.1);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.badge-pending {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border: 1px solid #ffc107;
+}
+
+.badge-verified {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid #28a745;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--dark);
+    font-size: 0.85rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--gray-light);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    transition: var(--transition);
+    background: white;
+    -webkit-appearance: none;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.form-input:disabled {
+    background: var(--gray-light);
+    cursor: not-allowed;
+}
+
+/* Progress Bar */
+.progress-bar {
+    height: 6px;
+    background: var(--gray-light);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: var(--spacing-sm) 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Utility Classes */
+.text-center { text-align: center; }
+.text-muted { color: var(--gray); font-size: 0.85rem; }
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.p-1 { padding: var(--spacing-sm); }
+.p-2 { padding: var(--spacing-md); }
+.p-3 { padding: var(--spacing-lg); }
+.w-100 { width: 100%; }
+.d-flex { display: flex; }
+.flex-column { flex-direction: column; }
+.align-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+
+/* Extra Small Screens */
+@media (max-width: 320px) {
+    body {
+        font-size: 14px;
+    }
+    
+    .header {
+        padding: 14px 10px;
+    }
+    
+    .logo {
+        font-size: 1.2rem;
+    }
+    
+    .main-content {
+        padding: 14px 10px;
+    }
+    
+    .footer-nav {
+        height: 65px;
+    }
+    
+    .nav-menu {
+        padding: 4px 0;
+        gap: 1px;
+    }
+    
+    .nav-item {
+        padding: 6px 1px;
+    }
+    
+    .nav-icon {
+        font-size: 1rem;
+        height: 22px;
+        width: 22px;
+    }
+    
+    .nav-label {
+        font-size: 0.6rem;
+    }
+}
+
+/* Small Screens */
+@media (max-width: 360px) {
+    .container {
+        padding: 0 2px;
+    }
+    
+    .nav-menu {
+        gap: 0;
+    }
+    
+    .nav-item {
+        margin: 0;
+        padding: 6px 1px;
+    }
+}
+
+/* Prevent desktop view entirely */
+@media (min-width: 481px) {
+    .container {
+        max-width: 100%;
+        border-left: 1px solid var(--gray-light);
+        border-right: 1px solid var(--gray-light);
+        min-height: 100vh;
+        margin: 0;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #e9ecef;
+    }
+}
+
+/* Touch-friendly hover states (only for devices that support hover) */
+@media (hover: hover) {
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .nav-item:hover {
+        background: rgba(67, 97, 238, 0.05);
+    }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+    body {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .container {
+        min-height: -webkit-fill-available;
+    }
+    
+    .footer-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+        height: calc(70px + env(safe-area-inset-bottom));
+    }
+}
+
+/* Hide scrollbar but keep functionality */
+.main-content {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.main-content::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+/* Make the first container start from the very top */
+.main-content {
+    padding-top: 0 !important; /* remove top padding */
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 80px; /* keep space for footer */
+}
+
+
+/* Logo Styles */
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ctu-logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 20px;
+}
+
+.logo-text {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: -0.5px;
+    color: white;
+}

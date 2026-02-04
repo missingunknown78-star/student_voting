@@ -47,7 +47,6 @@ class Student(db.Model, UserMixin):
     course_rel = db.relationship('Course', backref='students')
 
 
-# ------------------- VOTE -------------------
 class Vote(db.Model):
     __tablename__ = "votes"
 
@@ -55,12 +54,16 @@ class Vote(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id'), nullable=False)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
+    
+    # Add these timestamp fields
+    cast_timestamp = db.Column(db.DateTime, nullable=True)  # When user clicked "Cast Vote"
+    recorded_timestamp = db.Column(db.DateTime, nullable=True)  # When vote was saved to DB
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Auto timestamp
 
     # relationships
     student = db.relationship("Student", backref="student_votes")
-    candidate = db.relationship("Candidate", back_populates="votes")  # <-- match back_populates
+    candidate = db.relationship("Candidate", back_populates="votes")
     election = db.relationship("Election", backref="election_votes")
-
 
 
 from datetime import datetime

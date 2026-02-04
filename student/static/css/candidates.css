@@ -1,686 +1,618 @@
-/* ===============================
-   CANDIDATES PAGE – COMPACT STYLE
-   =============================== */
+/* ============================================
+   CANDIDATES PAGE - MOBILE FIRST DESIGN
+   ============================================ */
 
-/* ==========================================================================
-   GLOBAL STYLES & VARIABLES
-   ========================================================================== */
-   :root {
-    --primary: #3498db;
-    --primary-dark: #2980b9;
-    --primary-light: #ebf5fb;
-    --secondary: #2c3e50;
-    --success: #27ae60;
-    --success-light: #2ecc71;
-    --warning: #f39c12;
-    --warning-light: #f1c40f;
-    --danger: #e74c3c;
-    --info: #3498db;
-    --light: #f8f9fa;
-    --dark: #2c3e50;
-    --gray: #95a5a6;
-    --light-gray: #ecf0f1;
-    --border-color: #dfe6e9;
-    --shadow: 0 4px 12px rgba(0,0,0,0.08);
-    --shadow-lg: 0 8px 25px rgba(0,0,0,0.12);
-    --transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1);
-    --border-radius: 12px;
-    --border-radius-sm: 8px;
-    --sidebar-width: 300px;
+   .candidates-container {
+    padding: 12px 8px;
+    padding-bottom: 90px; /* Extra space for footer */
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-body {
-    background-color: #f5f7fa;
-    color: var(--dark);
-    min-height: 100vh;
-    overflow-x: hidden;
-    line-height: 1.6;
-}
-
-/* ==========================================================================
-   DESKTOP HEADER WITH HAMBURGER (Hidden on Mobile)
-   ========================================================================== */
-
-.top-nav {
-    display: none;
-}
-
-/* DESKTOP ONLY: Show header and hamburger */
-@media (min-width: 769px) {
-    .top-nav {
-        display: flex;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 70px;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: #fff;
-        align-items: center;
-        padding: 0 25px;
-        z-index: 1000;
-        box-shadow: 0 4px 20px rgba(52, 152, 219, 0.25);
-        transition: var(--transition);
-    }
-
-    .hamburger {
-        cursor: pointer;
-        margin-right: 20px;
-        transition: transform 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.15);
-        position: relative;
-        z-index: 1001;
-        align-self: center;
-    }
-
-    .hamburger span {
-        position: relative;
-        display: block;
-        width: 24px;
-        height: 2px;
-        background: white;
-        border-radius: 2px;
-        transition: all 0.3s ease;
-        top: 0;
-        left: 0;
-    }
-
-    .hamburger span:before,
-    .hamburger span:after {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        background: white;
-        border-radius: 2px;
-        transition: all 0.3s ease;
-        left: 0;
-    }
-
-    .hamburger span:before {
-        top: -8px;
-    }
-
-    .hamburger span:after {
-        bottom: -8px;
-    }
-
-    .hamburger.active span {
-        background: transparent;
-    }
-
-    .hamburger.active span:before {
-        transform: rotate(45deg);
-        top: 0;
-    }
-
-    .hamburger.active span:after {
-        transform: rotate(-45deg);
-        bottom: 0;
-    }
-
-    .hamburger:hover {
-        background: rgba(255, 255, 255, 0.25);
-        transform: scale(1.1);
-    }
-
-    .nav-left {
-        display: flex;
-        align-items: center;
-        height: 100%;
-    }
-
-    .nav-title {
-        font-weight: 700;
-        font-size: 1.4rem;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        letter-spacing: 0.5px;
-        line-height: 1;
-        display: flex;
-        align-items: center;
-        height: 100%;
-    }
-}
-
-/* ==========================================================================
-   SIDEBAR STYLES
-   ========================================================================== */
-
-.side-menu {
-    position: fixed;
-    top: 0;
-    left: -350px;
-    width: var(--sidebar-width);
-    height: 100vh;
-    background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+/* Election Info */
+.election-info {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    z-index: 1002;
-    transition: left 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
-    overflow-y: auto;
-    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.2);
+    padding: 18px 14px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
 }
 
-.side-menu.open {
-    left: 0;
-}
-
-.side-menu-header {
-    padding: 30px 25px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.side-menu-title {
-    font-size: 1.5rem;
+.election-title {
+    font-size: 1.3rem;
     font-weight: 700;
-    margin-bottom: 5px;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    margin-bottom: 4px;
+    line-height: 1.3;
 }
 
-.side-menu-subtitle {
+.election-subtitle {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
+    opacity: 0.9;
+    margin-bottom: 18px;
+    line-height: 1.4;
 }
 
-.side-menu-nav {
-    padding: 20px 0;
-}
-
-.menu-item {
+.election-stats {
     display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 16px 25px;
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border-left: 3px solid transparent;
-    position: relative;
-    overflow: hidden;
+    justify-content: space-around;
+    gap: 12px;
 }
 
-.menu-item:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.6s ease;
-}
-
-.menu-item:hover:before {
-    left: 100%;
-}
-
-.menu-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-    border-left-color: var(--primary);
-    padding-left: 28px;
-}
-
-.menu-item.active {
-    background: rgba(52, 152, 219, 0.15);
-    color: white;
-    border-left-color: var(--primary);
-    font-weight: 600;
-}
-
-.menu-item i {
-    font-size: 1.2rem;
-    width: 24px;
+.election-stats .stat {
     text-align: center;
+    flex: 1;
 }
 
-.menu-text {
-    font-size: 0.95rem;
-    font-weight: 500;
+.election-stats .stat-number {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 4px;
 }
 
-.menu-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.1);
-    margin: 15px 25px;
+.election-stats .stat-label {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.menu-footer {
-    padding: 25px;
-    margin-top: auto;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.85rem;
-}
-
-/* ==========================================================================
-   SIDEBAR OVERLAY FOR DESKTOP
-   ========================================================================== */
-.side-menu-overlay {
-    display: none;
-}
-
-@media (min-width: 769px) {
-    .side-menu-overlay {
-        display: block;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1001;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-
-    .side-menu-overlay.active {
-        opacity: 1;
-        visibility: visible;
-    }
-}
-
-/* ==========================================================================
-   MAIN CONTENT ADJUSTMENTS FOR SIDEBAR
-   ========================================================================== */
-
-.main-content {
-    padding: 20px;
-    transition: margin-left 0.35s ease;
-    min-height: 100vh;
-    position: relative;
-    z-index: 1;
-}
-
-@media (min-width: 769px) {
-    .main-content {
-        margin-top: 70px;
-        padding: 30px;
-    }
-
-    .side-menu.open ~ .main-content {
-        margin-left: var(--sidebar-width);
-    }
-}
-
-/* ==========================================================================
-   FIX FOR HEADER BELOW SIDEBAR WHEN OPEN
-   ========================================================================== */
-
-@media (min-width: 769px) {
-    /* When sidebar is open, adjust header to appear below it */
-    .side-menu.open ~ .top-nav {
-        z-index: 999;
-    }
-    
-    /* Ensure hamburger stays clickable even when header is below */
-    .side-menu.open ~ .top-nav .hamburger {
-        z-index: 1003;
-    }
-}
-
-/* ==========================================================================
-   ALTERNATIVE FIX - SLIDE HEADER WITH SIDEBAR
-   ========================================================================== */
-@media (min-width: 769px) {
-    .side-menu.open ~ .top-nav {
-        left: var(--sidebar-width);
-        width: calc(100% - var(--sidebar-width));
-        transition: left 0.35s ease, width 0.35s ease;
-    }
-}
-
-/* ================= MOBILE TOP-RIGHT HAMBURGER ================= */
-.mobile-fab {
-    position: fixed;
-    top: 14px;
-    right: 14px;
-    z-index: 1100;
-    display: none;
-}
-
-.fab-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: none;
-    background: var(--primary);
-    color: #fff;
-    font-size: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    cursor: pointer;
+/* Position Tabs */
+.position-tabs {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 4px 0 14px;
+    margin-bottom: 16px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    background: #f5f7ff;
+    z-index: 5;
+    padding-right: 8px;
+}
+
+.position-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-btn {
+    padding: 10px 14px;
+    background: white;
+    border: 2px solid var(--gray-light);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--gray);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
     transition: var(--transition);
 }
 
-.fab-btn:hover {
-    transform: scale(1.1);
-    background: var(--primary-dark);
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
 }
 
-/* Dropdown menu */
-.fab-menu {
-    position: absolute;
-    top: 54px;
-    right: 0;
-    background: #fff;
+.tab-btn:active:not(.active) {
+    border-color: var(--primary-light);
+    color: var(--primary);
+}
+
+/* Election Section */
+.election-section {
+    margin-bottom: 24px;
+}
+
+.election-header-card {
+    background: #f8f9fa;
+    padding: 16px;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    display: none;
-    overflow: hidden;
-    min-width: 190px;
-    z-index: 1101;
+    margin-bottom: 16px;
+    border: 2px solid var(--primary); /* Changed from left border to all borders */
+    text-align: center; /* Center align all text */
 }
 
-.fab-menu.open {
+.election-title-section {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--dark);
+    display: flex; /* Added for better centering */
+    justify-content: center; /* Center the text */
+    align-items: center; /* Center vertically if needed */
+}
+
+.election-type {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(67, 97, 238, 0.1);
+    border-radius: 12px;
+    font-size: 0.7rem;
+    color: var(--primary);
+    font-weight: 500;
+    margin: 0 auto; /* Center the election type badge */
+}
+/* Candidates Grid */
+.candidates-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.candidate-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    border: 2px solid transparent;
+    transition: var(--transition);
     display: block;
 }
 
-.fab-item {
-    all: unset;
+.candidate-card:active {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    border-color: var(--primary-light);
+}
+
+.candidate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.candidate-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.2s ease;
-}
-
-.fab-item:hover {
-    background: #f4f6f8;
-}
-
-.fab-item i {
-    width: 20px;
-    text-align: center;
-}
-
-.fab-item.logout {
-    color: #e74c3c;
+    justify-content: center;
+    font-size: 1.3rem;
     font-weight: 600;
-}
-
-/* MOBILE ONLY */
-@media (max-width: 768px) {
-    .mobile-fab {
-        display: block;
-    }
-}
-
-/* ===============================
-   CANDIDATES PAGE SPECIFIC STYLES
-   =============================== */
-
-/* Page title */
-.page-title {
-    text-align: center;
-    margin: 8px 0 20px 0;
-    font-size: 1.2rem;
-    color: #2c3e50;
-}
-
-@media (min-width: 769px) {
-    .page-title {
-        font-size: 1.8rem;
-        margin: 0 0 30px 0;
-        color: var(--secondary);
-    }
-}
-
-/* Main container */
-.candidates-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    padding: 6px;
-}
-
-@media (min-width: 769px) {
-    .candidates-container {
-        padding: 0;
-        gap: 25px;
-    }
-}
-
-/* Candidate card */
-.candidate-card {
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    text-align: center;
-    transition: var(--transition);
-}
-
-.candidate-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lg);
-}
-
-@media (min-width: 769px) {
-    .candidate-card {
-        border-radius: var(--border-radius-sm);
-        padding: 20px;
-    }
-}
-
-/* Candidate photo */
-.candidate-photo {
-    width: 100%;
-    height: 115px;
-    object-fit: cover;
-    border-radius: 6px;
-    margin-bottom: 6px;
+    color: white;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
     cursor: pointer;
-    transition: transform 0.3s ease;
+    position: relative;
 }
 
-.candidate-photo:hover {
-    transform: scale(1.02);
+.candidate-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-@media (min-width: 769px) {
-    .candidate-photo {
-        height: 200px;
-        border-radius: var(--border-radius-sm);
-        margin-bottom: 15px;
-    }
+.candidate-initials {
+    font-weight: 600;
+    color: white;
 }
 
-/* Candidate info */
+.candidate-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.position-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(135deg, #4361ee, #3f37c9);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .candidate-info {
-    font-size: 0.75rem;
-    line-height: 1.3;
-    text-align: left;
-}
-
-@media (min-width: 769px) {
-    .candidate-info {
-        font-size: 0.9rem;
-        line-height: 1.5;
-    }
+    margin-bottom: 16px;
 }
 
 .candidate-name {
-    text-align: center;
-    font-size: 0.82rem;
-    font-weight: 600;
-    margin-bottom: 3px;
-    color: #2c3e50;
-    font: bold;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--dark);
+    line-height: 1.3;
 }
 
-@media (min-width: 769px) {
-    .candidate-name {
-        font-size: 1.1rem;
-        margin-bottom: 10px;
-        color: var(--secondary);
-    }
+.candidate-course {
+    font-size: 0.8rem;
+    color: var(--gray);
+    margin-bottom: 12px;
+    line-height: 1.4;
 }
 
-.candidate-position,
 .candidate-platform {
-    margin: 2px 0;
-    color: #555;
-}
-
-@media (min-width: 769px) {
-    .candidate-position,
-    .candidate-platform {
-        margin: 5px 0;
-        color: var(--gray);
-    }
-}
-
-/* No candidates */
-.no-candidates {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 30px 15px;
-    font-size: 0.85rem;
-    color: #777;
-}
-
-@media (min-width: 769px) {
-    .no-candidates {
-        font-size: 1rem;
-        padding: 60px 30px;
-    }
-}
-
-/* ===============================
-   RESPONSIVE UPGRADES
-   =============================== */
-
-/* Tablet */
-@media (min-width: 768px) {
-    .candidates-container {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        padding: 12px;
-    }
-
-    .candidate-info {
-        font-size: 0.85rem;
-    }
-
-    .candidate-name {
-        font-size: 0.95rem;
-    }
-}
-
-/* Desktop */
-@media (min-width: 1024px) {
-    .candidates-container {
-        grid-template-columns: repeat(4, 1fr);
-        max-width: 1200px;
-        margin: auto;
-    }
-
-    .candidate-info {
-        font-size: 0.9rem;
-    }
-
-    .candidate-name {
-        font-size: 1rem;
-    }
-}
-
-/* ===============================
-   PHOTO-ONLY MODAL (LIGHTBOX)
-   =============================== */
-
-.photo-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 3000;
-    background: rgba(0, 0, 0, 0.85);
-    justify-content: center;
-    align-items: center;
+    background: #f8f9fa;
     padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 12px;
 }
 
-.photo-modal.active {
+.platform-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--dark);
+}
+
+.platform-text {
+    font-size: 0.75rem;
+    color: var(--gray);
+    line-height: 1.4;
+    margin: 0;
+}
+
+.candidate-election {
     display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid var(--gray-light);
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+
+.election-icon {
+    font-size: 0.9rem;
+}
+
+.candidate-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 14px;
+    border-top: 1px solid var(--gray-light);
+}
+
+.view-profile-btn {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+}
+
+/* Filter Card */
+.filter-card {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 12px;
+    margin: 20px 0;
+    border: 2px solid #e9ecef;
+}
+
+.filter-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.position-filters,
+.election-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.position-filter,
+.election-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--gray);
+    cursor: pointer;
+    padding: 6px 10px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--gray-light);
+    transition: var(--transition);
+}
+
+.position-filter.active,
+.election-filter.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.position-filter:active:not(.active),
+.election-filter:active:not(.active) {
+    border-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.position-filter input[type="radio"],
+.election-filter input[type="radio"] {
+    display: none;
+}
+
+/* Guide Card */
+.guide-card {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+    border: 2px solid #ffd54f;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 20px 0;
+}
+
+.guide-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.step {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.step-number {
+    width: 22px;
+    height: 22px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.step-content h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+    color: var(--dark);
+}
+
+.step-content p {
+    font-size: 0.75rem;
+    color: var(--gray);
+    line-height: 1.4;
+}
+
+.guide-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+.note-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* No Candidates Card */
+.no-candidates-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    margin: 20px 0;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.no-candidates-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.no-candidates-card h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--dark);
+}
+
+.no-candidates-card p {
+    color: var(--gray);
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.no-candidates-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+/* Photo Modal */
+.photo-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.photo-modal-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+    background: transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .photo-modal-img {
     max-width: 100%;
-    max-height: 90vh;
+    max-height: 70vh;
     object-fit: contain;
     border-radius: 8px;
 }
 
-.photo-close {
-    position: fixed;
-    top: 12px;
-    right: 16px;
-    font-size: 2rem;
-    color: #fff;
-    cursor: pointer;
-    z-index: 3001;
-    transition: transform 0.3s ease;
-}
-
-.photo-close:hover {
-    transform: scale(1.1);
-}
-
-/* ==========================================================================
-   UTILITY CLASSES
-   ========================================================================== */
-.text-center { text-align: center; }
-.mt-20 { margin-top: 20px; }
-.w-100 { width: 100%; }
-.d-flex { display: flex; }
-.align-center { align-items: center; }
-.justify-center { justify-content: center; }
-.flex-column { flex-direction: column; }
-.d-none { display: none !important; }
-.d-block { display: block !important; }
-
-.election-header {
-    margin: 18px 6px 6px;
-}
-
-.election-title {
-    background-color: #0b5ef8;   /* light blue */
-    color: #f7f9fa;              /* readable blue text */
-    padding: 8px 10px;
-    margin: 16px 6px 8px;
+.photo-modal-caption {
+    margin-top: 12px;
+    color: white;
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-align: center;
+    backdrop-filter: blur(10px);
 }
 
-.election-type {
-    display: block;
-    text-align: center;
-    font-size: 0.75rem;
-    color: #777;
+.photo-modal-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: white;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: var(--transition);
+    z-index: 1001;
 }
- 
+
+.photo-modal-close:active {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0.95);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 360px) {
+    .position-tabs {
+        gap: 4px;
+    }
+    
+    .tab-btn {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+    }
+    
+    .candidates-grid {
+        gap: 12px;
+    }
+    
+    .candidate-card {
+        padding: 14px;
+    }
+    
+    .candidate-photo {
+        width: 50px;
+        height: 50px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (min-width: 500px) {
+    .candidates-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Touch-friendly hover states */
+@media (hover: hover) {
+    .candidate-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-light);
+    }
+    
+    .tab-btn:hover:not(.active) {
+        border-color: var(--primary-light);
+        color: var(--primary);
+    }
+    
+    .position-filter:hover:not(.active),
+    .election-filter:hover:not(.active) {
+        border-color: var(--primary-light);
+        color: var(--primary);
+    }
+    
+    .photo-modal-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* Animation for modal */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.photo-modal-content {
+    animation: modalFadeIn 0.3s ease;
+}
