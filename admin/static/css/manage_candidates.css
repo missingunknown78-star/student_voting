@@ -1,5 +1,28 @@
 /* ================= COMBINED MANAGE + ADD CANDIDATE CSS ================= */
 
+/* ==================== PREVENT FOUC ==================== */
+/* Set initial dark background to prevent flash */
+body {
+    background-color: #0f172a; /* Dark background as default */
+    transition: background-color 0.3s ease;
+}
+
+/* Light mode override */
+body:not(.dark-mode) {
+    background-color: #f5f7fb;
+}
+
+/* Quick fade-in to hide any remaining flash */
+@keyframes quickFadeIn {
+    from { opacity: 0.99; }
+    to { opacity: 1; }
+}
+
+.container {
+    animation: quickFadeIn 0.1s ease-out;
+    opacity: 1;
+}
+
 /* ---------------- Variables ---------------- */
 :root {
     --primary: #4361ee;
@@ -19,50 +42,190 @@
     --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --content-gap: 20px; /* Space between sidebar and content */
+    --content-gap: 20px; /* Space between sidebar and content - KEEPING THIS */
+    
+    /* Light mode specific */
+    --bg-color: #f5f6fa;
+    --text-color: #212529;
+    --text-secondary: #6c757d;
+    --card-bg: #ffffff;
+    --table-header-bg: #2c3e50;
+    --table-row-hover: #f1f2f6;
+    --input-bg: white;
+    --input-border: #e9ecef;
+    --modal-bg: #f9f9f9;
+    --modal-text: #333;
+}
+
+/* Dark mode variables */
+.dark-mode {
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --card-bg: #1e293b;
+    --table-header-bg: #334155;
+    --table-row-hover: rgba(51, 65, 85, 0.3);
+    --input-bg: #1e293b;
+    --input-border: rgba(51, 65, 85, 0.8);
+    --modal-bg: #1e293b;
+    --modal-text: #f1f5f9;
+    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    --light: #334155;
+    --gray-light: rgba(51, 65, 85, 0.8);
+    --dark: #f1f5f9;
 }
 
 * { box-sizing: border-box; }
 
-/* ---------------- Main content (adjusted for sidebar with gap) ---------------- */
-.main-content {
-    margin-left: calc(280px + var(--content-gap)); /* Hardcoded 280px to match sidebar.css */
+/* ---------------- Page container (replaces .main-content) ---------------- */
+/* CHANGED: Removed var(--content-gap) for edge-to-edge */
+.container {
+    margin-left: 280px; /* Removed: + var(--content-gap) */
     padding: 30px;
     min-height: 100vh;
-    background-color: #f5f6fa;
+    background-color: var(--bg-color);
     box-sizing: border-box;
-    max-width: calc(100% - 280px - var(--content-gap) - 30px);
+    width: calc(100% - 280px); /* Changed: width instead of max-width */
+    transition: var(--transition);
 }
 
-/* ---------------- Headings ---------------- */
-h1.page-title {
+/* ---------------- Title Bar with Buttons ---------------- */
+.title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.container .title-bar h1 {
     font-size: 1.8rem;
-    margin-bottom: 20px;
-    text-align: center;
+    margin: 0;
+    padding: 0;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    position: relative;
-    padding-bottom: 20px;
-    z-index: 1;
+    color: var(--text-color);
+    transition: var(--transition);
+    flex-grow: 1;
 }
 
-h1.page-title::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    border-radius: 2px;
+/* Title buttons container */
+.title-buttons {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* Position buttons styling */
+.position-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 10px 20px;
+    white-space: nowrap;
+    font-family: var(--font-family);
+}
+
+/* Position List Button */
+.position-list-btn {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+}
+
+.position-list-btn:hover {
+    background: linear-gradient(135deg, #27ae60, #219653);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+}
+
+/* Add Position Button */
+.add-position-btn {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: #fff;
+}
+
+.add-position-btn:hover {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+}
+
+/* ---------------- ACTION BAR: Add Button + Filter Form Side by Side ---------------- */
+.action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Left side: Add button */
+.add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 12px 24px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.add-btn:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+/* Right side: Filter form */
+.filter-form {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 0;
+    flex-grow: 1;
+    justify-content: flex-end;
+}
+
+.filter-form select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    font-size: 14px;
+    background: var(--input-bg);
+    color: var(--dark);
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 180px;
+}
+
+.filter-form select:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+/* Department dropdown in filter */
+#filter_department {
+    min-width: 200px;
 }
 
 /* ---------------- Buttons ---------------- */
-.add-btn,
 .cancel-btn,
 .edit-btn {
     border: none;
@@ -75,26 +238,14 @@ h1.page-title::after {
     padding: 10px 18px;
 }
 
-.add-btn {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: #fff;
-    margin-bottom: 15px;
-}
-
-.add-btn:hover {
-    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
-}
-
 .cancel-btn {
-    background: #ccc;
-    color: #333;
+    background: var(--light);
+    color: var(--dark);
 }
 
 .cancel-btn:hover {
-    background: var(--light);
+    background: var(--gray-light);
+    transform: translateY(-1px);
 }
 
 .edit-btn {
@@ -104,43 +255,50 @@ h1.page-title::after {
 
 .edit-btn:hover {
     background: #2980b9;
+    transform: translateY(-1px);
 }
 
 /* ---------------- Table ---------------- */
 .candidates-table {
     width: 100%;
     border-collapse: collapse;
-    background: #ffffff;
+    background: var(--card-bg);
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: var(--box-shadow);
     margin-bottom: 50px;
+    transition: var(--transition);
 }
 
 .candidates-table th {
-    background: #2c3e50;
+    background: var(--table-header-bg);
     color: #ffffff;
     padding: 12px;
     text-align: left;
     font-weight: 600;
+    transition: var(--transition);
 }
 
 .candidates-table td {
     padding: 12px;
-    border-bottom: 1px solid #ecf0f1;
+    border-bottom: 1px solid var(--input-border);
     vertical-align: middle;
+    color: var(--text-color);
+    transition: var(--transition);
 }
 
 .candidates-table tr:hover {
-    background: #f1f2f6;
+    background: var(--table-row-hover);
 }
 
-/* Candidate Photo */
+/* Candidate Photo - FIXED SIZE */
 .candidate-photo {
     width: 50px;
     height: 50px;
     object-fit: cover;
     border-radius: 6px;
+    border: 1px solid var(--input-border);
+    transition: var(--transition);
 }
 
 .clickable-photo {
@@ -164,6 +322,7 @@ h1.page-title::after {
     font-weight: 600;
     color: var(--dark);
     font-size: 0.95rem;
+    transition: var(--transition);
 }
 
 .form-group input[type="text"],
@@ -171,11 +330,11 @@ h1.page-title::after {
 .form-group input[type="file"] {
     width: 100%;
     padding: 14px 16px;
-    border: 2px solid var(--gray-light);
+    border: 2px solid var(--input-border);
     border-radius: var(--border-radius-sm);
     font-size: 15px;
     transition: var(--transition);
-    background: white;
+    background: var(--input-bg);
     color: var(--dark);
     font-family: inherit;
 }
@@ -220,10 +379,11 @@ h1.page-title::after {
     background-color: rgba(0,0,0,0.7);
     justify-content: center;
     align-items: center;
+    backdrop-filter: blur(5px);
 }
 
 .lightbox-content {
-    background-color: #f9f9f9;
+    background-color: var(--modal-bg);
     padding: 25px;
     border-radius: 10px;
     max-width: 500px;
@@ -232,10 +392,11 @@ h1.page-title::after {
     overflow-y: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    box-shadow: var(--box-shadow);
     animation: zoomIn 0.3s forwards;
     position: relative;
     z-index: 10001;
+    transition: var(--transition);
 }
 
 /* Hide scrollbar for Chrome, Safari, Opera */
@@ -248,8 +409,13 @@ h1.page-title::after {
     right: 20px;
     font-size: 28px;
     font-weight: bold;
-    color: #333;
+    color: var(--modal-text);
     cursor: pointer;
+    transition: var(--transition);
+}
+
+.lightbox-content .close:hover {
+    color: var(--primary);
 }
 
 .lightbox-content button.add-btn {
@@ -262,8 +428,8 @@ h1.page-title::after {
 }
 
 .lightbox-content button.cancel-btn {
-    background-color: #ccc;
-    color: #333;
+    background-color: var(--light);
+    color: var(--dark);
     border: none;
     padding: 10px 20px;
     border-radius: 6px;
@@ -284,6 +450,7 @@ h1.page-title::after {
     align-items: center;
     z-index: 10000;
     cursor: pointer;
+    backdrop-filter: blur(5px);
 }
 
 #lightbox-img {
@@ -293,6 +460,7 @@ h1.page-title::after {
     box-shadow: 0 8px 20px rgba(0,0,0,0.5);
     transform: scale(0.8);
     animation: zoomIn 0.3s forwards;
+    border: 1px solid var(--input-border);
 }
 
 /* ---------------- Animations ---------------- */
@@ -334,69 +502,11 @@ h1.page-title::after {
     font-size: 0.85rem;
 }
 
-/* ---------------- Filter Form ---------------- */
-.filter-form {
-    margin: 15px 0 20px;
-}
-
-.filter-form select {
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    font-size: 14px;
-    background: #fff;
-    cursor: pointer;
-}
-
-/* ---------------- Responsive Design ---------------- */
-@media (max-width: 1024px) {
-    .main-content {
-        margin-left: var(--content-gap);
-        max-width: calc(100% - var(--content-gap) - 30px);
-    }
-}
-
-@media (max-width: 768px) {
-    .main-content {
-        margin-left: 0;
-        padding: 20px;
-        max-width: 100%;
-    }
-    
-    .add-btn,
-    .cancel-btn,
-    .edit-btn {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .main-content {
-        padding: 15px;
-    }
-    
-    .candidates-table th,
-    .candidates-table td {
-        padding: 8px 10px;
-        font-size: 0.9rem;
-    }
-    
-    .candidate-photo {
-        width: 40px;
-        height: 40px;
-    }
-}
-
-
-/* ================= TWO-COLUMN MODAL FORM LAYOUT ================= */
-
-/* Widen the modal so two columns fit */
+/* ---------------- TWO-COLUMN MODAL FORM LAYOUT ---------------- */
 .lightbox-content {
     max-width: 850px !important;
 }
 
-/* Turn the form into a grid */
 .lightbox-content form {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -404,13 +514,11 @@ h1.page-title::after {
     row-gap: 20px;
 }
 
-/* Make every field fill its column */
 .lightbox-content .form-group {
     width: 100%;
     margin-bottom: 0;
 }
 
-/* Make buttons span full width */
 .lightbox-content .button-group {
     grid-column: 1 / -1;
     display: flex;
@@ -419,17 +527,16 @@ h1.page-title::after {
     margin-top: 20px;
 }
 
-/* Make titles span full width */
 .lightbox-content h2 {
     grid-column: 1 / -1;
+    color: var(--modal-text);
+    transition: var(--transition);
 }
 
-/* Photo upload should span both columns */
 .lightbox-content .form-group:last-of-type {
     grid-column: 1 / -1;
 }
 
-/* Prevent scrolling unless screen is small */
 .lightbox-content {
     max-height: 90vh;
     overflow-y: auto;
@@ -446,29 +553,25 @@ h1.page-title::after {
     }
 }
 
-
-
 /* Spinner inside button */
 .add-btn .spinner {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid #fff; /* white border */
-    border-top: 2px solid transparent; /* top transparent */
+    border: 2px solid #fff;
+    border-top: 2px solid transparent;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
     vertical-align: middle;
     margin-right: 5px;
-  }
-  
-  @keyframes spin {
+}
+
+@keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-  }
-  
+}
 
-
-  /* ================= Pagination Styling ================= */
+/* ================= Pagination Styling ================= */
 .pagination {
     display: flex;
     justify-content: center;
@@ -514,14 +617,79 @@ h1.page-title::after {
 }
 
 .pagination .disabled {
-    background: #e9ecef;
-    color: var(--gray);
+    background: var(--light);
+    color: var(--text-secondary);
     cursor: default;
     border: 1px solid var(--gray-light);
 }
 
-/* MOBILE RESPONSIVE PAGINATION */
+/* ---------------- Responsive Design ---------------- */
+/* UPDATED: Remove var(--content-gap) from responsive styles too */
+@media (max-width: 1024px) {
+    .container {
+        margin-left: 280px; /* Removed: var(--content-gap) */
+        width: calc(100% - 280px); /* Removed: - var(--content-gap) - 30px */
+    }
+}
+
 @media (max-width: 768px) {
+    .container {
+        margin-left: 0;
+        padding: 20px;
+        width: 100%;
+    }
+    
+    /* Title bar mobile */
+    .title-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .title-buttons {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .position-btn {
+        flex: 1;
+        min-width: 140px;
+        justify-content: center;
+    }
+    
+    /* Action bar mobile */
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+    
+    .filter-form {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    
+    .filter-form select {
+        min-width: 100%;
+    }
+    
+    .add-btn,
+    .cancel-btn,
+    .edit-btn {
+        width: 100%;
+        margin-bottom: 10px;
+        justify-content: center;
+    }
+    
+    /* Two-column layout back to single on mobile */
+    .lightbox-content form {
+        grid-template-columns: 1fr;
+    }
+
+    .lightbox-content {
+        max-width: 95%;
+    }
+    
     .pagination {
         gap: 4px;
     }
@@ -531,5 +699,39 @@ h1.page-title::after {
         padding: 6px 10px;
         font-size: 0.85rem;
         min-width: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .container .title-bar h1 {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    
+    .title-buttons {
+        flex-direction: column;
+    }
+    
+    .position-btn {
+        width: 100%;
+    }
+    
+    .candidates-table th,
+    .candidates-table td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+    
+    .candidate-photo {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .action-bar {
+        gap: 12px;
     }
 }

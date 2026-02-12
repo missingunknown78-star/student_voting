@@ -7,54 +7,55 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="announcements-title">Announcements & Reminders</h2>
+<!-- ADD THIS WRAPPER DIV -->
+<div class="announcements-page">
+    <h2 class="announcements-title">Announcements & Reminders</h2>
 
-<!-- Add Announcement Button -->
-<a href="javascript:void(0)" class="add-announcement-btn" id="openModalBtn">+ Add Announcement</a>
+    <!-- Add Announcement Button -->
+    <a href="javascript:void(0)" class="add-announcement-btn" id="openModalBtn">+ Add Announcement</a>
 
-<!-- Modal -->
-<!-- Modal -->
-<div id="announcementModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" id="closeModalBtn">&times;</span>
-        <h3>Add New Announcement</h3>
-        <form id="announcementForm" method="POST" action="{{ url_for('admin.announcements') }}">
-            
-            <label for="title">Title</label>
-            <input type="text" id="title" name="title" placeholder="Enter announcement title" required>
+    <!-- Modal -->
+    <div id="announcementModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModalBtn">&times;</span>
+            <h3>Add New Announcement</h3>
+            <form id="announcementForm" method="POST" action="{{ url_for('admin.announcements') }}">
+                
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title" placeholder="Enter announcement title" required>
 
-            <label for="content">Content</label>
-            <textarea id="content" name="content" rows="4" placeholder="Enter announcement details" required></textarea>
+                <label for="content">Content</label>
+                <textarea id="content" name="content" rows="4" placeholder="Enter announcement details" required></textarea>
 
-            <label for="date">Date</label>
-            <input type="date" id="date" name="date" required>
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" required>
 
-            <label for="department">Department</label>
-            <select id="department" name="department" required>
-                <option value="all">All</option>
-                {% for dept in departments %}
-                <option value="{{ dept.id }}">{{ dept.name }}</option>
-                {% endfor %}
-            </select>
+                <label for="department">Department</label>
+                <select id="department" name="department" required>
+                    <option value="all">All</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
 
-            <button type="submit" class="add-announcement-btn">Submit</button>
-        </form>
+                <button type="submit" class="add-announcement-btn">Submit</button>
+            </form>
+        </div>
     </div>
-</div>
 
+    <!-- Example announcement cards -->
+    <div class="announcement-card">
+        <h3>Election Schedule Released</h3>
+        <p>The election schedule for the upcoming student government elections has been published. Please check your department notice boards for details.</p>
+        <div class="date">Dec 26, 2025</div>
+    </div>
 
-<!-- Example announcement cards -->
-<div class="announcement-card">
-    <h3>Election Schedule Released</h3>
-    <p>The election schedule for the upcoming student government elections has been published. Please check your department notice boards for details.</p>
-    <div class="date">Dec 26, 2025</div>
-</div>
-
-<div class="announcement-card">
-    <h3>Reminder: Voter Registration Deadline</h3>
-    <p>All students must register as voters by Dec 30, 2025 to be eligible to vote. Late registrations will not be accepted.</p>
-    <div class="date">Dec 25, 2025</div>
-</div>
+    <div class="announcement-card">
+        <h3>Reminder: Voter Registration Deadline</h3>
+        <p>All students must register as voters by Dec 30, 2025 to be eligible to vote. Late registrations will not be accepted.</p>
+        <div class="date">Dec 25, 2025</div>
+    </div>
+</div> <!-- END announcements-page wrapper -->
 
 <!-- Modal Script -->
 <script>
@@ -62,19 +63,19 @@
         const modal = document.getElementById('announcementModal');
         const openBtn = document.getElementById('openModalBtn');
         const closeBtn = document.getElementById('closeModalBtn');
-    
+
         if (!openBtn || !modal || !closeBtn) return; // Exit if elements not found
-    
+
         // Open modal
         openBtn.addEventListener('click', () => {
             modal.classList.add('show'); // uses flex centering
         });
-    
+
         // Close modal with X button
         closeBtn.addEventListener('click', () => {
             modal.classList.remove('show');
         });
-    
+
         // Close modal when clicking outside modal-content
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -82,8 +83,5 @@
             }
         });
     });
-    </script>
-    
-    
-    
+</script>
 {% endblock %}

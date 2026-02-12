@@ -1,347 +1,424 @@
-/* create_election.css */
+/* ================================
+   CREATE/MANAGE ELECTIONS PAGE CSS
+   Scoped so it won't affect sidebar
+   ================================ */
 
-.election-form-container {
-    max-width: 900px;
-    margin: 1rem auto; /* Center horizontally */
-    padding: .5rem 3rem 3rem 3rem;
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: calc(100vh - 4rem);
-    box-sizing: border-box;
-}
-
-.election-form-container h2 {
-    color: #2c3e50;
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 2.2rem;
-    font-weight: 600;
-    position: relative;
-    padding-bottom: 1rem;
-}
-
-.election-form-container h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 4px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 2px;
-}
-
-.election-form-group {
-    margin-bottom: 1.8rem;
-    position: relative;
-}
-
-.election-form-group label {
-    display: block;
-    margin-bottom: 0.6rem;
-    font-weight: 500;
-    color: #34495e;
-    font-size: 1rem;
-    transition: color 0.3s ease;
-}
-
-.election-form-group:focus-within label {
-    color: #667eea;
-}
-
-.election-form-group input,
-.election-form-group select,
-.election-form-group textarea {
-    width: 100%;
-    padding: 1rem 1rem;
-    border: 2px solid #e8eeff;
-    border-radius: 12px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background-color: #f8faff;
-    box-sizing: border-box;
-    font-family: inherit;
-}
-
-.election-form-group input:focus,
-.election-form-group select:focus,
-.election-form-group textarea:focus {
-    outline: none;
-    border-color: #667eea;
-    background-color: #ffffff;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
-    transform: translateY(-2px);
-}
-
-.election-form-group input:hover,
-.election-form-group select:hover,
-.election-form-group textarea:hover {
-    border-color: #a5b4fc;
-    background-color: #f0f4ff;
-}
-
-.election-form-group textarea {
-    resize: vertical;
-    min-height: 120px;
-    line-height: 1.5;
-}
-
-.election-form-group::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    transition: width 0.3s ease;
-    border-radius: 2px;
-}
-
-.election-form-group:focus-within::after {
-    width: 100%;
-}
-
-/* Custom select arrow */
-.election-form-group select {
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 1.2rem center;
-    background-size: 1.2rem;
-    padding-right: 3rem;
-}
-
-/* Date input customization */
-.election-form-group input[type="datetime-local"] {
-    position: relative;
-}
-
-.election-form-group input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3e%3c/rect%3e%3cline x1='16' y1='2' x2='16' y2='6'%3e%3c/line%3e%3cline x1='8' y1='2' x2='8' y2='6'%3e%3c/line%3e%3cline x1='3' y1='10' x2='21' y2='10'%3e%3c/line%3e%3c/svg%3e");
-    cursor: pointer;
-    padding: 0.3rem;
-    border-radius: 4px;
+/* ==================== PREVENT FOUC ==================== */
+/* Set initial dark background to prevent flash */
+body {
+    background-color: #0f172a; /* Dark background as default */
     transition: background-color 0.3s ease;
 }
 
-.election-form-group input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
-    background-color: #e8eeff;
+/* Light mode override */
+body:not(.dark-mode) {
+    background-color: #f5f7fb;
 }
 
-.create-election-btn {
-    width: 100%;
-    padding: 1.2rem 2rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 1rem;
-    position: relative;
-    overflow: hidden;
-}
-
-.create-election-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.create-election-btn:hover::before {
-    left: 100%;
-}
-
-.create-election-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-}
-
-.create-election-btn:active {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-/* Main content area that accounts for sidebar */
-.main-content {
-    margin-left: 250px; /* Same as sidebar width */
+/* Elections page specific */
+.create-election-page {
+    margin-left: var(--sidebar-width);
+    padding: 20px 40px;
     min-height: 100vh;
-    background-color: #f8f9fa;
-    padding: 5px;
+    background: var(--bg-color);
+    box-sizing: border-box;
+    transition: var(--transition);
+    opacity: 1;
+}
+
+/* Quick fade-in to hide any remaining flash */
+@keyframes quickFadeIn {
+    from { opacity: 0.99; }
+    to { opacity: 1; }
+}
+
+.create-election-page {
+    animation: quickFadeIn 0.1s ease-out;
+}
+
+/* ==================== CSS VARIABLES ==================== */
+:root {
+    /* Light mode colors */
+    --primary-orange: #ff4500;
+    --primary-blue: #1a56db;
+    --secondary-blue: #3b82f6;
+    --accent-teal: #06b6d4;
+    --secondary-orange: #ff8c00;
+    --accent-yellow: #ffcc00;
+    --success-green: #10b981;
+    --warning-amber: #f59e0b;
+    --danger-red: #ef4444;
+    --dark-gray: #1f2937;
+    --light-gray: #f8fafc;
+    --sidebar-width: 280px;
+    --card-radius: 12px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --border-color: rgba(226, 232, 240, 0.8);
+    --bg-color: #f5f7fb;
+    --text-color: #2c3e50;
+    --text-secondary: #6c757d;
+    --card-bg: white;
+}
+
+/* Dark mode variables */
+.dark-mode {
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --card-bg: #1e293b;
+    --light-gray: #334155;
+    --dark-gray: #e2e8f0;
+    --border-color: rgba(51, 65, 85, 0.8);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ==================== PAGE LAYOUT ==================== */
+.create-election-page {
+    margin-left: var(--sidebar-width);
+    padding: 20px 40px;
+    min-height: 100vh;
+    background: var(--bg-color);
+    box-sizing: border-box;
+    transition: var(--transition);
+}
+
+/* Page Title */
+.create-election-page .page-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+/* Page Description */
+.create-election-page .page-description {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    transition: var(--transition);
+}
+
+/* ==================== FORM CONTAINER ==================== */
+.create-election-page .election-form-container {
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    padding: 25px 30px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 30px;
+    transition: var(--transition);
+}
+
+.create-election-page .election-form-container h2 {
+    font-size: 1.4rem;
+    color: var(--text-color);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary-blue);
+    transition: var(--transition);
+}
+
+/* ==================== FORM STYLES ==================== */
+.create-election-page .desktop-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.create-election-page .form-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.create-election-page .form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex: 1;
+    min-width: 300px;
+}
+
+.create-election-page .description-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex: 1;
+    min-width: 300px;
+}
+
+.create-election-page .description-column textarea {
+    height: 120px;
+    resize: vertical;
+}
+
+/* Form Groups */
+.create-election-page .election-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%; /* Ensure form groups take full width */
+}
+
+.create-election-page .election-form-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.create-election-page .election-form-group input,
+.create-election-page .election-form-group select,
+.create-election-page .election-form-group textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--light-gray);
+    color: var(--text-color);
+    transition: var(--transition);
+    font-family: inherit;
+    width: 100%; /* Make all inputs full width */
     box-sizing: border-box;
 }
 
-/* Desktop-style multi-column form */
-.desktop-form .form-row {
+.create-election-page .election-form-group input:focus,
+.create-election-page .election-form-group select:focus,
+.create-election-page .election-form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(27, 85, 226, 0.1);
+}
+
+/* ==================== SUBMIT BUTTON ==================== */
+.create-election-page .create-election-btn {
     display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    border: none;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%; /* Full width button */
+    margin-top: 10px;
+    box-sizing: border-box;
 }
 
-.desktop-form .form-row .election-form-group {
-    flex: 1;
-    min-width: 250px;
-}
-
-/* Election card styling */
-.election-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.election-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    flex: 1 1 300px;
-    transition: transform 0.2s ease;
-}
-
-.election-card.active {
-    border-left: 5px solid #667eea;
-}
-
-.election-card:hover {
+.create-election-page .create-election-btn:hover {
     transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
 }
 
-/* Responsive adjustments */
+/* ==================== DEPARTMENT SELECTION ==================== */
+/* Make department group full width when displayed */
+.create-election-page #department_group {
+    width: 100%;
+}
+
+.create-election-page #department_group .election-form-group {
+    width: 100%;
+}
+
+.create-election-page #department_group select {
+    width: 100%;
+}
+
+/* ==================== FLASH MESSAGES ==================== */
+.create-election-page .flash-container {
+    margin-bottom: 20px;
+    max-width: 100%;
+}
+
+.create-election-page .flash-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: white;
+    font-size: 0.9rem;
+    animation: fadeInFlash 0.5s forwards;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .create-election-page .flash-message {
+    border: 1px solid var(--border-color);
+}
+
+.create-election-page .flash-message.election {
+    background: var(--primary-blue);
+}
+
+@keyframes fadeInFlash {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== SECTION DIVIDER ==================== */
+.create-election-page .election-form-container hr {
+    margin: 25px 0;
+    border: none;
+    height: 1px;
+    background: var(--border-color);
+    opacity: 0.6;
+}
+
+/* ==================== ELECTION LISTS ==================== */
+.create-election-page .election-form-container h3 {
+    font-size: 1.2rem;
+    color: var(--text-color);
+    margin-bottom: 15px;
+    transition: var(--transition);
+}
+
+.create-election-page .election-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+/* Election Cards */
+.create-election-page .election-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px 20px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.create-election-page .election-card:hover {
+    border-color: var(--primary-blue);
+    transform: translateX(2px);
+    box-shadow: var(--shadow-md);
+}
+
+.create-election-page .election-card.active {
+    border-left: 4px solid var(--success-green);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.dark-mode .create-election-page .election-card.active {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.create-election-page .election-card strong {
+    color: var(--text-color);
+    font-size: 1rem;
+    margin-bottom: 4px;
+    display: block;
+    transition: var(--transition);
+}
+
+.create-election-page .election-card.active strong {
+    color: var(--success-green);
+}
+
+.create-election-page .election-card br {
+    display: none;
+}
+
+/* Empty State */
+.create-election-page .election-list p {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+    transition: var(--transition);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
-    .main-content {
+    .create-election-page {
         margin-left: 250px;
-        padding: 15px;
-    }
-    
-    .election-form-container {
-        margin: 1rem auto;
-        padding: 2rem;
+        padding: 25px 30px;
     }
 }
 
 @media (max-width: 768px) {
-    .main-content {
+    .create-election-page {
         margin-left: 0;
-        padding: 10px;
+        padding: 20px;
     }
-    
-    .election-form-container {
-        margin: 0.5rem auto;
-        padding: 1.5rem;
-        border-radius: 12px;
-    }
-    
-    .desktop-form .form-row {
+
+    .create-election-page .form-row {
         flex-direction: column;
-        gap: 1rem;
+        gap: 15px;
     }
     
-    .election-card {
-        flex: 1 1 100%;
+    .create-election-page .form-column,
+    .create-election-page .description-column {
+        min-width: 100%;
     }
     
-    .election-form-container h2 {
-        font-size: 1.8rem;
-    }
-    
-    .election-form-group input,
-    .election-form-group select,
-    .election-form-group textarea {
-        padding: 0.8rem 1rem;
-    }
-    
-    .create-election-btn {
-        padding: 1rem 1.5rem;
-        font-size: 1rem;
+    .create-election-page .create-election-btn {
+        width: 100%;
+        padding: 14px 20px;
     }
 }
 
 @media (max-width: 480px) {
-    .main-content {
-        padding: 5px;
+    .create-election-page {
+        padding: 15px;
     }
     
-    .election-form-container {
-        margin: 0.25rem auto;
-        padding: 1rem;
-    }
-    
-    .election-form-container h2 {
+    .create-election-page .page-title {
         font-size: 1.5rem;
     }
     
-    .election-form-group {
-        margin-bottom: 1.2rem;
+    .create-election-page .election-form-container {
+        padding: 20px;
+    }
+    
+    .create-election-page .election-card {
+        padding: 12px 15px;
+    }
+    
+    .create-election-page .create-election-btn {
+        padding: 12px 16px;
+        font-size: 0.95rem;
     }
 }
 
-/* Animation for form elements */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.create-election-page .election-card {
+    animation: fadeIn 0.3s ease forwards;
+    animation-delay: calc(var(--item-index, 0) * 0.05s);
+    opacity: 0;
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .create-election-page * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
-.election-form-group {
-    animation: fadeInUp 0.5s ease forwards;
-}
-
-.election-form-group:nth-child(1) { animation-delay: 0.1s; }
-.election-form-group:nth-child(2) { animation-delay: 0.2s; }
-.election-form-group:nth-child(3) { animation-delay: 0.3s; }
-.election-form-group:nth-child(4) { animation-delay: 0.4s; }
-.election-form-group:nth-child(5) { animation-delay: 0.5s; }
-
-/* Loading state for button */
-.create-election-btn.loading {
-    pointer-events: none;
-    opacity: 0.8;
-}
-
-.create-election-btn.loading::after {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    top: 50%;
-    left: 50%;
-    margin-left: -10px;
-    margin-top: -10px;
-    border: 2px solid #ffffff;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 0.8s ease infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Ensure body has proper padding to prevent sidebar overlap */
-body {
-    margin: 0;
-    padding: 0;
-    background-color: #f8f9fa;
-    min-height: 100vh;
+/* Focus styles for keyboard navigation */
+.create-election-page .election-form-group input:focus-visible,
+.create-election-page .election-form-group select:focus-visible,
+.create-election-page .election-form-group textarea:focus-visible {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 1px;
 }

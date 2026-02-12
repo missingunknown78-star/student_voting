@@ -12,12 +12,10 @@ import pytz
 from student.utils import is_device_trusted
 from student.models import TrustedDevice
 from student.utils import generate_device_fingerprint
-
-
-
-
-
-
+import json
+from phe import paillier
+import pickle
+import os
 
 # WebAuthn imports
 from webauthn import (
@@ -50,6 +48,86 @@ def get_origin_and_rp_id():
         origin = request.url_root[:-1]
     rp_id = origin.split("://")[1].split(":")[0]
     return origin, rp_id
+
+# Paillier encryption setup
+def get_encryption_keys():
+    """Get or generate Paillier encryption keys"""
+    key_dir = "keys"
+    os.makedirs(key_dir, exist_ok=True)
+    
+    public_key_path = os.path.join(key_dir, "public_key.pkl")
+    private_key_path = os.path.join(key_dir, "private_key.pkl")
+    
+    if os.path.exists(public_key_path) and os.path.exists(private_key_path):
+        with open(public_key_path, 'rb') as f:
+            public_key = pickle.load(f)
+        with open(private_key_path, 'rb') as f:
+            private_key = pickle.load(f)
+    else:
+        public_key, private_key = paillier.generate_paillier_keypair()
+        with open(public_key_path, 'wb') as f:
+            pickle.dump(public_key, f)
+        with open(private_key_path, 'wb') as f:
+            pickle.dump(private_key, f)
+    
+    return public_key, private_key
+
+# Initialize keys
+public_key, private_key = get_encryption_keys()
+
+def encrypt_vote_for_candidates(candidate_ids, selected_candidate_id):
+    """Create one-hot encrypted vote vector for all candidates"""
+    # Create one-hot vector: 1 for selected candidate, 0 for others
+    vote_vector = [1 if candidate_id == selected_candidate_id else 0 
+                  for candidate_id in candidate_ids]
+    
+    # Encrypt each element using Paillier
+    enc_vote = [public_key.encrypt(x) for x in vote_vector]
+    
+    # Serialize for storage
+    vote_json = json.dumps([
+        {"ciphertext": str(e.ciphertext()), "exponent": e.exponent} 
+        for e in enc_vote
+    ])
+    
+    return vote_json
+
+def deserialize_encrypted_vote(encrypted_data):
+    """Deserialize stored encrypted vote"""
+    if not encrypted_data:
+        return []
+    
+    data = json.loads(encrypted_data)
+    return [
+        paillier.EncryptedNumber(
+            public_key,
+            int(item["ciphertext"]),
+            int(item["exponent"])
+        )
+        for item in data
+    ]
+
+def count_votes_for_candidates(election_id, candidate_ids):
+    """Count votes for candidates in an election using homomorphic addition"""
+    votes = Vote.query.filter_by(election_id=election_id).all()
+    
+    if not votes:
+        return {candidate_id: 0 for candidate_id in candidate_ids}
+    
+    # Initialize with encrypted zeros
+    total_encrypted = [public_key.encrypt(0) for _ in candidate_ids]
+    
+    # Add all votes homomorphically
+    for vote in votes:
+        enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+        for i in range(len(total_encrypted)):
+            total_encrypted[i] = total_encrypted[i] + enc_votes[i]
+    
+    # Decrypt final totals
+    decrypted_totals = [private_key.decrypt(x) for x in total_encrypted]
+    
+    # Map to candidate IDs
+    return dict(zip(candidate_ids, decrypted_totals))
 
 
 from admin.models import CtuStudent  # the table where admin imported students
@@ -778,14 +856,31 @@ def dashboard():
         (Announcement.department_id == None)  # None means "All"
     ).order_by(Announcement.date.desc()).all()
 
-    leading_candidates = (
-        db.session.query(Candidate, func.count(Vote.id).label("vote_count"))
-        .outerjoin(Vote, Candidate.id == Vote.candidate_id)
-        .group_by(Candidate.id)
-        .order_by(func.count(Vote.id).desc())
-        .limit(5)
-        .all()
-    )
+    # ---------------- Updated leading_candidates logic with encrypted votes ----------------
+    # Get all elections
+    elections = Election.query.all()
+    leading_candidates = []
+    
+    if elections:
+        # For simplicity, use the most recent election
+        recent_election = elections[0]
+        
+        # Get all candidates for this election
+        candidates = Candidate.query.filter_by(election_id=recent_election.id).all()
+        candidate_ids = [c.id for c in candidates]
+        
+        # Count votes using homomorphic encryption
+        vote_counts = count_votes_for_candidates(recent_election.id, candidate_ids)
+        
+        # Create list of (candidate, vote_count)
+        candidate_votes = []
+        for candidate in candidates:
+            vote_count = vote_counts.get(candidate.id, 0)
+            candidate_votes.append((candidate, vote_count))
+        
+        # Sort by vote count and get top 5
+        candidate_votes.sort(key=lambda x: x[1], reverse=True)
+        leading_candidates = candidate_votes[:5]
 
     # ---------------- New: trust-device prompt ----------------
     fingerprint = generate_device_fingerprint()
@@ -898,6 +993,8 @@ from admin.models import Election, Candidate
 from collections import defaultdict
 
 
+
+
 @student_bp.route('/vote/<int:election_id>', methods=['GET'])
 @login_required
 def vote_page(election_id):
@@ -921,16 +1018,24 @@ def vote_page(election_id):
     # Fetch candidates and group by position
     candidates = Candidate.query.filter_by(election_id=election_id).all()
     candidates_by_position = defaultdict(list)
+    
+    # Get ALL candidate IDs for PHE one-hot vector
+    all_candidate_ids = []
+    
     for c in candidates:
         if c.position:
             candidates_by_position[c.position.name].append(c)
+        all_candidate_ids.append(c.id)
 
     return render_template(
         'vote_page.html',
         election=election,
-        candidates_by_position=candidates_by_position
+        candidates_by_position=candidates_by_position,
+        all_candidate_ids=all_candidate_ids  # Pass to template
     )
 
+
+    
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
 def submit_vote(election_id):
@@ -943,10 +1048,21 @@ def submit_vote(election_id):
         except:
             cast_timestamp = datetime.utcnow()
     
-    # Get all selected candidates from the form
-    selected_candidates = {
-        key: value for key, value in request.form.items() if key.startswith('candidate_')
-    }
+    # Get all candidate IDs from hidden input (for PHE one-hot vector)
+    all_candidate_ids_str = request.form.get('all_candidate_ids', '')
+    if not all_candidate_ids_str:
+        flash("Voting data error. Please try again.", "danger")
+        return redirect(url_for('student.vote_page', election_id=election_id))
+    
+    # Convert string to list of integers
+    all_candidate_ids = [int(id_str) for id_str in all_candidate_ids_str.split(',') if id_str.strip()]
+    
+    # Get selected candidates - FIXED: look for 'position_' prefix
+    selected_candidates = {}
+    for key, value in request.form.items():
+        if key.startswith('position_'):  # Changed from 'candidate_' to 'position_'
+            position_id = key.replace('position_', '')
+            selected_candidates[position_id] = int(value)
 
     if not selected_candidates:
         flash("Please select at least one candidate before submitting.", "warning")
@@ -958,21 +1074,46 @@ def submit_vote(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Record votes for each position
-    recorded_timestamp = datetime.utcnow()  # When vote is actually saved to DB
-    for position_name, candidate_id in selected_candidates.items():
+    # Record votes for each position WITH ENCRYPTION
+    recorded_timestamp = datetime.utcnow()
+    
+    for position_id, candidate_id in selected_candidates.items():
+        # Encrypt the vote using Paillier
+        encrypted_vote = encrypt_vote_for_candidates(all_candidate_ids, candidate_id)
+        
+        # Debug: print what we're storing
+        print(f"DEBUG: Encrypting vote for candidate {candidate_id}")
+        print(f"DEBUG: All candidate IDs: {all_candidate_ids}")
+        print(f"DEBUG: Encrypted vote (first 200 chars): {encrypted_vote[:200]}")
+        
+        # Validate it's proper JSON
+        try:
+            json.loads(encrypted_vote)
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Invalid JSON in encrypted vote: {e}")
+            flash("Voting encryption error. Please try again.", "danger")
+            return redirect(url_for('student.vote_page', election_id=election_id))
+        
         vote = Vote(
             student_id=current_user.id, 
-            candidate_id=int(candidate_id), 
             election_id=election_id,
+            encrypted_vote=encrypted_vote,
             cast_timestamp=cast_timestamp,
             recorded_timestamp=recorded_timestamp
         )
         db.session.add(vote)
+        print(f"DEBUG: Added vote for position {position_id}, candidate {candidate_id}")
 
-    db.session.commit()
-    flash("Your vote has been submitted successfully!", "success")
-    return redirect(url_for('student.available_elections'))
+    try:
+        db.session.commit()
+        print("DEBUG: Vote successfully committed to database")
+        flash("Your vote has been submitted and encrypted successfully!", "success")
+        return redirect(url_for('student.available_elections'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR: Database commit failed: {str(e)}")
+        flash(f"Error saving your vote: {str(e)}", "danger")
+        return redirect(url_for('student.vote_page', election_id=election_id))
 
 
 from sqlalchemy import or_
@@ -1108,33 +1249,30 @@ def results():
     # Calculate voter turnout percentage
     voter_turnout = (total_votes / total_voters * 100) if total_voters > 0 else 0
     
-    # Get all positions in this election with their candidates and vote counts
-    positions_data = []
+    # Get all positions in this election
     positions = Position.query.filter_by(
         election_id=recent_election.id
     ).all()
     
+    # Get all candidates for this election
+    all_candidates = Candidate.query.filter_by(election_id=recent_election.id).all()
+    candidate_ids = [c.id for c in all_candidates]
+    
+    # Count votes using homomorphic encryption
+    vote_counts = count_votes_for_candidates(recent_election.id, candidate_ids)
+    
+    # Prepare positions data
+    positions_data = []
     for position in positions:
-        # Get candidates for this position with their vote counts
-        candidates_with_votes = db.session.query(
-            Candidate,
-            func.count(Vote.id).label('vote_count')
-        ).outerjoin(
-            Vote, Candidate.id == Vote.candidate_id
-        ).filter(
-            Candidate.position_id == position.id,
-            Candidate.election_id == recent_election.id
-        ).group_by(Candidate.id).order_by(
-            func.count(Vote.id).desc()
-        ).all()
+        # Get candidates for this position
+        position_candidates = [c for c in all_candidates if c.position_id == position.id]
         
-        # Calculate total votes for this position
-        position_total_votes = sum(vote_count for _, vote_count in candidates_with_votes)
-        
-        # Prepare candidate data
         candidates_data = []
-        for candidate, vote_count in candidates_with_votes:
-            vote_percentage = (vote_count / position_total_votes * 100) if position_total_votes > 0 else 0
+        position_total_votes = 0
+        
+        for candidate in position_candidates:
+            vote_count = vote_counts.get(candidate.id, 0)
+            position_total_votes += vote_count
             
             candidates_data.append({
                 'id': candidate.id,
@@ -1145,9 +1283,16 @@ def results():
                 'year_level': candidate.year_level,
                 'platform': candidate.platform,
                 'vote_count': vote_count,
-                'vote_percentage': round(vote_percentage, 1),
-                'is_winner': vote_count == max([vc for _, vc in candidates_with_votes]) if candidates_with_votes else False
+                'vote_percentage': 0,  # Will calculate below
+                'is_winner': False
             })
+        
+        # Calculate percentages and determine winner
+        if position_total_votes > 0:
+            max_votes = max(c['vote_count'] for c in candidates_data) if candidates_data else 0
+            for c in candidates_data:
+                c['vote_percentage'] = round((c['vote_count'] / position_total_votes) * 100, 1)
+                c['is_winner'] = c['vote_count'] == max_votes and c['vote_count'] > 0
         
         positions_data.append({
             'id': position.id,
@@ -1158,11 +1303,7 @@ def results():
         })
     
     # Calculate party/group performance if you have party data
-    # This is a simplified version - you might need to adjust based on your data model
     party_performance = []
-    
-    # Group candidates by party (if you have a party field)
-    # If you don't have parties, you can skip this or use candidate groups
     
     return render_template('results.html',
                          recent_election=recent_election,

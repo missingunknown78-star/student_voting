@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vote - {{ election.title }}</title>
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
+    <style>
+        /* Additional styles for PHE info */
+        .phe-info {
+            background-color: #f0f7ff;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .phe-info h4 {
+            margin-top: 0;
+            color: #2563eb;
+        }
+        .phe-info p {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .encryption-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
 
@@ -19,7 +47,15 @@
     <!-- Election Title -->
     <div class="election-title">
         <h2>{{ election.title }}</h2>
+        <span class="encryption-badge">🔒 Encrypted Voting</span>
     </div>
+
+    <!-- PHE Information -->
+    <section class="phe-info">
+        <h4>🔐 Privacy-Protected Voting</h4>
+        <p>Your vote is encrypted using advanced cryptography. Your choices remain private while ensuring vote integrity.</p>
+        <p><strong>How it works:</strong> Your selection is converted to a secure encrypted format that can be counted without revealing individual votes.</p>
+    </section>
 
     <!-- Instructions -->
     <section class="instructions">
@@ -28,52 +64,76 @@
 
     <!-- Candidates Form -->
     <form method="POST" action="{{ url_for('student.submit_vote', election_id=election.id) }}" 
-      class="candidates-form" 
-      onsubmit="document.getElementById('cast-timestamp').value = new Date().toISOString();">
+          class="candidates-form" 
+          id="voteForm"
+          onsubmit="return validateVote()">
 
-    <!-- Hidden input to store cast timestamp -->
-    <input type="hidden" name="cast_timestamp" id="cast-timestamp">
-    
-    {% for position, candidates in candidates_by_position.items() %}
-    <div class="position-group">
-        <h3 class="position-title">{{ position }}</h3>
-        <div class="position-candidates">
-            {% for candidate in candidates %}
-            <label class="candidate-row">
-                <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
-                     alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
-                     class="candidate-photo">
-                <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
-                <!-- Radio button with unique name per position -->
-                <input type="radio" name="candidate_{{ position|replace(' ', '_') }}" value="{{ candidate.id }}" required>
-            </label>
-            {% endfor %}
+        <!-- Hidden inputs for PHE -->
+        <input type="hidden" name="cast_timestamp" id="cast-timestamp">
+        
+        <!-- Store all candidate IDs for one-hot vector creation -->
+        <input type="hidden" name="all_candidate_ids" id="all-candidate-ids" 
+               value="{{ all_candidate_ids|join(',') }}">
+        
+        {% for position, candidates in candidates_by_position.items() %}
+        <div class="position-group">
+            <h3 class="position-title">{{ position }}</h3>
+            <div class="position-candidates">
+                {% for candidate in candidates %}
+                <label class="candidate-row">
+                    <div class="candidate-info">
+                        <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) if candidate.photo else url_for('static', filename='default_avatar.png') }}" 
+                             alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
+                             class="candidate-photo">
+                        <div class="candidate-details">
+                            <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
+                            <span class="candidate-course">{{ candidate.course }} • Year {{ candidate.year_level }}</span>
+                            {% if candidate.platform %}
+                            <p class="candidate-platform">{{ candidate.platform|truncate(100) }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Radio button with position ID -->
+                    <input type="radio" 
+                           name="position_{{ candidate.position_id }}" 
+                           value="{{ candidate.id }}" 
+                           class="candidate-radio"
+                           required>
+                </label>
+                {% endfor %}
+            </div>
         </div>
-    </div>
-    {% endfor %}
+        {% endfor %}
 
-    <!-- Voting Countdown -->
-    <div class="voting-deadline-container">
-        <h3>Voting ends in:</h3>
-        <div id="countdown" class="countdown-timer"></div>
-    </div>
+        <!-- Voting Countdown -->
+        <div class="voting-deadline-container">
+            <h3>Voting ends in:</h3>
+            <div id="countdown" class="countdown-timer"></div>
+        </div>
 
-    <!-- Submit Button -->
-    <div class="submit-vote">
-        <button type="submit" onclick="return confirm('Submit your vote?')">Cast My Vote</button>
-    </div>
-</form>
+        <!-- Submit Button -->
+        <div class="submit-vote">
+            <button type="submit" id="submitBtn">Cast My Encrypted Vote</button>
+            <p class="submit-note">Your vote will be encrypted for maximum privacy</p>
+        </div>
+    </form>
 
 </div>
 
 <script>
+    // Set cast timestamp when form is submitted
+    document.getElementById('voteForm').onsubmit = function() {
+        document.getElementById('cast-timestamp').value = new Date().toISOString();
+        return true;
+    };
+
     // Countdown Timer
     const deadline = new Date("{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}").getTime();
     const countdownEl = document.getElementById("countdown");
-    const candidatesForm = document.querySelector(".candidates-form");
-    const submitButton = document.querySelector(".submit-vote button");
+    const submitBtn = document.getElementById("submitBtn");
+    const voteForm = document.getElementById("voteForm");
 
-    const timer = setInterval(() => {
+    function updateCountdown() {
         const now = new Date().getTime();
         const distance = deadline - now;
 
@@ -84,12 +144,86 @@
             const seconds = Math.floor((distance % (1000*60)) / 1000);
             countdownEl.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
         } else {
-            clearInterval(timer);
             countdownEl.innerHTML = "Voting period has ended ⏰";
-            if(candidatesForm) candidatesForm.querySelectorAll("input[type=radio]").forEach(i => i.disabled = true);
-            if(submitButton) submitButton.disabled = true;
+            if(submitBtn) submitBtn.disabled = true;
+            if(submitBtn) submitBtn.textContent = "Voting Closed";
+            submitBtn.style.backgroundColor = "#999";
+            
+            // Disable all radio buttons
+            document.querySelectorAll('.candidate-radio').forEach(radio => {
+                radio.disabled = true;
+            });
         }
-    }, 1000);
+    }
+
+    // Initial call and set interval
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+
+    // Validate that at least one position is voted for
+    function validateVote() {
+        // Get all position groups
+        const positionGroups = document.querySelectorAll('.position-group');
+        let allPositionsVoted = true;
+        
+        positionGroups.forEach(group => {
+            const positionName = group.querySelector('.position-title').textContent;
+            const radios = group.querySelectorAll('input[type="radio"]');
+            let positionVoted = false;
+            
+            radios.forEach(radio => {
+                if (radio.checked) {
+                    positionVoted = true;
+                }
+            });
+            
+            if (!positionVoted) {
+                allPositionsVoted = false;
+                // Highlight the position group
+                group.style.border = "2px solid #e53e3e";
+                group.style.borderRadius = "8px";
+                group.style.padding = "10px";
+            } else {
+                group.style.border = "";
+                group.style.padding = "";
+            }
+        });
+        
+        if (!allPositionsVoted) {
+            alert("Please select a candidate for each position before submitting your vote.");
+            return false;
+        }
+        
+        // Final confirmation
+        return confirm("Are you sure you want to submit your vote?\n\nYour vote will be encrypted and cannot be changed.");
+    }
+
+    // Add visual feedback when selecting candidates
+    document.querySelectorAll('.candidate-row').forEach(row => {
+        const radio = row.querySelector('input[type="radio"]');
+        
+        radio.addEventListener('change', function() {
+            // Remove selected class from all candidates in this position
+            const positionGroup = this.closest('.position-group');
+            positionGroup.querySelectorAll('.candidate-row').forEach(r => {
+                r.classList.remove('selected');
+            });
+            
+            // Add selected class to this candidate
+            if (this.checked) {
+                this.closest('.candidate-row').classList.add('selected');
+            }
+        });
+        
+        // Also make the entire row clickable
+        row.addEventListener('click', function(e) {
+            if (e.target.tagName !== 'INPUT') {
+                const radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change'));
+            }
+        });
+    });
 </script>
 
 </body>

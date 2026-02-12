@@ -1,0 +1,465 @@
+/* ==================== AUDIT LOGS PAGE ==================== */
+/* Scoped so it won't affect sidebar - with TOP ALIGNMENT FIX */
+/* NO SCROLLBAR - All columns fit perfectly */
+
+/* ==================== RESET & TOP ALIGNMENT - CRITICAL ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    background-color: #0f172a;
+    transition: background-color 0.3s ease;
+}
+
+body:not(.dark-mode) {
+    background-color: #f5f7fb;
+}
+
+/* ==================== CSS VARIABLES ==================== */
+:root {
+    /* Light mode colors */
+    --primary-blue: #1a56db;
+    --secondary-blue: #3b82f6;
+    --accent-teal: #06b6d4;
+    --success-green: #10b981;
+    --success-green-light: #34d399;
+    --warning-amber: #f59e0b;
+    --danger-red: #ef4444;
+    --dark-gray: #1f2937;
+    --light-gray: #f8fafc;
+    --sidebar-width: 280px;
+    --header-height: 80px;
+    --card-radius: 12px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --border-color: rgba(226, 232, 240, 0.8);
+    --bg-color: #f5f7fb;
+    --text-color: #2c3e50;
+    --text-secondary: #6c757d;
+    --card-bg: white;
+    --header-bg: rgba(255, 255, 255, 0.95);
+    
+    /* Audit specific - light mode */
+    --audit-header-gradient: linear-gradient(90deg, var(--secondary-blue), var(--primary-blue));
+    --filter-btn-bg: var(--primary-blue);
+    --filter-btn-hover: var(--secondary-blue);
+    --export-btn-bg: linear-gradient(90deg, var(--success-green), #059669);
+    --export-btn-hover: linear-gradient(90deg, #059669, #047857);
+    --badge-create-bg: rgba(34, 197, 94, 0.15);
+    --badge-create-text: #16a34a;
+    --badge-update-bg: rgba(59, 130, 246, 0.15);
+    --badge-update-text: #2563eb;
+    --badge-delete-bg: rgba(239, 68, 68, 0.15);
+    --badge-delete-text: #dc2626;
+    --badge-login-bg: rgba(168, 85, 247, 0.15);
+    --badge-login-text: #7c3aed;
+}
+
+/* Dark mode variables */
+.dark-mode {
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --card-bg: #1e293b;
+    --header-bg: rgba(30, 41, 59, 0.95);
+    --light-gray: #334155;
+    --dark-gray: #e2e8f0;
+    --border-color: rgba(51, 65, 85, 0.8);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+    
+    /* Audit specific - dark mode */
+    --audit-header-gradient: linear-gradient(90deg, #2563eb, #1e40af);
+    --filter-btn-bg: #2563eb;
+    --filter-btn-hover: #3b82f6;
+    --export-btn-bg: linear-gradient(90deg, #059669, #047857);
+    --export-btn-hover: linear-gradient(90deg, #047857, #065f46);
+    --badge-create-bg: rgba(34, 197, 94, 0.25);
+    --badge-create-text: #4ade80;
+    --badge-update-bg: rgba(59, 130, 246, 0.25);
+    --badge-update-text: #93c5fd;
+    --badge-delete-bg: rgba(239, 68, 68, 0.25);
+    --badge-delete-text: #fca5a5;
+    --badge-login-bg: rgba(168, 85, 247, 0.25);
+    --badge-login-text: #d8b4fe;
+}
+
+/* ==================== MAIN CONTENT ==================== */
+.main-content {
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    padding: 0 40px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+/* ==================== PAGE HEADER ==================== */
+.audit-header {
+    margin-top: 0;
+    padding-top: 0;
+    margin-bottom: 30px;
+}
+
+.audit-header h1 {
+    margin-top: 0;
+    padding-top: 20px;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 10px;
+    transition: var(--transition);
+}
+
+.audit-timezone {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0;
+    margin-bottom: 0;
+    transition: var(--transition);
+}
+
+/* ==================== CARD CONTAINER - NO SCROLLBAR ==================== */
+.audit-card {
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    padding: 25px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    overflow-x: hidden;
+    transition: var(--transition);
+}
+
+/* ==================== TABLE STYLES - NO SCROLLBAR ==================== */
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    table-layout: fixed;
+}
+
+.audit-table thead {
+    background: var(--audit-header-gradient);
+    color: white;
+}
+
+.audit-table th {
+    padding: 14px;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: white;
+}
+
+.audit-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+/* ==================== COLUMN WIDTHS - NO SCROLLBAR ==================== */
+/* ID column - extra small */
+.audit-table th:nth-child(1),
+.audit-table td:nth-child(1) {
+    width: 45px;
+    text-align: center;
+}
+
+/* User column - small */
+.audit-table th:nth-child(2),
+.audit-table td:nth-child(2) {
+    width: 90px;
+}
+
+/* Role column - small */
+.audit-table th:nth-child(3),
+.audit-table td:nth-child(3) {
+    width: 90px;
+}
+
+/* ACTION column - SHORT horizontally */
+.audit-table th:nth-child(4),
+.audit-table td:nth-child(4) {
+    width: 75px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* DESCRIPTION column - LONG horizontally but fits */
+.audit-table th:nth-child(5),
+.audit-table td:nth-child(5) {
+    width: 300px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* IP column - small */
+.audit-table th:nth-child(6),
+.audit-table td:nth-child(6) {
+    width: 100px;
+    white-space: nowrap;
+}
+
+/* Date column - medium */
+.audit-table th:nth-child(7),
+.audit-table td:nth-child(7) {
+    width: 150px;
+    white-space: nowrap;
+}
+
+/* ==================== DESCRIPTION TEXT STYLING ==================== */
+.audit-table td:nth-child(5) {
+    font-weight: 400;
+    color: var(--text-color);
+    line-height: 1.5;
+}
+
+/* ==================== ACTION TEXT STYLING ==================== */
+.audit-table td:nth-child(4) {
+    font-weight: 500;
+    text-transform: capitalize;
+    color: var(--text-color);
+}
+
+/* Zebra Rows */
+.audit-table tbody tr:nth-child(even) {
+    background: var(--light-gray);
+}
+
+/* Hover Effect */
+.audit-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.08);
+    transition: var(--transition);
+}
+
+.dark-mode .audit-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+/* ==================== ACTION BADGES ==================== */
+.audit-badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+    transition: var(--transition);
+}
+
+.badge-create {
+    background: var(--badge-create-bg);
+    color: var(--badge-create-text);
+}
+
+.badge-update {
+    background: var(--badge-update-bg);
+    color: var(--badge-update-text);
+}
+
+.badge-delete {
+    background: var(--badge-delete-bg);
+    color: var(--badge-delete-text);
+}
+
+.badge-login {
+    background: var(--badge-login-bg);
+    color: var(--badge-login-text);
+}
+
+/* ==================== FORM ELEMENTS ==================== */
+.audit-input {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    background: var(--card-bg);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.audit-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ==================== BUTTONS ==================== */
+/* Filter Button - Primary Blue */
+.audit-btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--filter-btn-bg);
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.audit-btn:hover {
+    background: var(--filter-btn-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
+}
+
+/* Export Button - Success Green (not too light) */
+.export-btn {
+    background: var(--export-btn-bg);
+}
+
+.export-btn:hover {
+    background: var(--export-btn-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.35);
+}
+
+/* ==================== EMPTY STATE ==================== */
+.audit-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    transition: var(--transition);
+}
+
+/* ==================== PAGINATION ==================== */
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.pagination a {
+    text-decoration: none;
+    padding: 8px 16px;
+    background: var(--secondary-blue);
+    color: white;
+    border-radius: 6px;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination a:hover {
+    background: var(--primary-blue);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ==================== RESPONSIVE ADJUSTMENTS ==================== */
+@media (max-width: 1200px) {
+    .audit-table th:nth-child(5),
+    .audit-table td:nth-child(5) {
+        width: 250px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 250px;
+        padding: 0 30px;
+    }
+    
+    .audit-table th:nth-child(5),
+    .audit-table td:nth-child(5) {
+        width: 220px;
+    }
+    
+    .audit-table th:nth-child(4),
+    .audit-table td:nth-child(4) {
+        width: 70px;
+    }
+    
+    .audit-table th:nth-child(7),
+    .audit-table td:nth-child(7) {
+        width: 140px;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding: 0 20px;
+    }
+
+    .audit-card {
+        padding: 20px;
+        overflow-x: auto;
+    }
+
+    .audit-header h1 {
+        font-size: 1.5rem;
+        padding-top: 15px;
+    }
+
+    .audit-card form {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .audit-input {
+        width: 100%;
+    }
+
+    .audit-table {
+        table-layout: auto;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .audit-table td,
+    .audit-table th {
+        white-space: nowrap;
+    }
+    
+    .audit-table td:nth-child(5) {
+        white-space: normal;
+        min-width: 250px;
+    }
+
+    .pagination {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 0 15px;
+    }
+
+    .audit-card {
+        padding: 15px;
+    }
+
+    .audit-header h1 {
+        font-size: 1.3rem;
+        padding-top: 10px;
+    }
+}

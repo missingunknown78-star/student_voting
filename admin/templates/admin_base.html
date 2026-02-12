@@ -7,20 +7,169 @@
     <!-- Base Admin CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/theme.css') }}">
+    
+    <!-- PREVENT FOUC - MORE AGGRESSIVE APPROACH -->
+    <style>
+        /* HIDE EVERYTHING until theme is applied */
+        .main-content {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Show after theme is applied */
+        .main-content.theme-applied {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Floating Theme Toggle Styles */
+        .floating-theme-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9999;
+        }
+        
+        .floating-theme-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff9900, #ff5500);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4),
+                        0 0 0 2px rgba(255, 255, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .floating-theme-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            background: linear-gradient(135deg, #ff5500, #ff9900);
+            box-shadow: 0 6px 20px rgba(255, 85, 0, 0.6),
+                        0 0 0 3px rgba(255, 255, 0, 0.3);
+        }
+        
+        .floating-theme-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Dark mode styles for floating button */
+        .dark-mode .floating-theme-btn {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3),
+                        0 0 0 2px rgba(114, 9, 183, 0.2);
+        }
+        
+        .dark-mode .floating-theme-btn:hover {
+            background: linear-gradient(135deg, #7209b7, #4361ee);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.5),
+                        0 0 0 3px rgba(114, 9, 183, 0.3);
+        }
+        
+        /* Pulse animation */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4), 0 0 0 2px rgba(255, 255, 0, 0.2); }
+            50% { box-shadow: 0 4px 20px rgba(255, 85, 0, 0.7), 0 0 0 3px rgba(255, 255, 0, 0.4); }
+        }
+        
+        .floating-theme-btn {
+            animation: pulse-glow 3s infinite;
+        }
+        
+        .dark-mode .floating-theme-btn {
+            animation: pulse-glow-dark 3s infinite;
+        }
+        
+        @keyframes pulse-glow-dark {
+            0%, 100% { box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3), 0 0 0 2px rgba(114, 9, 183, 0.2); }
+            50% { box-shadow: 0 4px 20px rgba(67, 97, 238, 0.5), 0 0 0 3px rgba(114, 9, 183, 0.3); }
+        }
+    </style>
+    
+    <script>
+        // Apply dark mode IMMEDIATELY - BEFORE ANYTHING RENDERS
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                
+                // Apply dark mode to main content BEFORE page renders
+                if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                    // Create a style element and inject it
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        .main-content {
+                            background-color: #0f172a !important;
+                            color: #f1f5f9 !important;
+                        }
+                        
+                        /* Hide content until fully loaded */
+                        .main-content * {
+                            color: #f1f5f9 !important;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                    
+                    // Also add class immediately
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const mainContent = document.querySelector('.main-content');
+                        if (mainContent) {
+                            mainContent.classList.add('dark-mode', 'theme-applied');
+                        }
+                    });
+                } else if (savedTheme === 'light') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const mainContent = document.querySelector('.main-content');
+                        if (mainContent) {
+                            mainContent.classList.remove('dark-mode');
+                            mainContent.classList.add('theme-applied');
+                        }
+                    });
+                } else {
+                    // No preference, just show content
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const mainContent = document.querySelector('.main-content');
+                        if (mainContent) {
+                            mainContent.classList.add('theme-applied');
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Theme initialization error:', e);
+            }
+        })();
+    </script>
 
     {% block extra_head %}{% endblock %}
 </head>
 <body>
 
+<!-- Floating Theme Toggle Button -->
+<div class="floating-theme-toggle" id="floatingThemeToggle">
+    <button class="floating-theme-btn" id="floatingThemeBtn" title="Toggle Theme">
+        <i class="fa-solid fa-sun"></i>
+    </button>
+</div>
+
 <div class="dashboard-container">
 
     <!-- ====================== SIDEBAR ====================== -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}"
                  alt="School Logo" class="logo">
             <h2>Cebu Technological University</h2>
-            <p style="color:#ecf0f1; font-size:0.85rem; margin:0;">
+            <p style="color:#ffcc00; font-size:0.85rem; margin:0;">
                 Moalboal Campus
             </p>
         </div>
@@ -39,11 +188,16 @@
                <i class="fa-solid fa-file-import"></i> Import Students
             </a>
 
-
             <!-- STUDENTS / VOTERS -->
             <a href="{{ url_for('admin.manage_students') }}"
                class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
                <i class="fa-solid fa-users"></i> Manage Students
+            </a>
+
+            <!-- CANDIDATES -->
+            <a href="{{ url_for('admin.manage_candidates') }}"
+               class="{% if request.endpoint == 'admin.manage_candidates' %}active{% endif %}">
+               <i class="fa-solid fa-user-check"></i> Manage Candidates
             </a>
 
             <!-- COLLEGES / DEPARTMENTS -->
@@ -58,26 +212,15 @@
                <i class="fa-solid fa-building-columns"></i> Create Elections
             </a>
 
-            <!-- CANDIDATES -->
-            <a href="{{ url_for('admin.manage_candidates') }}"
-               class="{% if request.endpoint == 'admin.manage_candidates' %}active{% endif %}">
-               <i class="fa-solid fa-user-check"></i> Manage Candidates
-            </a>
-
-            <!-- POSITIONS -->
-            <a href="{{ url_for('admin.manage_positions') }}"
-               class="{% if request.endpoint == 'admin.manage_positions' %}active{% endif %}">
-               <i class="fa-solid fa-clipboard-list"></i> Positions
-            </a>
-
             <!-- ANNOUNCEMENTS -->
             <a href="{{ url_for('admin.announcements') }}"
                class="{% if request.endpoint == 'admin.announcements' %}active{% endif %}">
                <i class="fa-solid fa-bullhorn"></i> Announcements
             </a>
 
-            <!-- RESULTS (still display-only) -->
-            <a href="#" class="disabled-link">
+            <!-- RESULTS -->
+            <a href="{{ url_for('admin.results_page') }}"
+               class="{% if request.endpoint in ['admin.results_page', 'admin.election_results'] %}active{% endif %}">
                <i class="fa-solid fa-trophy"></i> Results
             </a>
 
@@ -87,11 +230,12 @@
                <i class="fa-solid fa-chart-bar"></i> Statistics
             </a>
 
-            <!-- AUDIT LOGS (still display-only) -->
-            <a href="#" class="disabled-link">
-               <i class="fa-solid fa-file-lines"></i> Audit Logs
-            </a>
-
+            <!-- AUDIT LOGS -->
+            <a href="{{ url_for('admin.audit_logs') }}"
+            class="{% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
+            <i class="fa-solid fa-file-lines"></i> Audit Logs
+         </a>
+         
             <!-- LOGOUT -->
             <a href="{{ url_for('admin.logout') }}">
                <i class="fa-solid fa-right-from-bracket"></i> Logout
@@ -107,6 +251,9 @@
     </main>
 
 </div>
+
+<!-- Admin Base JavaScript -->
+<script src="{{ url_for('admin.static', filename='js/admin_base.js') }}"></script>
 
 </body>
 </html>

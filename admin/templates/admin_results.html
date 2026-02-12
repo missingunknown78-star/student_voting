@@ -1,0 +1,238 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Election Results{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_results.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    <!-- Header -->
+    <div class="results-header">
+        <div class="header-content">
+            <h1><i class="fa-solid fa-trophy"></i> Election Results Dashboard</h1>
+            <p>View and analyze election outcomes with real-time vote counts and statistics</p>
+        </div>
+    </div>
+    
+    <!-- Stats Summary -->
+    <div class="stats-summary">
+        <div class="stat-card">
+            <div class="stat-icon completed">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ completed_elections|length }}</div>
+                <div class="stat-label">Completed Elections</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon active">
+                <i class="fa-solid fa-person-running"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ active_elections|length }}</div>
+                <div class="stat-label">Active Elections</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon upcoming">
+                <i class="fa-solid fa-calendar-day"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ upcoming_elections|length }}</div>
+                <div class="stat-label">Upcoming Elections</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Completed Elections Section -->
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fa-solid fa-check-circle"></i> 
+            Completed Elections
+            <span class="badge-count">{{ completed_elections|length }}</span>
+        </h2>
+        <p class="section-subtitle">View detailed results and analytics for completed elections</p>
+    </div>
+    
+    {% if completed_elections %}
+    <div class="elections-grid">
+        {% for election in completed_elections %}
+        <div class="election-card completed">
+            <div class="card-header">
+                <div class="election-title">{{ election.title }}</div>
+                <span class="status-badge status-completed">
+                    <i class="fa-solid fa-check"></i> Completed
+                </span>
+            </div>
+            
+            <div class="election-details">
+                <div class="detail-item">
+                    <i class="fa-solid fa-calendar"></i>
+                    <span>{{ election.start_date.strftime('%b %d, %Y') }} - {{ election.end_date.strftime('%b %d, %Y') }}</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-building"></i>
+                    <span>
+                        {% if election.election_type == 'Department' %}
+                            {{ election.department or 'All Departments' }}
+                        {% else %}
+                            SSG Election
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-users"></i>
+                    <span>{{ election.candidates|length }} Candidates</span>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
+                   class="btn btn-primary completed">
+                    <i class="fa-solid fa-chart-simple"></i> View Full Results
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="fa-solid fa-calendar-times"></i>
+        </div>
+        <h3>No Completed Elections</h3>
+        <p>There are no elections that have finished yet.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Active Elections Section -->
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fa-solid fa-hourglass-half"></i> 
+            Active Elections
+            <span class="badge-count">{{ active_elections|length }}</span>
+        </h2>
+        <p class="section-subtitle">Monitor currently running elections in real-time</p>
+    </div>
+    
+    {% if active_elections %}
+    <div class="elections-grid">
+        {% for election in active_elections %}
+        <div class="election-card active">
+            <div class="card-header">
+                <div class="election-title">{{ election.title }}</div>
+                <span class="status-badge status-active">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Active Now
+                </span>
+            </div>
+            
+            <div class="election-details">
+                <div class="detail-item">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>Ends: {{ election.end_date.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-building"></i>
+                    <span>
+                        {% if election.election_type == 'Department' %}
+                            {{ election.department or 'All Departments' }}
+                        {% else %}
+                            SSG Election
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-users"></i>
+                    <span>{{ election.candidates|length }} Candidates</span>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                {% if now > election.end_date %}
+                <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
+                   class="btn btn-primary">
+                    <i class="fa-solid fa-chart-bar"></i> View Full Results
+                </a>
+                {% else %}
+                <button class="btn btn-primary disabled" disabled>
+                    <i class="fa-solid fa-lock"></i> Results Locked
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="fa-solid fa-hourglass-end"></i>
+        </div>
+        <h3>No Active Elections</h3>
+        <p>There are no elections currently running.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Upcoming Elections Section -->
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fa-solid fa-calendar-plus"></i> 
+            Upcoming Elections
+            <span class="badge-count">{{ upcoming_elections|length }}</span>
+        </h2>
+        <p class="section-subtitle">Elections scheduled for the future</p>
+    </div>
+    
+    {% if upcoming_elections %}
+    <div class="elections-grid">
+        {% for election in upcoming_elections %}
+        <div class="election-card upcoming">
+            <div class="card-header">
+                <div class="election-title">{{ election.title }}</div>
+                <span class="status-badge status-upcoming">
+                    <i class="fa-solid fa-clock"></i> Upcoming
+                </span>
+            </div>
+            
+            <div class="election-details">
+                <div class="detail-item">
+                    <i class="fa-solid fa-calendar"></i>
+                    <span>Starts: {{ election.start_date.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-building"></i>
+                    <span>
+                        {% if election.election_type == 'Department' %}
+                            {{ election.department or 'All Departments' }}
+                        {% else %}
+                            SSG Election
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-users"></i>
+                    <span>{{ election.candidates|length }} Candidates</span>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <button class="btn btn-primary disabled" disabled>
+                    <i class="fa-solid fa-clock"></i> Election Not Started
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="fa-solid fa-calendar-plus"></i>
+        </div>
+        <h3>No Upcoming Elections</h3>
+        <p>There are no elections scheduled for the future.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

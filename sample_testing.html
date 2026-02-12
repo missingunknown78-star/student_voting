@@ -3,1040 +3,954 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Panel - Mobile</title>
+    <title>Student Government E-Voting System - Admin Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3a0ca3;
-            --accent-color: #4cc9f0;
-            --success-color: #4ade80;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --light-color: #f8f9fa;
-            --dark-color: #1e293b;
-            --gray-color: #94a3b8;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --border-radius: 12px;
-            --transition: all 0.3s ease;
+            --primary-blue: #1a365d;
+            --secondary-blue: #2c5282;
+            --accent-blue: #4299e1;
+            --light-gray: #f7fafc;
+            --medium-gray: #e2e8f0;
+            --dark-gray: #2d3748;
+            --error-red: #f56565;
+            --success-green: #48bb78;
+            --warning-yellow: #ed8936;
+            --sidebar-width: 380px;
         }
-
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         }
-
+        
         body {
-            background-color: #f1f5f9;
-            color: var(--dark-color);
-            line-height: 1.6;
-            padding-bottom: 80px; /* Space for bottom nav */
+            background-color: #edf2f7;
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
         }
-
-        .container {
-            max-width: 100%;
-            padding: 0 16px;
-        }
-
-        /* Header Styles */
-        header {
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        
+        /* Left Sidebar - Information Panel */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
             color: white;
-            padding: 18px 16px;
+            padding: 40px 30px;
             display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow);
-            position: sticky;
+            box-shadow: 5px 0 20px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar::before {
+            content: "";
+            position: absolute;
             top: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo i {
-            font-size: 24px;
-        }
-
-        .logo h1 {
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        .user-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        /* Bottom Navigation */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
             left: 0;
             right: 0;
-            background-color: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 100;
+            bottom: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiLz48L2c+PC9nPjwvc3ZnPg==');
+            background-size: 80px 80px;
+            opacity: 0.1;
+            z-index: -1;
         }
-
-        .nav-item {
+        
+        .logo-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            color: var(--gray-color);
-            text-decoration: none;
-            font-size: 12px;
-            transition: var(--transition);
-            flex: 1;
+            margin-bottom: 40px;
         }
-
-        .nav-item i {
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.15);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logo i {
+            font-size: 48px;
+            color: white;
+        }
+        
+        .system-name {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+        
+        .system-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 400;
+            text-align: center;
+        }
+        
+        .admin-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 40px;
+            border-left: 5px solid var(--accent-blue);
+            backdrop-filter: blur(5px);
+        }
+        
+        .admin-info h3 {
             font-size: 20px;
-            margin-bottom: 4px;
-        }
-
-        .nav-item.active {
-            color: var(--primary-color);
-        }
-
-        /* Main Content */
-        main {
-            padding: 20px 0;
-        }
-
-        .page {
-            display: none;
-            animation: fadeIn 0.5s;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* Card Styles */
-        .card {
-            background-color: white;
-            border-radius: var(--border-radius);
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: var(--shadow);
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 16px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 10px;
-            color: var(--secondary-color);
         }
-
-        .card-title i {
-            font-size: 20px;
+        
+        .admin-info h3 i {
+            color: var(--accent-blue);
         }
-
-        /* Dashboard Styles */
-        .profile-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
+        
+        .admin-info p {
+            font-size: 15px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        .security-features {
+            margin-bottom: 40px;
+        }
+        
+        .security-features h4 {
+            font-size: 18px;
             margin-bottom: 20px;
-        }
-
-        .profile-img {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background-color: var(--accent-color);
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
+            gap: 10px;
         }
-
-        .profile-text h3 {
-            font-size: 20px;
-            margin-bottom: 5px;
+        
+        .security-features h4 i {
+            color: var(--accent-blue);
         }
-
-        .profile-text p {
-            color: var(--gray-color);
-            font-size: 14px;
+        
+        .feature-list {
+            list-style: none;
         }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            text-align: center;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .btn:hover {
-            background-color: var(--secondary-color);
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background-color: var(--success-color);
-        }
-
-        .btn-success:hover {
-            background-color: #22c55e;
-        }
-
-        .btn-warning {
-            background-color: var(--warning-color);
-        }
-
-        .btn-warning:hover {
-            background-color: #d97706;
-        }
-
-        .announcement-item, .guideline-item {
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .announcement-item:last-child, .guideline-item:last-child {
-            border-bottom: none;
-        }
-
-        .announcement-item h4, .guideline-item h4 {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-
-        .announcement-item p, .guideline-item p {
-            font-size: 14px;
-            color: var(--gray-color);
-        }
-
-        .announcement-date, .guideline-date {
-            font-size: 12px;
-            color: var(--primary-color);
-            margin-top: 5px;
-        }
-
-        /* Available Elections */
-        .election-card {
-            border-left: 5px solid var(--primary-color);
-            transition: var(--transition);
-        }
-
-        .election-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .election-status {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .status-active {
-            background-color: #dcfce7;
-            color: #166534;
-        }
-
-        .status-upcoming {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-ended {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
-
-        /* View Candidates */
-        .candidate-card {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            transition: var(--transition);
-        }
-
-        .candidate-card:hover {
-            border-color: var(--primary-color);
-        }
-
-        .candidate-img {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: #cbd5e1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 20px;
-        }
-
-        .candidate-info h4 {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-
-        .candidate-info p {
-            font-size: 14px;
-            color: var(--gray-color);
-        }
-
-        /* My Profile */
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--dark-color);
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: var(--transition);
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
-        }
-
-        /* Voter Receipt */
-        .receipt-card {
-            text-align: center;
-            border: 2px dashed #cbd5e1;
-        }
-
-        .receipt-icon {
-            font-size: 50px;
-            color: var(--success-color);
-            margin-bottom: 20px;
-        }
-
-        .receipt-details {
-            text-align: left;
-            margin-top: 20px;
-        }
-
-        .receipt-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        /* Results */
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .result-candidate {
+        
+        .feature-list li {
             display: flex;
             align-items: center;
             gap: 12px;
+            margin-bottom: 15px;
+            font-size: 15px;
         }
-
-        .progress-bar {
-            height: 10px;
-            background-color: #e2e8f0;
-            border-radius: 5px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background-color: var(--primary-color);
-            border-radius: 5px;
-        }
-
-        /* Help & Support */
-        .support-item {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 20px;
-            background-color: #f8fafc;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            transition: var(--transition);
-        }
-
-        .support-item:hover {
-            background-color: #e2e8f0;
-        }
-
-        .support-icon {
-            width: 50px;
-            height: 50px;
-            background-color: var(--primary-color);
-            color: white;
+        
+        .feature-list li i {
+            color: #68d391;
+            background: rgba(255, 255, 255, 0.1);
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            flex-shrink: 0;
         }
-
-        .support-info h4 {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-
-        .support-info p {
+        
+        .sidebar-footer {
             font-size: 14px;
-            color: var(--gray-color);
+            opacity: 0.7;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 200;
+        
+        /* Main Login Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 40px;
+            overflow-y: auto;
         }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background-color: white;
-            border-radius: var(--border-radius);
-            padding: 24px;
-            max-width: 400px;
+        
+        .login-container {
             width: 100%;
-            animation: modalFadeIn 0.3s;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            padding: 50px;
+            border: 1px solid var(--medium-gray);
         }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        
+        .login-header {
+            margin-bottom: 40px;
+            text-align: center;
         }
-
-        .modal-title {
-            font-size: 20px;
+        
+        .login-header h2 {
+            font-size: 32px;
+            color: var(--dark-gray);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .login-header p {
+            color: var(--dark-gray);
+            font-size: 16px;
+            opacity: 0.7;
+        }
+        
+        .form-group {
+            margin-bottom: 28px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--dark-gray);
             font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--secondary-color);
+            font-size: 15px;
         }
-
-        .modal-close {
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-with-icon i {
             position: absolute;
-            top: 16px;
-            right: 16px;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-gray);
+            font-size: 18px;
+            opacity: 0.7;
+        }
+        
+        .input-with-icon input {
+            width: 100%;
+            padding: 18px 18px 18px 55px;
+            border: 2px solid var(--medium-gray);
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: #fafafa;
+        }
+        
+        .input-with-icon input:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+            background-color: white;
+        }
+        
+        .input-with-icon input.error {
+            border-color: var(--error-red);
+            background-color: rgba(245, 101, 101, 0.05);
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
             background: none;
             border: none;
-            font-size: 24px;
+            color: var(--dark-gray);
             cursor: pointer;
-            color: var(--gray-color);
+            font-size: 18px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
         }
-
-        /* Responsive adjustments */
-        @media (min-width: 768px) {
-            .container {
-                max-width: 600px;
-                margin: 0 auto;
+        
+        .password-toggle:hover {
+            opacity: 1;
+            color: var(--accent-blue);
+        }
+        
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--dark-gray);
+            font-size: 15px;
+        }
+        
+        .remember-me input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .forgot-password {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        
+        .forgot-password:hover {
+            color: var(--secondary-blue);
+            text-decoration: underline;
+        }
+        
+        .login-button {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(26, 54, 93, 0.2);
+        }
+        
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(26, 54, 93, 0.3);
+        }
+        
+        .login-button:active {
+            transform: translateY(0);
+        }
+        
+        .login-button.loading {
+            opacity: 0.8;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .error-message {
+            background-color: rgba(245, 101, 101, 0.1);
+            color: var(--error-red);
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            border-left: 4px solid var(--error-red);
+        }
+        
+        .error-message.show {
+            display: flex;
+        }
+        
+        .attempts-warning {
+            display: none;
+            background-color: rgba(237, 137, 54, 0.1);
+            color: var(--warning-yellow);
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            border-left: 4px solid var(--warning-yellow);
+        }
+        
+        .attempts-warning.show {
+            display: flex;
+        }
+        
+        .security-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid var(--medium-gray);
+            color: var(--dark-gray);
+            font-size: 14px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-item i {
+            color: var(--accent-blue);
+        }
+        
+        .status-item.secure i {
+            color: var(--success-green);
+        }
+        
+        /* System Status Indicator */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success-green);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Alert Notification */
+        .alert-notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: white;
+            padding: 20px 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid var(--accent-blue);
+            display: none;
+            z-index: 1000;
+            max-width: 350px;
+            transform: translateX(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .alert-notification.show {
+            display: block;
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .alert-header i {
+            color: var(--accent-blue);
+            font-size: 20px;
+        }
+        
+        .alert-header h4 {
+            color: var(--dark-gray);
+            font-size: 16px;
+        }
+        
+        .alert-body {
+            color: var(--dark-gray);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        /* Responsive adjustments for desktop */
+        @media (max-height: 800px) {
+            .sidebar {
+                padding: 30px 25px;
             }
             
-            .bottom-nav {
-                max-width: 600px;
-                margin: 0 auto;
-                left: 50%;
-                transform: translateX(-50%);
+            .login-container {
+                padding: 40px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            :root {
+                --sidebar-width: 320px;
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            body {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+            
+            .sidebar {
+                width: 100%;
+                padding: 30px;
+            }
+            
+            .main-content {
+                padding: 40px 20px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="logo">
-            <i class="fas fa-graduation-cap"></i>
-            <h1>Student Panel</h1>
-        </div>
-        <div class="user-icon">
-            <i class="fas fa-user"></i>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="container">
-        <!-- Dashboard Page -->
-        <section id="dashboard" class="page active">
-            <div class="card">
-                <div class="profile-info">
-                    <div class="profile-img">JS</div>
-                    <div class="profile-text">
-                        <h3>John Smith</h3>
-                        <p>Computer Science • ID: S123456</p>
-                        <p>Status: <span style="color: var(--success-color); font-weight: 600;">Verified Voter</span></p>
-                    </div>
+    <!-- Left Sidebar with System Information -->
+    <div class="sidebar">
+        <div>
+            <div class="logo-container">
+                <div class="logo">
+                    <i class="fas fa-vote-yea"></i>
                 </div>
-                <button class="btn btn-success" id="registerFingerprintBtn">
-                    <i class="fas fa-fingerprint"></i> Register Fingerprint
-                </button>
-            </div>
-
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-bullhorn"></i> Announcements</h2>
-                <div class="announcement-item">
-                    <h4>Student Council Elections 2024</h4>
-                    <p>Voting will be open from May 15 to May 17, 2024. All students are encouraged to participate.</p>
-                    <div class="announcement-date">Posted: May 1, 2024</div>
-                </div>
-                <div class="announcement-item">
-                    <h4>New Voting System</h4>
-                    <p>We have implemented a new biometric voting system for enhanced security and convenience.</p>
-                    <div class="announcement-date">Posted: April 25, 2024</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-list-check"></i> Election Guidelines</h2>
-                <div class="guideline-item">
-                    <h4>1. Voting Period</h4>
-                    <p>Voting is only allowed during the specified election dates and times.</p>
-                </div>
-                <div class="guideline-item">
-                    <h4>2. One Vote Per Position</h4>
-                    <p>Each voter can cast only one vote per election position.</p>
-                </div>
-                <div class="guideline-item">
-                    <h4>3. No Campaigning in Polling Areas</h4>
-                    <p>Campaigning is strictly prohibited within 50 meters of polling stations.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Available Elections Page -->
-        <section id="elections" class="page">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-vote-yea"></i> Available Elections</h2>
-                <p>Select an election to view details and cast your vote.</p>
-            </div>
-
-            <div class="card election-card">
-                <span class="election-status status-active">Active Now</span>
-                <h3>Student Council President 2024</h3>
-                <p>Vote for the next Student Council President. This position represents all students in university affairs.</p>
-                <div class="announcement-date">May 15 - May 17, 2024</div>
-                <button class="btn" style="margin-top: 15px;">View & Vote</button>
-            </div>
-
-            <div class="card election-card">
-                <span class="election-status status-upcoming">Upcoming</span>
-                <h3>Department Representatives</h3>
-                <p>Election for department representatives in the Faculty of Engineering.</p>
-                <div class="announcement-date">June 1 - June 3, 2024</div>
-                <button class="btn" style="margin-top: 15px; opacity: 0.7;" disabled>Coming Soon</button>
-            </div>
-
-            <div class="card election-card">
-                <span class="election-status status-ended">Ended</span>
-                <h3>Sports Committee Head</h3>
-                <p>Election for the head of the University Sports Committee.</p>
-                <div class="announcement-date">March 10 - March 12, 2024</div>
-                <button class="btn" style="margin-top: 15px; background-color: var(--gray-color);">View Results</button>
-            </div>
-        </section>
-
-        <!-- View Candidates Page -->
-        <section id="candidates" class="page">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-users"></i> Candidates for President</h2>
-                <p>Review the candidates for Student Council President 2024.</p>
-            </div>
-
-            <div class="candidate-card">
-                <div class="candidate-img">AR</div>
-                <div class="candidate-info">
-                    <h4>Alex Rodriguez</h4>
-                    <p>Computer Science Major</p>
-                    <p>"Transparency and Student Welfare First"</p>
-                </div>
-                <button class="btn" style="padding: 8px 16px; width: auto;">View Profile</button>
-            </div>
-
-            <div class="candidate-card">
-                <div class="candidate-img">SK</div>
-                <div class="candidate-info">
-                    <h4>Sarah Johnson</h4>
-                    <p>Political Science Major</p>
-                    <p>"Building Bridges Across Departments"</p>
-                </div>
-                <button class="btn" style="padding: 8px 16px; width: auto;">View Profile</button>
-            </div>
-
-            <div class="candidate-card">
-                <div class="candidate-img">MP</div>
-                <div class="candidate-info">
-                    <h4>Michael Patel</h4>
-                    <p>Business Administration Major</p>
-                    <p>"Innovation and Practical Solutions"</p>
-                </div>
-                <button class="btn" style="padding: 8px 16px; width: auto;">View Profile</button>
-            </div>
-        </section>
-
-        <!-- My Profile Page -->
-        <section id="profile" class="page">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-user-edit"></i> My Profile</h2>
-                <p>Update your personal information here.</p>
-            </div>
-
-            <div class="card">
-                <form id="profileForm">
-                    <div class="form-group">
-                        <label for="fullName">Full Name</label>
-                        <input type="text" id="fullName" value="John Smith">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="studentId">Student ID</label>
-                        <input type="text" id="studentId" value="S123456" readonly>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input type="email" id="email" value="john.smith@university.edu">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="phone">Phone Number</label>
-                        <input type="tel" id="phone" value="+1 (555) 123-4567">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="department">Department</label>
-                        <select id="department">
-                            <option>Computer Science</option>
-                            <option>Electrical Engineering</option>
-                            <option>Business Administration</option>
-                            <option>Political Science</option>
-                            <option>Medicine</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="year">Year of Study</label>
-                        <select id="year">
-                            <option>1st Year</option>
-                            <option>2nd Year</option>
-                            <option selected>3rd Year</option>
-                            <option>4th Year</option>
-                            <option>Graduate</option>
-                        </select>
-                    </div>
-                    
-                    <button type="submit" class="btn">Update Profile</button>
-                </form>
-            </div>
-        </section>
-
-        <!-- Voter Receipt Page -->
-        <section id="receipt" class="page">
-            <div class="card receipt-card">
-                <div class="receipt-icon">
-                    <i class="fas fa-receipt"></i>
-                </div>
-                <h2>Voting Receipt</h2>
-                <p>Your vote has been successfully recorded.</p>
-                
-                <div class="receipt-details">
-                    <div class="receipt-row">
-                        <span>Election:</span>
-                        <span style="font-weight: 600;">Student Council President 2024</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span>Voter ID:</span>
-                        <span>S123456</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span>Voted For:</span>
-                        <span style="font-weight: 600; color: var(--primary-color);">Alex Rodriguez</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span>Date & Time:</span>
-                        <span>May 16, 2024 • 10:24 AM</span>
-                    </div>
-                    <div class="receipt-row">
-                        <span>Transaction ID:</span>
-                        <span style="font-family: monospace;">VTX-7890-4567-1234</span>
-                    </div>
-                </div>
-                
-                <button class="btn" style="margin-top: 20px;">
-                    <i class="fas fa-print"></i> Print Receipt
-                </button>
-                <button class="btn" style="margin-top: 10px; background-color: var(--gray-color);">
-                    <i class="fas fa-download"></i> Download PDF
-                </button>
-            </div>
-        </section>
-
-        <!-- Results Page -->
-        <section id="results" class="page">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-chart-bar"></i> Election Results</h2>
-                <p>Live results for the Student Council President 2024 election.</p>
-            </div>
-
-            <div class="card">
-                <h3>Student Council President 2024</h3>
-                <p style="color: var(--gray-color); margin-bottom: 20px;">Total Votes: 1,245 • 78% Turnout</p>
-                
-                <div class="result-item">
-                    <div class="result-candidate">
-                        <div class="candidate-img">AR</div>
-                        <div>
-                            <h4>Alex Rodriguez</h4>
-                            <p>Computer Science</p>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <h4>543 Votes</h4>
-                        <p>43.6%</p>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: 43.6%;"></div>
-                </div>
-                
-                <div class="result-item">
-                    <div class="result-candidate">
-                        <div class="candidate-img">SK</div>
-                        <div>
-                            <h4>Sarah Johnson</h4>
-                            <p>Political Science</p>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <h4>489 Votes</h4>
-                        <p>39.3%</p>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: 39.3%;"></div>
-                </div>
-                
-                <div class="result-item">
-                    <div class="result-candidate">
-                        <div class="candidate-img">MP</div>
-                        <div>
-                            <h4>Michael Patel</h4>
-                            <p>Business Administration</p>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <h4>213 Votes</h4>
-                        <p>17.1%</p>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: 17.1%;"></div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 12px; background-color: #f0f9ff; border-radius: 8px;">
-                    <p><i class="fas fa-info-circle" style="color: var(--primary-color);"></i> Results are preliminary and will be finalized after the election period ends.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Help & Support Page -->
-        <section id="support" class="page">
-            <div class="card">
-                <h2 class="card-title"><i class="fas fa-question-circle"></i> Help & Support</h2>
-                <p>Get assistance with the voting system and election process.</p>
-            </div>
-
-            <div class="support-item">
-                <div class="support-icon">
-                    <i class="fas fa-phone-alt"></i>
-                </div>
-                <div class="support-info">
-                    <h4>Contact Election Committee</h4>
-                    <p>Call +1 (555) 123-4567 for immediate assistance</p>
-                </div>
-            </div>
-
-            <div class="support-item">
-                <div class="support-icon">
-                    <i class="fas fa-envelope"></i>
-                </div>
-                <div class="support-info">
-                    <h4>Email Support</h4>
-                    <p>Send queries to elections@university.edu</p>
-                </div>
-            </div>
-
-            <div class="support-item">
-                <div class="support-icon">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <div class="support-info">
-                    <h4>Visit Help Desk</h4>
-                    <p>Student Affairs Building, Room 205</p>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3 class="card-title"><i class="fas fa-question"></i> Frequently Asked Questions</h3>
-                
-                <div class="guideline-item">
-                    <h4>How do I register my fingerprint?</h4>
-                    <p>Click the "Register Fingerprint" button on your dashboard and follow the on-screen instructions.</p>
-                </div>
-                
-                <div class="guideline-item">
-                    <h4>Can I change my vote after submitting?</h4>
-                    <p>No, once a vote is cast, it cannot be changed to ensure election integrity.</p>
-                </div>
-                
-                <div class="guideline-item">
-                    <h4>What if I encounter technical issues?</h4>
-                    <p>Contact the Election Committee immediately via phone or email for assistance.</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="#" class="nav-item active" data-page="dashboard">
-            <i class="fas fa-home"></i>
-            <span>Dashboard</span>
-        </a>
-        <a href="#" class="nav-item" data-page="elections">
-            <i class="fas fa-vote-yea"></i>
-            <span>Elections</span>
-        </a>
-        <a href="#" class="nav-item" data-page="candidates">
-            <i class="fas fa-users"></i>
-            <span>Candidates</span>
-        </a>
-        <a href="#" class="nav-item" data-page="profile">
-            <i class="fas fa-user-edit"></i>
-            <span>My Profile</span>
-        </a>
-        <a href="#" class="nav-item" data-page="receipt">
-            <i class="fas fa-receipt"></i>
-            <span>Receipt</span>
-        </a>
-        <a href="#" class="nav-item" data-page="results">
-            <i class="fas fa-chart-bar"></i>
-            <span>Results</span>
-        </a>
-        <a href="#" class="nav-item" data-page="support">
-            <i class="fas fa-question-circle"></i>
-            <span>Help</span>
-        </a>
-    </nav>
-
-    <!-- Fingerprint Modal -->
-    <div id="fingerprintModal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close" id="closeModal">&times;</button>
-            <h2 class="modal-title"><i class="fas fa-fingerprint"></i> Fingerprint Registration</h2>
-            <p>Place your finger on the scanner to register your biometric data for secure voting.</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <div style="width: 120px; height: 120px; background-color: #e2e8f0; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--primary-color);">
-                    <i class="fas fa-fingerprint"></i>
-                </div>
-                <p style="margin-top: 15px; font-weight: 600;">Ready to scan...</p>
+                <h1 class="system-name">Student Government E-Voting System</h1>
+                <p class="system-subtitle">Administrator Access Portal</p>
             </div>
             
-            <div style="display: flex; gap: 10px;">
-                <button class="btn" id="startScanBtn">Start Scanning</button>
-                <button class="btn" style="background-color: var(--gray-color);" id="cancelScanBtn">Cancel</button>
+            <div class="admin-info">
+                <h3><i class="fas fa-shield-alt"></i> Restricted Access</h3>
+                <p>This portal is exclusively for authorized election administrators, COMELEC officers, IT personnel, and faculty advisers. Unauthorized access attempts are logged and may result in disciplinary action.</p>
+            </div>
+            
+            <div class="security-features">
+                <h4><i class="fas fa-lock"></i> Security Features</h4>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Multi-factor authentication ready</li>
+                    <li><i class="fas fa-check"></i> Encrypted session management</li>
+                    <li><i class="fas fa-check"></i> Brute-force protection</li>
+                    <li><i class="fas fa-check"></i> Audit logging for all activities</li>
+                    <li><i class="fas fa-check"></i> CSRF protection</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="sidebar-footer">
+            <p>© 2023 Student Government E-Voting System v4.2</p>
+            <p>For technical support: IT Department Ext. 4502</p>
+        </div>
+    </div>
+    
+    <!-- Main Login Area -->
+    <div class="main-content">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>Administrator Login</h2>
+                <p>Enter your credentials to access the election management dashboard</p>
+            </div>
+            
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText">Invalid credentials. Please try again.</span>
+            </div>
+            
+            <div class="attempts-warning" id="attemptsWarning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="attemptsText">Multiple failed login attempts detected. Your IP may be temporarily blocked.</span>
+            </div>
+            
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label for="username">Admin Username or Email</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-user-tie"></i>
+                        <input type="text" id="username" name="username" placeholder="admin.username or admin@university.edu" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-key"></i>
+                        <input type="password" id="password" name="password" placeholder="Enter your secure password" required>
+                        <button type="button" class="password-toggle" id="passwordToggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-options">
+                    <div class="remember-me">
+                        <input type="checkbox" id="rememberMe" name="rememberMe">
+                        <label for="rememberMe">Remember this device</label>
+                    </div>
+                    <a href="#" class="forgot-password" id="forgotPassword">Forgot Password?</a>
+                </div>
+                
+                <button type="submit" class="login-button" id="loginButton">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Access Admin Dashboard</span>
+                </button>
+            </form>
+            
+            <div class="security-status">
+                <div class="status-item secure">
+                    <i class="fas fa-lock"></i>
+                    <span>Secure Connection (HTTPS)</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-history"></i>
+                    <span>Last login: --:-- --</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span>System Active</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- Profile Update Success Modal -->
-    <div id="successModal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close" id="closeSuccessModal">&times;</button>
-            <div style="text-align: center;">
-                <div style="width: 80px; height: 80px; background-color: #dcfce7; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 36px; color: var(--success-color);">
-                    <i class="fas fa-check"></i>
-                </div>
-                <h2 class="modal-title">Profile Updated!</h2>
-                <p>Your profile information has been successfully updated.</p>
-                <button class="btn" id="closeSuccessBtn" style="margin-top: 20px;">OK</button>
-            </div>
+    
+    <!-- Alert Notification -->
+    <div class="alert-notification" id="alertNotification">
+        <div class="alert-header">
+            <i class="fas fa-info-circle"></i>
+            <h4>Security Notice</h4>
+        </div>
+        <div class="alert-body" id="alertBody">
+            All login activities are monitored and logged for security purposes.
         </div>
     </div>
 
     <script>
-        // Navigation functionality
         document.addEventListener('DOMContentLoaded', function() {
-            // Get all navigation items
-            const navItems = document.querySelectorAll('.nav-item');
-            const pages = document.querySelectorAll('.page');
+            // DOM Elements
+            const loginForm = document.getElementById('adminLoginForm');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const passwordToggle = document.getElementById('passwordToggle');
+            const loginButton = document.getElementById('loginButton');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const attemptsWarning = document.getElementById('attemptsWarning');
+            const attemptsText = document.getElementById('attemptsText');
+            const rememberMe = document.getElementById('rememberMe');
+            const forgotPassword = document.getElementById('forgotPassword');
+            const alertNotification = document.getElementById('alertNotification');
+            const alertBody = document.getElementById('alertBody');
             
-            // Function to switch pages
-            function switchPage(pageId) {
-                // Hide all pages
-                pages.forEach(page => {
-                    page.classList.remove('active');
-                });
+            // State management
+            let loginAttempts = 0;
+            const maxAttempts = 5;
+            let loginLocked = false;
+            
+            // Show alert notification
+            function showAlert(message, type = 'info') {
+                alertBody.textContent = message;
+                alertNotification.style.borderLeftColor = type === 'warning' ? 'var(--warning-yellow)' : 'var(--accent-blue)';
+                alertNotification.classList.add('show');
                 
-                // Show selected page
-                document.getElementById(pageId).classList.add('active');
+                setTimeout(() => {
+                    alertNotification.classList.remove('show');
+                }, 5000);
+            }
+            
+            // Show security alert on page load
+            setTimeout(() => {
+                showAlert("You are accessing a restricted system. All activities are logged and monitored.");
+            }, 1000);
+            
+            // Toggle password visibility
+            passwordToggle.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
                 
-                // Update active nav item
-                navItems.forEach(item => {
-                    item.classList.remove('active');
-                    if (item.getAttribute('data-page') === pageId) {
-                        item.classList.add('active');
+                // Toggle eye icon
+                const eyeIcon = this.querySelector('i');
+                eyeIcon.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+                
+                // Show brief alert
+                if (type === 'text') {
+                    showAlert("Password is now visible. Ensure no one is watching your screen.", 'warning');
+                }
+            });
+            
+            // Form validation
+            function validateForm() {
+                let isValid = true;
+                
+                // Reset previous error states
+                usernameInput.classList.remove('error');
+                passwordInput.classList.remove('error');
+                errorMessage.classList.remove('show');
+                
+                // Check if username is empty
+                if (!usernameInput.value.trim()) {
+                    showError('Please enter your admin username or email.');
+                    usernameInput.classList.add('error');
+                    usernameInput.focus();
+                    isValid = false;
+                }
+                
+                // Check if password is empty
+                else if (!passwordInput.value.trim()) {
+                    showError('Please enter your password.');
+                    passwordInput.classList.add('error');
+                    passwordInput.focus();
+                    isValid = false;
+                }
+                
+                // Check password strength (for demo purposes)
+                else if (passwordInput.value.length < 8) {
+                    showError('Password must be at least 8 characters long.');
+                    passwordInput.classList.add('error');
+                    passwordInput.focus();
+                    isValid = false;
+                }
+                
+                return isValid;
+            }
+            
+            // Show error message
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.classList.add('show');
+                
+                // Auto-hide error after 6 seconds
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 6000);
+            }
+            
+            // Show attempts warning
+            function showAttemptsWarning() {
+                const remainingAttempts = maxAttempts - loginAttempts;
+                attemptsText.textContent = `Security Alert: ${loginAttempts} failed login attempt${loginAttempts > 1 ? 's' : ''}. ${remainingAttempts > 0 ? `${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining before temporary lockout.` : 'Your IP has been temporarily blocked.'}`;
+                attemptsWarning.classList.add('show');
+                
+                // Show alert notification
+                showAlert(`Multiple failed login attempts (${loginAttempts}). Further attempts may trigger security protocols.`, 'warning');
+                
+                // Auto-hide warning after 8 seconds
+                setTimeout(() => {
+                    attemptsWarning.classList.remove('show');
+                }, 8000);
+            }
+            
+            // Lock login functionality
+            function lockLogin() {
+                loginLocked = true;
+                loginButton.disabled = true;
+                loginButton.innerHTML = '<i class="fas fa-lock"></i><span>Account Locked (30s)</span>';
+                loginButton.style.background = 'linear-gradient(135deg, #c53030 0%, #e53e3e 100%)';
+                
+                // Countdown timer
+                let seconds = 30;
+                const countdown = setInterval(() => {
+                    loginButton.innerHTML = `<i class="fas fa-lock"></i><span>Account Locked (${seconds}s)</span>`;
+                    seconds--;
+                    
+                    if (seconds < 0) {
+                        clearInterval(countdown);
+                        resetLogin();
                     }
+                }, 1000);
+                
+                showAlert('Account temporarily locked due to multiple failed attempts. Please wait 30 seconds.', 'warning');
+            }
+            
+            // Reset login form
+            function resetLogin() {
+                loginLocked = false;
+                loginAttempts = 0;
+                loginButton.disabled = false;
+                loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Access Admin Dashboard</span>';
+                loginButton.style.background = 'linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%)';
+                attemptsWarning.classList.remove('show');
+                
+                showAlert('Login form has been reset. You may attempt to login again.');
+            }
+            
+            // Simulate login process
+            function simulateLogin(username, password) {
+                // Valid credentials for demo
+                const validCredentials = [
+                    { username: 'admin', password: 'AdminPass123', role: 'Super Admin' },
+                    { username: 'comelec', password: 'Comelec@2023', role: 'Election Officer' },
+                    { username: 'itadmin', password: 'SecureVote2023!', role: 'IT Administrator' },
+                    { username: 'faculty', password: 'FacultyAdv2023', role: 'Faculty Adviser' }
+                ];
+                
+                // Check if credentials match any valid pair
+                const validCred = validCredentials.find(cred => 
+                    (cred.username === username || `${username}@university.edu` === cred.username) && 
+                    cred.password === password
+                );
+                
+                // Simulate API delay
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (validCred) {
+                            resolve({ success: true, role: validCred.role });
+                        } else {
+                            resolve({ success: false });
+                        }
+                    }, 1200);
                 });
             }
             
-            // Add click event to nav items
-            navItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const pageId = this.getAttribute('data-page');
-                    switchPage(pageId);
-                });
-            });
-            
-            // Fingerprint registration modal
-            const fingerprintBtn = document.getElementById('registerFingerprintBtn');
-            const fingerprintModal = document.getElementById('fingerprintModal');
-            const closeModal = document.getElementById('closeModal');
-            const cancelScanBtn = document.getElementById('cancelScanBtn');
-            const startScanBtn = document.getElementById('startScanBtn');
-            
-            fingerprintBtn.addEventListener('click', function() {
-                fingerprintModal.classList.add('active');
-            });
-            
-            closeModal.addEventListener('click', function() {
-                fingerprintModal.classList.remove('active');
-            });
-            
-            cancelScanBtn.addEventListener('click', function() {
-                fingerprintModal.classList.remove('active');
-            });
-            
-            startScanBtn.addEventListener('click', function() {
-                // Simulate fingerprint scanning
-                startScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
-                startScanBtn.disabled = true;
-                
-                setTimeout(function() {
-                    fingerprintModal.classList.remove('active');
-                    startScanBtn.innerHTML = 'Start Scanning';
-                    startScanBtn.disabled = false;
-                    
-                    // Update the fingerprint button on dashboard
-                    fingerprintBtn.innerHTML = '<i class="fas fa-check"></i> Fingerprint Registered';
-                    fingerprintBtn.classList.remove('btn-success');
-                    fingerprintBtn.classList.add('btn-warning');
-                    fingerprintBtn.disabled = true;
-                    
-                    // Show a quick notification
-                    alert('Fingerprint successfully registered!');
-                }, 3000);
-            });
-            
-            // Profile form submission
-            const profileForm = document.getElementById('profileForm');
-            const successModal = document.getElementById('successModal');
-            const closeSuccessModal = document.getElementById('closeSuccessModal');
-            const closeSuccessBtn = document.getElementById('closeSuccessBtn');
-            
-            profileForm.addEventListener('submit', function(e) {
+            // Form submission handler
+            loginForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                successModal.classList.add('active');
-            });
-            
-            closeSuccessModal.addEventListener('click', function() {
-                successModal.classList.remove('active');
-            });
-            
-            closeSuccessBtn.addEventListener('click', function() {
-                successModal.classList.remove('active');
-            });
-            
-            // User icon click
-            const userIcon = document.querySelector('.user-icon');
-            userIcon.addEventListener('click', function() {
-                switchPage('profile');
-            });
-            
-            // Close modals when clicking outside
-            window.addEventListener('click', function(e) {
-                if (e.target === fingerprintModal) {
-                    fingerprintModal.classList.remove('active');
+                
+                // Check if login is locked
+                if (loginLocked) {
+                    showError('Account is temporarily locked. Please wait 30 seconds.');
+                    return;
                 }
-                if (e.target === successModal) {
-                    successModal.classList.remove('active');
+                
+                // Validate form
+                if (!validateForm()) {
+                    return;
+                }
+                
+                // Disable login button and show loading state
+                loginButton.classList.add('loading');
+                loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Authenticating...</span>';
+                loginButton.disabled = true;
+                
+                // Get form values
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value;
+                
+                // Simulate login (replace with actual API call in production)
+                const loginResult = await simulateLogin(username, password);
+                
+                if (loginResult.success) {
+                    // Reset attempts counter on successful login
+                    loginAttempts = 0;
+                    attemptsWarning.classList.remove('show');
+                    
+                    // Show success state
+                    loginButton.innerHTML = '<i class="fas fa-check-circle"></i><span>Authentication Successful!</span>';
+                    loginButton.style.background = 'linear-gradient(135deg, #38a169 0%, #48bb78 100%)';
+                    
+                    // Update security status
+                    document.querySelector('.security-status .status-item:nth-child(2) span').textContent = 
+                        `Last login: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                    
+                    // Simulate redirect to admin dashboard
+                    setTimeout(() => {
+                        // In a real application, this would redirect to the admin dashboard
+                        // For demo purposes, we'll show an alert with login details
+                        const demoMessage = `Login successful! Welcome, ${loginResult.role}.\n\nYou would now be redirected to the Admin Dashboard.\n\nDemo Credentials:\n• admin / AdminPass123 (Super Admin)\n• comelec / Comelec@2023 (Election Officer)\n• itadmin / SecureVote2023! (IT Admin)\n• faculty / FacultyAdv2023 (Faculty Adviser)`;
+                        
+                        // Show success alert
+                        showAlert(`Welcome, ${loginResult.role}! Redirecting to dashboard...`);
+                        
+                        // Reset form after simulated login
+                        setTimeout(() => {
+                            loginButton.classList.remove('loading');
+                            loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Access Admin Dashboard</span>';
+                            loginButton.style.background = 'linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%)';
+                            loginButton.disabled = false;
+                            
+                            // Clear form (except if "Remember Me" is checked)
+                            if (!rememberMe.checked) {
+                                usernameInput.value = '';
+                            }
+                            passwordInput.value = '';
+                            passwordInput.type = 'password';
+                            passwordToggle.querySelector('i').className = 'fas fa-eye';
+                            
+                            // Show demo message
+                            alert(demoMessage);
+                        }, 1500);
+                    }, 1000);
+                } else {
+                    // Increment login attempts
+                    loginAttempts++;
+                    
+                    // Re-enable login button
+                    loginButton.classList.remove('loading');
+                    loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Access Admin Dashboard</span>';
+                    loginButton.disabled = false;
+                    
+                    // Show error message
+                    showError('Invalid credentials. Please check your username and password.');
+                    
+                    // Show attempts warning if multiple failed attempts
+                    if (loginAttempts >= 2) {
+                        showAttemptsWarning();
+                    }
+                    
+                    // Lock login after max attempts
+                    if (loginAttempts >= maxAttempts) {
+                        lockLogin();
+                    }
                 }
             });
+            
+            // Forgot password handler
+            forgotPassword.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (!usernameInput.value.trim()) {
+                    showError('Please enter your username or email to reset your password.');
+                    usernameInput.focus();
+                    return;
+                }
+                
+                // Show processing state
+                const originalText = forgotPassword.textContent;
+                forgotPassword.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                forgotPassword.style.pointerEvents = 'none';
+                
+                // Simulate password reset request
+                setTimeout(() => {
+                    showAlert(`Password reset instructions have been sent to the email associated with "${usernameInput.value}".`);
+                    forgotPassword.innerHTML = originalText;
+                    forgotPassword.style.pointerEvents = 'auto';
+                }, 1500);
+            });
+            
+            // Load saved username if "Remember Me" was checked previously
+            const savedUsername = localStorage.getItem('evoting_admin_username');
+            if (savedUsername) {
+                usernameInput.value = savedUsername;
+                rememberMe.checked = true;
+            }
+            
+            // Save username when "Remember Me" is checked on form submit
+            loginForm.addEventListener('submit', function() {
+                if (rememberMe.checked && usernameInput.value.trim()) {
+                    localStorage.setItem('evoting_admin_username', usernameInput.value.trim());
+                } else {
+                    localStorage.removeItem('evoting_admin_username');
+                }
+            });
+            
+            // Auto-focus username field
+            usernameInput.focus();
+            
+            // Show security tip periodically
+            setInterval(() => {
+                const tips = [
+                    "Ensure you are on the official university network when accessing this system.",
+                    "Always log out after completing your administrative tasks.",
+                    "Never share your admin credentials with anyone.",
+                    "Report any suspicious activity to the IT Department immediately."
+                ];
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
+                showAlert(randomTip);
+            }, 30000);
         });
     </script>
 </body>

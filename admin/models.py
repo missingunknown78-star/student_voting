@@ -33,11 +33,9 @@ class Position(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
-    # Link to election
-    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
-
     # Relationship to candidates
     candidates = db.relationship('Candidate', backref='position', lazy=True)
+
 
 
 # ------------------- CANDIDATE -------------------
@@ -56,14 +54,21 @@ class Candidate(db.Model):
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))
     election = db.relationship('Election', backref='candidates', lazy=True)
 
-    votes = db.relationship(
-        'Vote', 
-        back_populates='candidate', 
-        lazy=True,
-        overlaps="candidate_votes"  # <-- added to fix warning
-    )
-
-
+    # Remove or comment out this relationship since Vote no longer has candidate_id
+    # votes = db.relationship(
+    #     'Vote', 
+    #     back_populates='candidate', 
+    #     lazy=True,
+    #     overlaps="candidate_votes"
+    # )
+    
+    # If you still want a way to count votes (for results), you can add a property
+    # that doesn't create a database relationship:
+    @property
+    def vote_count(self):
+        # This will be calculated dynamically using encrypted votes
+        from student.routes import count_votes_for_candidate  # Import your vote counting function
+        return count_votes_for_candidate(self.id)
 
 # ------------------- ELECTION -------------------
 class Election(db.Model):
@@ -172,3 +177,39 @@ class CtuStudent(db.Model):
     course = db.Column(db.String(100))
     email = db.Column(db.String(150))
     is_active = db.Column(db.Boolean, default=True)
+
+
+# Add this to your models.py
+class TallyVote(db.Model):
+    """Model for storing official tally results"""
+    __tablename__ = 'tally_votes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id', ondelete='CASCADE'), nullable=False)
+    vote_count = db.Column(db.Integer, nullable=False, default=0)
+    tally_timestamp = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    # Relationships
+    election = db.relationship('Election', backref='tally_records')
+    candidate = db.relationship('Candidate', backref='tally_records')
+    
+    def __repr__(self):
+        return f'<TallyVote Election:{self.election_id} Candidate:{self.candidate_id} Votes:{self.vote_count}>'
+    
+
+ 
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=True)
+    role = db.Column(db.String(50), nullable=False)
+    action = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(pytz.timezone('Asia/Manila')).replace(tzinfo=None))
+
+    def __repr__(self):
+        return f"<AuditLog {self.action}>"

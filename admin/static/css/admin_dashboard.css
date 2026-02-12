@@ -33,6 +33,7 @@
     background-attachment: fixed;
     position: relative;
     transition: margin-left 0.3s ease;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .main-content::before {

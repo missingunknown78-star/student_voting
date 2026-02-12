@@ -1,5 +1,6 @@
 # student/__init__.py
 from flask import Blueprint
+from admin.utils import log_audit
 
 # Define the student blueprint
 student_bp = Blueprint('student_bp', __name__)

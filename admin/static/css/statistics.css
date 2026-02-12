@@ -1,29 +1,87 @@
-/* Statistics CSS - Minimal */
+/* ================================
+   STATISTICS PAGE CSS
+   ================================ */
+
+/* ==================== PREVENT FOUC ==================== */
+/* Set initial dark background to prevent flash */
+body {
+    background-color: #0f172a; /* Dark background as default */
+    transition: background-color 0.3s ease;
+}
+
+/* Light mode override */
+body:not(.dark-mode) {
+    background-color: #f5f7fb;
+}
+
+/* Quick fade-in to hide any remaining flash */
+@keyframes quickFadeIn {
+    from { opacity: 0.99; }
+    to { opacity: 1; }
+}
+
+.stats-page {
+    animation: quickFadeIn 0.1s ease-out;
+    opacity: 1;
+}
+
+/* ==================== CSS VARIABLES ==================== */
 :root {
+    /* Light mode colors */
+    --primary-blue: #1a56db;
+    --secondary-blue: #3b82f6;
+    --accent-teal: #06b6d4;
+    --success-green: #10b981;
+    --warning-amber: #f59e0b;
+    --danger-red: #ef4444;
+    --dark-gray: #1f2937;
+    --light-gray: #f8fafc;
     --sidebar-width: 280px;
-    --primary: #2c7be5;
-    --success: #20c997;
-    --warning: #ff922b;
-    --danger: #e64980;
-    --gray: #6c757d;
-    --light: #f8f9fa;
-    --border: #e9ecef;
+    --card-radius: 12px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --border-color: rgba(226, 232, 240, 0.8);
+    --bg-color: #f5f7fb;
+    --text-color: #2c3e50;
+    --text-secondary: #6c757d;
+    --card-bg: white;
+    --header-bg: rgba(30, 41, 59, 0.95);
+}
+
+/* Dark mode variables */
+.dark-mode {
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --card-bg: #1e293b;
+    --light-gray: #334155;
+    --dark-gray: #e2e8f0;
+    --border-color: rgba(51, 65, 85, 0.8);
+    --header-bg: rgba(30, 41, 59, 0.95);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .stats-page {
     margin-left: var(--sidebar-width);
     padding: 20px;
     min-height: 100vh;
-    background: #f8fafc;
+    background: var(--bg-color);
+    transition: var(--transition);
+    box-sizing: border-box;
 }
 
 .stats-header {
-    background: linear-gradient(135deg, var(--primary), #1a5bb8);
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
     color: white;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: var(--card-radius);
     margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(44, 123, 229, 0.2);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
 }
 
 .stats-header h1 {
@@ -56,7 +114,7 @@
     cursor: pointer;
     border-radius: 4px;
     color: rgba(255, 255, 255, 0.9);
-    transition: all 0.3s;
+    transition: var(--transition);
     font-size: 0.85rem;
 }
 
@@ -66,11 +124,11 @@
 
 .period-btn.active {
     background: white;
-    color: var(--primary);
+    color: var(--primary-blue);
 }
 
 .export-btn {
-    background: var(--success);
+    background: var(--success-green);
     color: white;
     border: none;
     padding: 8px 15px;
@@ -80,12 +138,12 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.3s;
+    transition: var(--transition);
 }
 
 .export-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(32, 201, 151, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 .kpi-grid {
@@ -96,12 +154,13 @@
 }
 
 .kpi-card {
-    background: white;
-    border-radius: 8px;
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
     padding: 15px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
     text-align: center;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
 }
 
 .kpi-icon {
@@ -119,14 +178,16 @@
 .kpi-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-blue);
     margin-bottom: 5px;
+    transition: var(--transition);
 }
 
 .kpi-label {
-    color: var(--gray);
+    color: var(--text-secondary);
     font-size: 0.85rem;
     margin-bottom: 8px;
+    transition: var(--transition);
 }
 
 .kpi-change {
@@ -134,34 +195,36 @@
     padding: 3px 8px;
     border-radius: 12px;
     display: inline-block;
+    transition: var(--transition);
 }
 
 .change-positive {
-    background: rgba(32, 201, 151, 0.15);
-    color: #155724;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success-green);
 }
 
 .change-negative {
-    background: rgba(231, 76, 60, 0.15);
-    color: #721c24;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger-red);
 }
 
 .change-neutral {
-    background: var(--border);
-    color: #495057;
+    background: var(--light-gray);
+    color: var(--text-color);
 }
 
 .filter-container {
-    background: white;
+    background: var(--card-bg);
     padding: 15px;
-    border-radius: 8px;
+    border-radius: var(--card-radius);
     margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
 }
 
 .filter-group {
@@ -171,20 +234,29 @@
 }
 
 .filter-group label {
-    color: var(--primary);
+    color: var(--primary-blue);
     font-weight: 500;
     display: flex;
     align-items: center;
     gap: 6px;
+    transition: var(--transition);
 }
 
 .filter-group select {
     padding: 6px 10px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 5px;
-    background: white;
+    background: var(--card-bg);
     min-width: 120px;
     cursor: pointer;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.1);
 }
 
 .charts-section {
@@ -195,10 +267,11 @@
 }
 
 .chart-card {
-    background: white;
-    border-radius: 8px;
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
     padding: 15px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
 }
 
 .chart-header {
@@ -206,12 +279,13 @@
 }
 
 .chart-header h3 {
-    color: var(--primary);
+    color: var(--primary-blue);
     font-size: 1rem;
     margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: var(--transition);
 }
 
 .chart-wrapper {
@@ -219,20 +293,22 @@
 }
 
 .insights-panel {
-    background: white;
-    border-radius: 8px;
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
     padding: 15px;
     margin-bottom: 20px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
 }
 
 .insights-panel h3 {
-    color: var(--primary);
+    color: var(--primary-blue);
     font-size: 1.1rem;
     margin-bottom: 15px;
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: var(--transition);
 }
 
 .insights-grid {
@@ -246,14 +322,15 @@
     gap: 10px;
     align-items: center;
     padding: 10px;
-    background: var(--light);
+    background: var(--light-gray);
     border-radius: 6px;
+    transition: var(--transition);
 }
 
 .insight-icon {
     width: 40px;
     height: 40px;
-    background: var(--primary);
+    background: var(--primary-blue);
     border-radius: 6px;
     display: flex;
     align-items: center;
@@ -265,36 +342,42 @@
 .insight-content h4 {
     margin: 0 0 3px 0;
     font-size: 0.9rem;
+    color: var(--text-color);
+    transition: var(--transition);
 }
 
 .insight-value {
     font-size: 1.2rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-blue);
     margin: 3px 0;
+    transition: var(--transition);
 }
 
 .insight-desc {
-    color: var(--gray);
+    color: var(--text-secondary);
     font-size: 0.8rem;
     margin: 0;
+    transition: var(--transition);
 }
 
 .detailed-stats h2 {
-    color: var(--primary);
+    color: var(--primary-blue);
     font-size: 1.2rem;
     margin-bottom: 15px;
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: var(--transition);
 }
 
 .stat-card {
-    background: white;
-    border-radius: 8px;
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
     padding: 15px;
     margin-bottom: 15px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
 }
 
 .election-header {
@@ -306,8 +389,9 @@
 
 .election-header h3 {
     margin: 0;
-    color: var(--primary);
+    color: var(--primary-blue);
     font-size: 1.1rem;
+    transition: var(--transition);
 }
 
 .election-badge {
@@ -318,13 +402,13 @@
 }
 
 .election-badge.department {
-    background: rgba(32, 201, 151, 0.15);
-    color: #155724;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success-green);
 }
 
 .election-badge.wide {
-    background: rgba(44, 123, 229, 0.15);
-    color: #084298;
+    background: rgba(26, 86, 219, 0.15);
+    color: var(--primary-blue);
 }
 
 .election-meta {
@@ -333,8 +417,9 @@
     gap: 10px;
     margin-bottom: 15px;
     padding: 10px;
-    background: var(--light);
+    background: var(--light-gray);
     border-radius: 6px;
+    transition: var(--transition);
 }
 
 .meta-item {
@@ -342,10 +427,12 @@
     align-items: center;
     gap: 8px;
     font-size: 0.85rem;
+    color: var(--text-color);
+    transition: var(--transition);
 }
 
 .meta-item i {
-    color: var(--primary);
+    color: var(--primary-blue);
     width: 14px;
 }
 
@@ -355,8 +442,9 @@
     gap: 15px;
     margin: 15px 0;
     padding: 15px;
-    background: var(--light);
+    background: var(--light-gray);
     border-radius: 6px;
+    transition: var(--transition);
 }
 
 .summary-item {
@@ -364,15 +452,17 @@
 }
 
 .summary-label {
-    color: var(--gray);
+    color: var(--text-secondary);
     font-size: 0.8rem;
     margin-bottom: 5px;
+    transition: var(--transition);
 }
 
 .summary-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-blue);
+    transition: var(--transition);
 }
 
 .candidates-list {
@@ -382,13 +472,14 @@
 .candidate-row {
     margin-bottom: 10px;
     padding: 10px;
-    background: var(--light);
+    background: var(--light-gray);
     border-radius: 6px;
+    transition: var(--transition);
 }
 
 .candidate-row.winner {
-    border: 2px solid #ffd700;
-    background: rgba(255, 215, 0, 0.05);
+    border: 2px solid var(--warning-amber);
+    background: rgba(245, 158, 11, 0.05);
 }
 
 .candidate-info {
@@ -400,30 +491,34 @@
 .candidate-name {
     font-weight: 600;
     font-size: 0.9rem;
+    color: var(--text-color);
+    transition: var(--transition);
 }
 
 .candidate-votes {
-    color: var(--gray);
+    color: var(--text-secondary);
     font-size: 0.85rem;
+    transition: var(--transition);
 }
 
 .vote-progress {
     width: 100%;
     height: 6px;
-    background: var(--border);
+    background: var(--border-color);
     border-radius: 3px;
     overflow: hidden;
+    transition: var(--transition);
 }
 
 .vote-progress-bar {
     height: 100%;
     border-radius: 3px;
-    background: var(--primary);
+    background: var(--primary-blue);
     transition: width 0.5s;
 }
 
 .candidate-row.winner .vote-progress-bar {
-    background: linear-gradient(90deg, #f59f00, #ff922b);
+    background: linear-gradient(90deg, var(--warning-amber), #ff922b);
 }
 
 .chart-container {
@@ -434,23 +529,27 @@
 .no-data {
     text-align: center;
     padding: 40px 20px;
-    background: white;
-    border-radius: 8px;
-    border: 2px dashed var(--border);
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    border: 2px dashed var(--border-color);
+    transition: var(--transition);
 }
 
 .no-data i {
-    color: var(--border);
+    color: var(--text-secondary);
     margin-bottom: 15px;
+    font-size: 3rem;
 }
 
 .no-data h3 {
-    color: var(--gray);
+    color: var(--text-color);
     margin-bottom: 8px;
+    transition: var(--transition);
 }
 
 .no-data p {
-    color: var(--border);
+    color: var(--text-secondary);
+    transition: var(--transition);
 }
 
 /* Responsive */
@@ -493,4 +592,9 @@
     .period-selector {
         overflow-x: auto;
     }
+}
+
+/* Chart container specific styles for dark mode */
+.dark-mode .chart-container {
+    filter: brightness(0.9) contrast(1.1);
 }

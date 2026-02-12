@@ -33,114 +33,120 @@
 {% endblock %}
 
 {% block content %}
-<div class="election-form-container">
-    <h2>Manage Elections</h2>
-
+<!-- ADD THIS WRAPPER DIV -->
+<div class="create-election-page">
+    <h1 class="page-title">Create Election</h1>
+    <p class="page-description">Create a new departmental election</p>
+    
     <!-- Flash messages -->
     {% with messages = get_flashed_messages(category_filter=["election"]) %}
         {% if messages %}
-            <div class="flash-messages">
+            <div class="flash-container">
                 {% for message in messages %}
-                    <p style="color: #e74c3c; margin-bottom: 1rem;">{{ message }}</p>
+                    <div class="flash-message">{{ message }}</div>
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
+    
+    <!-- Add dark-mode class here based on parent's dark mode -->
+    <div class="election-form-container {% if main_content_has_dark_mode %}dark-mode{% endif %}">
+        <h2>Manage Elections</h2>
 
-    <!-- Desktop-style Form -->
-    <form method="POST" class="desktop-form">
-        <!-- Row 1: Title + Type and Description -->
-        <div class="form-row">
-            <!-- Left column: Title + Type -->
-            <div class="form-column">
-                <div class="election-form-group">
-                    <label for="title">Election Title</label>
-                    <input type="text" id="title" name="title" placeholder="Enter election title" required>
+        <!-- Desktop-style Form -->
+        <form method="POST" class="desktop-form">
+            <!-- Row 1: Title + Type and Description -->
+            <div class="form-row">
+                <!-- Left column: Title + Type -->
+                <div class="form-column">
+                    <div class="election-form-group">
+                        <label for="title">Election Title</label>
+                        <input type="text" id="title" name="title" placeholder="Enter election title" required>
+                    </div>
+                    <div class="election-form-group">
+                        <label for="election_type">Election Type</label>
+                        <select id="election_type" name="election_type" required onchange="toggleDepartment()">
+                            <option value="">Select type</option>
+                            <option value="General">General</option>
+                            <option value="Department">Department</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="election-form-group">
-                    <label for="election_type">Election Type</label>
-                    <select id="election_type" name="election_type" required onchange="toggleDepartment()">
-                        <option value="">Select type</option>
-                        <option value="General">General</option>
-                        <option value="Department">Department</option>
+
+                <!-- Right column: Description -->
+                <div class="description-column election-form-group">
+                    <label for="description">Description (optional)</label>
+                    <textarea id="description" name="description" placeholder="Enter description..."></textarea>
+                </div>
+            </div>
+
+            <!-- Row 2: Department -->
+            <div class="form-row">
+                <div class="election-form-group" id="department_group" style="display: none;">
+                    <label for="department_id">Department</label>
+                    <select id="department_id" name="department_id">
+                        <option value="">Select department</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
 
-            <!-- Right column: Description -->
-            <div class="description-column election-form-group">
-                <label for="description">Description (optional)</label>
-                <textarea id="description" name="description" placeholder="Enter description..."></textarea>
-            </div>
-        </div>
-
-        <!-- Row 2: Department -->
-        <div class="form-row">
-            <div class="election-form-group" id="department_group" style="display: none;">
-                <label for="department_id">Department</label>
-                <select id="department_id" name="department_id">
-                    <option value="">Select department</option>
-                    {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-
-        <!-- Row 3: Start & End Date -->
-        <div class="form-row">
-            <div class="election-form-group">
-                <label for="start_date">Start Date & Time</label>
-                <input type="datetime-local" id="start_date" name="start_date" required>
-            </div>
-            <div class="election-form-group">
-                <label for="end_date">End Date & Time</label>
-                <input type="datetime-local" id="end_date" name="end_date" required>
-            </div>
-        </div>
-
-        <!-- Submit button -->
-        <button type="submit" class="create-election-btn">Create Election</button>
-    </form>
-
-    <hr>
-
-    <!-- Upcoming Elections -->
-    <h3>Upcoming Elections</h3>
-    <div class="election-list">
-        {% if upcoming %}
-            {% for election in upcoming %}
-                <div class="election-card">
-                    <strong>{{ election.title }}</strong>
-                    {% if election.election_type %} ({{ election.election_type }}) {% endif %}<br>
-                    {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
-                    {% if election.department %}- {{ election.department }}{% endif %}
+            <!-- Row 3: Start & End Date -->
+            <div class="form-row">
+                <div class="election-form-group">
+                    <label for="start_date">Start Date & Time</label>
+                    <input type="datetime-local" id="start_date" name="start_date" required>
                 </div>
-            {% endfor %}
-        {% else %}
-            <p>No upcoming elections.</p>
-        {% endif %}
-    </div>
-
-    <!-- Active Elections -->
-    <h3>Active Elections</h3>
-    <div class="election-list">
-        {% if active %}
-            {% for election in active %}
-                <div class="election-card active">
-                    <strong>{{ election.title }}</strong>
-                    {% if election.election_type %} ({{ election.election_type }}) {% endif %}<br>
-                    {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
-                    {% if election.department %}- {{ election.department }}{% endif %}
+                <div class="election-form-group">
+                    <label for="end_date">End Date & Time</label>
+                    <input type="datetime-local" id="end_date" name="end_date" required>
                 </div>
-            {% endfor %}
-        {% else %}
-            <p>No active elections.</p>
-        {% endif %}
+            </div>
+
+            <!-- Submit button -->
+            <button type="submit" class="create-election-btn">Create Election</button>
+        </form>
+
+        <hr>
+
+        <!-- Upcoming Elections -->
+        <h3>Upcoming Elections</h3>
+        <div class="election-list">
+            {% if upcoming %}
+                {% for election in upcoming %}
+                    <div class="election-card">
+                        <strong>{{ election.title }}</strong>
+                        {% if election.election_type %} ({{ election.election_type }}) {% endif %}<br>
+                        {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
+                        {% if election.department %}- {{ election.department }}{% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-secondary);">No upcoming elections.</p>
+            {% endif %}
+        </div>
+
+        <!-- Active Elections -->
+        <h3>Active Elections</h3>
+        <div class="election-list">
+            {% if active %}
+                {% for election in active %}
+                    <div class="election-card active">
+                        <strong>{{ election.title }}</strong>
+                        {% if election.election_type %} ({{ election.election_type }}) {% endif %}<br>
+                        {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
+                        {% if election.department %}- {{ election.department }}{% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-secondary);">No active elections.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 
-<!-- JS to toggle Department dropdown -->
 <script>
 function toggleDepartment() {
     const electionType = document.getElementById('election_type').value;
@@ -152,6 +158,18 @@ function toggleDepartment() {
         document.getElementById('department_id').value = '';
     }
 }
+
+// Apply dark mode to election form container based on parent
+document.addEventListener('DOMContentLoaded', function() {
+    const mainContent = document.querySelector('.main-content');
+    const electionForm = document.querySelector('.election-form-container');
+    
+    if (mainContent && electionForm) {
+        if (mainContent.classList.contains('dark-mode')) {
+            electionForm.classList.add('dark-mode');
+        }
+    }
+});
 </script>
 
 {% endblock %}

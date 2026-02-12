@@ -1,0 +1,430 @@
+/* ================= POSITIONS MODAL STYLES ================= */
+
+/* Positions Table Container */
+.positions-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+    border-radius: var(--border-radius-sm);
+    background: var(--card-bg);
+    border: 1px solid var(--input-border);
+}
+
+.positions-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.positions-list-table th {
+    background: var(--table-header-bg);
+    color: #ffffff;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.positions-list-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--input-border);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.positions-list-table tr:hover {
+    background: var(--table-row-hover);
+}
+
+.positions-list-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Position Actions */
+.position-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.position-action-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: var(--font-family);
+}
+
+.position-edit-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.position-edit-btn:hover {
+    background: linear-gradient(135deg, #2980b9, #1c6ea4);
+    transform: translateY(-1px);
+}
+
+.position-delete-btn {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.position-delete-btn:hover {
+    background: linear-gradient(135deg, #c0392b, #962d22);
+    transform: translateY(-1px);
+}
+
+/* Position Form Styles */
+#addPositionModal .lightbox-content,
+#editPositionModal .lightbox-content {
+    max-width: 500px !important;
+}
+
+#addPositionForm,
+#editPositionForm {
+    display: block;
+    margin: 0 auto;
+}
+
+#addPositionForm .form-group,
+#editPositionForm .form-group {
+    margin-bottom: 25px;
+    position: relative;
+}
+
+#addPositionForm label,
+#editPositionForm label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 0.95rem;
+    transition: var(--transition);
+}
+
+#position_name,
+#edit_position_name {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--input-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
+    transition: var(--transition);
+    background: var(--input-bg);
+    color: var(--dark);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+#position_name:focus,
+#edit_position_name:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+#addPositionModal .button-group,
+#editPositionModal .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+#addPositionModal .add-btn,
+#editPositionModal .edit-btn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 140px;
+    text-align: center;
+}
+
+#addPositionModal .add-btn:hover,
+#editPositionModal .edit-btn:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+#addPositionModal .cancel-btn,
+#editPositionModal .cancel-btn {
+    background: var(--light);
+    color: var(--dark);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 100px;
+    text-align: center;
+}
+
+#addPositionModal .cancel-btn:hover,
+#editPositionModal .cancel-btn:hover {
+    background: var(--gray-light);
+    transform: translateY(-2px);
+}
+
+/* Empty State */
+.empty-positions {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-positions i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+    color: var(--text-secondary);
+}
+
+.empty-positions h3 {
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.empty-positions p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Loading State */
+.loading-positions {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-secondary);
+}
+
+.loading-positions i {
+    font-size: 24px;
+    color: var(--primary);
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+.loading-positions p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error State */
+.error-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--danger);
+}
+
+.error-state i {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.error-state p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Modal Header */
+#addPositionModal h2,
+#editPositionModal h2,
+#positionListModal h2 {
+    color: var(--modal-text);
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    transition: var(--transition);
+}
+
+/* Modal Close Button */
+#addPositionModal .close,
+#editPositionModal .close,
+#positionListModal .close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--modal-text);
+    cursor: pointer;
+    transition: var(--transition);
+    z-index: 1;
+}
+
+#addPositionModal .close:hover,
+#editPositionModal .close:hover,
+#positionListModal .close:hover {
+    color: var(--primary);
+}
+
+/* Position List Modal Specific Styles */
+#positionListModal .lightbox-content {
+    max-width: 700px !important;
+    width: 90%;
+}
+
+#positionListModal .button-group {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+#positionListModal .cancel-btn {
+    background: var(--light);
+    color: var(--dark);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 120px;
+}
+
+#positionListModal .cancel-btn:hover {
+    background: var(--gray-light);
+    transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .positions-table-container {
+        max-height: 300px;
+    }
+    
+    .positions-list-table th,
+    .positions-list-table td {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .position-actions {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .position-action-btn {
+        width: 100%;
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+    
+    #addPositionModal .lightbox-content,
+    #editPositionModal .lightbox-content {
+        max-width: 95% !important;
+        padding: 20px;
+    }
+    
+    #positionListModal .lightbox-content {
+        max-width: 95% !important;
+        padding: 20px;
+    }
+    
+    #addPositionModal .button-group,
+    #editPositionModal .button-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #addPositionModal .add-btn,
+    #addPositionModal .cancel-btn,
+    #editPositionModal .edit-btn,
+    #editPositionModal .cancel-btn {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .positions-list-table {
+        font-size: 0.85rem;
+    }
+    
+    .empty-positions i {
+        font-size: 36px;
+    }
+    
+    .empty-positions h3 {
+        font-size: 1.1rem;
+    }
+    
+    .empty-positions p {
+        font-size: 0.9rem;
+    }
+    
+    #addPositionModal h2,
+    #editPositionModal h2,
+    #positionListModal h2 {
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+    }
+    
+    #position_name,
+    #edit_position_name {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+}
+
+/* Dark mode adjustments for position modals */
+.dark-mode #addPositionForm label,
+.dark-mode #editPositionForm label {
+    color: #f1f5f9;
+}
+
+.dark-mode #positionListModal h2,
+.dark-mode #addPositionModal h2,
+.dark-mode #editPositionModal h2 {
+    color: #f1f5f9;
+}
+
+/* Ensure form inputs have proper styling in dark mode */
+.dark-mode #position_name,
+.dark-mode #edit_position_name {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: rgba(51, 65, 85, 0.8);
+}
+
+.dark-mode #position_name:focus,
+.dark-mode #edit_position_name:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.3);
+}
+
+/* Style for disabled buttons */
+#addPositionForm button[disabled],
+#editPositionForm button[disabled] {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Spinner for loading buttons */
+.add-btn .fa-spinner,
+.edit-btn .fa-spinner {
+    margin-right: 8px;
+}

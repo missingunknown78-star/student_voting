@@ -3,7 +3,7 @@ from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
 from functools import wraps
-from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, CtuStudent
+from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, CtuStudent, TallyVote
 from student.models import Student, Vote
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -20,12 +20,110 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, PatternFill, Alignment
 from werkzeug.security import generate_password_hash
+import json
+from phe import paillier
+import pickle
+from .utils import check_if_tallied, get_tally_timestamp
+from flask import request, render_template, send_file
+from sqlalchemy import or_, desc
+from datetime import datetime
+import io
+import csv
+from admin.models import AuditLog
+from admin.utils import log_audit
+import pandas as pd
+
+
+
+
+
+try:
+    from admin.models import TallyVote
+    TALLY_VOTE_AVAILABLE = True
+except ImportError:
+    TALLY_VOTE_AVAILABLE = False
+    print("Note: TallyVote model not found. Official tally features disabled.")
 
 
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
 
+# ---------------------- PHE Helper Functions ---------------------- #
+def get_encryption_keys():
+    """Get Paillier encryption keys"""
+    key_dir = "keys"
+    os.makedirs(key_dir, exist_ok=True)
+    
+    public_key_path = os.path.join(key_dir, "public_key.pkl")
+    private_key_path = os.path.join(key_dir, "private_key.pkl")
+    
+    if os.path.exists(public_key_path) and os.path.exists(private_key_path):
+        with open(public_key_path, 'rb') as f:
+            public_key = pickle.load(f)
+        with open(private_key_path, 'rb') as f:
+            private_key = pickle.load(f)
+    else:
+        public_key, private_key = paillier.generate_paillier_keypair()
+        with open(public_key_path, 'wb') as f:
+            pickle.dump(public_key, f)
+        with open(private_key_path, 'wb') as f:
+            pickle.dump(private_key, f)
+    
+    return public_key, private_key
+
+# Initialize keys
+public_key, private_key = get_encryption_keys()
+
+def deserialize_encrypted_vote(encrypted_data):
+    """Deserialize stored encrypted vote"""
+    if not encrypted_data:
+        return []
+    
+    data = json.loads(encrypted_data)
+    return [
+        paillier.EncryptedNumber(
+            public_key,
+            int(item["ciphertext"]),
+            int(item["exponent"])
+        )
+        for item in data
+    ]
+
+def count_votes_for_candidate(candidate_id, election_id):
+    """Count votes for a specific candidate in an election using PHE"""
+    # Get all votes for this election
+    votes = Vote.query.filter_by(election_id=election_id).all()
+    
+    if not votes:
+        return 0
+    
+    # Get all candidates in this election
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    candidate_ids = [c.id for c in candidates]
+    
+    # Find the index of our target candidate
+    try:
+        candidate_index = candidate_ids.index(candidate_id)
+    except ValueError:
+        return 0  # Candidate not found in this election
+    
+    # Initialize encrypted sum
+    total_encrypted = public_key.encrypt(0)
+    
+    # Add all votes homomorphically
+    for vote in votes:
+        enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+        if candidate_index < len(enc_votes):
+            total_encrypted = total_encrypted + enc_votes[candidate_index]
+    
+    # Decrypt the total for this candidate
+    return private_key.decrypt(total_encrypted)
+
+def get_all_voters_for_election(election_id):
+    """Get all unique voters for an election"""
+    votes = Vote.query.filter_by(election_id=election_id).all()
+    return list(set(vote.student_id for vote in votes))
 
 # ---------------------- Secure Admin Required Decorator ---------------------- #
 # Configure logging for unauthorized attempts
@@ -70,7 +168,12 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
+ 
+def count_unique_voters(election_id):
+    """Count the number of unique students who voted in an election"""
+    return db.session.query(Vote.student_id).filter_by(
+        election_id=election_id
+    ).distinct().count()
 
 # ------------------- Configuration ------------------- #
 MAX_ATTEMPTS = 3          # max allowed failed username/password attempts
@@ -110,12 +213,28 @@ def login():
             session[f'login_cooldown_{ip}'] = 0
             session.permanent = True
 
+            # ---------- AUDIT LOG: Successful login attempt ----------
+            log_audit(
+                action='LOGIN_SUCCESS',
+                description=f"Admin user '{username}' logged in successfully from IP: {ip}"
+            )
+
             # Redirect to 2FA setup if no totp_secret
             if not getattr(admin, 'totp_secret', None):
                 session['pre_2fa_admin_id'] = admin.id
+                # ---------- AUDIT LOG: 2FA not set up ----------
+                log_audit(
+                    action='2FA_REQUIRED',
+                    description=f"Admin user '{username}' redirected to 2FA setup - TOTP secret not configured"
+                )
                 return redirect(url_for('admin.setup_2fa'))
             else:
                 session['pre_2fa_admin_id'] = admin.id
+                # ---------- AUDIT LOG: 2FA verification required ----------
+                log_audit(
+                    action='2FA_VERIFICATION',
+                    description=f"Admin user '{username}' redirected to 2FA verification"
+                )
                 return redirect(url_for('admin.verify_2fa'))
 
         else:
@@ -123,18 +242,28 @@ def login():
             attempts += 1
             session[f'login_attempts_{ip}'] = attempts
 
+            # ---------- AUDIT LOG: Failed login attempt ----------
+            log_audit(
+                action='LOGIN_FAILED',
+                description=f"Failed login attempt for username '{username}' from IP: {ip} (Attempt {attempts} of {MAX_ATTEMPTS})"
+            )
+
             if attempts >= MAX_ATTEMPTS:
                 session[f'login_cooldown_{ip}'] = time.time() + COOLDOWN_TIME
                 session[f'login_attempts_{ip}'] = 0
                 error = 'Invalid credentials. Admin login temporarily locked.'
+                
+                # ---------- AUDIT LOG: Account temporarily locked ----------
+                log_audit(
+                    action='ACCOUNT_LOCKED',
+                    description=f"Admin login temporarily locked for IP: {ip} due to {MAX_ATTEMPTS} failed attempts. Cooldown: {COOLDOWN_TIME} seconds"
+                )
             else:
                 error = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
 
     return render_template('admin_login.html', error=error)
 
-
-
-# ------------------- Admin 2FA Verification ------------------- #
+    # ------------------- Admin 2FA Verification ------------------- #
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
 def verify_2fa():
     if 'pre_2fa_admin_id' not in session:
@@ -154,6 +283,13 @@ def verify_2fa():
     if time.time() < cooldown:
         remaining = int(cooldown - time.time())
         error = f"Too many 2FA attempts. Try again in {remaining} seconds."
+        
+        # ---------- AUDIT LOG: 2FA in cooldown ----------
+        log_audit(
+            action='2FA_COOLDOWN',
+            description=f"Admin user '{admin.username}' 2FA verification in cooldown. Remaining: {remaining}s from IP: {ip}"
+        )
+        
         return render_template('admin_2fa_verify.html', error=error)
 
     error = None
@@ -168,6 +304,12 @@ def verify_2fa():
             login_user(admin)
             session.permanent = True
 
+            # ---------- AUDIT LOG: 2FA verification successful ----------
+            log_audit(
+                action='2FA_SUCCESS',
+                description=f"Admin user '{admin.username}' successfully verified 2FA code from IP: {ip}"
+            )
+
             # Cleanup session keys
             session.pop('pre_2fa_admin_id', None)
             session.pop(f'2fa_attempts_{ip}', None)
@@ -181,10 +323,22 @@ def verify_2fa():
             attempts += 1
             session[f'2fa_attempts_{ip}'] = attempts
 
+            # ---------- AUDIT LOG: Failed 2FA attempt ----------
+            log_audit(
+                action='2FA_FAILED',
+                description=f"Admin user '{admin.username}' failed 2FA verification. Attempt {attempts} of {MAX_2FA_ATTEMPTS} from IP: {ip}"
+            )
+
             if attempts >= MAX_2FA_ATTEMPTS:
                 session[f'2fa_cooldown_{ip}'] = time.time() + TWO_FA_COOLDOWN
                 session[f'2fa_attempts_{ip}'] = 0
                 error = "Too many invalid codes. 2FA temporarily locked."
+                
+                # ---------- AUDIT LOG: 2FA locked ----------
+                log_audit(
+                    action='2FA_LOCKED',
+                    description=f"Admin user '{admin.username}' 2FA temporarily locked for IP: {ip} due to {MAX_2FA_ATTEMPTS} failed attempts. Cooldown: {TWO_FA_COOLDOWN}s"
+                )
             else:
                 error = f"Invalid code. Attempt {attempts} of {MAX_2FA_ATTEMPTS}."
 
@@ -196,6 +350,13 @@ def generate_2fa_secret(admin):
     if not getattr(admin, 'totp_secret', None):
         admin.totp_secret = pyotp.random_base32()
         db.session.commit()
+        
+        # ---------- AUDIT LOG: 2FA secret generated ----------
+        log_audit(
+            action='2FA_SECRET_GENERATED',
+            description=f"2FA secret generated for admin user '{admin.username}'"
+        )
+        
     return admin.totp_secret
 
 
@@ -207,14 +368,33 @@ def setup_2fa():
     secret = generate_2fa_secret(admin)
     totp = pyotp.TOTP(secret)
 
+    # ---------- AUDIT LOG: 2FA setup page viewed ----------
+    log_audit(
+        action='2FA_SETUP_VIEW',
+        description=f"Admin user '{admin.username}' viewed 2FA setup page"
+    )
+
     if request.method == 'POST':
         code = request.form.get('code')
         if totp.verify(code):
-            admin.is_2fa_enabled = True  # keep your original logic
+            admin.is_2fa_enabled = True
             db.session.commit()
+            
+            # ---------- AUDIT LOG: 2FA successfully enabled ----------
+            log_audit(
+                action='2FA_ENABLED',
+                description=f"Admin user '{admin.username}' successfully enabled 2FA"
+            )
+            
             flash("Two-factor authentication enabled!", "success")
             return redirect(url_for('admin.dashboard'))
         else:
+            # ---------- AUDIT LOG: 2FA setup failed ----------
+            log_audit(
+                action='2FA_SETUP_FAILED',
+                description=f"Admin user '{admin.username}' failed to verify 2FA code during setup"
+            )
+            
             flash("Invalid code. Try again.", "error")
 
     totp_uri = totp.provisioning_uri(
@@ -252,15 +432,17 @@ def dashboard():
 
         for c in e.candidates:
             labels.append(f"{c.first_name} {c.last_name}")
-            votes.append(len(c.votes))
-            positions.append(c.position.name if c.position else "Unknown")  # fetch position
+            # FIXED: Use PHE-compatible vote counting
+            vote_count = count_votes_for_candidate(c.id, e.id)
+            votes.append(vote_count)
+            positions.append(c.position.name if c.position else "Unknown")
 
         election_data.append({
             "id": e.id,
             "title": e.title,
             "labels": labels,
             "votes": votes,
-            "positions": positions  # send positions to JS
+            "positions": positions
         })
 
     # ================================
@@ -278,6 +460,15 @@ def dashboard():
     recent_elections = recent_elections_all[:5]
     ongoing_elections = sum(1 for e in recent_elections_all if e.status == 'Open')
 
+    # ---------- AUDIT LOG: Dashboard viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='DASHBOARD_VIEW',
+        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | Stats: {total_students} students, {total_candidates} candidates, {total_elections} elections, {total_votes} votes"
+    )
+
     return render_template(
         'admin_dashboard.html',
         admin=current_user,
@@ -292,13 +483,7 @@ def dashboard():
         now=now
     )
 
-
-import pandas as pd
-from werkzeug.utils import secure_filename
-from flask import request, redirect, url_for, flash, render_template
-from sqlalchemy import or_
-
-
+# ---------------------- IMPORT STUDENTS ---------------------- #
 @admin_bp.route("/import_students", methods=["GET", "POST"])
 def import_students():
 
@@ -381,6 +566,16 @@ def import_students():
 
             db.session.commit()
 
+            # ---------- AUDIT LOG: Student import completed ----------
+            username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
+            ip = request.remote_addr
+            filename = file.filename if file else 'Unknown'
+            
+            log_audit(
+                action='IMPORT_STUDENTS',
+                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {imported}, Updated: {updated}, Deleted: {deleted}"
+            )
+
             flash(
                 f"Sync complete. "
                 f"Imported {imported}, Updated {updated}, Deleted {deleted}.",
@@ -390,6 +585,17 @@ def import_students():
 
         except Exception as e:
             db.session.rollback()
+            
+            # ---------- AUDIT LOG: Student import failed ----------
+            username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
+            ip = request.remote_addr
+            filename = file.filename if file else 'Unknown'
+            
+            log_audit(
+                action='IMPORT_STUDENTS_FAILED',
+                description=f"Admin user '{username}' failed to import students from '{filename}' from IP: {ip} | Error: {str(e)}"
+            )
+            
             flash(f"Error importing file: {str(e)}", "import-danger")
             return redirect(url_for("admin.import_students"))
 
@@ -414,6 +620,16 @@ def import_students():
 
     # ------------------ TOTAL STUDENTS ------------------
     total_students = CtuStudent.query.count()  # Always get current count
+
+    # ---------- AUDIT LOG: Import students page viewed ----------
+    if request.method == "GET" and current_user.is_authenticated:
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='IMPORT_STUDENTS_VIEW',
+            description=f"Admin user '{username}' viewed the import students page from IP: {ip}"
+        )
 
     return render_template(
         "import_students.html",
@@ -459,6 +675,17 @@ def import_students_table():
         else:
             registered_numbers = set()
 
+        # ---------- AUDIT LOG: Import students table AJAX request ----------
+        if current_user.is_authenticated:
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            search_term = search_query if search_query else 'none'
+            
+            log_audit(
+                action='IMPORT_STUDENTS_TABLE_VIEW',
+                description=f"Admin user '{username}' viewed/refreshed import students table from IP: {ip} | Page: {page}, Search: '{search_term}'"
+            )
+
         return render_template(
             "partials/_students_table.html",
             students=students,
@@ -468,13 +695,23 @@ def import_students_table():
     except Exception as e:
         import traceback
         traceback.print_exc()
+        
+        # ---------- AUDIT LOG: Import students table error ----------
+        if current_user.is_authenticated:
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='IMPORT_STUDENTS_TABLE_ERROR',
+                description=f"Admin user '{username}' encountered error viewing import students table from IP: {ip} | Error: {str(e)[:100]}..."
+            )
+        
         # Return a simple HTML message instead of plain text, for AJAX
         return render_template(
             "partials/_students_table.html",
             students=None,
             registered_numbers=set()
         )
-
 
 # ---------------------- MANAGE STUDENTS PAGE (ENHANCED) ---------------------- #
 @admin_bp.route('/students')
@@ -491,6 +728,15 @@ def manage_students():
     elections = Election.query.order_by(Election.start_date.desc()).all()
     elections_data = [{"id": e.id, "title": e.title} for e in elections]
 
+    # ---------- AUDIT LOG: Manage Students page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='MANAGE_STUDENTS_VIEW',
+        description=f"Admin user '{username}' viewed the manage students page from IP: {ip}"
+    )
+
     # -------------------- Render Template -------------------- #
     return render_template(
         'manage_students.html',
@@ -498,6 +744,7 @@ def manage_students():
         courses=courses_data,
         elections=elections_data
     )
+
 
 from sqlalchemy import or_, func
 
@@ -532,7 +779,6 @@ def students_data():
             )
         )
 
-
     # Pagination
     pagination = query.order_by(Student.last_name).paginate(
         page=page,
@@ -557,6 +803,15 @@ def students_data():
             "year_level": s.year_level_id or "",
             "has_voted": has_voted  # NEW: send voting status to frontend
         })
+
+    # ---------- AUDIT LOG: Student data AJAX request ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='STUDENTS_DATA_VIEW',
+        description=f"Admin user '{username}' fetched student data via AJAX from IP: {ip} | Filter: {filter_type}, Search: '{search}', Page: {page}"
+    )
 
     return jsonify({
         "students": students,
@@ -692,6 +947,17 @@ def export_students_excel():
                 max_length = max(max_length, len(str(cell.value)) + 2)
         ws.column_dimensions[col_letter].width = max_length
 
+    # ---------- AUDIT LOG: Export students Excel ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    student_count = len(students)
+    election_name = election.title if election else 'All Elections'
+    
+    log_audit(
+        action='EXPORT_STUDENTS_EXCEL',
+        description=f"Admin user '{username}' exported {student_count} students to Excel from IP: {ip} | Election: {election_name}, Filter: {filter_type}, Search: '{search}'"
+    )
+
     # ------------------- RETURN EXCEL ------------------- #
     output = BytesIO()
     wb.save(output)
@@ -704,14 +970,28 @@ def export_students_excel():
     )
 
 
-
 # ---------------------- DELETE STUDENT ---------------------- #
 @admin_bp.route('/students/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_student(id):
     student = Student.query.get_or_404(id)
+    
+    # Store student info before deletion for audit log
+    student_name = f"{student.first_name} {student.last_name}"
+    student_id_number = student.id_number
+    
     db.session.delete(student)
     db.session.commit()
+    
+    # ---------- AUDIT LOG: Delete student ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='DELETE_STUDENT',
+        description=f"Admin user '{username}' deleted student: {student_name} (ID: {student_id_number}) from IP: {ip}"
+    )
+    
     return jsonify({"success": True})
 
 
@@ -720,14 +1000,28 @@ def delete_student(id):
 @admin_required
 def edit_student(id):
     student = Student.query.get_or_404(id)
+    
+    # Store old values for audit log
+    old_first_name = student.first_name
+    old_last_name = student.last_name
+    old_course = student.course
 
     student.first_name = request.form.get('first_name')
     student.last_name = request.form.get('last_name')
     student.course = request.form.get('course')
 
     db.session.commit()
+    
+    # ---------- AUDIT LOG: Edit student ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='EDIT_STUDENT',
+        description=f"Admin user '{username}' edited student ID: {student.id_number} from IP: {ip} | Name: {old_first_name} {old_last_name} → {student.first_name} {student.last_name} | Course: {old_course} → {student.course}"
+    )
+    
     return jsonify({"success": True})
-
 
 # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
@@ -754,6 +1048,15 @@ def manage_departments():
 
     cursor.close()
     connection.close()
+    
+    # ---------- AUDIT LOG: Manage Departments page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='MANAGE_DEPARTMENTS_VIEW',
+        description=f"Admin user '{username}' viewed the departments & courses page from IP: {ip} | Total Departments: {len(departments)}, Total Courses: {len(courses)}"
+    )
 
     return render_template('manage_departments.html', departments=departments, courses=courses)
 
@@ -775,6 +1078,15 @@ def add_department():
     cursor.close()
     connection.close()
 
+    # ---------- AUDIT LOG: Add department ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='ADD_DEPARTMENT',
+        description=f"Admin user '{username}' added new department: '{name}' from IP: {ip}"
+    )
+
     flash('Department added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
@@ -784,20 +1096,45 @@ def add_department():
 def delete_multiple_departments():
     ids = request.form.getlist('department_ids')
     if ids:
+        # Get department names before deletion for audit log
         connection = mysql.connector.connect(
             host=MYSQL_HOST,
             user=MYSQL_USER,
             password=MYSQL_PASSWORD,
             database=MYSQL_DB
         )
-        cursor = connection.cursor()
+        cursor = connection.cursor(dictionary=True)
         format_strings = ','.join(['%s'] * len(ids))
+        cursor.execute(f"SELECT id, name FROM departments WHERE id IN ({format_strings})", tuple(ids))
+        departments_to_delete = cursor.fetchall()
+        department_names = [d['name'] for d in departments_to_delete]
+        
+        # Delete departments
         cursor.execute(f"DELETE FROM departments WHERE id IN ({format_strings})", tuple(ids))
         connection.commit()
         cursor.close()
         connection.close()
+        
+        # ---------- AUDIT LOG: Delete multiple departments ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='DELETE_MULTIPLE_DEPARTMENTS',
+            description=f"Admin user '{username}' deleted {len(ids)} department(s) from IP: {ip} | Departments: {', '.join(department_names)} (IDs: {', '.join(ids)})"
+        )
+        
         flash(f'{len(ids)} department(s) deleted successfully!', 'success')
     else:
+        # ---------- AUDIT LOG: Attempted delete with no selection ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='DELETE_DEPARTMENTS_NO_SELECTION',
+            description=f"Admin user '{username}' attempted to delete departments but no selection was made from IP: {ip}"
+        )
+        
         flash('No departments selected for deletion.', 'warning')
     return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
@@ -821,8 +1158,23 @@ def add_course():
         (course_name, department_id)
     )
     connection.commit()
+    
+    # Get department name for audit log
+    cursor.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
+    department_result = cursor.fetchone()
+    department_name = department_result[0] if department_result else 'Unknown'
+    
     cursor.close()
     connection.close()
+
+    # ---------- AUDIT LOG: Add course ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='ADD_COURSE',
+        description=f"Admin user '{username}' added new course: '{course_name}' to department: '{department_name}' (ID: {department_id}) from IP: {ip}"
+    )
 
     flash('Course added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))  # <-- fixed
@@ -833,24 +1185,56 @@ def add_course():
 def delete_multiple_courses():
     ids = request.form.getlist('course_ids')
     if ids:
+        # Get course names and department info before deletion for audit log
         connection = mysql.connector.connect(
             host=MYSQL_HOST,
             user=MYSQL_USER,
             password=MYSQL_PASSWORD,
             database=MYSQL_DB
         )
-        cursor = connection.cursor()
+        cursor = connection.cursor(dictionary=True)
         format_strings = ','.join(['%s'] * len(ids))
+        cursor.execute(f"""
+            SELECT c.id, c.course_name, d.name AS department_name 
+            FROM courses c
+            JOIN departments d ON c.department_id = d.id
+            WHERE c.id IN ({format_strings})
+        """, tuple(ids))
+        courses_to_delete = cursor.fetchall()
+        course_names = [f"{c['course_name']} ({c['department_name']})" for c in courses_to_delete]
+        
+        # Delete courses
         cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
         connection.commit()
         cursor.close()
         connection.close()
+        
+        # ---------- AUDIT LOG: Delete multiple courses ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='DELETE_MULTIPLE_COURSES',
+            description=f"Admin user '{username}' deleted {len(ids)} course(s) from IP: {ip} | Courses: {', '.join(course_names)} (IDs: {', '.join(ids)})"
+        )
+        
         flash(f'{len(ids)} course(s) deleted successfully!', 'success')
     else:
+        # ---------- AUDIT LOG: Attempted delete with no selection ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='DELETE_COURSES_NO_SELECTION',
+            description=f"Admin user '{username}' attempted to delete courses but no selection was made from IP: {ip}"
+        )
+        
         flash('No courses selected for deletion.', 'warning')
     return redirect(url_for('admin.manage_departments'))  # <-- fixed
 
 
+
+# ---------------------- Manage Candidates ---------------------- #
 # ---------------------- Manage Candidates ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
@@ -862,8 +1246,8 @@ def manage_candidates():
     # ================= FILTER =================
     selected_election_type = request.args.get('election_type', default=None)
     department_id = request.args.get('department_id', type=int)
-    page = request.args.get('page', 1, type=int)  # <--- pagination
-    per_page = 10  # number of candidates per page
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     selected_department = None
 
     query = Candidate.query.join(Election, Candidate.election_id == Election.id)
@@ -909,7 +1293,9 @@ def manage_candidates():
         os.makedirs(photo_folder, exist_ok=True)
 
         if photo_file and photo_file.filename:
-            photo_filename = secure_filename(photo_file.filename)
+            filename = secure_filename(photo_file.filename)
+            name, ext = os.path.splitext(filename)
+            photo_filename = f"{name}_{int(time.time())}{ext}"
             photo_file.save(os.path.join(photo_folder, photo_filename))
 
         new_candidate = Candidate(
@@ -924,6 +1310,16 @@ def manage_candidates():
         db.session.add(new_candidate)
         db.session.commit()
 
+        # ---------- AUDIT LOG ----------
+        department_name = new_candidate.department.name if new_candidate.department else 'N/A'
+        position_name = new_candidate.position.name if new_candidate.position else 'N/A'
+        election_title = new_candidate.election.title if new_candidate.election else 'N/A'
+        
+        log_audit(
+            action='CREATE_CANDIDATE',
+            description=f"Added candidate: {first_name} {last_name} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+        )
+
         # ---------- AJAX RESPONSE ----------
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
@@ -935,12 +1331,11 @@ def manage_candidates():
                 "position": new_candidate.position.name,
                 "position_id": new_candidate.position_id,
                 "election_id": new_candidate.election_id,
-                "election_type": new_candidate.election.election_type,
+                "election_type": new_candidate.election.election_type if new_candidate.election else '',
                 "photo": url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None,
                 "delete_url": url_for('admin.delete_candidate', id=new_candidate.id)
             })
 
-        # fallback for normal submit
         flash('Candidate added successfully!', 'success')
         return redirect(url_for('admin.manage_candidates'))
 
@@ -951,12 +1346,12 @@ def manage_candidates():
     return render_template(
         'manage_candidates.html',
         candidates=candidates,
-        candidates_pagination=candidates_pagination,  # <--- pass pagination object
+        candidates_pagination=candidates_pagination,
         positions=positions,
         departments=departments,
-        elections=elections,  # all elections
-        department_elections=department_elections,  # filtered for JS if needed
-        ssg_elections=ssg_elections,               # filtered for JS if needed
+        elections=elections,
+        department_elections=department_elections,
+        ssg_elections=ssg_elections,
         selected_department=selected_department,
         selected_election_type=selected_election_type
     )
@@ -966,19 +1361,35 @@ def manage_candidates():
 @admin_required
 def update_candidate(id):
     candidate = Candidate.query.get_or_404(id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    # Store old values for audit log
+    old_first_name = candidate.first_name
+    old_last_name = candidate.last_name
+    old_position = candidate.position.name if candidate.position else 'N/A'
+    old_department = candidate.department.name if candidate.department else 'N/A'
 
     candidate.first_name = request.form.get('first_name')
     candidate.last_name = request.form.get('last_name')
     candidate.position_id = request.form.get('position_id')
     candidate.election_id = request.form.get('election_id')
+    
+    election_type = request.form.get('election_type')
+    department_id = request.form.get('department_id', type=int)
+    
+    # Handle department based on election type
+    if election_type == 'Department' and department_id:
+        candidate.department_id = department_id
+    else:
+        candidate.department_id = None
 
-    department_id = request.form.get('department_id')
-    department = Department.query.get(department_id)
-    candidate.course = department.name if department else candidate.course
-
+    # Handle photo upload
     photo_file = request.files.get('photo')
     if photo_file and photo_file.filename:
         filename = secure_filename(photo_file.filename)
+        name, ext = os.path.splitext(filename)
+        filename = f"{name}_{int(time.time())}{ext}"
+        
         photo_folder = os.path.join(
             current_app.root_path, 'admin', 'static', 'images'
         )
@@ -987,18 +1398,220 @@ def update_candidate(id):
         candidate.photo = filename
 
     db.session.commit()
+    
+    # ---------- AUDIT LOG ----------
+    new_department = candidate.department.name if candidate.department else 'N/A'
+    new_position = candidate.position.name if candidate.position else 'N/A'
+    
+    log_audit(
+        action='UPDATE_CANDIDATE',
+        description=f"Updated candidate: {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
+    )
+    
+    if is_ajax:
+        return jsonify({
+            'success': True,
+            'id': candidate.id,
+            'first_name': candidate.first_name,
+            'last_name': candidate.last_name,
+            'department': candidate.department.name if candidate.department else '',
+            'department_id': candidate.department_id,
+            'position': candidate.position.name if candidate.position else '',
+            'position_id': candidate.position_id,
+            'election_id': candidate.election_id,
+            'election_type': candidate.election.election_type if candidate.election else ''
+        })
+    
     flash('Candidate updated successfully!', 'success')
     return redirect(url_for('admin.manage_candidates'))
 
 
-@admin_bp.route('/candidates/delete/<int:id>')
+@admin_bp.route('/candidates/delete/<int:id>', methods=['GET', 'POST', 'DELETE'])
 @admin_required
 def delete_candidate(id):
     candidate = Candidate.query.get_or_404(id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    # Store candidate info for audit log before deletion
+    candidate_name = f"{candidate.first_name} {candidate.last_name}"
+    position_name = candidate.position.name if candidate.position else 'N/A'
+    department_name = candidate.department.name if candidate.department else 'N/A'
+    election_title = candidate.election.title if candidate.election else 'N/A'
+    
     db.session.delete(candidate)
     db.session.commit()
+    
+    # ---------- AUDIT LOG ----------
+    log_audit(
+        action='DELETE_CANDIDATE',
+        description=f"Deleted candidate: {candidate_name} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+    )
+    
+    if is_ajax:
+        return jsonify({
+            'success': True,
+            'message': 'Candidate deleted successfully!'
+        })
+    
     flash('Candidate deleted successfully!', 'success')
     return redirect(url_for('admin.manage_candidates'))
+
+# ---------------------- Manage Positions ---------------------- #
+@admin_bp.route('/manage_positions', methods=['GET', 'POST'])
+@admin_required
+def manage_positions():
+    if request.method == 'POST':
+        position_name = request.form.get('position_name', '').strip()
+        if position_name:
+            existing = Position.query.filter_by(name=position_name).first()
+            if existing:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    # ---------- AUDIT LOG: Attempt to add duplicate position (AJAX) ----------
+                    username = getattr(current_user, 'username', 'Unknown')
+                    ip = request.remote_addr
+                    log_audit(
+                        action='ADD_POSITION_DUPLICATE',
+                        description=f"Admin user '{username}' attempted to add duplicate position: '{position_name}' from IP: {ip}"
+                    )
+                    return jsonify({"success": False, "message": f'Position "{position_name}" already exists!'})
+                flash(f'Position "{position_name}" already exists!', 'warning')
+            else:
+                new_position = Position(name=position_name)
+                db.session.add(new_position)
+                db.session.commit()
+                
+                # ---------- AUDIT LOG: Add position ----------
+                username = getattr(current_user, 'username', 'Unknown')
+                ip = request.remote_addr
+                log_audit(
+                    action='ADD_POSITION',
+                    description=f"Admin user '{username}' added new position: '{position_name}' from IP: {ip}"
+                )
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": True, "message": f'Position "{position_name}" added successfully!'})
+                flash(f'Position "{position_name}" added successfully!', 'success')
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": True, "message": f'Position "{position_name}" added successfully!'})
+        return redirect(url_for('admin.manage_positions'))
+    
+    positions = Position.query.all()
+    
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        positions_data = [{"id": p.id, "name": p.name} for p in positions]
+        
+        # ---------- AUDIT LOG: Get positions data via AJAX ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='GET_POSITIONS_DATA',
+            description=f"Admin user '{username}' fetched positions data via AJAX from IP: {ip} | Total positions: {len(positions)}"
+        )
+        
+        return jsonify(positions_data)
+    
+    # ---------- AUDIT LOG: Manage Positions page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    log_audit(
+        action='MANAGE_POSITIONS_VIEW',
+        description=f"Admin user '{username}' viewed the manage positions page from IP: {ip} | Total positions: {len(positions)}"
+    )
+    
+    return render_template('manage_positions.html', positions=positions)
+
+
+# Get positions data (AJAX endpoint)
+@admin_bp.route('/manage_positions/data')
+@admin_required
+def get_positions_data():
+    positions = Position.query.all()
+    positions_data = [{"id": p.id, "name": p.name} for p in positions]
+    
+    # ---------- AUDIT LOG: Get positions data endpoint ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    log_audit(
+        action='GET_POSITIONS_DATA_ENDPOINT',
+        description=f"Admin user '{username}' fetched positions data from API endpoint from IP: {ip} | Total positions: {len(positions)}"
+    )
+    
+    return jsonify(positions_data)
+
+
+# Update position
+@admin_bp.route('/manage_positions/<int:position_id>', methods=['PUT'])
+@admin_required
+def update_position(position_id):
+    position = Position.query.get_or_404(position_id)
+    old_name = position.name
+    data = request.get_json()
+    
+    if not data or 'position_name' not in data:
+        return jsonify({"success": False, "message": "Position name is required"}), 400
+    
+    position_name = data['position_name'].strip()
+    if not position_name:
+        return jsonify({"success": False, "message": "Position name cannot be empty"}), 400
+    
+    # Check if position name already exists (excluding current position)
+    existing = Position.query.filter(Position.name == position_name, Position.id != position_id).first()
+    if existing:
+        # ---------- AUDIT LOG: Attempt to update to duplicate position name ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='UPDATE_POSITION_DUPLICATE',
+            description=f"Admin user '{username}' attempted to update position '{old_name}' to duplicate name: '{position_name}' from IP: {ip}"
+        )
+        return jsonify({"success": False, "message": f'Position "{position_name}" already exists!'})
+    
+    position.name = position_name
+    db.session.commit()
+    
+    # ---------- AUDIT LOG: Update position ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    log_audit(
+        action='UPDATE_POSITION',
+        description=f"Admin user '{username}' updated position from '{old_name}' to '{position_name}' (ID: {position_id}) from IP: {ip}"
+    )
+    
+    return jsonify({"success": True, "message": f'Position "{position_name}" updated successfully!'})
+
+
+# Delete position
+@admin_bp.route('/manage_positions/<int:position_id>', methods=['DELETE'])
+@admin_required
+def delete_position(position_id):
+    position = Position.query.get_or_404(position_id)
+    position_name = position.name
+    
+    # Check if position is being used by any candidate
+    candidates_using = Candidate.query.filter_by(position_id=position_id).first()
+    if candidates_using:
+        # ---------- AUDIT LOG: Attempt to delete position in use ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='DELETE_POSITION_IN_USE',
+            description=f"Admin user '{username}' attempted to delete position '{position_name}' (ID: {position_id}) but it is being used by candidates from IP: {ip}"
+        )
+        return jsonify({"success": False, "message": f'Cannot delete position "{position.name}" because it is being used by candidates.'})
+    
+    db.session.delete(position)
+    db.session.commit()
+    
+    # ---------- AUDIT LOG: Delete position ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    log_audit(
+        action='DELETE_POSITION',
+        description=f"Admin user '{username}' deleted position: '{position_name}' (ID: {position_id}) from IP: {ip}"
+    )
+    
+    return jsonify({"success": True, "message": f'Position "{position_name}" deleted successfully!'})
 
 
 # ---------------------- Create Department Election ---------------------- #
@@ -1059,6 +1672,16 @@ def create_department_election():
         )
         db.session.add(new_election)
         db.session.commit()
+        
+        # ---------- AUDIT LOG: Create election ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='CREATE_ELECTION',
+            description=f"Admin user '{username}' created new {election_type} election: '{title}' from IP: {ip} | Department: {department_name or 'N/A'}, Start: {start_date.strftime('%Y-%m-%d %H:%M')}, End: {end_date.strftime('%Y-%m-%d %H:%M')}"
+        )
+        
         flash('Election created successfully!', 'election')
         return redirect(url_for('admin.create_department_election'))
 
@@ -1075,6 +1698,15 @@ def create_department_election():
     # Filter elections in Python (reliable!)
     upcoming_elections = [e for e in elections_all if e.start_date > now]
     active_elections = [e for e in elections_all if e.start_date <= now <= e.end_date]
+    
+    # ---------- AUDIT LOG: Create election page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='CREATE_ELECTION_VIEW',
+        description=f"Admin user '{username}' viewed the create election page from IP: {ip} | Total elections: {len(elections_all)}, Active: {len(active_elections)}, Upcoming: {len(upcoming_elections)}"
+    )
 
     return render_template(
         'create_department_election.html',
@@ -1086,30 +1718,7 @@ def create_department_election():
     )
 
 
-
-# ---------------------- Manage Positions ---------------------- #
-@admin_bp.route('/manage_positions', methods=['GET', 'POST'])
-@admin_required
-def manage_positions():
-    if request.method == 'POST':
-        position_name = request.form.get('position_name', '').strip()
-        description = request.form.get('description', '').strip()
-        if position_name:
-            existing = Position.query.filter_by(name=position_name).first()
-            if existing:
-                flash(f'Position "{position_name}" already exists!', 'warning')
-            else:
-                new_position = Position(name=position_name, description=description)
-                db.session.add(new_position)
-                db.session.commit()
-                flash(f'Position "{position_name}" added successfully!', 'success')
-            return redirect(url_for('admin.manage_positions'))
-    positions = Position.query.all()
-    return render_template('manage_positions.html', positions=positions)
-
-
-
-    # ----------- ANNOUNCEMENTS ROUTE -----------
+# ----------- ANNOUNCEMENTS ROUTE -----------
 @admin_bp.route('/announcements', methods=['GET', 'POST'])
 @login_required
 def announcements():
@@ -1132,14 +1741,498 @@ def announcements():
         )
         db.session.add(new_announcement)
         db.session.commit()
+        
+        # ---------- AUDIT LOG: Create announcement ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        # Get department name for audit log
+        department_name = "All Departments"
+        if department_id:
+            dept = Department.query.get(department_id)
+            department_name = dept.name if dept else f"ID: {department_id}"
+        
+        log_audit(
+            action='CREATE_ANNOUNCEMENT',
+            description=f"Admin user '{username}' created new announcement: '{title}' from IP: {ip} | Target: {department_name}, Date: {date}"
+        )
 
         return redirect(url_for('admin.announcements'))
 
     # GET: fetch announcements to display
     announcements_list = Announcement.query.order_by(Announcement.date.desc()).all()
+    
+    # ---------- AUDIT LOG: Announcements page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='ANNOUNCEMENTS_VIEW',
+        description=f"Admin user '{username}' viewed the announcements page from IP: {ip} | Total announcements: {len(announcements_list)}"
+    )
 
     return render_template('announcements.html', departments=departments, announcements=announcements_list)
 
+@admin_bp.route('/results')
+@admin_required
+def results_page():
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    elections = Election.query.order_by(Election.end_date.desc()).all()
+    
+    upcoming, active, completed = [], [], []
+    
+    for election in elections:
+        if election.start_date.tzinfo is None:
+            election.start_date = tz.localize(election.start_date)
+        if election.end_date.tzinfo is None:
+            election.end_date = tz.localize(election.end_date)
+        
+        if election.end_date < now:
+            completed.append(election)
+        elif election.start_date <= now <= election.end_date:
+            active.append(election)
+        else:
+            upcoming.append(election)
+    
+    # ---------- AUDIT LOG: Results page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='RESULTS_PAGE_VIEW',
+        description=f"Admin user '{username}' viewed the results page from IP: {ip} | Total elections: {len(elections)}, Active: {len(active)}, Completed: {len(completed)}, Upcoming: {len(upcoming)}"
+    )
+    
+    return render_template(
+        'admin_results.html',
+        upcoming_elections=upcoming,
+        active_elections=active,
+        completed_elections=completed,
+        now=now
+    )
+
+
+@admin_bp.route('/results/<int:election_id>')
+@admin_required
+def election_results(election_id):
+    election = Election.query.get_or_404(election_id)
+    
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    if election.start_date.tzinfo is None:
+        election.start_date = tz.localize(election.start_date)
+    if election.end_date.tzinfo is None:
+        election.end_date = tz.localize(election.end_date)
+    
+    if election.end_date < now:
+        status = "Completed"
+    elif election.start_date <= now <= election.end_date:
+        status = "Active"
+    else:
+        status = "Upcoming"
+    
+    is_tallied = False
+    tally_timestamp = None
+    
+    if TALLY_VOTE_AVAILABLE:
+        tally_record = TallyVote.query.filter_by(election_id=election_id).first()
+        is_tallied = tally_record is not None
+        if is_tallied:
+            latest_tally = TallyVote.query.filter_by(
+                election_id=election_id
+            ).order_by(TallyVote.tally_timestamp.desc()).first()
+            tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
+    else:
+        is_tallied = check_if_tallied(election_id)
+        if is_tallied:
+            tally_timestamp = get_tally_timestamp(election_id)
+    
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    candidate_results = []
+    total_votes_cast = 0
+    
+    # COUNT UNIQUE VOTERS (students who have voted in this election)
+    unique_voters = db.session.query(Vote.student_id).filter_by(
+        election_id=election_id
+    ).distinct().count()
+    
+    if is_tallied and TALLY_VOTE_AVAILABLE:
+        tally_records = TallyVote.query.filter_by(election_id=election_id).all()
+        tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
+        
+        for candidate in candidates:
+            vote_count = tally_dict.get(candidate.id, 0)
+            
+            candidate_results.append({
+                'id': candidate.id,
+                'first_name': candidate.first_name,
+                'last_name': candidate.last_name,
+                'photo': candidate.photo,
+                'position': candidate.position.name if candidate.position else "N/A",
+                'department': candidate.department.name if candidate.department else "All Departments",
+                'vote_count': vote_count,
+                'vote_percentage': 0,
+                'is_tallied': True
+            })
+            total_votes_cast += vote_count
+    else:
+        for candidate in candidates:
+            vote_count = count_votes_for_candidate(candidate.id, election_id)
+            
+            candidate_results.append({
+                'id': candidate.id,
+                'first_name': candidate.first_name,
+                'last_name': candidate.last_name,
+                'photo': candidate.photo,
+                'position': candidate.position.name if candidate.position else "N/A",
+                'department': candidate.department.name if candidate.department else "All Departments",
+                'vote_count': vote_count,
+                'vote_percentage': 0,
+                'is_tallied': is_tallied
+            })
+            total_votes_cast += vote_count
+    
+    # Calculate percentages based on total votes (for candidate rankings)
+    if total_votes_cast > 0:
+        for candidate in candidate_results:
+            candidate['vote_percentage'] = round((candidate['vote_count'] / total_votes_cast) * 100, 2)
+    
+    candidate_results.sort(key=lambda x: x['vote_count'], reverse=True)
+    
+    winners_by_position = {}
+    for candidate in candidate_results:
+        position = candidate['position']
+        if position not in winners_by_position:
+            winners_by_position[position] = candidate
+        elif candidate['vote_count'] > winners_by_position[position]['vote_count']:
+            winners_by_position[position] = candidate
+    
+    if election.department_id:
+        total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
+    else:
+        total_eligible_voters = Student.query.count()
+    
+    # Use UNIQUE VOTERS for turnout calculation (not total votes)
+    voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
+    
+    # Students who haven't voted yet
+    students_not_voted = total_eligible_voters - unique_voters
+    
+    # ---------- AUDIT LOG: Election results detail viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='ELECTION_RESULTS_VIEW',
+        description=f"Admin user '{username}' viewed results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Status: {status}, Tallied: {is_tallied}, Voter turnout: {voter_turnout}%, Unique voters: {unique_voters}/{total_eligible_voters}"
+    )
+    
+    return render_template(
+        'election_results_detail.html',
+        election=election,
+        candidate_results=candidate_results,
+        winners_by_position=winners_by_position,
+        total_votes_cast=unique_voters,  # Change to unique voters count
+        total_votes_for_positions=total_votes_cast,  # Keep total votes for candidate percentages
+        total_eligible_voters=total_eligible_voters,
+        voter_turnout=voter_turnout,
+        students_not_voted=students_not_voted,
+        status=status,
+        now=now,
+        is_tallied=is_tallied,
+        tally_timestamp=tally_timestamp
+    )
+
+
+@admin_bp.route('/results/<int:election_id>/tally', methods=['POST'])
+@admin_required
+def tally_election_results(election_id):
+    if not TALLY_VOTE_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'message': 'Tally system not available. TallyVote model is missing.'
+        }), 500
+    
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    election = Election.query.get_or_404(election_id)
+    
+    if election.end_date.tzinfo is None:
+        election_end = tz.localize(election.end_date)
+    else:
+        election_end = election.end_date
+    
+    force_tally = request.json.get('force', False) if request.is_json else False
+    if not force_tally and election_end > now:
+        return jsonify({
+            'success': False,
+            'message': f'Election is active until {election_end.strftime("%b %d, %Y %I:%M %p")}.',
+            'suggestion': 'Add "force": true to tally early.'
+        }), 400
+    
+    try:
+        candidates = Candidate.query.filter_by(election_id=election_id).all()
+        if not candidates:
+            return jsonify({
+                'success': False,
+                'message': 'No candidates found for this election.'
+            }), 400
+        
+        candidate_results = []
+        total_votes_counted = 0
+        candidate_vote_map = {}
+        
+        for candidate in candidates:
+            vote_count = count_votes_for_candidate(candidate.id, election_id)
+            total_votes_counted += vote_count
+            candidate_vote_map[candidate.id] = vote_count
+            
+            candidate_results.append({
+                'candidate_id': candidate.id,
+                'name': f"{candidate.first_name} {candidate.last_name}",
+                'position': candidate.position.name if candidate.position else "N/A",
+                'vote_count': vote_count
+            })
+        
+        # Count unique voters
+        unique_voters = db.session.query(Vote.student_id).filter_by(
+            election_id=election_id
+        ).distinct().count()
+        
+        total_votes_in_db = Vote.query.filter_by(election_id=election_id).count()
+        
+        tally_timestamp = datetime.utcnow()
+        
+        TallyVote.query.filter_by(election_id=election_id).delete()
+        
+        for candidate_id, vote_count in candidate_vote_map.items():
+            tally = TallyVote(
+                election_id=election_id,
+                candidate_id=candidate_id,
+                vote_count=vote_count,
+                tally_timestamp=tally_timestamp
+            )
+            db.session.add(tally)
+        
+        db.session.commit()
+        
+        # ---------- AUDIT LOG: Tally election results ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        force_text = " (forced)" if force_tally else ""
+        
+        log_audit(
+            action='TALLY_ELECTION',
+            description=f"Admin user '{username}' tallied results for election: '{election.title}' (ID: {election_id}) from IP: {ip}{force_text} | Candidates: {len(candidates)}, Unique voters: {unique_voters}, Total votes: {total_votes_counted}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Tally completed: {unique_voters} voters, {total_votes_counted} votes for {len(candidates)} candidates.',
+            'data': {
+                'unique_voters': unique_voters,
+                'total_votes': total_votes_counted,
+                'votes_in_db': total_votes_in_db,
+                'candidates_tallied': len(candidates),
+                'tally_timestamp': tally_timestamp.isoformat(),
+                'election_title': election.title,
+                'results': candidate_results
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        
+        # ---------- AUDIT LOG: Tally election failed ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='TALLY_ELECTION_FAILED',
+            description=f"Admin user '{username}' failed to tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Error: {str(e)[:200]}"
+        )
+        
+        return jsonify({
+            'success': False,
+            'message': f'Tally failed: {str(e)}'
+        }), 500
+
+
+@admin_bp.route('/results/<int:election_id>/tally', methods=['DELETE'])
+@admin_required
+def clear_tally_results(election_id):
+    if not TALLY_VOTE_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'message': 'Tally system not available.'
+        }), 500
+    
+    election = Election.query.get_or_404(election_id)
+    
+    try:
+        count = TallyVote.query.filter_by(election_id=election_id).count()
+        TallyVote.query.filter_by(election_id=election_id).delete()
+        db.session.commit()
+        
+        # ---------- AUDIT LOG: Clear tally results ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='CLEAR_TALLY',
+            description=f"Admin user '{username}' cleared tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Records deleted: {count}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed {count} tally records for {election.title}.',
+            'data': {
+                'records_deleted': count,
+                'election_id': election_id,
+                'election_title': election.title
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        
+        # ---------- AUDIT LOG: Clear tally failed ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='CLEAR_TALLY_FAILED',
+            description=f"Admin user '{username}' failed to clear tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Error: {str(e)[:200]}"
+        )
+        
+        return jsonify({
+            'success': False,
+            'message': f'Failed to clear tally: {str(e)}'
+        }), 500
+
+
+@admin_bp.route('/results/<int:election_id>/tally')
+@admin_required
+def get_tally_results(election_id):
+    if not TALLY_VOTE_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'message': 'Tally system not available.'
+        }), 500
+    
+    election = Election.query.get_or_404(election_id)
+    
+    tally_records = TallyVote.query.filter_by(election_id=election_id).all()
+    if not tally_records:
+        # ---------- AUDIT LOG: Get tally results - none found ----------
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='GET_TALLY_NO_RESULTS',
+            description=f"Admin user '{username}' attempted to fetch tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | No tally records found"
+        )
+        
+        return jsonify({
+            'success': False,
+            'message': 'No official tally results found.',
+            'suggestion': 'Use the Tally Votes button to create official results.'
+        }), 404
+    
+    results = []
+    total_votes = 0
+    
+    for tally in tally_records:
+        candidate = Candidate.query.get(tally.candidate_id)
+        if candidate:
+            results.append({
+                'candidate_id': candidate.id,
+                'name': f"{candidate.first_name} {candidate.last_name}",
+                'position': candidate.position.name if candidate.position else "N/A",
+                'vote_count': tally.vote_count,
+                'tally_timestamp': tally.tally_timestamp.isoformat()
+            })
+            total_votes += tally.vote_count
+    
+    last_tally = max(tally_records, key=lambda x: x.tally_timestamp)
+    
+    # ---------- AUDIT LOG: Get tally results ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='GET_TALLY_RESULTS',
+        description=f"Admin user '{username}' fetched tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Candidates tallied: {len(results)}, Total votes: {total_votes}"
+    )
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'election_id': election.id,
+            'election_title': election.title,
+            'total_candidates_tallied': len(results),
+            'total_votes_tallied': total_votes,
+            'last_tally_timestamp': last_tally.tally_timestamp.isoformat(),
+            'results': sorted(results, key=lambda x: x['vote_count'], reverse=True)
+        }
+    })
+
+
+@admin_bp.route('/results/<int:election_id>/test-tally')
+@admin_required
+def test_tally_calculation(election_id):
+    election = Election.query.get_or_404(election_id)
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    
+    if not candidates:
+        return jsonify({
+            'success': False,
+            'message': 'No candidates found'
+        }), 400
+    
+    results = []
+    total_votes = 0
+    
+    for candidate in candidates:
+        vote_count = count_votes_for_candidate(candidate.id, election_id)
+        total_votes += vote_count
+        
+        results.append({
+            'candidate_id': candidate.id,
+            'name': f"{candidate.first_name} {candidate.last_name}",
+            'position': candidate.position.name if candidate.position else "N/A",
+            'vote_count': vote_count
+        })
+    
+    results.sort(key=lambda x: x['vote_count'], reverse=True)
+    
+    winners_by_position = {}
+    for result in results:
+        position = result['position']
+        if position not in winners_by_position:
+            winners_by_position[position] = result
+        elif result['vote_count'] > winners_by_position[position]['vote_count']:
+            winners_by_position[position] = result
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'election': {
+                'id': election.id,
+                'title': election.title,
+                'status': election.status
+            },
+            'total_votes_calculated': total_votes,
+            'candidates_count': len(results),
+            'winners': list(winners_by_position.values()),
+            'results': results,
+            'note': 'This is a test calculation. Results are NOT saved.'
+        }
+    })
 
 
 @admin_bp.route('/profile')
@@ -1159,7 +2252,6 @@ def admin_profile():
     return render_template('admin_profile.html', admin=admin,
                            total_elections=total_elections,
                            total_votes=total_votes)
-
 
 
 @admin_bp.route('/statistics')
@@ -1191,17 +2283,16 @@ def statistics():
 
         for candidate in election.candidates:
             full_name = f"{candidate.first_name} {candidate.last_name}"
-            vote_count = len(candidate.votes)
+            # FIXED: Use PHE-compatible vote counting
+            vote_count = count_votes_for_candidate(candidate.id, election.id)
             votes_per_candidate[full_name] = vote_count
             total_votes += vote_count
 
             # Store role/position as string (JSON serializable)
             candidate_roles[full_name] = candidate.position.name if candidate.position else 'Other'
 
-            # Collect unique student_ids
-            for vote in candidate.votes:
-                voter_ids.add(vote.student_id)
-
+        # Get all unique voters for this election
+        voter_ids = get_all_voters_for_election(election.id)
         total_voted_students = len(voter_ids)
         total_voted_students_all += total_voted_students
 
@@ -1222,7 +2313,7 @@ def statistics():
             'start_date': election.start_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
             'end_date': election.end_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
             'votes': votes_per_candidate,
-            'candidate_roles': candidate_roles,  # <- key matches JS now
+            'candidate_roles': candidate_roles,
             'winner': winner,
             'total_voters': total_voted_students,
             'winning_percentage': winning_percentage
@@ -1265,6 +2356,15 @@ def statistics():
             'name': c.department.name
         } if c.department else None
     } for c in colleges]
+    
+    # ---------- AUDIT LOG: Statistics page viewed ----------
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='STATISTICS_VIEW',
+        description=f"Admin user '{username}' viewed the election statistics page from IP: {ip} | Total past elections: {len(past_elections)}, Average participation: {avg_participation}, Average candidates: {avg_candidates}, Closest margin: {closest_margin}%, Most active month: {most_active_month}, Largest election: '{largest_election}' ({largest_voters} voters)"
+    )
 
     return render_template(
         'statistics.html',
@@ -1280,13 +2380,113 @@ def statistics():
 
 
 
+@admin_bp.route("/audit-logs", methods=["GET"])
+def audit_logs():
+    import pytz  # Add this import
+    
+    page = request.args.get("page", 1, type=int)
+    search = request.args.get("search", "")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    export = request.args.get("export")
 
+    query = AuditLog.query
+
+    # 🔎 SEARCH FILTER
+    if search:
+        query = query.filter(
+            or_(
+                AuditLog.action.ilike(f"%{search}%"),
+                AuditLog.role.ilike(f"%{search}%"),
+                AuditLog.description.ilike(f"%{search}%")
+            )
+        )
+
+    # 📅 DATE FILTER (FIXED PROPERLY)
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(AuditLog.timestamp >= start_date_obj)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            # Add 1 day to include full end date
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59)
+            query = query.filter(AuditLog.timestamp <= end_date_obj)
+        except ValueError:
+            pass
+
+    # ORDER BY LATEST FIRST
+    query = query.order_by(desc(AuditLog.timestamp))
+
+    # 📥 EXPORT CSV
+    if export == "csv":
+        logs = query.all()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow(["ID", "User ID", "Role", "Action", "Description", "IP Address", "Timestamp (Manila Time)"])
+
+        tz = pytz.timezone('Asia/Manila')
+        
+        for log in logs:
+            # Convert UTC to Manila time for CSV export
+            if log.timestamp:
+                manila_time = log.timestamp.replace(tzinfo=pytz.UTC).astimezone(tz)
+                timestamp_str = manila_time.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                timestamp_str = ""
+                
+            writer.writerow([
+                log.id,
+                log.user_id,
+                log.role,
+                log.action,
+                log.description,
+                log.ip_address,
+                timestamp_str
+            ])
+
+        output.seek(0)
+
+        return send_file(
+            io.BytesIO(output.getvalue().encode("utf-8")),
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name="audit_logs.csv"
+        )
+
+    # 📄 PAGINATION
+    logs = query.paginate(page=page, per_page=20)
+    
+    # Pass pytz to template
+    return render_template(
+        "audit_logs.html",
+        logs=logs,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        pytz=pytz  # Add this
+    )
 
 # ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')
 @admin_required
 def logout():
+    # ---------- AUDIT LOG: Logout ----------
+    if current_user.is_authenticated:
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='LOGOUT',
+            description=f"Admin user '{username}' logged out from IP: {ip}"
+        )
+    
     logout_user()
     flash('Admin has been logged out.', 'info')
     return redirect(url_for('admin.login'))
-

@@ -3,33 +3,48 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_candidates.css') }}">
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/positions.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Manage Candidates</h1>
+    <!-- Title and Action Buttons Container -->
+    <div class="title-bar">
+        <h1>Manage Candidates</h1>
+        <div class="title-buttons">
+            <button class="position-btn position-list-btn" id="openPositionListModal">
+                <i class="fa-solid fa-list"></i> Position List
+            </button>
+            <button class="position-btn add-position-btn" id="openAddPositionModal">
+                <i class="fa-solid fa-plus"></i> Add Position
+            </button>
+        </div>
+    </div>
+    
+    <!-- ACTION BAR: Add Button and Filter side by side -->
+    <div class="action-bar">
+        <!-- Add Candidate Button -->
+        <a href="#" class="add-btn" id="openAddCandidate">+ Add Candidate</a>
 
-    <!-- Add Candidate Button -->
-    <a href="#" class="add-btn" id="openAddCandidate">+ Add Candidate</a>
+        <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
+        <form method="GET" class="filter-form" id="filterForm">
+            <select name="election_type" id="filter_election_type">
+                <option value="">General</option>
+                <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
+                    Department Election
+                </option>
+            </select>
 
-    <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
-    <form method="GET" class="filter-form" id="filterForm">
-        <select name="election_type" id="filter_election_type">
-            <option value="">General</option>
-            <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
-                Department Election
-            </option>
-        </select>
-
-        <select name="department_id" id="filter_department" style="display:none;">
-            <option value="">All Departments</option>
-            {% for dept in departments %}
-            <option value="{{ dept.id }}" {% if selected_department and selected_department.id == dept.id %}selected{% endif %}>
-                {{ dept.name }}
-            </option>
-            {% endfor %}
-        </select>
-    </form>
+            <select name="department_id" id="filter_department" style="display:none;">
+                <option value="">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if selected_department and selected_department.id == dept.id %}selected{% endif %}>
+                    {{ dept.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
 
     <table class="candidates-table">
         <thead>
@@ -41,9 +56,9 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="candidatesTableBody">
             {% for c in candidates %}
-            <tr>
+            <tr id="candidate-{{ c.id }}">
                 <td>
                     {% if c.photo %}
                         <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}"
@@ -70,8 +85,8 @@
                     </a>
 
                     <a href="{{ url_for('admin.delete_candidate', id=c.id) }}" 
-                        class="delete-btn" 
-                        onclick="return confirm('Are you sure?')">
+                        class="delete-btn delete-candidate" 
+                        data-id="{{ c.id }}">
                         Delete
                     </a>
                 </td>
@@ -113,6 +128,80 @@
 
 </div>
 
+<!-- ================= MODALS ================= -->
+
+<!-- ADD POSITION MODAL -->
+<div id="addPositionModal" class="lightbox-modal">
+    <div class="lightbox-content">
+        <span class="close" onclick="closeAddPositionModal()">&times;</span>
+        <h2>Add New Position</h2>
+        
+        <form id="addPositionForm">
+            <div class="form-group">
+                <label for="position_name">Position Name</label>
+                <input type="text" id="position_name" name="position_name" required 
+                       placeholder="Enter position name (e.g., President, Vice President)">
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="add-btn">Add Position</button>
+                <button type="button" class="cancel-btn" onclick="closeAddPositionModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- POSITION LIST MODAL -->
+<div id="positionListModal" class="lightbox-modal">
+    <div class="lightbox-content">
+        <span class="close" onclick="closePositionListModal()">&times;</span>
+        <h2>Position List</h2>
+        
+        <div class="positions-table-container">
+            <table class="positions-list-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Position Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsTableBody">
+                    <!-- Positions will be loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="button-group">
+            <button type="button" class="cancel-btn" onclick="closePositionListModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT POSITION MODAL -->
+<div id="editPositionModal" class="lightbox-modal">
+    <div class="lightbox-content">
+        <span class="close" onclick="closeEditPositionModal()">&times;</span>
+        <h2>Edit Position</h2>
+        
+        <form id="editPositionForm">
+            <input type="hidden" id="edit_position_id" name="position_id">
+            
+            <div class="form-group">
+                <label for="edit_position_name">Position Name</label>
+                <input type="text" id="edit_position_name" name="position_name" required 
+                       placeholder="Enter position name">
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="edit-btn">Update Position</button>
+                <button type="button" class="cancel-btn" onclick="closeEditPositionModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Existing Modals -->
 <div id="lightbox" onclick="closeLightbox()">
     <img id="lightbox-img">
 </div>
@@ -123,15 +212,15 @@
         <span class="close" onclick="closeAddCandidateModal()">&times;</span>
         <h2>Add Candidate</h2>
 
-        <form id="addCandidateForm" method="POST" enctype="multipart/form-data" autocomplete="off">
+        <form id="addCandidateForm" enctype="multipart/form-data" autocomplete="off">
             <div class="form-group">
                 <label>First Name</label>
-                <input type="text" name="first_name" required placeholder=" ">
+                <input type="text" name="first_name" id="add_first_name" required placeholder=" ">
             </div>
 
             <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" name="last_name" required placeholder=" ">
+                <input type="text" name="last_name" id="add_last_name" required placeholder=" ">
             </div>
 
             <div class="form-group">
@@ -167,7 +256,7 @@
 
             <div class="form-group">
                 <label>Position</label>
-                <select name="position_id" required>
+                <select name="position_id" id="add_position" required>
                     {% for position in positions %}
                     <option value="{{ position.id }}">{{ position.name }}</option>
                     {% endfor %}
@@ -176,7 +265,7 @@
 
             <div class="form-group">
                 <label>Photo</label>
-                <input type="file" name="photo" accept="image/*">
+                <input type="file" name="photo" id="add_photo" accept="image/*">
             </div>
 
             <div class="button-group">
@@ -193,8 +282,8 @@
         <span class="close" onclick="closeEditModal()">&times;</span>
         <h2>Edit Candidate</h2>
 
-        <form id="editCandidateForm" method="POST" enctype="multipart/form-data" autocomplete="off">
-            <input type="hidden" id="edit_id">
+        <form id="editCandidateForm" enctype="multipart/form-data" autocomplete="off">
+            <input type="hidden" id="edit_id" name="id">
 
             <div class="form-group">
                 <label>First Name</label>
@@ -247,7 +336,7 @@
 
             <div class="form-group">
                 <label>Change Photo</label>
-                <input type="file" name="photo" accept="image/*">
+                <input type="file" name="photo" id="edit_photo" accept="image/*">
             </div>
 
             <div class="button-group">
@@ -258,150 +347,6 @@
     </div>
 </div>
 
-<script>
-/* PHOTO LIGHTBOX */
-document.querySelectorAll('.clickable-photo').forEach(img => {
-    img.onclick = () => {
-        document.getElementById('lightbox').style.display = 'flex';
-        document.getElementById('lightbox-img').src = img.src;
-    };
-});
-function closeLightbox() {
-    document.getElementById('lightbox').style.display = 'none';
-}
-
-/* ADD MODAL */
-document.getElementById('openAddCandidate').onclick = e => {
-    e.preventDefault();
-    document.getElementById('addCandidateModal').style.display = 'flex';
-};
-function closeAddCandidateModal() {
-    document.getElementById('addCandidateModal').style.display = 'none';
-}
-
-/* EDIT MODAL */
-document.querySelectorAll('.openEditModal').forEach(btn => {
-    btn.onclick = e => {
-        e.preventDefault();
-        const id = btn.dataset.id;
-        document.getElementById('edit_first').value = btn.dataset.first;
-        document.getElementById('edit_last').value = btn.dataset.last;
-        document.getElementById('edit_position').value = btn.dataset.position;
-        document.getElementById('edit_election').value = btn.dataset.election;
-        document.getElementById('edit_department').value = btn.dataset.department;
-        document.getElementById('edit_election_type').value = btn.dataset.election_type;
-
-        document.getElementById('edit_department_field').style.display =
-            btn.dataset.election_type === 'Department' ? 'block' : 'none';
-
-        document.getElementById('editCandidateForm').action = `/admin/candidates/edit/${id}`;
-        document.getElementById('editCandidateModal').style.display = 'flex';
-    };
-});
-function closeEditModal() {
-    document.getElementById('editCandidateModal').style.display = 'none';
-}
-
-/* SHOW/HIDE Department field & FILTER Election dropdown */
-const addElectionType = document.getElementById('add_election_type');
-const addDepartmentField = document.getElementById('add_department_field');
-const addElectionSelect = document.getElementById('add_election');
-addDepartmentField.style.display = 'none';
-addElectionType.addEventListener('change', () => {
-    addDepartmentField.style.display = addElectionType.value === 'Department' ? 'block' : 'none';
-    Array.from(addElectionSelect.options).forEach(opt => {
-        if(addElectionType.value === 'Department') opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
-        else if(addElectionType.value === 'SSG') opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
-        else opt.style.display = 'block';
-    });
-    addElectionSelect.value = "";
-});
-
-const editElectionType = document.getElementById('edit_election_type');
-const editDepartmentField = document.getElementById('edit_department_field');
-const editElectionSelect = document.getElementById('edit_election');
-editDepartmentField.style.display = 'none';
-editElectionType.addEventListener('change', () => {
-    editDepartmentField.style.display = editElectionType.value === 'Department' ? 'block' : 'none';
-    Array.from(editElectionSelect.options).forEach(opt => {
-        if(editElectionType.value === 'Department') opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
-        else if(editElectionType.value === 'SSG') opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
-        else opt.style.display = 'block';
-    });
-    editElectionSelect.value = "";
-});
-
-/* FILTER: election type & department dependent dropdown */
-const filterForm = document.getElementById('filterForm');
-const filterElectionType = document.getElementById('filter_election_type');
-const filterDepartment = document.getElementById('filter_department');
-function updateFilterDepartment() {
-    if (filterElectionType.value === 'Department') filterDepartment.style.display = 'inline-block';
-    else { filterDepartment.style.display = 'none'; filterDepartment.value = ""; }
-}
-updateFilterDepartment();
-filterElectionType.addEventListener('change', () => { updateFilterDepartment(); filterForm.submit(); });
-filterDepartment.addEventListener('change', () => filterForm.submit());
-
-/* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
-const addCandidateForm = document.getElementById('addCandidateForm');
-const addBtn = addCandidateForm.querySelector('.add-btn');
-
-addCandidateForm.addEventListener('submit', function(e) {
-    e.preventDefault(); // prevent normal submit
-
-    // Disable button & show spinner
-    addBtn.disabled = true;
-    const originalText = addBtn.innerHTML;
-    addBtn.innerHTML = `<span class="spinner"></span> Adding...`;
-
-    const formData = new FormData(this);
-
-    fetch("{{ url_for('admin.manage_candidates') }}", {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success) {
-            alert('Candidate added!');
-            this.reset();
-
-            // Append new candidate to table
-            const tbody = document.querySelector('.candidates-table tbody');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${data.photo ? `<img src="${data.photo}" class="candidate-photo clickable-photo">` : 'No Photo'}</td>
-                <td>${data.first_name} ${data.last_name}</td>
-                <td>${data.department}</td>
-                <td>${data.position}</td>
-                <td>
-                    <a href="#" class="edit-btn openEditModal" 
-                       data-id="${data.id}" data-first="${data.first_name}" data-last="${data.last_name}" 
-                       data-position="${data.position_id}" data-election="${data.election_id}" 
-                       data-department="${data.department}" data-election_type="${data.election_type}">Edit</a>
-                    <a href="${data.delete_url}" class="delete-btn" onclick="return confirm('Are you sure?')">Delete</a>
-                </td>
-            `;
-            tbody.appendChild(tr);
-
-            // Add click for new photo
-            tr.querySelector('.clickable-photo')?.addEventListener('click', e => {
-                document.getElementById('lightbox').style.display = 'flex';
-                document.getElementById('lightbox-img').src = e.target.src;
-            });
-
-        } else {
-            alert(data.error || 'Something went wrong.');
-        }
-    })
-    .catch(err => { console.error(err); alert('Error submitting form.'); })
-    .finally(() => {
-        // Restore button
-        addBtn.disabled = false;
-        addBtn.innerHTML = originalText;
-    });
-});
-</script>
+<script src="{{ url_for('admin.static', filename='js/manage_candidates.js') }}"></script>
+<script src="{{ url_for('admin.static', filename='js/positions.js') }}"></script>
 {% endblock %}

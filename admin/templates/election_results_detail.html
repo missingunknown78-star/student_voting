@@ -1,0 +1,331 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Results - {{ election.title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/election_results_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="results-detail-container">
+    <!-- Back Button -->
+    <a href="{{ url_for('admin.results_page') }}" class="back-button">
+        <i class="fa-solid fa-arrow-left"></i> Back to All Elections
+    </a>
+    
+    <!-- Election Header -->
+    <div class="election-header">
+        <h1>{{ election.title }} - Results</h1>
+        <div class="election-meta">
+            <div class="meta-item">
+                <i class="fa-solid fa-calendar"></i>
+                {{ election.start_date.strftime('%b %d, %Y') }} - {{ election.end_date.strftime('%b %d, %Y') }}
+            </div>
+            <div class="meta-item">
+                <i class="fa-solid fa-building"></i>
+                {% if election.election_type == 'Department' %}
+                    {{ election.department or 'All Departments' }}
+                {% else %}
+                    SSG Election
+                {% endif %}
+            </div>
+            <div class="meta-item">
+                <i class="fa-solid fa-chart-pie"></i>
+                {{ candidate_results|length }} Candidates
+            </div>
+            <div class="meta-item">
+                <span class="status-badge status-{{ status|lower }}">
+                    {{ status }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Encryption Note -->
+    <div class="encryption-note">
+        <i class="fa-solid fa-shield-alt"></i> 
+        <strong>Privacy Protected Results:</strong> These results are calculated from encrypted votes using 
+        Paillier Homomorphic Encryption. Individual votes remain private while ensuring accurate totals.
+    </div>
+    
+    <!-- Tally Control Section -->
+    <div class="tally-control-section">
+        <div class="tally-status">
+            <i class="fa-solid fa-calculator"></i>
+            <span>Tally Status: <strong id="tallyStatus" class="tally-status-text">
+                {% if is_tallied %}Officially Tallied{% else %}Not Yet Tallied{% endif %}
+            </strong></span>
+            {% if is_tallied and tally_timestamp %}
+            <span class="tally-timestamp">
+                (Last tallied: {{ tally_timestamp.strftime('%b %d, %Y %I:%M %p') }})
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="tally-actions">
+            {% if status == 'Completed' or status == 'Active' %}
+            <button class="tally-btn" id="tallyVotesBtn">
+                <i class="fa-solid fa-calculator"></i> 
+                {% if is_tallied %}Re-tally Votes{% else %}Tally Votes Officially{% endif %}
+            </button>
+            <button class="refresh-btn" id="refreshResultsBtn">
+                <i class="fa-solid fa-sync-alt"></i> Refresh
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Results Summary - DIFFERENT BEHAVIOR BASED ON STATE -->
+    <div class="results-summary">
+        <div class="summary-card voters">
+            <i class="fa-solid fa-users" style="color: #3498db; font-size: 24px;"></i>
+            <div class="summary-number">{{ total_votes_cast }}</div>
+            <div class="summary-label">Votes Cast</div>
+        </div>
+        <div class="summary-card turnout">
+            <i class="fa-solid fa-percentage" style="color: #27ae60; font-size: 24px;"></i>
+            <div class="summary-number">{{ voter_turnout }}%</div>
+            <div class="summary-label">Voter Turnout</div>
+        </div>
+        <div class="summary-card candidates">
+            <i class="fa-solid fa-user-friends" style="color: #9b59b6; font-size: 24px;"></i>
+            <div class="summary-number">{{ candidate_results|length }}</div>
+            <div class="summary-label">Candidates</div>
+        </div>
+        <div class="summary-card positions">
+            <i class="fa-solid fa-clipboard-list" style="color: #e74c3c; font-size: 24px;"></i>
+            <div class="summary-number">
+                {% if not is_tallied %}
+                    <span class="pending-text">Pending</span>
+                {% else %}
+                    {{ winners_by_position|length }}
+                {% endif %}
+            </div>
+            <div class="summary-label">Positions</div>
+        </div>
+    </div>
+    
+    <!-- Export Actions (Only Print Button - Simple Implementation) -->
+    <div class="export-actions">
+        <button class="export-btn" id="printResultsBtn">
+            <i class="fa-solid fa-print"></i> Print Results
+        </button>
+    </div>
+    
+    <!-- =========================================== -->
+    <!-- STATE 1: LIVE RESULTS (is_tallied == false) -->
+    <!-- =========================================== -->
+    {% if not is_tallied %}
+    
+    <!-- Live Results Section -->
+    <div class="results-section live-results-section">
+        <h2 class="section-title">
+            <i class="fa-solid fa-chart-line" style="color: #3498db;"></i> 
+            Live Results (Unofficial)
+        </h2>
+        
+        <div class="live-results-note">
+            <i class="fa-solid fa-exclamation-circle"></i>
+            <p>
+                <strong>Note:</strong> Percentages are based on encrypted votes from the Vote table and may change until official tally.
+                Exact vote counts are not shown to prevent premature conclusions.
+            </p>
+        </div>
+        
+        {% if candidate_results %}
+        <div class="candidates-table live-table">
+            <div class="table-header candidate-row">
+                <div>#</div>
+                <div>Candidate</div>
+                <div>Position</div>
+                <div>Percentage</div>
+                <div>Progress</div>
+            </div>
+            
+            {% for candidate in candidate_results %}
+            <div class="candidate-row">
+                <div>{{ loop.index }}</div>
+                <div class="candidate-info">
+                    {% if candidate.photo %}
+                    <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
+                         alt="{{ candidate.first_name }}" class="candidate-photo">
+                    {% else %}
+                    <div class="default-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    {% endif %}
+                    <div class="candidate-text">
+                        <div class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</div>
+                    </div>
+                </div>
+                <div class="candidate-position">{{ candidate.position }}</div>
+                <div class="vote-percentage-cell">
+                    <span class="vote-percentage">
+                        {{ candidate.vote_percentage }}%
+                    </span>
+                </div>
+                <div class="vote-bar-cell">
+                    <div class="vote-bar-container">
+                        <div class="vote-bar" style="width: {{ candidate.vote_percentage }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+            <i class="fa-solid fa-chart-bar"></i>
+            <h3>No Live Results Available</h3>
+            <p>There are no votes recorded for this election yet.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Live Voter Participation -->
+    <div class="results-section">
+        <h2 class="section-title">
+            <i class="fa-solid fa-user-check" style="color: #9b59b6;"></i> 
+            Live Voter Participation
+        </h2>
+        
+        <div class="voter-turnout-card">
+            <div class="voter-stats">
+                <div class="voter-stat">
+                    <div class="voter-stat-value">{{ total_eligible_voters }}</div>
+                    <div class="voter-stat-label">Registered Students</div>
+                </div>
+                <div class="voter-stat">
+                    <div class="voter-stat-value">{{ total_votes_cast }}</div>
+                    <div class="voter-stat-label">Students Voted</div>
+                </div>
+                <div class="voter-stat">
+                    <div class="voter-stat-value">{{ voter_turnout }}%</div>
+                    <div class="voter-stat-label">Turnout Rate</div>
+                </div>
+            </div>
+            
+            <div class="turnout-bar-container">
+                <div class="turnout-bar" style="width: {{ voter_turnout }}%;"></div>
+            </div>
+            
+            <div class="turnout-breakdown">
+                <div class="turnout-item">
+                    <span class="turnout-label">Voted:</span>
+                    <span class="turnout-value">{{ total_votes_cast }} students</span>
+                </div>
+                <div class="turnout-item">
+                    <span class="turnout-label">Not Voted:</span>
+                    <span class="turnout-value">{{ students_not_voted }} students</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ============================================ -->
+    <!-- STATE 2: FINAL RESULTS (is_tallied == true) -->
+    <!-- ============================================ -->
+    {% else %}
+    
+    <!-- Winners Section (ONLY SHOW IN FINAL STATE) -->
+    {% if winners_by_position %}
+    <div class="results-section">
+        <h2 class="section-title">
+            <i class="fa-solid fa-trophy" style="color: #f39c12;"></i> 
+            Election Winners (Official)
+        </h2>
+        
+        <div class="winners-grid">
+            {% for position, winner in winners_by_position.items() %}
+            <div class="winner-card">
+                <div class="winner-position">{{ position }}</div>
+                <div class="winner-name">{{ winner.first_name }} {{ winner.last_name }}</div>
+                <div class="winner-votes">{{ winner.vote_count }} votes</div>
+                <div class="winner-percentage">{{ winner.vote_percentage }}% of votes</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Final Detailed Results Table -->
+    <div class="results-section">
+        <h2 class="section-title">
+            <i class="fa-solid fa-list-check" style="color: #3498db;"></i> 
+            Official Candidate Results
+        </h2>
+        
+        {% if candidate_results %}
+        <div class="candidates-table final-table">
+            <div class="table-header candidate-row">
+                <div>#</div>
+                <div>Candidate</div>
+                <div>Position</div>
+                <div>Votes</div>
+                <div>Percentage</div>
+            </div>
+            
+            {% for candidate in candidate_results %}
+            {% set is_winner = winners_by_position.get(candidate.position) and 
+                               winners_by_position[candidate.position].id == candidate.id %}
+            <div class="candidate-row {% if is_winner %}winner{% endif %}">
+                <div>{{ loop.index }}</div>
+                <div class="candidate-info">
+                    {% if candidate.photo %}
+                    <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
+                         alt="{{ candidate.first_name }}" class="candidate-photo">
+                    {% else %}
+                    <div class="default-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    {% endif %}
+                    <div class="candidate-text">
+                        <div class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</div>
+                    </div>
+                </div>
+                <div class="candidate-position">{{ candidate.position }}</div>
+                <div class="vote-count">{{ candidate.vote_count }}</div>
+                <div class="vote-percentage-cell">
+                    <span class="vote-percentage {% if is_winner %}winner-percentage{% else %}regular-percentage{% endif %}">
+                        {{ candidate.vote_percentage }}%
+                    </span>
+                    {% if is_winner %}
+                    <span class="winner-badge">Winner</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+            <i class="fa-solid fa-chart-bar"></i>
+            <h3>No Official Results Available</h3>
+            <p>No tally results found for this election.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% endif %} <!-- End of is_tallied conditional -->
+    
+</div>
+
+<!-- Debug Information -->
+<div style="display: none;" id="debugInfo">
+    Election ID: {{ election.id }}<br>
+    Candidates: {{ candidate_results|length }}<br>
+    Election Title: {{ election.title }}<br>
+    Tally Status: {{ is_tallied }}<br>
+    Data Source: {% if is_tallied %}TallyVote Table{% else %}Vote Table (Encrypted){% endif %}
+</div>
+
+<!-- Pass template variables to JavaScript -->
+<script id="template-data" type="application/json">
+{
+    "electionId": {{ election.id }},
+    "isTallied": {{ 'true' if is_tallied else 'false' }},
+    "status": "{{ status }}",
+    "csrfToken": "{{ csrf_token() if csrf_token else '' }}"
+}
+</script>
+
+<script src="{{ url_for('admin.static', filename='js/election_results_detail.js') }}"></script>
+{% endblock %}

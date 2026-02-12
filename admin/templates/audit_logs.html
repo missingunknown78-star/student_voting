@@ -1,0 +1,104 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Audit Logs{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/audit_logs.css') }}">
+<style>
+    .audit-timezone {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 5px;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="audit-header">
+    <h1><i class="fa-solid fa-file-lines"></i> System Audit Logs</h1>
+    <p class="audit-timezone"><i class="fa-solid fa-clock"></i> All times are displayed in Asia/Manila (PHT)</p>
+</div>
+
+<!-- 🔎 FILTER + SEARCH FORM -->
+<div class="audit-card" style="margin-bottom:20px;">
+    <form method="GET" style="display:flex; flex-wrap:wrap; gap:15px; align-items:center;">
+        
+        <input type="text" name="search" placeholder="Search action, role, description..."
+               value="{{ search or '' }}" class="audit-input">
+
+        <input type="date" name="start_date" value="{{ start_date or '' }}" class="audit-input">
+        <input type="date" name="end_date" value="{{ end_date or '' }}" class="audit-input">
+
+        <button type="submit" class="audit-btn">
+            <i class="fa-solid fa-magnifying-glass"></i> Filter
+        </button>
+
+        <a href="{{ url_for('admin.audit_logs', export='csv', search=search, start_date=start_date, end_date=end_date) }}"
+           class="audit-btn export-btn">
+           <i class="fa-solid fa-download"></i> Export CSV
+        </a>
+
+    </form>
+</div>
+
+<!-- 📄 TABLE -->
+<div class="audit-card">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Role</th>
+                <th>Action</th>
+                <th>Description</th>
+                <th>IP</th>
+                <th>Date (Manila)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs.items %}
+            <tr>
+                <td>{{ log.id }}</td>
+                <td>{{ log.user_id or '-' }}</td>
+                <td>{{ log.role }}</td>
+                <td>{{ log.action }}</td>
+                <td>{{ log.description }}</td>
+                <td>{{ log.ip_address }}</td>
+                <td>
+                    {% if log.timestamp %}
+                        {% set tz = pytz.timezone('Asia/Manila') %}
+                        {% set utc_dt = log.timestamp.replace(tzinfo=pytz.UTC) %}
+                        {% set manila_dt = utc_dt.astimezone(tz) %}
+                        {{ manila_dt.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="audit-empty">
+                    No audit logs found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 📄 PAGINATION -->
+    <div class="pagination">
+        {% if logs.has_prev %}
+            <a href="{{ url_for('admin.audit_logs', page=logs.prev_num, search=search, start_date=start_date, end_date=end_date) }}">Previous</a>
+        {% endif %}
+
+        <span>Page {{ logs.page }} of {{ logs.pages }}</span>
+
+        {% if logs.has_next %}
+            <a href="{{ url_for('admin.audit_logs', page=logs.next_num, search=search, start_date=start_date, end_date=end_date) }}">Next</a>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

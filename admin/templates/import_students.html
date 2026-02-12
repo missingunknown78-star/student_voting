@@ -67,15 +67,13 @@
         <h3 style="margin-top:2rem;">Imported Students</h3>
 
         <!-- Search Form -->
-        <form id="search-form" class="search-form" style="margin-bottom:1rem;">
-            <input type="text" name="q" id="search-input" placeholder="Search by Student No or Name..."
-                   value="{{ request.args.get('q','') }}"
-                   style="padding:0.4rem 0.8rem; width:250px; border:1px solid #ccc; border-radius:4px;">
-            <button type="submit" id="search-btn"
-                    style="padding:0.4rem 0.8rem; border:none; background:#3498db; color:white; border-radius:4px; cursor:pointer;">
-                <i class="fa-solid fa-magnifying-glass"></i> Search
-            </button>
-        </form>
+<form id="search-form" class="search-form">
+    <input type="text" name="q" id="search-input" placeholder="Search by Student No or Name..."
+           value="{{ request.args.get('q','') }}">
+    <button type="submit" id="search-btn">
+        <i class="fa-solid fa-magnifying-glass"></i> Search
+    </button>
+</form>
 
         <div id="students-table-container">
             {% include 'partials/_students_table.html' %}
