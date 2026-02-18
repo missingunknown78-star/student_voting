@@ -1,5 +1,6 @@
 /* ================================
    STATISTICS PAGE CSS
+   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
@@ -65,15 +66,18 @@ body:not(.dark-mode) {
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
+/* ==================== PAGE LAYOUT ==================== */
 .stats-page {
     margin-left: var(--sidebar-width);
     padding: 20px;
     min-height: 100vh;
-    background: var(--bg-color);
+    /* REMOVED solid background - now transparent to show gradient from main template */
+    background: transparent;
     transition: var(--transition);
     box-sizing: border-box;
 }
 
+/* Stats Header - FLOATING CARD */
 .stats-header {
     background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
     color: white;
@@ -82,6 +86,12 @@ body:not(.dark-mode) {
     margin-bottom: 20px;
     box-shadow: var(--shadow-md);
     transition: var(--transition);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.stats-header:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
 .stats-header h1 {
@@ -120,11 +130,14 @@ body:not(.dark-mode) {
 
 .period-btn:hover {
     background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
 }
 
 .period-btn.active {
     background: white;
     color: var(--primary-blue);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .export-btn {
@@ -139,13 +152,15 @@ body:not(.dark-mode) {
     align-items: center;
     gap: 6px;
     transition: var(--transition);
+    box-shadow: var(--shadow-sm);
 }
 
 .export-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
+/* KPI Grid - FLOATING CARDS */
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -157,10 +172,18 @@ body:not(.dark-mode) {
     background: var(--card-bg);
     border-radius: var(--card-radius);
     padding: 15px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     text-align: center;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: calc(var(--card-index, 0) * 0.05s);
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .kpi-icon {
@@ -173,6 +196,11 @@ body:not(.dark-mode) {
     margin: 0 auto 10px;
     font-size: 1.3rem;
     color: white;
+    transition: var(--transition);
+}
+
+.kpi-card:hover .kpi-icon {
+    transform: scale(1.1);
 }
 
 .kpi-value {
@@ -181,6 +209,10 @@ body:not(.dark-mode) {
     color: var(--primary-blue);
     margin-bottom: 5px;
     transition: var(--transition);
+}
+
+.kpi-card:hover .kpi-value {
+    transform: scale(1.05);
 }
 
 .kpi-label {
@@ -213,6 +245,7 @@ body:not(.dark-mode) {
     color: var(--text-color);
 }
 
+/* Filter Container - FLOATING CARD */
 .filter-container {
     background: var(--card-bg);
     padding: 15px;
@@ -225,6 +258,15 @@ body:not(.dark-mode) {
     gap: 15px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.15s;
+}
+
+.filter-container:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .filter-group {
@@ -251,14 +293,22 @@ body:not(.dark-mode) {
     cursor: pointer;
     color: var(--text-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.filter-group select:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-blue);
 }
 
 .filter-group select:focus {
     outline: none;
     border-color: var(--primary-blue);
-    box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.1);
+    box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.1), var(--shadow-md);
 }
 
+/* Charts Section - FLOATING CARDS */
 .charts-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -272,6 +322,15 @@ body:not(.dark-mode) {
     padding: 15px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.2s;
+}
+
+.chart-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .chart-header {
@@ -292,6 +351,7 @@ body:not(.dark-mode) {
     height: 250px;
 }
 
+/* Insights Panel - FLOATING CARD */
 .insights-panel {
     background: var(--card-bg);
     border-radius: var(--card-radius);
@@ -299,6 +359,15 @@ body:not(.dark-mode) {
     margin-bottom: 20px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.25s;
+}
+
+.insights-panel:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .insights-panel h3 {
@@ -327,6 +396,11 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
+.insight-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
 .insight-icon {
     width: 40px;
     height: 40px;
@@ -337,6 +411,11 @@ body:not(.dark-mode) {
     justify-content: center;
     color: white;
     flex-shrink: 0;
+    transition: var(--transition);
+}
+
+.insight-item:hover .insight-icon {
+    transform: scale(1.1);
 }
 
 .insight-content h4 {
@@ -361,6 +440,7 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
+/* Detailed Stats - FLOATING CARDS */
 .detailed-stats h2 {
     color: var(--primary-blue);
     font-size: 1.2rem;
@@ -378,6 +458,15 @@ body:not(.dark-mode) {
     margin-bottom: 15px;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .election-header {
@@ -399,6 +488,7 @@ body:not(.dark-mode) {
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
+    transition: var(--transition);
 }
 
 .election-badge.department {
@@ -420,6 +510,10 @@ body:not(.dark-mode) {
     background: var(--light-gray);
     border-radius: 6px;
     transition: var(--transition);
+}
+
+.election-meta:hover {
+    box-shadow: var(--shadow-sm);
 }
 
 .meta-item {
@@ -445,6 +539,10 @@ body:not(.dark-mode) {
     background: var(--light-gray);
     border-radius: 6px;
     transition: var(--transition);
+}
+
+.vote-summary:hover {
+    box-shadow: var(--shadow-sm);
 }
 
 .summary-item {
@@ -477,9 +575,19 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
+.candidate-row:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
 .candidate-row.winner {
     border: 2px solid var(--warning-amber);
     background: rgba(245, 158, 11, 0.05);
+}
+
+.candidate-row.winner:hover {
+    border-color: var(--warning-amber);
+    box-shadow: 0 6px 15px rgba(245, 158, 11, 0.3);
 }
 
 .candidate-info {
@@ -517,6 +625,10 @@ body:not(.dark-mode) {
     transition: width 0.5s;
 }
 
+.candidate-row:hover .vote-progress-bar {
+    filter: brightness(1.1);
+}
+
 .candidate-row.winner .vote-progress-bar {
     background: linear-gradient(90deg, var(--warning-amber), #ff922b);
 }
@@ -526,6 +638,7 @@ body:not(.dark-mode) {
     margin-top: 15px;
 }
 
+/* No Data - FLOATING CARD */
 .no-data {
     text-align: center;
     padding: 40px 20px;
@@ -533,12 +646,25 @@ body:not(.dark-mode) {
     border-radius: var(--card-radius);
     border: 2px dashed var(--border-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-md);
+}
+
+.no-data:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .no-data i {
     color: var(--text-secondary);
     margin-bottom: 15px;
     font-size: 3rem;
+    transition: var(--transition);
+}
+
+.no-data:hover i {
+    transform: scale(1.1);
+    color: var(--primary-blue);
 }
 
 .no-data h3 {
@@ -552,15 +678,56 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-/* Responsive */
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Stagger animations for KPI cards */
+.kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.kpi-card:nth-child(2) { animation-delay: 0.1s; }
+.kpi-card:nth-child(3) { animation-delay: 0.15s; }
+.kpi-card:nth-child(4) { animation-delay: 0.2s; }
+.kpi-card:nth-child(5) { animation-delay: 0.25s; }
+.kpi-card:nth-child(6) { animation-delay: 0.3s; }
+
+/* Force repaint on initial load */
+.stats-header,
+.kpi-card,
+.filter-container,
+.chart-card,
+.insights-panel,
+.stat-card,
+.no-data,
+.insight-item,
+.candidate-row {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Chart container specific styles for dark mode */
+.dark-mode .chart-container {
+    filter: brightness(0.9) contrast(1.1);
+}
+
+/* ==================== RESPONSIVE ==================== */
 @media (max-width: 1024px) {
     .stats-page {
-        margin-left: 0;
-        width: 100%;
+        margin-left: 250px;
+        width: calc(100% - 250px);
     }
 }
 
 @media (max-width: 768px) {
+    .stats-page {
+        margin-left: 0;
+        width: 100%;
+        padding: 15px;
+    }
+    
     .charts-section {
         grid-template-columns: 1fr;
     }
@@ -573,11 +740,26 @@ body:not(.dark-mode) {
         flex-direction: column;
         align-items: flex-start;
     }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-group select {
+        flex: 1;
+    }
+    
+    .kpi-card:hover,
+    .chart-card:hover,
+    .insights-panel:hover,
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
 }
 
 @media (max-width: 576px) {
     .stats-page {
-        padding: 15px;
+        padding: 10px;
     }
     
     .kpi-grid, .insights-grid {
@@ -591,10 +773,27 @@ body:not(.dark-mode) {
     
     .period-selector {
         overflow-x: auto;
+        padding-bottom: 5px;
+    }
+    
+    .period-btn {
+        white-space: nowrap;
     }
 }
 
-/* Chart container specific styles for dark mode */
-.dark-mode .chart-container {
-    filter: brightness(0.9) contrast(1.1);
+/* ==================== ACCESSIBILITY ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .stats-page *,
+    .kpi-card,
+    .chart-card,
+    .insights-panel,
+    .stat-card,
+    .no-data,
+    .insight-item,
+    .candidate-row {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transform: none !important;
+    }
 }

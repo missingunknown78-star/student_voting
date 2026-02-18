@@ -1,4 +1,5 @@
 /* ================= COMBINED MANAGE + ADD CANDIDATE CSS ================= */
+/* FLOATING CARDS DESIGN - WITH PROPER BACKGROUND */
 
 /* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
@@ -78,12 +79,13 @@ body:not(.dark-mode) {
 * { box-sizing: border-box; }
 
 /* ---------------- Page container (replaces .main-content) ---------------- */
-/* CHANGED: Removed var(--content-gap) for edge-to-edge */
+/* CHANGED: Removed background to show gradient from main template */
 .container {
     margin-left: 280px; /* Removed: + var(--content-gap) */
     padding: 30px;
     min-height: 100vh;
-    background-color: var(--bg-color);
+    /* REMOVED solid background - now transparent to show gradient from main template */
+    background: transparent;
     box-sizing: border-box;
     width: calc(100% - 280px); /* Changed: width instead of max-width */
     transition: var(--transition);
@@ -116,7 +118,7 @@ body:not(.dark-mode) {
     flex-shrink: 0;
 }
 
-/* Position buttons styling */
+/* Position buttons styling - FLOATING BUTTONS */
 .position-btn {
     display: inline-flex;
     align-items: center;
@@ -131,6 +133,7 @@ body:not(.dark-mode) {
     padding: 10px 20px;
     white-space: nowrap;
     font-family: var(--font-family);
+    box-shadow: var(--box-shadow);
 }
 
 /* Position List Button */
@@ -141,8 +144,8 @@ body:not(.dark-mode) {
 
 .position-list-btn:hover {
     background: linear-gradient(135deg, #27ae60, #219653);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(46, 204, 113, 0.5);
 }
 
 /* Add Position Button */
@@ -153,8 +156,8 @@ body:not(.dark-mode) {
 
 .add-position-btn:hover {
     background: linear-gradient(135deg, #8e44ad, #7d3c98);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.5);
 }
 
 /* ---------------- ACTION BAR: Add Button + Filter Form Side by Side ---------------- */
@@ -167,7 +170,7 @@ body:not(.dark-mode) {
     flex-wrap: wrap;
 }
 
-/* Left side: Add button */
+/* Left side: Add button - FLOATING BUTTON */
 .add-btn {
     display: inline-flex;
     align-items: center;
@@ -184,15 +187,16 @@ body:not(.dark-mode) {
     padding: 12px 24px;
     white-space: nowrap;
     flex-shrink: 0;
+    box-shadow: var(--box-shadow);
 }
 
 .add-btn:hover {
     background: linear-gradient(135deg, var(--primary-dark), var(--secondary-dark));
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.5);
 }
 
-/* Right side: Filter form */
+/* Right side: Filter form - FLOATING CARD */
 .filter-form {
     display: flex;
     align-items: center;
@@ -207,11 +211,18 @@ body:not(.dark-mode) {
     border-radius: 8px;
     border: 1px solid var(--input-border);
     font-size: 14px;
-    background: var(--input-bg);
+    background: var(--card-bg);
     color: var(--dark);
     cursor: pointer;
     transition: var(--transition);
     min-width: 180px;
+    box-shadow: var(--box-shadow);
+}
+
+.filter-form select:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary);
 }
 
 .filter-form select:focus {
@@ -241,24 +252,28 @@ body:not(.dark-mode) {
 .cancel-btn {
     background: var(--light);
     color: var(--dark);
+    box-shadow: var(--box-shadow);
 }
 
 .cancel-btn:hover {
     background: var(--gray-light);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
 .edit-btn {
     background: #3498db;
     color: white;
+    box-shadow: var(--box-shadow);
 }
 
 .edit-btn:hover {
     background: #2980b9;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
 }
 
-/* ---------------- Table ---------------- */
+/* ---------------- Table - FLOATING CARD ---------------- */
 .candidates-table {
     width: 100%;
     border-collapse: collapse;
@@ -268,6 +283,13 @@ body:not(.dark-mode) {
     box-shadow: var(--box-shadow);
     margin-bottom: 50px;
     transition: var(--transition);
+    border: 1px solid var(--input-border);
+}
+
+.candidates-table:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--box-shadow), 0 15px 30px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary);
 }
 
 .candidates-table th {
@@ -307,10 +329,11 @@ body:not(.dark-mode) {
 }
 
 .clickable-photo:hover {
-    transform: scale(1.05);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* ---------------- Form ---------------- */
+/* ---------------- Form - FLOATING CARD ---------------- */
 .form-group {
     margin-bottom: 28px;
     position: relative;
@@ -337,6 +360,15 @@ body:not(.dark-mode) {
     background: var(--input-bg);
     color: var(--dark);
     font-family: inherit;
+    box-shadow: var(--box-shadow);
+}
+
+.form-group input[type="text"]:hover,
+.form-group select:hover,
+.form-group input[type="file"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary);
 }
 
 .form-group select {
@@ -360,6 +392,12 @@ body:not(.dark-mode) {
     margin-right: 15px;
 }
 
+.form-group input[type="file"]::file-selector-button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+}
+
 .form-group select:focus,
 .form-group input:focus {
     border-color: var(--primary);
@@ -367,7 +405,7 @@ body:not(.dark-mode) {
     box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
 }
 
-/* ---------------- Modal Lightboxes ---------------- */
+/* ---------------- Modal Lightboxes - FLOATING CARD ---------------- */
 .lightbox-modal {
     display: none;
     position: fixed;
@@ -397,6 +435,13 @@ body:not(.dark-mode) {
     position: relative;
     z-index: 10001;
     transition: var(--transition);
+    border: 1px solid var(--input-border);
+}
+
+.lightbox-content:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
 }
 
 /* Hide scrollbar for Chrome, Safari, Opera */
@@ -416,6 +461,7 @@ body:not(.dark-mode) {
 
 .lightbox-content .close:hover {
     color: var(--primary);
+    transform: rotate(90deg);
 }
 
 .lightbox-content button.add-btn {
@@ -488,12 +534,13 @@ body:not(.dark-mode) {
     cursor: pointer;
     transition: var(--transition);
     text-align: center;
+    box-shadow: var(--box-shadow);
 }
 
 .delete-btn:hover {
     background: linear-gradient(135deg, #c0392b, #962d22);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5);
 }
 
 /* For table cells specifically */
@@ -542,17 +589,6 @@ body:not(.dark-mode) {
     overflow-y: auto;
 }
 
-/* MOBILE: back to single column */
-@media (max-width: 768px) {
-    .lightbox-content form {
-        grid-template-columns: 1fr;
-    }
-
-    .lightbox-content {
-        max-width: 95%;
-    }
-}
-
 /* Spinner inside button */
 .add-btn .spinner {
     display: inline-block;
@@ -571,7 +607,7 @@ body:not(.dark-mode) {
     100% { transform: rotate(360deg); }
 }
 
-/* ================= Pagination Styling ================= */
+/* ================= Pagination Styling - FLOATING PAGINATION ================= */
 .pagination {
     display: flex;
     justify-content: center;
@@ -596,16 +632,18 @@ body:not(.dark-mode) {
 }
 
 .pagination a {
-    background: var(--light);
+    background: var(--card-bg);
     color: var(--dark);
-    border: 1px solid var(--gray-light);
+    border: 1px solid var(--input-border);
+    box-shadow: var(--box-shadow);
 }
 
 .pagination a:hover {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.5);
+    border-color: transparent;
 }
 
 .pagination .current {
@@ -613,14 +651,57 @@ body:not(.dark-mode) {
     color: #fff;
     border: none;
     font-weight: 600;
-    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.5);
+    transform: translateY(-2px);
 }
 
 .pagination .disabled {
     background: var(--light);
     color: var(--text-secondary);
     cursor: default;
-    border: 1px solid var(--gray-light);
+    border: 1px solid var(--input-border);
+    box-shadow: none;
+}
+
+.pagination .disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* ================= CARD ANIMATIONS ================= */
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.candidates-table,
+.pagination a,
+.pagination .current,
+.add-btn,
+.position-btn,
+.filter-form select {
+    animation: cardFadeIn 0.3s ease-out;
+}
+
+/* Stagger animation */
+.position-list-btn { animation-delay: 0.05s; }
+.add-position-btn { animation-delay: 0.1s; }
+.add-btn { animation-delay: 0.15s; }
+.filter-form select { animation-delay: 0.2s; }
+.candidates-table { animation-delay: 0.25s; }
+
+/* Force repaint on initial load */
+.candidates-table,
+.lightbox-content,
+.pagination a,
+.pagination .current,
+.add-btn,
+.position-btn,
+.filter-form select {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* ---------------- Responsive Design ---------------- */
@@ -699,6 +780,10 @@ body:not(.dark-mode) {
         padding: 6px 10px;
         font-size: 0.85rem;
         min-width: 32px;
+    }
+    
+    .candidates-table:hover {
+        transform: translateY(-3px);
     }
 }
 

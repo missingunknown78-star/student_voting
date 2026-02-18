@@ -1,43 +1,132 @@
 /* ======================
-   GENERAL LAYOUT
+   RESET & BASE STYLES
 ====================== */
 
-body {
+* {
     margin: 0;
-    background: #f4f6fa;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.vote-container {
-    padding: 10px;
+body {
+    background: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+    color: #1e293b;
 }
 
 /* ======================
-   HEADER (SMALL & CLEAN)
+   MAIN CONTAINER
+====================== */
+
+.vote-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px;
+}
+
+/* ======================
+   HEADER - Clean & Compact
 ====================== */
 
 .vote-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    background: #ffffff;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    gap: 12px;
+    background: white;
+    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 16px;
 }
 
 .vote-header .logo {
-    height: 32px;        /* 🔥 SMALL LOGO */
+    height: 36px;
     width: auto;
+    object-fit: contain;
 }
 
 .vote-header h1 {
-    font-size: 0.9rem;   /* 🔥 SMALL TITLE */
+    font-size: 1rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: #0f172a;
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.3;
+    flex: 1;
+}
+
+/* ======================
+   ELECTION TITLE
+====================== */
+
+.election-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+    background: white;
+    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.election-title h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.encryption-badge {
+    background: #059669;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+/* ======================
+   PHE INFO - Simple Card
+====================== */
+
+.phe-info {
+    background: #eef2ff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #c7d2fe;
+}
+
+.phe-info h4 {
+    color: #4f46e5;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.phe-info p {
+    color: #334155;
+    font-size: 0.8rem;
+    margin: 6px 0;
+    line-height: 1.4;
+}
+
+.phe-info p:last-child {
+    background: white;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-top: 10px;
+    font-weight: 500;
 }
 
 /* ======================
@@ -45,73 +134,236 @@ body {
 ====================== */
 
 .instructions {
-    background: #ffffff;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    color: #555;
-    margin-bottom: 12px;
+    background: white;
+    padding: 14px 16px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-left: 4px solid #3b82f6;
+}
+
+.instructions p {
+    font-size: 0.85rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.instructions p::before {
+    content: '✓';
+    background: #3b82f6;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
 }
 
 /* ======================
-   GRID (BALLOT STYLE)
+   POSITION GROUPS
 ====================== */
 
-.candidates-form {
+.position-group {
+    background: white;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.position-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.position-title::before {
+    content: '📋';
+    font-size: 1.1rem;
+}
+
+/* ======================
+   CANDIDATES GRID - 3 COLUMNS ON MOBILE!
+====================== */
+
+.position-candidates {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns on mobile */
+    gap: 8px;
 }
 
 /* ======================
-   CANDIDATE CARD
+   CANDIDATE CARD - Compact & Clean
 ====================== */
 
-.candidate-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 10px 6px;
-    text-align: center;
-    cursor: pointer;
-
+.candidate-row {
     display: flex;
     flex-direction: column;
     align-items: center;
-
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: all 0.2s ease;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 6px 10px 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    height: 100%;
 }
 
-.candidate-card input {
-    display: none;
+.candidate-row:hover {
+    background: #f1f5f9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* PHOTO */
+/* Selected state */
+.candidate-row:has(input:checked) {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+    padding: 11px 5px 9px 5px; /* Adjust for border */
+}
+
+.candidate-row:has(input:checked) .candidate-photo {
+    border-color: #22c55e;
+}
+
+/* Hide the radio button */
+.candidate-radio {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Candidate photo */
 .candidate-photo {
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #dfe6e9;
-    margin-bottom: 6px;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
+    background: white;
 }
 
-/* NAME */
+/* Candidate info container */
+.candidate-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* Candidate details */
+.candidate-details {
+    text-align: center;
+    width: 100%;
+}
+
 .candidate-name {
     font-size: 0.75rem;
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 700;
+    color: #0f172a;
+    display: block;
+    margin-bottom: 2px;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.candidate-course {
+    font-size: 0.65rem;
+    color: #64748b;
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
     line-height: 1.2;
 }
 
-/* SELECTED */
-.candidate-card:has(input:checked) {
-    border: 2px solid #27ae60;
-    background: #eefaf3;
+.candidate-platform {
+    display: none; /* Hide platform text on cards for space */
 }
 
-.candidate-card:has(input:checked) .candidate-photo {
-    border-color: #27ae60;
+/* Show platform on hover/touch for desktop */
+@media (min-width: 768px) {
+    .candidate-row:hover .candidate-platform {
+        display: block;
+        font-size: 0.6rem;
+        color: #475569;
+        background: #e2e8f0;
+        padding: 4px 6px;
+        border-radius: 12px;
+        margin-top: 6px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Selected indicator dot */
+.candidate-row:has(input:checked)::after {
+    content: '✓';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #22c55e;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+}
+
+/* ======================
+   COUNTDOWN TIMER
+====================== */
+
+.voting-deadline-container {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+}
+
+.voting-deadline-container h3 {
+    font-size: 0.85rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.countdown-timer {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #dc2626;
+    font-family: 'Courier New', monospace;
+    background: #fef2f2;
+    padding: 10px 16px;
+    border-radius: 30px;
+    display: inline-block;
+    border: 1px solid #fecaca;
 }
 
 /* ======================
@@ -119,176 +371,180 @@ body {
 ====================== */
 
 .submit-vote {
-    grid-column: 1 / -1;
-    margin-top: 14px;
+    text-align: center;
+    margin-top: 24px;
+    margin-bottom: 16px;
 }
 
 .submit-vote button {
-    width: 100%;
-    padding: 12px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    border-radius: 12px;
-    border: none;
-    background: #27ae60;
+    background: #059669;
     color: white;
-}
-
-/* ======================
-   RESPONSIVE
-====================== */
-
-@media (min-width: 768px) {
-    .candidates-form {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (min-width: 1024px) {
-    .candidates-form {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-/* ======================
-   GENERAL LAYOUT
-====================== */
-.vote-container {
-    padding: 10px;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: #f4f6fa;
-}
-
-/* ======================
-   HEADER
-====================== */
-.vote-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    background: #ffffff;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-.vote-header .logo {
-    height: 32px;
-}
-
-.vote-header h1 {
-    font-size: 0.9rem;
+    border: none;
+    padding: 16px 32px;
+    font-size: 1rem;
     font-weight: 600;
-    color: #2c3e50;
-    margin: 0;
-}
-
-/* ======================
-   INSTRUCTIONS
-====================== */
-.instructions {
-    background: #ffffff;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    color: #555;
-    margin-bottom: 12px;
-}
-/* ======================
-   CANDIDATE GRID (2-columns)
-====================== */
-.candidates-form {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 columns desktop */
-    gap: 10px;
-}
-
-/* Ensure each candidate row still uses flex for photo-name-bullet */
-.candidate-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* photo-left, radio-right */
-    background: #ffffff;
-    padding: 6px 8px;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    border-radius: 40px;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: 100%;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
 }
 
-/* Adjust photo and name for tighter 2-column layout */
-.candidate-photo {
-    width: 40px;
-    height: 40px;
-    margin-right: 10px;
+.submit-vote button:hover {
+    background: #047857;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
 }
 
-.candidate-name {
+.submit-vote button:active {
+    transform: translateY(0);
+}
+
+.submit-vote button:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.submit-note {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.submit-note::before {
+    content: '🔒';
     font-size: 0.8rem;
-    font-weight: 600;
-    color: #2c3e50;
-    flex: 1; /* name takes remaining space */
 }
 
-/* Radio button to the right */
-.candidate-row input[type="radio"] {
-    margin-left: 10px; /* separate from name */
-}
+/* ======================
+   RESPONSIVE BREAKPOINTS
+====================== */
 
-/* Hover & Selected */
-.candidate-row:hover {
-    background: #f0f8ff;
-}
-
-.candidate-row:has(input:checked) {
-    border: 2px solid #27ae60;
-    background: #eefaf3;
-}
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-    .candidates-form {
-        grid-template-columns: 1fr; /* single column mobile */
+/* Small phones - keep 3 columns but smaller cards */
+@media (max-width: 380px) {
+    .position-candidates {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
     }
-
+    
     .candidate-photo {
-        width: 35px;
-        height: 35px;
+        width: 45px;
+        height: 45px;
     }
-
+    
     .candidate-name {
+        font-size: 0.65rem;
+    }
+    
+    .candidate-course {
+        font-size: 0.55rem;
+    }
+}
+
+/* Tablets - 4 columns */
+@media (min-width: 640px) {
+    .position-candidates {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+    
+    .vote-container {
+        padding: 20px;
+    }
+    
+    .candidate-photo {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .candidate-name {
+        font-size: 0.85rem;
+    }
+    
+    .candidate-course {
+        font-size: 0.7rem;
+    }
+}
+
+/* Desktop - 5 columns */
+@media (min-width: 1024px) {
+    .position-candidates {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+    }
+    
+    .candidate-photo {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .candidate-name {
+        font-size: 0.9rem;
+    }
+    
+    .candidate-course {
         font-size: 0.75rem;
     }
 }
 
-
-.election-title {
-    text-align: center;
-    margin: 10px 0 20px 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #2c3e50;
+/* Large desktop - 6 columns */
+@media (min-width: 1280px) {
+    .position-candidates {
+        grid-template-columns: repeat(6, 1fr);
+    }
 }
 
+/* ======================
+   UTILITY CLASSES
+====================== */
 
-.voting-deadline-container {
-    background: #ffffff;
-    padding: 10px;
-    border-radius: 10px;
-    text-align: center;
-    margin: 15px 0;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+/* Highlight invalid position groups */
+.position-group:has(input:invalid) {
+    border: 2px solid #ef4444;
+    padding: 14px;
 }
 
-.voting-deadline-container h3 {
-    font-size: 0.85rem;
-    margin-bottom: 5px;
-    color: #2c3e50;
+/* Animation for new votes */
+@keyframes highlight {
+    0% { background: #f0fdf4; }
+    100% { background: #f8fafc; }
 }
 
-.countdown-timer {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #e74c3c;
+.candidate-row:has(input:checked) {
+    animation: highlight 0.3s ease;
+}
+
+/* ======================
+   PRINT STYLES
+====================== */
+
+@media print {
+    body {
+        background: white;
+    }
+    
+    .vote-header,
+    .phe-info,
+    .instructions,
+    .voting-deadline-container,
+    .submit-vote,
+    .encryption-badge {
+        display: none;
+    }
+    
+    .candidate-row {
+        break-inside: avoid;
+        border: 1px solid #000;
+    }
+    
+    .candidate-row:has(input:checked) {
+        border: 2px solid #000;
+    }
 }

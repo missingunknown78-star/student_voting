@@ -4,7 +4,6 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_dashboard.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -52,30 +51,6 @@
         <p>{{ voter_turnout if voter_turnout else "0%" }}</p>
     </div>
 
-</div>
-
-<!-- ================= RESULTS CHART ================= -->
-<div class="chart-card combined-charts">
-    <h3 id="activeChartTitle">Election Results</h3>
-
-    <div class="election-dropdown">
-        <label for="electionSelect">Select Election:</label>
-        <select id="electionSelect">
-            {% for election in elections_json %}
-                <option value="{{ loop.index0 }}">{{ election.title }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="chart-container">
-        <canvas id="mainBar"></canvas>
-
-        <div id="noVotesOverlay">
-            No votes yet
-        </div>
-    </div>
-
-    <div id="colorLegend" class="color-legend"></div>
 </div>
 
 <!-- ================= RECENT ELECTIONS ================= -->
@@ -160,11 +135,6 @@
         </div>
     </div>
 </div>
-
-<!-- ================= JSON DATA (LIKE STATISTICS) ================= -->
-<script id="dashboardElectionData" type="application/json">
-{{ elections_json | tojson }}
-</script>
 
 <script src="{{ url_for('admin.static', filename='js/admin_dashboard.js') }}"></script>
 

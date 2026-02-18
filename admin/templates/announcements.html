@@ -4,6 +4,55 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
+
+<style>
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.announcements-page {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+body.dark-mode .announcements-page .announcement-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .announcements-page .modal-content {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .announcements-page .modal-content input,
+body.dark-mode .announcements-page .modal-content textarea,
+body.dark-mode .announcements-page .modal-content select {
+    background: var(--light-gray);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .announcements-page .announcement-card .date {
+    color: var(--text-secondary);
+    border-top-color: var(--border-color);
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -57,31 +106,112 @@
     </div>
 </div> <!-- END announcements-page wrapper -->
 
-<!-- Modal Script -->
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const modal = document.getElementById('announcementModal');
-        const openBtn = document.getElementById('openModalBtn');
-        const closeBtn = document.getElementById('closeModalBtn');
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class - ONLY to mainContent
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
 
-        if (!openBtn || !modal || !closeBtn) return; // Exit if elements not found
-
-        // Open modal
-        openBtn.addEventListener('click', () => {
-            modal.classList.add('show'); // uses flex centering
-        });
-
-        // Close modal with X button
-        closeBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-        });
-
-        // Close modal when clicking outside modal-content
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('show');
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on main-content ONLY
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
             }
         });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// Modal Script
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('announcementModal');
+    const openBtn = document.getElementById('openModalBtn');
+    const closeBtn = document.getElementById('closeModalBtn');
+
+    if (!openBtn || !modal || !closeBtn) return; // Exit if elements not found
+
+    // Open modal
+    openBtn.addEventListener('click', () => {
+        modal.classList.add('show'); // uses flex centering
+        // Reapply theme when modal opens
+        setTimeout(applyThemeToMainContent, 10);
     });
+
+    // Close modal with X button
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        // Reapply theme when modal closes
+        setTimeout(applyThemeToMainContent, 10);
+    });
+
+    // Close modal when clicking outside modal-content
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+            // Reapply theme when modal closes
+            setTimeout(applyThemeToMainContent, 10);
+        }
+    });
+    
+    // Add event listeners to form elements to reapply theme on interaction
+    const formElements = document.querySelectorAll('.modal-content input, .modal-content textarea, .modal-content select');
+    formElements.forEach(element => {
+        element.addEventListener('focus', function() {
+            setTimeout(applyThemeToMainContent, 10);
+        });
+        element.addEventListener('change', function() {
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    });
+});
 </script>
+
 {% endblock %}

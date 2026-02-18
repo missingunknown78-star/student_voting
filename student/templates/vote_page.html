@@ -32,6 +32,148 @@
             font-weight: bold;
             margin-left: 10px;
         }
+        
+        /* Party list badge style */
+        .party-badge {
+            display: inline-block;
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .party-badge.independent {
+            background: #f1f5f9;
+            color: #475569;
+            font-style: italic;
+            border: 1px dashed #94a3b8;
+        }
+        
+        .candidate-course {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            width: 100%;
+        }
+        
+        .course-name {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        /* Card layout adjustments */
+        .candidate-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .candidate-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .candidate-details {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .candidate-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 6px 0 2px 0;
+            text-align: center;
+        }
+        
+        .candidate-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 4px;
+        }
+        
+        .candidate-platform {
+            font-size: 0.7rem;
+            color: #475569;
+            background: #f8fafc;
+            padding: 6px 10px;
+            border-radius: 12px;
+            margin-top: 8px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        /* Hide radio button but keep functionality */
+        .candidate-radio {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        /* Selected state */
+        .candidate-row.selected {
+            border: 2px solid #22c55e;
+            background: #f0fdf4;
+            position: relative;
+        }
+        
+        .candidate-row.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #22c55e;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .party-badge {
+                min-width: 70px;
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+            
+            .candidate-photo {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .candidate-name {
+                font-size: 0.75rem;
+            }
+            
+            .course-name {
+                font-size: 0.65rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -54,12 +196,7 @@
     <section class="phe-info">
         <h4>🔐 Privacy-Protected Voting</h4>
         <p>Your vote is encrypted using advanced cryptography. Your choices remain private while ensuring vote integrity.</p>
-        <p><strong>How it works:</strong> Your selection is converted to a secure encrypted format that can be counted without revealing individual votes.</p>
-    </section>
-
-    <!-- Instructions -->
-    <section class="instructions">
-        <p>Please vote for your preferred candidates. You can only vote once per position. Once submitted, your vote cannot be changed.</p>
+        <p><strong>Instructions: </strong>Please click your preferred candidates to vote for them. Once submitted, your vote cannot be changed.</p>
     </section>
 
     <!-- Candidates Form -->
@@ -87,7 +224,19 @@
                              class="candidate-photo">
                         <div class="candidate-details">
                             <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
-                            <span class="candidate-course">{{ candidate.course }} • Year {{ candidate.year_level }}</span>
+                            
+                            <!-- Course and Party List -->
+                            <div class="candidate-course">
+                                <span class="course-name">{{ candidate.course }}</span>
+                                
+                                <!-- Party List Badge - Centered -->
+                                {% if candidate.party_list and candidate.party_list.strip() %}
+                                    <span class="party-badge">{{ candidate.party_list }}</span>
+                                {% else %}
+                                    <span class="party-badge independent">INDEPENDENT</span>
+                                {% endif %}
+                            </div>
+                            
                             {% if candidate.platform %}
                             <p class="candidate-platform">{{ candidate.platform|truncate(100) }}</p>
                             {% endif %}
@@ -113,7 +262,7 @@
 
         <!-- Submit Button -->
         <div class="submit-vote">
-            <button type="submit" id="submitBtn">Cast My Encrypted Vote</button>
+            <button type="submit" id="submitBtn">Submit Form</button>
             <p class="submit-note">Your vote will be encrypted for maximum privacy</p>
         </div>
     </form>

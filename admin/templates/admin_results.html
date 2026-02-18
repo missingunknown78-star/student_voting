@@ -4,6 +4,76 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_results.css') }}">
+
+<style>
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.results-container {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+body.dark-mode .results-header {
+    background: var(--secondary-blue);
+}
+
+body.dark-mode .stat-card,
+body.dark-mode .election-card,
+body.dark-mode .empty-state {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .stat-card:hover,
+body.dark-mode .election-card:hover,
+body.dark-mode .empty-state:hover {
+    border-color: var(--primary-blue);
+}
+
+body.dark-mode .section-title {
+    color: var(--text-color);
+}
+
+body.dark-mode .badge-count {
+    background: var(--light-gray);
+    color: var(--text-secondary);
+}
+
+body.dark-mode .detail-item i {
+    color: var(--text-secondary);
+}
+
+body.dark-mode .btn-secondary {
+    background: var(--light-gray);
+    color: var(--text-color);
+}
+
+body.dark-mode .btn.disabled {
+    background: var(--light-gray);
+    color: var(--text-secondary);
+}
+
+body.dark-mode .card-footer {
+    border-top-color: var(--border-color);
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -151,7 +221,8 @@
             </div>
             
             <div class="card-footer">
-                {% if now > election.end_date %}
+                {# Use tz_end for timezone-aware comparison #}
+                {% if now > election.tz_end %}
                 <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
                    class="btn btn-primary">
                     <i class="fa-solid fa-chart-bar"></i> View Full Results
@@ -235,4 +306,96 @@
     </div>
     {% endif %}
 </div>
+
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class - ONLY to mainContent
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on main-content ONLY
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// Reapply theme when any card is hovered or interacted with
+document.addEventListener('DOMContentLoaded', function() {
+    applyThemeToMainContent();
+    
+    // Also check periodically for the first 2 seconds (in case main content loads later)
+    let checkCount = 0;
+    const checkInterval = setInterval(function() {
+        if (document.querySelector('.main-content') || checkCount > 20) {
+            clearInterval(checkInterval);
+            applyThemeToMainContent();
+        }
+        checkCount++;
+    }, 100);
+    
+    // Add event listeners to all interactive elements to reapply theme on interaction
+    const interactiveElements = document.querySelectorAll('.btn, .election-card, .stat-card, .empty-state');
+    interactiveElements.forEach(element => {
+        element.addEventListener('mouseenter', function() {
+            setTimeout(applyThemeToMainContent, 10);
+        });
+        element.addEventListener('click', function() {
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    });
+});
+</script>
+
 {% endblock %}

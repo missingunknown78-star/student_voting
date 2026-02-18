@@ -33,6 +33,10 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_first').value = btn.dataset.first;
         document.getElementById('edit_last').value = btn.dataset.last;
+        
+        // NEW: Set party list value
+        document.getElementById('edit_party_list').value = btn.dataset.party || '';
+        
         document.getElementById('edit_position').value = btn.dataset.position;
         document.getElementById('edit_election').value = btn.dataset.election;
         document.getElementById('edit_department').value = btn.dataset.department;
@@ -222,6 +226,7 @@ addCandidateForm.addEventListener('submit', function(e) {
                         '<span>No Photo</span>'}
                 </td>
                 <td>${data.first_name || ''} ${data.last_name || ''}</td>
+                <td>${data.party_list || ''}</td>
                 <td>${deptName}</td>
                 <td>${data.position || ''}</td>
                 <td>
@@ -229,6 +234,7 @@ addCandidateForm.addEventListener('submit', function(e) {
                        data-id="${data.id}" 
                        data-first="${data.first_name || ''}" 
                        data-last="${data.last_name || ''}" 
+                       data-party="${data.party_list || ''}"
                        data-position="${data.position_id || ''}" 
                        data-election="${data.election_id || ''}" 
                        data-department="${deptName}" 
@@ -253,6 +259,7 @@ addCandidateForm.addEventListener('submit', function(e) {
                 document.getElementById('edit_id').value = id;
                 document.getElementById('edit_first').value = this.dataset.first;
                 document.getElementById('edit_last').value = this.dataset.last;
+                document.getElementById('edit_party_list').value = this.dataset.party || '';
                 document.getElementById('edit_position').value = this.dataset.position;
                 document.getElementById('edit_election').value = this.dataset.election;
                 document.getElementById('edit_department').value = this.dataset.department;
@@ -368,8 +375,9 @@ editCandidateForm.addEventListener('submit', function(e) {
             const row = document.getElementById(`candidate-${candidateId}`);
             if (row) {
                 row.querySelector('td:nth-child(2)').textContent = `${data.first_name || ''} ${data.last_name || ''}`;
-                row.querySelector('td:nth-child(3)').textContent = data.department || '';
-                row.querySelector('td:nth-child(4)').textContent = data.position || '';
+                row.querySelector('td:nth-child(3)').textContent = data.party_list || '';
+                row.querySelector('td:nth-child(4)').textContent = data.department || '';
+                row.querySelector('td:nth-child(5)').textContent = data.position || '';
                 
                 // Update photo if changed
                 if (data.photo) {
@@ -388,6 +396,7 @@ editCandidateForm.addEventListener('submit', function(e) {
                 const editBtn = row.querySelector('.openEditModal');
                 editBtn.dataset.first = data.first_name || '';
                 editBtn.dataset.last = data.last_name || '';
+                editBtn.dataset.party = data.party_list || '';
                 editBtn.dataset.position = data.position_id || '';
                 editBtn.dataset.election = data.election_id || '';
                 editBtn.dataset.department = data.department || '';

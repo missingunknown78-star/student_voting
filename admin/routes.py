@@ -404,6 +404,7 @@ def setup_2fa():
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
 
 
+
 # ---------------------- DASHBOARD ---------------------- #
 @admin_bp.route('/dashboard')
 @admin_required
@@ -420,34 +421,9 @@ def dashboard():
     total_votes = Vote.query.count()
 
     # ================================
-    # Per-election chart data
-    # ================================
-    election_data = []
-
-    elections = Election.query.order_by(Election.start_date.desc()).all()
-    for e in elections:
-        labels = []
-        votes = []
-        positions = []
-
-        for c in e.candidates:
-            labels.append(f"{c.first_name} {c.last_name}")
-            # FIXED: Use PHE-compatible vote counting
-            vote_count = count_votes_for_candidate(c.id, e.id)
-            votes.append(vote_count)
-            positions.append(c.position.name if c.position else "Unknown")
-
-        election_data.append({
-            "id": e.id,
-            "title": e.title,
-            "labels": labels,
-            "votes": votes,
-            "positions": positions
-        })
-
-    # ================================
     # Recent elections table
     # ================================
+    elections = Election.query.order_by(Election.start_date.desc()).all()
     recent_elections_all = elections
 
     # Localize timezone if naive
@@ -459,6 +435,12 @@ def dashboard():
 
     recent_elections = recent_elections_all[:5]
     ongoing_elections = sum(1 for e in recent_elections_all if e.status == 'Open')
+
+    # Calculate voter turnout
+    voter_turnout = "0%"
+    if total_students > 0:
+        turnout_percentage = (total_votes / total_students) * 100
+        voter_turnout = f"{turnout_percentage:.1f}%"
 
     # ---------- AUDIT LOG: Dashboard viewed ----------
     username = getattr(current_user, 'username', 'Unknown')
@@ -477,11 +459,12 @@ def dashboard():
         total_elections=total_elections,
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
-        elections_json=election_data,
+        voter_turnout=voter_turnout,
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
         now=now
     )
+
 
 # ---------------------- IMPORT STUDENTS ---------------------- #
 @admin_bp.route("/import_students", methods=["GET", "POST"])
@@ -1235,7 +1218,6 @@ def delete_multiple_courses():
 
 
 # ---------------------- Manage Candidates ---------------------- #
-# ---------------------- Manage Candidates ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
@@ -1271,6 +1253,7 @@ def manage_candidates():
     if request.method == 'POST':
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
+        party_list = request.form.get('party_list')  # NEW: Get party list
         department_id_form = request.form.get('department_id', type=int)
         position_id = request.form.get('position_id')
         election_id = request.form.get('election_id')
@@ -1301,6 +1284,7 @@ def manage_candidates():
         new_candidate = Candidate(
             first_name=first_name,
             last_name=last_name,
+            party_list=party_list if party_list else None,  # NEW: Add party list
             department_id=department_id_form if election_type == 'Department' else None,
             position_id=position_id,
             election_id=election_id,
@@ -1314,10 +1298,11 @@ def manage_candidates():
         department_name = new_candidate.department.name if new_candidate.department else 'N/A'
         position_name = new_candidate.position.name if new_candidate.position else 'N/A'
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
+        party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'  # NEW
         
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Added candidate: {first_name} {last_name} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+            description=f"Added candidate: {first_name} {last_name} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
         )
 
         # ---------- AJAX RESPONSE ----------
@@ -1327,6 +1312,7 @@ def manage_candidates():
                 "id": new_candidate.id,
                 "first_name": new_candidate.first_name,
                 "last_name": new_candidate.last_name,
+                "party_list": new_candidate.party_list,  # NEW: Add party list
                 "department": new_candidate.department.name if new_candidate.department else '',
                 "position": new_candidate.position.name,
                 "position_id": new_candidate.position_id,
@@ -1366,11 +1352,17 @@ def update_candidate(id):
     # Store old values for audit log
     old_first_name = candidate.first_name
     old_last_name = candidate.last_name
+    old_party_list = candidate.party_list  # NEW: Store old party list
     old_position = candidate.position.name if candidate.position else 'N/A'
     old_department = candidate.department.name if candidate.department else 'N/A'
 
     candidate.first_name = request.form.get('first_name')
     candidate.last_name = request.form.get('last_name')
+    
+    # NEW: Update party list
+    party_list = request.form.get('party_list')
+    candidate.party_list = party_list if party_list else None
+    
     candidate.position_id = request.form.get('position_id')
     candidate.election_id = request.form.get('election_id')
     
@@ -1402,10 +1394,11 @@ def update_candidate(id):
     # ---------- AUDIT LOG ----------
     new_department = candidate.department.name if candidate.department else 'N/A'
     new_position = candidate.position.name if candidate.position else 'N/A'
+    new_party_list = candidate.party_list if candidate.party_list else 'Independent'  # NEW
     
     log_audit(
         action='UPDATE_CANDIDATE',
-        description=f"Updated candidate: {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
+        description=f"Updated candidate: {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
     )
     
     if is_ajax:
@@ -1414,12 +1407,14 @@ def update_candidate(id):
             'id': candidate.id,
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
+            'party_list': candidate.party_list,  # NEW: Add party list
             'department': candidate.department.name if candidate.department else '',
             'department_id': candidate.department_id,
             'position': candidate.position.name if candidate.position else '',
             'position_id': candidate.position_id,
             'election_id': candidate.election_id,
-            'election_type': candidate.election.election_type if candidate.election else ''
+            'election_type': candidate.election.election_type if candidate.election else '',
+            'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
         })
     
     flash('Candidate updated successfully!', 'success')
@@ -1434,6 +1429,7 @@ def delete_candidate(id):
     
     # Store candidate info for audit log before deletion
     candidate_name = f"{candidate.first_name} {candidate.last_name}"
+    party_list = candidate.party_list if candidate.party_list else 'Independent'  # NEW
     position_name = candidate.position.name if candidate.position else 'N/A'
     department_name = candidate.department.name if candidate.department else 'N/A'
     election_title = candidate.election.title if candidate.election else 'N/A'
@@ -1444,7 +1440,7 @@ def delete_candidate(id):
     # ---------- AUDIT LOG ----------
     log_audit(
         action='DELETE_CANDIDATE',
-        description=f"Deleted candidate: {candidate_name} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+        description=f"Deleted candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
     )
     
     if is_ajax:
@@ -1784,14 +1780,24 @@ def results_page():
     upcoming, active, completed = [], [], []
     
     for election in elections:
-        if election.start_date.tzinfo is None:
-            election.start_date = tz.localize(election.start_date)
-        if election.end_date.tzinfo is None:
-            election.end_date = tz.localize(election.end_date)
+        # Create timezone-aware copies for comparison
+        start_date = election.start_date
+        end_date = election.end_date
         
-        if election.end_date < now:
+        # Convert to timezone-aware if naive
+        if start_date.tzinfo is None:
+            start_date = tz.localize(start_date)
+        if end_date.tzinfo is None:
+            end_date = tz.localize(end_date)
+        
+        # Add timezone-aware attributes to election object for template use
+        election.tz_start = start_date
+        election.tz_end = end_date
+        
+        # Categorize based on the dates
+        if end_date < now:
             completed.append(election)
-        elif election.start_date <= now <= election.end_date:
+        elif start_date <= now <= end_date:
             active.append(election)
         else:
             upcoming.append(election)
@@ -2238,20 +2244,23 @@ def test_tally_calculation(election_id):
 @admin_bp.route('/profile')
 @login_required
 def admin_profile():
-    # Ensure only admin user can access
-    if current_user.user_type != 'admin':
+    # Check if user is admin using role
+    if current_user.role != 'Admin':
         return "Unauthorized", 403
 
     # Get the admin data
     admin = Admin.query.get(current_user.id)
 
-    # Optional: fetch stats
-    total_elections = 12  # replace with actual query
-    total_votes = 340      # replace with actual query
+    # Simple stats (replace with actual queries later)
+    total_elections = 12
+    total_votes = 340
 
-    return render_template('admin_profile.html', admin=admin,
+    return render_template('admin_profile.html', 
+                           admin=admin,
                            total_elections=total_elections,
                            total_votes=total_votes)
+
+
 
 
 @admin_bp.route('/statistics')

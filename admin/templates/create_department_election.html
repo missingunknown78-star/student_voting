@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
+
 <style>
 /* Stack Title + Type closer and align Description */
 .form-column {
@@ -29,6 +30,58 @@
     gap: 2rem;
     flex-wrap: wrap;
 }
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.create-election-page {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+body.dark-mode .election-form-container {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .election-form-group input,
+body.dark-mode .election-form-group select,
+body.dark-mode .election-form-group textarea {
+    background: var(--light-gray);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .election-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .election-card.active {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+body.dark-mode .election-list p {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
 </style>
 {% endblock %}
 
@@ -50,7 +103,7 @@
     {% endwith %}
     
     <!-- Add dark-mode class here based on parent's dark mode -->
-    <div class="election-form-container {% if main_content_has_dark_mode %}dark-mode{% endif %}">
+    <div class="election-form-container">
         <h2>Manage Elections</h2>
 
         <!-- Desktop-style Form -->
@@ -147,7 +200,73 @@
     </div>
 </div>
 
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class - ONLY to mainContent, NOT to body
+    // This prevents the recursive loop with the MutationObserver
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on main-content ONLY
+    // NOT on body - this prevents the recursive loop
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// Function to toggle department field
 function toggleDepartment() {
     const electionType = document.getElementById('election_type').value;
     const deptGroup = document.getElementById('department_group');
@@ -157,18 +276,24 @@ function toggleDepartment() {
         deptGroup.style.display = 'none';
         document.getElementById('department_id').value = '';
     }
+    
+    // Reapply theme after state change (optional)
+    setTimeout(applyThemeToMainContent, 10);
 }
 
-// Apply dark mode to election form container based on parent
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    const mainContent = document.querySelector('.main-content');
-    const electionForm = document.querySelector('.election-form-container');
+    applyThemeToMainContent();
     
-    if (mainContent && electionForm) {
-        if (mainContent.classList.contains('dark-mode')) {
-            electionForm.classList.add('dark-mode');
+    // Also check periodically for the first 2 seconds (in case main content loads later)
+    let checkCount = 0;
+    const checkInterval = setInterval(function() {
+        if (document.querySelector('.main-content') || checkCount > 20) {
+            clearInterval(checkInterval);
+            applyThemeToMainContent();
         }
-    }
+        checkCount++;
+    }, 100);
 });
 </script>
 

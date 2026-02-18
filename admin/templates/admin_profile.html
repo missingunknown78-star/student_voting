@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Profile</title>
-<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_profile.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Profile</title>
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_profile.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
@@ -14,7 +13,10 @@
 <div class="dashboard-header">
     <h1>Admin Profile</h1>
     <div class="profile-container">
-        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" alt="Admin Profile" id="profilePic" class="profile-pic">
+        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" 
+             alt="Admin Profile" 
+             id="profilePic" 
+             class="profile-pic">
         <div class="profile-menu" id="profileMenu">
             <a href="#">Profile</a>
             <a href="#">Settings</a>
@@ -29,56 +31,98 @@
         <div class="profile-header">
             <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}" alt="Profile Picture">
             <div class="profile-info">
-                <h2>John Doe</h2>
-                <p>admin@example.com</p>
-                <p>Administrator</p>
-                <button class="edit-profile-btn">Edit Profile</button>
+                <h2>{{ admin.first_name }} {{ admin.last_name }}</h2>
+                <p><i class="fas fa-envelope"></i> {{ admin.email }}</p>
+                <p><i class="fas fa-user-tag"></i> {{ admin.role }}</p>
+                <p><i class="fas fa-circle" style="color: {{ '#28a745' if admin.status == 'Active' else '#dc3545' }}; font-size: 10px;"></i> {{ admin.status }}</p>
             </div>
         </div>
 
-        <!-- Account Details -->
+        <!-- Account Details (Display Only) -->
         <div class="account-details">
-            <h3>Account Details</h3>
-            <form>
-                <label>Username</label>
-                <input type="text" value="admin">
-                
-                <label>Email</label>
-                <input type="email" value="admin@example.com">
-
-                <label>Change Password</label>
-                <input type="password" placeholder="New Password">
-                <input type="password" placeholder="Confirm Password">
-
-                <button type="submit">Save Changes</button>
-            </form>
+            <h3><i class="fas fa-id-card"></i> Account Details</h3>
+            
+            <div class="detail-row">
+                <div class="detail-label">First Name</div>
+                <div class="detail-value">{{ admin.first_name }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Last Name</div>
+                <div class="detail-value">{{ admin.last_name }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Username</div>
+                <div class="detail-value">{{ admin.username }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Email Address</div>
+                <div class="detail-value">{{ admin.email }}</div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Role</div>
+                <div class="detail-value">
+                    <span class="role-badge">{{ admin.role }}</span>
+                </div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Account Status</div>
+                <div class="detail-value">
+                    <span class="status-badge {{ admin.status.lower() }}">{{ admin.status }}</span>
+                </div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Account Created</div>
+                <div class="detail-value">
+                    <i class="far fa-calendar-alt"></i> 
+                    {{ admin.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                </div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Account ID</div>
+                <div class="detail-value">ADM{{ admin.id }}</div>
+            </div>
         </div>
 
-        <!-- Activity Stats -->
+        <!-- Activity Stats (Display Only) -->
         <div class="activity-stats">
-            <h3>Activity Stats</h3>
-            <ul>
-                <li>Total Elections Managed: 12</li>
-                <li>Total Votes Overseen: 340</li>
-                <li>Account Created: 2025-12-27 08:30</li>
-            </ul>
+            <h3><i class="fas fa-chart-line"></i> Activity Stats</h3>
+            
+            <div class="stat-row">
+                <div class="stat-label">
+                    <i class="fas fa-vote-yea"></i> Total Elections Managed
+                </div>
+                <div class="stat-value">{{ total_elections }}</div>
+            </div>
+            
+            <div class="stat-row">
+                <div class="stat-label">
+                    <i class="fas fa-users"></i> Total Votes Overseen
+                </div>
+                <div class="stat-value">{{ total_votes }}</div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Profile menu toggle
+    // Profile menu toggle (keep this for the dropdown)
     const profilePic = document.getElementById('profilePic');
     const profileMenu = document.getElementById('profileMenu');
 
-    profilePic.addEventListener('click', () => {
+    profilePic.addEventListener('click', (e) => {
+        e.stopPropagation();
         profileMenu.style.display = profileMenu.style.display === 'block' ? 'none' : 'block';
     });
 
-    window.addEventListener('click', (e) => {
-        if (!profilePic.contains(e.target) && !profileMenu.contains(e.target)) {
-            profileMenu.style.display = 'none';
-        }
+    window.addEventListener('click', () => {
+        profileMenu.style.display = 'none';
     });
 </script>
 

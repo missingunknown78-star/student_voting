@@ -1,6 +1,6 @@
 /* ================================
    CREATE/MANAGE ELECTIONS PAGE CSS
-   Scoped so it won't affect sidebar
+   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
@@ -15,17 +15,6 @@ body:not(.dark-mode) {
     background-color: #f5f7fb;
 }
 
-/* Elections page specific */
-.create-election-page {
-    margin-left: var(--sidebar-width);
-    padding: 20px 40px;
-    min-height: 100vh;
-    background: var(--bg-color);
-    box-sizing: border-box;
-    transition: var(--transition);
-    opacity: 1;
-}
-
 /* Quick fade-in to hide any remaining flash */
 @keyframes quickFadeIn {
     from { opacity: 0.99; }
@@ -34,6 +23,7 @@ body:not(.dark-mode) {
 
 .create-election-page {
     animation: quickFadeIn 0.1s ease-out;
+    opacity: 1;
 }
 
 /* ==================== CSS VARIABLES ==================== */
@@ -61,6 +51,7 @@ body:not(.dark-mode) {
     --text-color: #2c3e50;
     --text-secondary: #6c757d;
     --card-bg: white;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Dark mode variables */
@@ -82,7 +73,8 @@ body:not(.dark-mode) {
     margin-left: var(--sidebar-width);
     padding: 20px 40px;
     min-height: 100vh;
-    background: var(--bg-color);
+    /* REMOVED solid background - now transparent to show gradient from main template */
+    background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
 }
@@ -104,7 +96,7 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-/* ==================== FORM CONTAINER ==================== */
+/* ==================== FORM CONTAINER - FLOATING CARD ==================== */
 .create-election-page .election-form-container {
     background: var(--card-bg);
     border-radius: var(--card-radius);
@@ -113,6 +105,13 @@ body:not(.dark-mode) {
     border: 1px solid var(--border-color);
     margin-bottom: 30px;
     transition: var(--transition);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.create-election-page .election-form-container:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .create-election-page .election-form-container h2 {
@@ -186,6 +185,15 @@ body:not(.dark-mode) {
     font-family: inherit;
     width: 100%; /* Make all inputs full width */
     box-sizing: border-box;
+    box-shadow: var(--shadow-sm);
+}
+
+.create-election-page .election-form-group input:hover,
+.create-election-page .election-form-group select:hover,
+.create-election-page .election-form-group textarea:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-blue);
 }
 
 .create-election-page .election-form-group input:focus,
@@ -193,10 +201,11 @@ body:not(.dark-mode) {
 .create-election-page .election-form-group textarea:focus {
     outline: none;
     border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(27, 85, 226, 0.1);
+    box-shadow: 0 0 0 3px rgba(27, 85, 226, 0.1), var(--shadow-md);
+    transform: translateY(-2px);
 }
 
-/* ==================== SUBMIT BUTTON ==================== */
+/* ==================== SUBMIT BUTTON - FLOATING ==================== */
 .create-election-page .create-election-btn {
     display: flex;
     align-items: center;
@@ -214,11 +223,12 @@ body:not(.dark-mode) {
     width: 100%; /* Full width button */
     margin-top: 10px;
     box-sizing: border-box;
+    box-shadow: var(--shadow-sm);
 }
 
 .create-election-page .create-election-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
 }
 
 /* ==================== DEPARTMENT SELECTION ==================== */
@@ -235,7 +245,7 @@ body:not(.dark-mode) {
     width: 100%;
 }
 
-/* ==================== FLASH MESSAGES ==================== */
+/* ==================== FLASH MESSAGES - FLOATING ==================== */
 .create-election-page .flash-container {
     margin-bottom: 20px;
     max-width: 100%;
@@ -248,8 +258,14 @@ body:not(.dark-mode) {
     color: white;
     font-size: 0.9rem;
     animation: fadeInFlash 0.5s forwards;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: var(--transition);
+}
+
+.create-election-page .flash-message:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .dark-mode .create-election-page .flash-message {
@@ -289,7 +305,7 @@ body:not(.dark-mode) {
     margin-bottom: 25px;
 }
 
-/* Election Cards */
+/* Election Cards - FLOATING CARDS */
 .create-election-page .election-card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -301,17 +317,23 @@ body:not(.dark-mode) {
 
 .create-election-page .election-card:hover {
     border-color: var(--primary-blue);
-    transform: translateX(2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-3px) translateX(2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .create-election-page .election-card.active {
     border-left: 4px solid var(--success-green);
     background: rgba(16, 185, 129, 0.05);
+    box-shadow: var(--shadow-md);
 }
 
 .dark-mode .create-election-page .election-card.active {
     background: rgba(16, 185, 129, 0.1);
+}
+
+.create-election-page .election-card.active:hover {
+    border-left-color: var(--success-green);
+    border-color: var(--success-green);
 }
 
 .create-election-page .election-card strong {
@@ -330,7 +352,7 @@ body:not(.dark-mode) {
     display: none;
 }
 
-/* Empty State */
+/* Empty State - FLOATING CARD */
 .create-election-page .election-list p {
     padding: 20px;
     text-align: center;
@@ -339,6 +361,57 @@ body:not(.dark-mode) {
     border-radius: 8px;
     border: 2px dashed var(--border-color);
     transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.create-election-page .election-list p:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-blue);
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInFromLeft {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.create-election-page .election-card {
+    animation: fadeInFromLeft 0.3s ease forwards;
+    animation-delay: calc(var(--item-index, 0) * 0.05s);
+    opacity: 0;
+}
+
+/* Stagger animations for multiple cards */
+.create-election-page .election-card:nth-child(1) { animation-delay: 0.05s; }
+.create-election-page .election-card:nth-child(2) { animation-delay: 0.1s; }
+.create-election-page .election-card:nth-child(3) { animation-delay: 0.15s; }
+.create-election-page .election-card:nth-child(4) { animation-delay: 0.2s; }
+.create-election-page .election-card:nth-child(5) { animation-delay: 0.25s; }
+.create-election-page .election-card:nth-child(6) { animation-delay: 0.3s; }
+.create-election-page .election-card:nth-child(7) { animation-delay: 0.35s; }
+.create-election-page .election-card:nth-child(8) { animation-delay: 0.4s; }
+.create-election-page .election-card:nth-child(9) { animation-delay: 0.45s; }
+.create-election-page .election-card:nth-child(10) { animation-delay: 0.5s; }
+
+/* Force repaint on initial load */
+.create-election-page .election-form-container,
+.create-election-page .election-card,
+.create-election-page .election-form-group input,
+.create-election-page .election-form-group select,
+.create-election-page .election-form-group textarea,
+.create-election-page .create-election-btn,
+.create-election-page .flash-message,
+.create-election-page .election-list p {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
@@ -355,6 +428,14 @@ body:not(.dark-mode) {
         padding: 20px;
     }
 
+    .create-election-page .election-form-container {
+        padding: 20px;
+    }
+    
+    .create-election-page .election-form-container:hover {
+        transform: translateY(-3px);
+    }
+
     .create-election-page .form-row {
         flex-direction: column;
         gap: 15px;
@@ -369,6 +450,10 @@ body:not(.dark-mode) {
         width: 100%;
         padding: 14px 20px;
     }
+    
+    .create-election-page .election-card:hover {
+        transform: translateY(-2px) translateX(1px);
+    }
 }
 
 @media (max-width: 480px) {
@@ -381,7 +466,8 @@ body:not(.dark-mode) {
     }
     
     .create-election-page .election-form-container {
-        padding: 20px;
+        padding: 15px;
+        border-radius: 8px;
     }
     
     .create-election-page .election-card {
@@ -392,26 +478,23 @@ body:not(.dark-mode) {
         padding: 12px 16px;
         font-size: 0.95rem;
     }
-}
-
-/* ==================== ANIMATIONS ==================== */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.create-election-page .election-card {
-    animation: fadeIn 0.3s ease forwards;
-    animation-delay: calc(var(--item-index, 0) * 0.05s);
-    opacity: 0;
+    
+    .create-election-page .election-card:hover {
+        transform: translateY(-2px);
+    }
 }
 
 /* ==================== ACCESSIBILITY ==================== */
 @media (prefers-reduced-motion: reduce) {
-    .create-election-page * {
+    .create-election-page *,
+    .create-election-page .election-card,
+    .create-election-page .election-form-container,
+    .create-election-page .election-form-group input,
+    .create-election-page .create-election-btn {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        transform: none !important;
     }
 }
 

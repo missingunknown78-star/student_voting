@@ -1,6 +1,7 @@
 /* ================================
    MANAGE STUDENTS PAGE CSS
    Scoped to match import_students.css style
+   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
@@ -73,9 +74,10 @@ body:not(.dark-mode) {
 /* ==================== PAGE LAYOUT ==================== */
 .manage-students-page {
     margin-left: var(--sidebar-width);
-    padding: 20px 40px;
+    padding: 30px 40px;
     min-height: 100vh;
-    background: var(--bg-color);
+    /* REMOVED solid background - now transparent to show gradient from main template */
+    background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
 }
@@ -96,7 +98,7 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-/* Table Container */
+/* Table Container - FLOATING CARD */
 .manage-students-page .table-container {
     background: var(--card-bg);
     border-radius: var(--card-radius);
@@ -105,6 +107,11 @@ body:not(.dark-mode) {
     border: 1px solid var(--border-color);
     margin-bottom: 25px;
     transition: var(--transition);
+}
+
+.manage-students-page .table-container:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }
 
 /* Filter Bar */
@@ -198,6 +205,11 @@ body:not(.dark-mode) {
     border-bottom: 1px solid var(--border-color);
     color: var(--text-color);
     transition: var(--transition);
+}
+
+/* Zebra stripes for better readability */
+.manage-students-page .students-table tbody tr:nth-child(even) {
+    background-color: var(--filter-bg);
 }
 
 .manage-students-page .students-table tr:hover {
@@ -307,14 +319,14 @@ body:not(.dark-mode) {
 @media (max-width: 1024px) {
     .manage-students-page {
         margin-left: 250px;
-        padding: 20px 30px;
+        padding: 25px 30px;
     }
 }
 
 @media (max-width: 768px) {
     .manage-students-page {
         margin-left: 0;
-        padding: 15px 20px;
+        padding: 20px;
     }
     
     .manage-students-page .filter-bar {
@@ -339,6 +351,31 @@ body:not(.dark-mode) {
     }
 }
 
+@media (max-width: 480px) {
+    .manage-students-page {
+        padding: 15px;
+    }
+    
+    .manage-students-page .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .manage-students-page .table-container {
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    .manage-students-page .students-table th,
+    .manage-students-page .students-table td {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .manage-students-page .action-buttons {
+        flex-direction: column;
+    }
+}
+
 /* Animation for loading */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -347,6 +384,11 @@ body:not(.dark-mode) {
 
 .manage-students-page .table-container {
     animation: fadeIn 0.3s ease-out;
+}
+
+/* Add hover effect to cards */
+.manage-students-page .filter-bar:hover {
+    box-shadow: var(--shadow-sm);
 }
 
 /* ==================== FLASH MESSAGES ==================== */
@@ -384,4 +426,9 @@ body:not(.dark-mode) {
 @keyframes fadeInFlash {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOutFlash {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
 }

@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_departments.css') }}">
+
 <style>
 /* -------------------- Buttons -------------------- */
 .edit-btn, .delete-btn, .select-all-btn {
@@ -21,6 +22,59 @@
 .select-all-btn:hover { background-color: #117a8b; }
 
 .select-col { width: 40px; text-align: center; }
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.container {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides for buttons */
+body.dark-mode .edit-btn {
+    background-color: #3498db;
+}
+
+body.dark-mode .delete-btn {
+    background-color: #e74c3c;
+}
+
+body.dark-mode .select-all-btn {
+    background-color: #17a2b8;
+}
+
+/* Fix for form elements in dark mode */
+body.dark-mode .container .card form input[type="text"],
+body.dark-mode .container .card form select {
+    color: var(--text-color);
+    background-color: var(--input-bg);
+}
+
+/* Fix for table text in dark mode */
+body.dark-mode .container table td {
+    color: var(--text-color);
+}
+
+/* Fix for checkbox in dark mode */
+body.dark-mode .select-col input[type="checkbox"] {
+    accent-color: var(--button-primary);
+}
 </style>
 {% endblock %}
 
@@ -117,6 +171,82 @@
 
 </div>
 
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on body
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+                applyThemeToMainContent();
+            }
+        });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+    
+    // Also watch for changes to the main-content class
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+</script>
+
 <script>
 // -------------------- Scroll Position --------------------
 document.querySelectorAll('form').forEach(form => {
@@ -127,6 +257,9 @@ document.querySelectorAll('form').forEach(form => {
 window.addEventListener('load', () => {
     const scrollPos = localStorage.getItem('scrollPos');
     if(scrollPos){ window.scrollTo(0, parseInt(scrollPos)); localStorage.removeItem('scrollPos'); }
+    
+    // Reapply theme after page load
+    applyThemeToMainContent();
 });
 
 // -------------------- Departments --------------------
@@ -145,17 +278,26 @@ editDepartmentsBtn.addEventListener('click', () => {
     deleteDepartmentsBtn.style.display = 'none';
     selectAllDepartmentsBtn.style.display = deptEditMode ? 'inline-block' : 'none';
     deptCheckboxes.forEach(cb => cb.checked = false);
+    
+    // Reapply theme after state change
+    setTimeout(applyThemeToMainContent, 10);
 });
 
 selectAllDepartmentsBtn.addEventListener('click', () => {
     const allChecked = Array.from(deptCheckboxes).every(cb => cb.checked);
     deptCheckboxes.forEach(cb => cb.checked = !allChecked);
     deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+    
+    // Reapply theme after state change
+    setTimeout(applyThemeToMainContent, 10);
 });
 
 deptCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
         deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        
+        // Reapply theme after state change
+        setTimeout(applyThemeToMainContent, 10);
     });
 });
 
@@ -190,17 +332,26 @@ editCoursesBtn.addEventListener('click', () => {
     deleteCoursesBtn.style.display = 'none';
     selectAllCoursesBtn.style.display = courseEditMode ? 'inline-block' : 'none';
     courseCheckboxes.forEach(cb => cb.checked = false);
+    
+    // Reapply theme after state change
+    setTimeout(applyThemeToMainContent, 10);
 });
 
 selectAllCoursesBtn.addEventListener('click', () => {
     const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
     courseCheckboxes.forEach(cb => cb.checked = !allChecked);
     deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+    
+    // Reapply theme after state change
+    setTimeout(applyThemeToMainContent, 10);
 });
 
 courseCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
         deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        
+        // Reapply theme after state change
+        setTimeout(applyThemeToMainContent, 10);
     });
 });
 

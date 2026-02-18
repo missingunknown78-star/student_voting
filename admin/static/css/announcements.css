@@ -1,6 +1,6 @@
 /* ================================
    ANNOUNCEMENTS PAGE CSS
-   Scoped so it won't affect sidebar
+   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
@@ -15,17 +15,6 @@ body:not(.dark-mode) {
     background-color: #f5f7fb;
 }
 
-/* Import page specific - FIXED SELECTOR */
-.announcements-page {
-    margin-left: var(--sidebar-width);
-    padding: 20px 40px;
-    min-height: 100vh;
-    background: var(--bg-color);
-    box-sizing: border-box;
-    transition: var(--transition);
-    opacity: 1;
-}
-
 /* Quick fade-in to hide any remaining flash */
 @keyframes quickFadeIn {
     from { opacity: 0.99; }
@@ -34,6 +23,7 @@ body:not(.dark-mode) {
 
 .announcements-page {
     animation: quickFadeIn 0.1s ease-out;
+    opacity: 1;
 }
 
 /* ==================== CSS VARIABLES ==================== */
@@ -60,6 +50,7 @@ body:not(.dark-mode) {
     --text-secondary: #6c757d;
     --card-bg: white;
     --header-bg: rgba(255, 255, 255, 0.95);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Dark mode variables */
@@ -82,7 +73,8 @@ body:not(.dark-mode) {
     margin-left: var(--sidebar-width);
     padding: 20px 40px;
     min-height: 100vh;
-    background: var(--bg-color);
+    /* REMOVED solid background - now transparent to show gradient from main template */
+    background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
 }
@@ -120,11 +112,12 @@ body:not(.dark-mode) {
     text-decoration: none;
     margin-bottom: 30px;
     transition: var(--transition);
+    box-shadow: var(--shadow-sm);
 }
 
 .announcements-page .add-announcement-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
 }
 
 .announcements-page .add-announcement-btn:disabled {
@@ -134,7 +127,7 @@ body:not(.dark-mode) {
     box-shadow: none;
 }
 
-/* ==================== ANNOUNCEMENT CARDS ==================== */
+/* ==================== ANNOUNCEMENT CARDS - FLOATING CARDS ==================== */
 .announcements-page .announcement-card {
     background: var(--card-bg);
     border-radius: var(--card-radius);
@@ -144,11 +137,26 @@ body:not(.dark-mode) {
     border-left: 5px solid var(--primary-blue);
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    animation: fadeIn 0.3s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.announcements-page .announcement-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
+    transition: var(--transition);
 }
 
 .announcements-page .announcement-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .announcements-page .announcement-card h3 {
@@ -156,6 +164,10 @@ body:not(.dark-mode) {
     color: var(--text-color);
     margin: 0 0 10px 0;
     transition: var(--transition);
+}
+
+.announcements-page .announcement-card:hover h3 {
+    color: var(--primary-blue);
 }
 
 .announcements-page .announcement-card p {
@@ -173,9 +185,27 @@ body:not(.dark-mode) {
     text-align: right;
     opacity: 0.8;
     transition: var(--transition);
+    border-top: 1px dashed var(--border-color);
+    padding-top: 10px;
 }
 
-/* ==================== MODAL STYLES ==================== */
+.announcements-page .announcement-card:hover .date {
+    opacity: 1;
+}
+
+/* Stagger animation for announcement cards */
+.announcements-page .announcement-card:nth-child(1) { animation-delay: 0.05s; }
+.announcements-page .announcement-card:nth-child(2) { animation-delay: 0.1s; }
+.announcements-page .announcement-card:nth-child(3) { animation-delay: 0.15s; }
+.announcements-page .announcement-card:nth-child(4) { animation-delay: 0.2s; }
+.announcements-page .announcement-card:nth-child(5) { animation-delay: 0.25s; }
+.announcements-page .announcement-card:nth-child(6) { animation-delay: 0.3s; }
+.announcements-page .announcement-card:nth-child(7) { animation-delay: 0.35s; }
+.announcements-page .announcement-card:nth-child(8) { animation-delay: 0.4s; }
+.announcements-page .announcement-card:nth-child(9) { animation-delay: 0.45s; }
+.announcements-page .announcement-card:nth-child(10) { animation-delay: 0.5s; }
+
+/* ==================== MODAL STYLES - FLOATING CARD ==================== */
 .announcements-page .modal {
     display: none;
     position: fixed;
@@ -215,6 +245,12 @@ body:not(.dark-mode) {
     position: relative;
 }
 
+.announcements-page .modal-content:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg), 0 15px 30px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary-blue);
+}
+
 @keyframes fadeInModal {
     from { transform: translateY(-20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -228,6 +264,10 @@ body:not(.dark-mode) {
     padding-right: 30px;
     text-align: center;
     transition: var(--transition);
+}
+
+.announcements-page .modal-content:hover h3 {
+    color: var(--primary-blue);
 }
 
 /* ==================== CLOSE BUTTON ==================== */
@@ -247,11 +287,13 @@ body:not(.dark-mode) {
     align-items: center;
     justify-content: center;
     transition: var(--transition);
+    z-index: 10;
 }
 
 .announcements-page .close-btn:hover {
     background: rgba(0, 0, 0, 0.05);
     color: var(--text-color);
+    transform: rotate(90deg) scale(1.1);
 }
 
 .dark-mode .announcements-page .close-btn:hover {
@@ -288,7 +330,16 @@ body:not(.dark-mode) {
     transition: var(--transition);
     width: 100%;
     box-sizing: border-box;
-    font-family: inherit;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    box-shadow: var(--shadow-sm);
+}
+
+.announcements-page .modal-content input:hover,
+.announcements-page .modal-content textarea:hover,
+.announcements-page .modal-content select:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-blue);
 }
 
 .announcements-page .modal-content textarea {
@@ -301,7 +352,8 @@ body:not(.dark-mode) {
 .announcements-page .modal-content select:focus {
     outline: none;
     border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .announcements-page .modal-content input::placeholder,
@@ -332,6 +384,12 @@ body:not(.dark-mode) {
     cursor: pointer;
     opacity: 0.7;
     filter: invert(0.5);
+    transition: var(--transition);
+}
+
+.announcements-page .modal-content input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 .dark-mode .announcements-page .modal-content input[type="date"]::-webkit-calendar-picker-indicator {
@@ -351,11 +409,12 @@ body:not(.dark-mode) {
     cursor: pointer;
     transition: var(--transition);
     font-size: 0.95rem;
+    box-shadow: var(--shadow-sm);
 }
 
 .announcements-page .modal-content button[type="submit"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
 }
 
 /* ==================== FORM VALIDATION ==================== */
@@ -369,6 +428,25 @@ body:not(.dark-mode) {
 .announcements-page .modal-content textarea:invalid:focus,
 .announcements-page .modal-content select:invalid:focus {
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Force repaint on initial load */
+.announcements-page .announcement-card,
+.announcements-page .modal-content,
+.announcements-page .add-announcement-btn,
+.announcements-page .modal-content input,
+.announcements-page .modal-content textarea,
+.announcements-page .modal-content select {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* ==================== SCROLLBAR HIDING ==================== */
@@ -411,11 +489,19 @@ body:not(.dark-mode) {
         padding: 20px;
     }
     
+    .announcements-page .announcement-card:hover {
+        transform: translateY(-3px);
+    }
+    
     .announcements-page .modal-content {
         padding: 20px;
         margin: 10px;
         width: 95%;
         max-height: 85vh;
+    }
+    
+    .announcements-page .modal-content:hover {
+        transform: translateY(-3px);
     }
     
     .announcements-page .modal-content form {
@@ -457,5 +543,22 @@ body:not(.dark-mode) {
     .announcements-page .modal-content button[type="submit"] {
         padding: 10px 0;
         font-size: 0.9rem;
+    }
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+@media (prefers-reduced-motion: reduce) {
+    .announcements-page *,
+    .announcements-page .announcement-card,
+    .announcements-page .modal-content,
+    .announcements-page .add-announcement-btn,
+    .announcements-page .modal-content input,
+    .announcements-page .modal-content textarea,
+    .announcements-page .modal-content select,
+    .announcements-page .close-btn {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transform: none !important;
     }
 }

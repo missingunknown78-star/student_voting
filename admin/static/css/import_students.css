@@ -1,10 +1,24 @@
 /* ================================
    IMPORT STUDENTS PAGE CSS
-   Scoped so it won't affect sidebar
+   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
    ================================ */
 
+   /* ==================== INHERIT BACKGROUND FROM BASE TEMPLATE ==================== */
+/* This ensures the main-content background shows through */
+.import-students-page {
+    background: transparent !important;
+}
 
-   /* ==================== PREVENT FOUC ==================== */
+/* Make sure the main content background changes with theme */
+body.dark-mode .main-content {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+body:not(.dark-mode) .main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
 body {
     background-color: #0f172a; /* Dark background as default */
@@ -14,17 +28,6 @@ body {
 /* Light mode override */
 body:not(.dark-mode) {
     background-color: #f5f7fb;
-}
-
-/* Import page specific */
-.import-students-page {
-    margin-left: var(--sidebar-width);
-    padding: 20px 40px;
-    min-height: 100vh;
-    background: var(--bg-color);
-    box-sizing: border-box;
-    transition: var(--transition);
-    opacity: 1;
 }
 
 /* Quick fade-in to hide any remaining flash */
@@ -37,16 +40,16 @@ body:not(.dark-mode) {
     animation: quickFadeIn 0.1s ease-out;
 }
 
-
 /* ==================== CSS VARIABLES ==================== */
 :root {
     /* Light mode colors */
     --primary-blue: #1a56db;
     --secondary-blue: #3b82f6;
     --accent-teal: #06b6d4;
+    --primary-green: #16a34a;
     --success-green: #10b981;
     --warning-amber: #f59e0b;
-    --danger-red: #ef4444;
+    --danger-red: #f00c0c;
     --dark-gray: #1f2937;
     --light-gray: #f8fafc;
     --sidebar-width: 280px;
@@ -62,10 +65,14 @@ body:not(.dark-mode) {
     --text-secondary: #6c757d;
     --card-bg: white;
     --header-bg: rgba(255, 255, 255, 0.95);
+    
+    /* Import specific - light mode */
+    --table-header-bg: #f8fafc;
+    --input-bg: #f8fafc;
 }
 
-/* Dark mode variables */
-.dark-mode {
+/* Dark mode variables - applied to body.dark-mode */
+body.dark-mode {
     --bg-color: #0f172a;
     --text-color: #f1f5f9;
     --text-secondary: #cbd5e1;
@@ -77,6 +84,10 @@ body:not(.dark-mode) {
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+    
+    /* Import specific - dark mode */
+    --table-header-bg: #2d3748; /* Lighter than #334155 for better contrast */
+    --input-bg: #2d3748;
 }
 
 /* ==================== PAGE LAYOUT ==================== */
@@ -84,7 +95,8 @@ body:not(.dark-mode) {
     margin-left: var(--sidebar-width);
     padding: 20px 40px;
     min-height: 100vh;
-    background: var(--bg-color);
+    /* REMOVED solid background - now transparent to show gradient from main template */
+    background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
 }
@@ -119,7 +131,7 @@ body:not(.dark-mode) {
     flex: 0 0 auto;
 }
 
-/* Form container */
+/* Form container - FLOATING CARD */
 .import-students-page .import-form {
     background: var(--card-bg);
     border-radius: var(--card-radius);
@@ -130,6 +142,12 @@ body:not(.dark-mode) {
     height: 100%;
     box-sizing: border-box;
     transition: var(--transition);
+}
+
+.import-students-page .import-form:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 /* Form group */
@@ -146,14 +164,14 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-/* File input */
+/* File input - FIXED: Use --input-bg instead of --light-gray */
 .import-students-page input[type="file"] {
     width: 100%;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
     font-size: 0.9rem;
-    background: var(--light-gray);
+    background: var(--input-bg);
     color: var(--text-color);
     transition: var(--transition);
 }
@@ -162,6 +180,10 @@ body:not(.dark-mode) {
     outline: none;
     border-color: var(--primary-blue);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+body.dark-mode .import-students-page input[type="file"]:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 /* Import button */
@@ -192,7 +214,7 @@ body:not(.dark-mode) {
     box-shadow: none;
 }
 
-/* ==================== TOTAL STUDENTS CARD ==================== */
+/* ==================== TOTAL STUDENTS CARD - FLOATING CARD ==================== */
 .total-students-card-wrapper {
     flex: 1;
     display: flex;
@@ -214,6 +236,12 @@ body:not(.dark-mode) {
     box-sizing: border-box;
     height: 100%;
     transition: var(--transition);
+}
+
+.total-students-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--success-green);
 }
 
 .total-students-card h4 {
@@ -295,11 +323,19 @@ body:not(.dark-mode) {
 }
 
 .info-float-btn:hover {
-    transform: scale(1.1);
+    transform: scale(1.1) translateY(-2px);
     box-shadow: var(--shadow-lg);
 }
 
-/* ==================== STUDENTS TABLE ==================== */
+body.dark-mode .info-float-btn {
+    box-shadow: var(--shadow-md);
+}
+
+body.dark-mode .info-float-btn:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+/* ==================== STUDENTS TABLE - FLOATING CARD ==================== */
 .students-list {
     margin-top: 2rem;
 }
@@ -335,6 +371,10 @@ body:not(.dark-mode) {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+body.dark-mode #search-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
 #search-btn {
     padding: 10px 20px;
     border: none;
@@ -351,16 +391,22 @@ body:not(.dark-mode) {
 
 #search-btn:hover {
     background: var(--secondary-blue);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+body.dark-mode #search-btn:hover {
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5);
 }
 
 #search-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
 }
 
-/* Table Styles */
+/* Table Styles - FLOATING CARD */
 .students-table {
     width: 100%;
     border-collapse: collapse;
@@ -368,9 +414,14 @@ body:not(.dark-mode) {
     background: var(--card-bg);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
     transition: var(--transition);
+}
+
+.students-table:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 .students-table th,
@@ -381,8 +432,9 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
+/* FIXED: Use --table-header-bg instead of --light-gray */
 .students-table th {
-    background: var(--light-gray);
+    background: var(--table-header-bg);
     color: var(--text-color);
     font-weight: 600;
     font-size: 0.9rem;
@@ -397,7 +449,7 @@ body:not(.dark-mode) {
     background: rgba(59, 130, 246, 0.05);
 }
 
-.dark-mode .students-table tbody tr:hover {
+body.dark-mode .students-table tbody tr:hover {
     background: rgba(51, 65, 85, 0.3);
 }
 
@@ -428,9 +480,10 @@ body:not(.dark-mode) {
 }
 
 .pagination .page-link:hover {
-    background: var(--light-gray);
+    background: var(--table-header-bg);
     border-color: var(--primary-blue);
     transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 /* THIS IS THE CORRECT SELECTOR - Your HTML uses "active" class */
@@ -440,55 +493,47 @@ body:not(.dark-mode) {
     border-color: var(--primary-blue) !important;
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px);
 }
 
-/* Optional: Also support .current-page if you want to use that too */
-.pagination .page-link.current-page {
-    background: var(--primary-blue) !important;
-    color: white !important;
-    border-color: var(--primary-blue) !important;
-    font-weight: 600;
+body.dark-mode .pagination .page-link.active {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5) !important;
 }
 
-/* If you're using a span for current page (non-clickable) */
-.pagination span.page-link.active {
-    background: var(--primary-blue);
-    color: white;
-    border-color: var(--primary-blue);
-    font-weight: 600;
-    cursor: default;
-}
-
-/* Remove the incorrect selector */
-/* .pagination .page-item.active .page-link { ... } */
-/* ==================== STATUS BADGES ==================== */
+/* ==================== STATUS BADGES - FIXED TO USE PURE RED/GREEN ==================== */
 .status-registered,
 .status-not-registered {
     display: inline-block;
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 20px;
     font-weight: 600;
     text-align: center;
-    min-width: 100px;
-    color: white;
-    font-size: 0.85rem;
+    min-width: 80px;
+    font-size: 0.75rem;
     transition: var(--transition);
 }
 
+/* Pure green background with white text - NO transparency, NO theme changes */
 .status-registered {
-    background-color: var(--success-green);
+    background: #16a34a !important;  /* Solid green */
+    color: white !important;
 }
 
+/* Pure red background with white text - NO transparency, NO theme changes */
 .status-not-registered {
-    background-color: var(--danger-red);
+    background: #f00c0c !important;  /* Solid red */
+    color: white !important;
 }
+
+/* Remove all dark mode overrides - they're not needed anymore */
+/* body.dark-mode .status-registered and body.dark-mode .status-not-registered removed */
 
 .students-table td:nth-child(5) {
     text-align: center;
     vertical-align: middle;
 }
 
-/* ==================== INFO MODAL ==================== */
+/* ==================== INFO MODAL - FLOATING CARD ==================== */
 .info-modal-overlay {
     display: none;
     position: fixed;
@@ -515,6 +560,13 @@ body:not(.dark-mode) {
     animation: fadeInModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    position: relative;
+}
+
+.info-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
 }
 
 @keyframes fadeInModal {
@@ -570,9 +622,10 @@ body:not(.dark-mode) {
 .close-modal-btn:hover {
     background: rgba(0, 0, 0, 0.05);
     color: var(--text-color);
+    transform: rotate(90deg);
 }
 
-.dark-mode .close-modal-btn:hover {
+body.dark-mode .close-modal-btn:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
@@ -600,6 +653,47 @@ body:not(.dark-mode) {
     40% { transform: translateY(-6px); opacity: 1; }
 }
 
+/* ==================== ANIMATIONS FOR CARDS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.import-students-page .import-form,
+.import-students-page .total-students-card,
+.import-students-page .students-table {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Stagger animation for cards */
+.import-students-page .import-form { animation-delay: 0.1s; }
+.import-students-page .total-students-card { animation-delay: 0.15s; }
+.import-students-page .students-table { animation-delay: 0.2s; }
+
+/* Force repaint on initial load */
+.import-students-page .import-form,
+.import-students-page .total-students-card,
+.import-students-page .students-table,
+.info-modal {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* ==================== FORCE INITIAL RENDER FIX ==================== */
+/* This ensures dark mode applies immediately without refresh */
+body.dark-mode .import-students-page,
+body.dark-mode .import-students-page .import-form,
+body.dark-mode .import-students-page .total-students-card,
+body.dark-mode .import-students-page .students-table,
+body.dark-mode .import-students-page input[type="file"],
+body.dark-mode #search-input,
+body.dark-mode .pagination .page-link,
+body.dark-mode .info-modal {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
     .import-students-page {
@@ -625,6 +719,10 @@ body:not(.dark-mode) {
     .import-students-page .import-form {
         width: 100%;
         height: auto;
+    }
+    
+    .import-students-page .import-form:hover {
+        transform: translateY(-3px);
     }
     
     .total-students-card-wrapper {
@@ -659,6 +757,10 @@ body:not(.dark-mode) {
 }
 
 @media (max-width: 480px) {
+    .import-students-page {
+        padding: 15px;
+    }
+    
     .import-students-page .page-title {
         font-size: 1.5rem;
     }
@@ -676,7 +778,14 @@ body:not(.dark-mode) {
     }
     
     .info-modal {
-        margin: 80px auto;
+        margin: 60px auto;
         padding: 1.2rem 1.5rem;
+    }
+    
+    .pagination .page-link {
+        padding: 6px 10px;
+        min-width: 32px;
+        min-height: 32px;
+        font-size: 0.85rem;
     }
 }

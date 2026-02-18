@@ -42,24 +42,24 @@
 }
 .pagination button {
     padding: 6px 12px;
-    border: 1px solid #ddd;
-    background-color: #f8f9fa;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
     cursor: pointer;
     border-radius: 4px;
     font-size: 0.9rem;
-    color: #2c3e50;
+    color: var(--text-color);
     transition: all 0.2s ease;
     min-width: 36px;
 }
 .pagination button:hover:not(:disabled) {
-    background-color: #3498db;
+    background-color: var(--primary-blue);
     color: white;
-    border-color: #3498db;
+    border-color: var(--primary-blue);
 }
 .pagination button:disabled {
-    background-color: #3498db;
+    background-color: var(--primary-blue);
     color: white;
-    border-color: #3498db;
+    border-color: var(--primary-blue);
     cursor: default;
 }
 
@@ -95,6 +95,46 @@
 .edit-btn:hover { background-color: #3498db; transform: translateY(-1px); }
 .delete-btn { background-color: #c0392b; color: #fff; }
 .delete-btn:hover { background-color: #e74c3c; transform: translateY(-1px); }
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.manage-students-page {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+body.dark-mode .status-badge.voted {
+    background-color: #27ae60;
+}
+
+body.dark-mode .status-badge.not-voted {
+    background-color: #c0392b;
+}
+
+body.dark-mode .edit-btn {
+    background-color: #3498db;
+}
+
+body.dark-mode .delete-btn {
+    background-color: #e74c3c;
+}
 </style>
 {% endblock %}
 
@@ -213,6 +253,9 @@ function loadStudents(page = 1) {
             for (let i = 1; i <= data.total_pages; i++) {
                 pagination.innerHTML += `<button onclick="loadStudents(${i})" ${i === data.current_page ? "disabled" : ""}>${i}</button>`;
             }
+            
+            // Ensure theme is applied to newly loaded content
+            applyThemeToMainContent();
         });
 }
 
@@ -248,7 +291,89 @@ function exportExcel() {
     window.location.href = url;
 }
 
+// =============== THEME SYNCHRONIZATION FIX ===============
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on body
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+                applyThemeToMainContent();
+            }
+        });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+    
+    // Also watch for changes to the main-content class
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// Handle any future AJAX loads
+$(document).ajaxComplete(function() {
+    setTimeout(applyThemeToMainContent, 50);
+});
+
 // === INIT ===
-document.addEventListener("DOMContentLoaded", () => loadStudents());
+document.addEventListener("DOMContentLoaded", () => {
+    loadStudents();
+    applyThemeToMainContent();
+});
 </script>
 {% endblock %}

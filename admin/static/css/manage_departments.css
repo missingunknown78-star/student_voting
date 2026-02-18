@@ -1,33 +1,18 @@
 /* ================================
-   DARK MODE CSS WITH FOUC PREVENTION
+   MANAGE DEPARTMENTS & COURSES CSS
+   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
-/* Set initial dark background to prevent flash */
-body {
-    background-color: #0f172a; /* Dark background as default */
-    transition: background-color 0.3s ease;
-}
-
-/* Light mode override */
-body:not(.dark-mode) {
-    background-color: #f5f7fb;
-}
-
 /* Quick fade-in to hide any remaining flash */
 @keyframes quickFadeIn {
     from { opacity: 0.99; }
     to { opacity: 1; }
 }
 
-.container {
-    animation: quickFadeIn 0.1s ease-out;
-}
-
 /* ==================== CSS VARIABLES ==================== */
 :root {
-    /* Layout Variables */
-    --content-gap: 20px;
+    /* Layout Variables - Match sidebar width */
     --sidebar-width: 280px;
     
     /* Light mode colors */
@@ -62,6 +47,7 @@ body:not(.dark-mode) {
     --link-bg: rgba(239, 68, 68, 0.05);
     --link-hover-bg: rgba(239, 68, 68, 0.1);
     --link-border: rgba(239, 68, 68, 0.2);
+    --filter-bg: #f8f9fa;
 }
 
 /* Dark mode variables */
@@ -80,42 +66,68 @@ body:not(.dark-mode) {
     --link-bg: rgba(248, 113, 113, 0.1);
     --link-hover-bg: rgba(248, 113, 113, 0.2);
     --link-border: rgba(248, 113, 113, 0.3);
+    --filter-bg: #1e293b;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* ===================== Layout ===================== */
+/* ==================== PAGE LAYOUT ==================== */
 .container {
-    padding: 30px;
-    margin-left: calc(var(--sidebar-width) + var(--content-gap));
-    max-width: 1200px;
+    margin-left: var(--sidebar-width);  /* Match sidebar width */
+    padding: 30px 40px;
     min-height: 100vh;
-    background-color: var(--bg-color);
-    padding-top: 3px;
-    color: var(--text-color);
+    box-sizing: border-box;
     transition: var(--transition);
+    /* REMOVED gradient background - now transparent to show gradient from main template */
+    background: transparent;
+    position: relative;
 }
 
-/* -------------------- Cards -------------------- */
-.card {
+/* Dark mode container */
+.dark-mode .container {
+    background: transparent;
+}
+
+/* Page Header */
+.container h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: var(--text-color);
+    transition: var(--transition);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+/* -------------------- Cards - Floating Effect -------------------- */
+.container .card {
     background-color: var(--card-bg);
     border-radius: var(--card-radius);
     padding: 25px;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
     transition: var(--transition);
     color: var(--text-color);
+    animation: fadeIn 0.3s ease-out;
 }
 
-.card:hover {
+.container .card:hover {
     box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
+    transform: translateY(-5px);
+    border-color: var(--button-primary);
 }
 
-/* -------------------- Headings -------------------- */
-.card h3 {
+/* Stagger animation for cards */
+.container .card:nth-child(1) { animation-delay: 0.05s; } /* Page header card? */
+.container .card:nth-child(2) { animation-delay: 0.1s; } /* Add Department */
+.container .card:nth-child(3) { animation-delay: 0.15s; } /* Departments Table */
+.container .card:nth-child(4) { animation-delay: 0.2s; } /* Add Course */
+.container .card:nth-child(5) { animation-delay: 0.25s; } /* Courses Table */
+
+/* -------------------- Card Headings -------------------- */
+.container .card h3 {
     margin-bottom: 20px;
     font-size: 1.3rem;
     color: var(--text-color);
@@ -127,7 +139,7 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-.card h3:before {
+.container .card h3:before {
     content: "";
     display: inline-block;
     width: 4px;
@@ -138,39 +150,53 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-/* -------------------- Forms -------------------- */
-.card form {
+/* -------------------- Forms - Floating Elements -------------------- */
+.container .card form {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
     align-items: flex-end;
 }
 
-.card form input[type="text"],
-.card form select {
+.container .card form input[type="text"],
+.container .card form select {
     padding: 12px 15px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     flex: 1;
-    min-width: 200px;
+    min-width: 250px;
     font-size: 15px;
     transition: var(--transition);
     background-color: var(--input-bg);
     color: var(--text-color);
+    box-shadow: var(--shadow-sm);
 }
 
-.card form input[type="text"]::placeholder {
+.container .card form input[type="text"]:hover,
+.container .card form select:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--button-primary);
+}
+
+.container .card form input[type="text"]::placeholder {
     color: var(--text-secondary);
 }
 
-.card form input[type="text"]:focus,
-.card form select:focus {
+.container .card form input[type="text"]:focus,
+.container .card form select:focus {
     outline: none;
     border-color: var(--button-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), var(--shadow-md);
+    transform: translateY(-2px);
 }
 
-.card form select {
+.dark-mode .container .card form input[type="text"]:focus,
+.dark-mode .container .card form select:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), var(--shadow-md);
+}
+
+.container .card form select {
     appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
@@ -179,11 +205,11 @@ body:not(.dark-mode) {
     padding-right: 40px;
 }
 
-.dark-mode .card form select {
+.dark-mode .container .card form select {
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
-.card form button {
+.container .card form button {
     padding: 12px 24px;
     background-color: var(--button-primary);
     color: #fff;
@@ -197,33 +223,97 @@ body:not(.dark-mode) {
     display: flex;
     align-items: center;
     gap: 8px;
+    box-shadow: var(--shadow-sm);
 }
 
-.card form button:hover {
+.container .card form button:hover {
     background-color: var(--button-primary-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.container .card form button:active {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
 }
 
-.card form button:active {
-    transform: translateY(0);
+.dark-mode .container .card form button:hover {
+    box-shadow: var(--shadow-lg);
 }
 
-/* -------------------- Tables -------------------- */
-table {
+/* -------------------- Action Buttons - Floating -------------------- */
+.edit-btn, .delete-btn, .select-all-btn {
+    padding: 8px 16px;
+    margin-right: 8px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.edit-btn {
+    background-color: var(--secondary-blue);
+    color: #fff;
+}
+
+.edit-btn:hover {
+    background-color: var(--primary-blue);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+}
+
+.delete-btn {
+    background-color: var(--danger-red);
+    color: #fff;
+}
+
+.delete-btn:hover {
+    background-color: var(--danger-red);
+    opacity: 0.9;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+}
+
+.select-all-btn {
+    background-color: var(--accent-teal);
+    color: #fff;
+}
+
+.select-all-btn:hover {
+    background-color: var(--accent-teal);
+    opacity: 0.9;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(6, 182, 212, 0.4);
+}
+
+/* -------------------- Tables - Floating Cards -------------------- */
+.container table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     margin-top: 15px;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     background-color: var(--card-bg);
     transition: var(--transition);
+    border: 1px solid var(--border-color);
 }
 
-table th,
-table td {
+.container table:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--button-primary);
+}
+
+.container table th,
+.container table td {
     padding: 14px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
@@ -231,7 +321,7 @@ table td {
     transition: var(--transition);
 }
 
-table th {
+.container table th {
     background-color: var(--table-header-bg);
     color: var(--text-color);
     font-weight: 600;
@@ -239,47 +329,37 @@ table th {
     border-bottom: 2px solid var(--border-color);
 }
 
-table tr {
+.container table tr {
     transition: var(--transition);
 }
 
-table tr:last-child td {
+.container table tr:last-child td {
     border-bottom: none;
 }
 
-table tr:hover {
+.container table tr:hover {
     background-color: var(--table-hover);
 }
 
-/* -------------------- Action Links -------------------- */
-a {
-    color: var(--link-color);
-    text-decoration: none;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
+/* Selection column */
+.select-col {
+    width: 40px;
+    text-align: center;
+}
+
+.select-col input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--button-primary);
     transition: var(--transition);
-    background-color: var(--link-bg);
-    border: 1px solid transparent;
 }
 
-a:hover {
-    text-decoration: none;
-    background-color: var(--link-hover-bg);
-    border-color: var(--link-border);
-    transform: translateY(-1px);
+.select-col input[type="checkbox"]:hover {
+    transform: scale(1.1);
 }
 
-/* Add icon to delete links */
-a[onclick*="delete"]:before {
-    content: "🗑️";
-    font-size: 16px;
-}
-
-/* -------------------- FLASH MESSAGES -------------------- */
+/* -------------------- Flash Messages (if any) -------------------- */
 .flash-container {
     margin-bottom: 20px;
 }
@@ -291,12 +371,14 @@ a[onclick*="delete"]:before {
     color: white;
     font-size: 0.9rem;
     animation: fadeInFlash 0.5s forwards;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    transform: translateZ(0);
 }
 
-.dark-mode .flash-message {
-    border: 1px solid var(--border-color);
+.flash-message:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
 }
 
 .flash-message.success {
@@ -316,81 +398,134 @@ a[onclick*="delete"]:before {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* -------------------- Responsive Adjustments -------------------- */
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes quickFadeIn {
+    from { opacity: 0.99; }
+    to { opacity: 1; }
+}
+
+/* Force repaint on initial load */
+.container .card,
+.container table,
+.container .card form input[type="text"],
+.container .card form select,
+.container .card form button,
+.edit-btn, .delete-btn, .select-all-btn,
+.flash-message {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
     .container {
-        margin-left: var(--content-gap);
-        padding: 20px;
+        margin-left: 250px;  /* Adjust for slightly smaller sidebar */
+        padding: 25px 30px;
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
     .container {
-        margin-left: 0;
-        padding: 15px;
-    }
-
-    .card {
+        margin-left: 0;  /* Remove margin on mobile when sidebar collapses */
         padding: 20px;
     }
 
-    .card form {
+    .container .card {
+        padding: 20px;
+    }
+    
+    .container .card:hover {
+        transform: translateY(-3px);
+    }
+
+    .container .card form {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .card form input[type="text"],
-    .card form select {
+    .container .card form input[type="text"],
+    .container .card form select {
         min-width: 100%;
     }
 
-    table {
+    .container table {
         display: block;
         overflow-x: auto;
         white-space: nowrap;
+    }
+    
+    .container table:hover {
+        transform: translateY(-3px);
+    }
+
+    .edit-btn, .delete-btn, .select-all-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
     }
 }
 
 @media (max-width: 480px) {
     .container {
-        padding: 10px;
+        padding: 15px;
     }
 
-    .card {
+    .container h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .container .card {
         padding: 15px;
         border-radius: 8px;
+        margin-bottom: 20px;
     }
 
-    .card h3 {
+    .container .card h3 {
         font-size: 1.1rem;
+        margin-bottom: 15px;
     }
 
-    table th,
-    table td {
+    .container .card form button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .container table th,
+    .container table td {
         padding: 10px 12px;
         font-size: 0.9rem;
     }
 
-    a {
-        padding: 5px 8px;
-        font-size: 0.9rem;
+    .edit-btn, .delete-btn, .select-all-btn {
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        margin-right: 5px;
     }
 }
 
-/* -------------------- Print Styles -------------------- */
+/* ==================== PRINT STYLES ==================== */
 @media print {
     .container {
         margin-left: 0;
         padding: 0;
+        background: white;
     }
 
-    .card {
+    .container .card {
         box-shadow: none;
         border: 1px solid #ddd;
         break-inside: avoid;
+        transform: none;
     }
 
-    a {
+    .edit-btn, .delete-btn, .select-all-btn {
         display: none;
     }
 }

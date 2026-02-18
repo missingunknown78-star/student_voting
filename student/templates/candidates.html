@@ -94,68 +94,82 @@
                 {% endif %}
             </div>
 
-            <div class="candidates-grid">
-                {% for c in election_candidates %}
-                <div class="candidate-card" data-position="{{ c.position.name|lower|replace(' ', '-') }}">
-                    <!-- Candidate Header -->
-                    <div class="candidate-header">
-                        <div class="candidate-photo" 
-                             data-photo-url="{% if c.photo %}{{ url_for('admin.static', filename='images/' ~ c.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
-                             onclick="openCandidatePhoto(this)">
-                            {% if c.photo %}
-                                <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
-                                     alt="{{ c.first_name }} {{ c.last_name }}"
-                                     class="candidate-photo-img">
+            {# Group candidates by position within this election #}
+            {% set candidates_by_position = {} %}
+            {% for c in election_candidates %}
+                {% if c.position %}
+                    {% set position_name = c.position.name %}
+                    {% if position_name not in candidates_by_position %}
+                        {% set _ = candidates_by_position.update({position_name: [c]}) %}
+                    {% else %}
+                        {% set _ = candidates_by_position[position_name].append(c) %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {# Display each position group #}
+            {% for position_name, position_candidates in candidates_by_position.items()|sort %}
+            <div class="position-group" data-position="{{ position_name|lower|replace(' ', '-') }}">
+                <h3 class="position-group-title">{{ position_name }}</h3>
+                <div class="candidates-grid">
+                    {% for c in position_candidates %}
+                    <div class="candidate-card" data-position="{{ c.position.name|lower|replace(' ', '-') }}">
+                        <!-- Candidate Header -->
+                        <div class="candidate-header">
+                            <div class="candidate-photo" 
+                                 data-photo-url="{% if c.photo %}{{ url_for('admin.static', filename='images/' ~ c.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
+                                 onclick="openCandidatePhoto(this)">
+                                {% if c.photo %}
+                                    <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
+                                         alt="{{ c.first_name }} {{ c.last_name }}"
+                                         class="candidate-photo-img">
+                                {% else %}
+                                    <span class="candidate-initials">
+                                        {{ c.first_name[0] }}{{ c.last_name[0] }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Candidate Info -->
+                        <div class="candidate-info">
+                            <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
+                            <p class="candidate-course">
+                                {% if c.course %}
+                                    {{ c.course }} 
+                                    {% if c.year_level %}• {{ c.year_level }}{% endif %}
+                                {% else %}
+                                    Student Candidate
+                                {% endif %}
+                            </p>
+                            
+                            {% if c.party_list %}
+                            <div class="party-badge">{{ c.party_list }}</div>
                             {% else %}
-                                <span class="candidate-initials">
-                                    {{ c.first_name[0] }}{{ c.last_name[0] }}
-                                </span>
+                            <div class="party-badge independent">INDEPENDENT</div>
+                            {% endif %}
+                            
+                            {% if c.platform %}
+                            <div class="candidate-platform">
+                                <h4 class="platform-title">Platform:</h4>
+                                <p class="platform-text">{{ c.platform[:100] }}{% if c.platform|length > 100 %}...{% endif %}</p>
+                            </div>
                             {% endif %}
                         </div>
                         
-                        <div class="candidate-badges">
-                            <span class="position-badge">{{ c.position.name if c.position else 'No Position' }}</span>
+                        <!-- Candidate Actions -->
+                        <div class="candidate-actions">
+                            <button class="btn btn-secondary btn-small view-profile-btn"
+                                    onclick="viewCandidateProfile('{{ c.id }}')">
+                                <span class="btn-icon">📄</span>
+                                View Profile
+                            </button>
                         </div>
                     </div>
-                    
-                    <!-- Candidate Info -->
-                    <div class="candidate-info">
-                        <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
-                        <p class="candidate-course">
-                            {% if c.course %}
-                                {{ c.course }} 
-                                {% if c.year_level %}• {{ c.year_level }}{% endif %}
-                            {% else %}
-                                Student Candidate
-                            {% endif %}
-                        </p>
-                        
-                        {% if c.platform %}
-                        <div class="candidate-platform">
-                            <h4 class="platform-title">Platform:</h4>
-                            <p class="platform-text">{{ c.platform[:100] }}{% if c.platform|length > 100 %}...{% endif %}</p>
-                        </div>
-                        {% endif %}
-                        
-                        {% if c.election %}
-                        <div class="candidate-election">
-                            <span class="election-icon">🗳️</span>
-                            <span class="election-name">{{ c.election.title }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Candidate Actions -->
-                    <div class="candidate-actions">
-                        <button class="btn btn-secondary btn-small view-profile-btn"
-                                onclick="viewCandidateProfile('{{ c.id }}')">
-                            <span class="btn-icon">📄</span>
-                            View Profile
-                        </button>
-                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
+            {% endfor %}
         </div>
         {% endfor %}
 
@@ -299,24 +313,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function filterCandidates(position) {
-        const candidateCards = document.querySelectorAll('.candidate-card');
-        const tabs = document.querySelectorAll('.tab-btn');
+        const positionGroups = document.querySelectorAll('.position-group');
+        
+        positionGroups.forEach(group => {
+            if (position === 'all' || group.dataset.position === position) {
+                group.style.display = 'block';
+            } else {
+                group.style.display = 'none';
+            }
+        });
         
         // Update tab buttons
+        const tabs = document.querySelectorAll('.tab-btn');
         tabs.forEach(tab => {
             if (tab.dataset.position === position) {
                 tab.classList.add('active');
             } else {
                 tab.classList.remove('active');
-            }
-        });
-        
-        // Filter cards
-        candidateCards.forEach(card => {
-            if (position === 'all' || card.dataset.position === position) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
             }
         });
     }

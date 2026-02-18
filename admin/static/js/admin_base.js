@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const floatingThemeBtn = document.getElementById('floatingThemeBtn');
     const floatingThemeIcon = floatingThemeBtn.querySelector('i');
     const mainContent = document.querySelector('.main-content');
+    const body = document.body;
     
     // Ensure theme-applied class is added
     if (mainContent && !mainContent.classList.contains('theme-applied')) {
@@ -16,11 +17,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // If no theme saved, check system preference
     if (!savedTheme) {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (prefersDark && !mainContent.classList.contains('dark-mode')) {
+        if (prefersDark) {
+            // Apply to BOTH
+            body.classList.add('dark-mode');
             mainContent.classList.add('dark-mode');
             localStorage.setItem('theme', 'dark');
         } else {
+            // Remove from BOTH
+            body.classList.remove('dark-mode');
+            mainContent.classList.remove('dark-mode');
             localStorage.setItem('theme', 'light');
+        }
+    } else {
+        // Apply saved theme to BOTH
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-mode');
+            mainContent.classList.add('dark-mode');
+        } else {
+            body.classList.remove('dark-mode');
+            mainContent.classList.remove('dark-mode');
         }
     }
     
@@ -51,6 +66,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function enableDarkMode() {
+        // Apply to BOTH body and main-content
+        body.classList.add('dark-mode');
         mainContent.classList.add('dark-mode');
         floatingThemeIcon.className = 'fa-solid fa-sun';
         floatingThemeBtn.title = 'Switch to Light Mode';
@@ -58,6 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function enableLightMode() {
+        // Remove from BOTH body and main-content
+        body.classList.remove('dark-mode');
         mainContent.classList.remove('dark-mode');
         floatingThemeIcon.className = 'fa-solid fa-moon';
         floatingThemeBtn.title = 'Switch to Dark Mode';
@@ -144,9 +163,12 @@ document.addEventListener('DOMContentLoaded', function() {
 window.AdminBase = {
     enableDarkMode: function() {
         const mainContent = document.querySelector('.main-content');
+        const body = document.body;
         const floatingThemeIcon = document.querySelector('#floatingThemeBtn i');
         const floatingThemeBtn = document.getElementById('floatingThemeBtn');
         
+        // Apply to BOTH
+        body.classList.add('dark-mode');
         mainContent.classList.add('dark-mode');
         if (floatingThemeIcon) floatingThemeIcon.className = 'fa-solid fa-sun';
         if (floatingThemeBtn) floatingThemeBtn.title = 'Switch to Light Mode';
@@ -155,9 +177,12 @@ window.AdminBase = {
     
     enableLightMode: function() {
         const mainContent = document.querySelector('.main-content');
+        const body = document.body;
         const floatingThemeIcon = document.querySelector('#floatingThemeBtn i');
         const floatingThemeBtn = document.getElementById('floatingThemeBtn');
         
+        // Remove from BOTH
+        body.classList.remove('dark-mode');
         mainContent.classList.remove('dark-mode');
         if (floatingThemeIcon) floatingThemeIcon.className = 'fa-solid fa-moon';
         if (floatingThemeBtn) floatingThemeBtn.title = 'Switch to Dark Mode';

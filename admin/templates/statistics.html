@@ -7,6 +7,82 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.stats-page {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+body.dark-mode .stats-header {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+}
+
+body.dark-mode .kpi-card,
+body.dark-mode .filter-container,
+body.dark-mode .chart-card,
+body.dark-mode .insights-panel,
+body.dark-mode .stat-card,
+body.dark-mode .no-data {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .kpi-card:hover,
+body.dark-mode .filter-container:hover,
+body.dark-mode .chart-card:hover,
+body.dark-mode .insights-panel:hover,
+body.dark-mode .stat-card:hover,
+body.dark-mode .no-data:hover {
+    border-color: var(--primary-blue);
+}
+
+body.dark-mode .insight-item,
+body.dark-mode .election-meta,
+body.dark-mode .vote-summary,
+body.dark-mode .candidate-row {
+    background: var(--light-gray);
+}
+
+body.dark-mode .filter-group select {
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .period-btn.active {
+    background: white;
+    color: var(--primary-blue);
+}
+
+body.dark-mode .change-neutral {
+    background: var(--light-gray);
+    color: var(--text-color);
+}
+
+body.dark-mode .chart-container {
+    filter: brightness(0.9) contrast(1.1);
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -216,6 +292,105 @@
 <!-- JSON DATA -->
 <script id="electionData" type="application/json">
 {{ election_stats | tojson }}
+</script>
+
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class - ONLY to mainContent
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on main-content ONLY
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// Reapply theme when charts are updated or interactions happen
+document.addEventListener('DOMContentLoaded', function() {
+    applyThemeToMainContent();
+    
+    // Also check periodically for the first 2 seconds (in case main content loads later)
+    let checkCount = 0;
+    const checkInterval = setInterval(function() {
+        if (document.querySelector('.main-content') || checkCount > 20) {
+            clearInterval(checkInterval);
+            applyThemeToMainContent();
+        }
+        checkCount++;
+    }, 100);
+    
+    // Add event listeners to all interactive elements to reapply theme on interaction
+    const interactiveElements = document.querySelectorAll('.kpi-card, .chart-card, .insight-item, .stat-card, .no-data, .filter-group select, .export-btn');
+    interactiveElements.forEach(element => {
+        element.addEventListener('mouseenter', function() {
+            setTimeout(applyThemeToMainContent, 10);
+        });
+        element.addEventListener('click', function() {
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    });
+    
+    // Watch for filter changes
+    const filterSelects = document.querySelectorAll('#filter-election-type, #filter-department, #sort-by');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            setTimeout(applyThemeToMainContent, 50);
+        });
+    });
+});
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/statistics.js') }}"></script>

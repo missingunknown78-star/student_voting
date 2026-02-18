@@ -45,6 +45,7 @@ class Candidate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
+    party_list = db.Column(db.String(200), nullable=True)  # New party list field
     
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     department = db.relationship('Department', backref='candidates', lazy=True)
@@ -54,20 +55,10 @@ class Candidate(db.Model):
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))
     election = db.relationship('Election', backref='candidates', lazy=True)
 
-    # Remove or comment out this relationship since Vote no longer has candidate_id
-    # votes = db.relationship(
-    #     'Vote', 
-    #     back_populates='candidate', 
-    #     lazy=True,
-    #     overlaps="candidate_votes"
-    # )
-    
-    # If you still want a way to count votes (for results), you can add a property
-    # that doesn't create a database relationship:
     @property
     def vote_count(self):
         # This will be calculated dynamically using encrypted votes
-        from student.routes import count_votes_for_candidate  # Import your vote counting function
+        from student.routes import count_votes_for_candidate
         return count_votes_for_candidate(self.id)
 
 # ------------------- ELECTION -------------------

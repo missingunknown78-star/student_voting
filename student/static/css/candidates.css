@@ -113,8 +113,8 @@
     padding: 16px;
     border-radius: 12px;
     margin-bottom: 16px;
-    border: 2px solid var(--primary); /* Changed from left border to all borders */
-    text-align: center; /* Center align all text */
+    border: 2px solid var(--primary);
+    text-align: center;
 }
 
 .election-title-section {
@@ -122,9 +122,9 @@
     font-weight: 700;
     margin-bottom: 6px;
     color: var(--dark);
-    display: flex; /* Added for better centering */
-    justify-content: center; /* Center the text */
-    align-items: center; /* Center vertically if needed */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .election-type {
@@ -135,24 +135,40 @@
     font-size: 0.7rem;
     color: var(--primary);
     font-weight: 500;
-    margin: 0 auto; /* Center the election type badge */
+    margin: 0 auto;
 }
-/* Candidates Grid */
+
+/* Position Group */
+.position-group {
+    margin-bottom: 24px;
+}
+
+.position-group-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 12px;
+    padding-left: 8px;
+    border-left: 4px solid var(--primary);
+}
+
+/* Candidates Grid - 2 Columns */
 .candidates-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
     margin-bottom: 20px;
 }
 
 .candidate-card {
     background: white;
     border-radius: 12px;
-    padding: 16px;
+    padding: 12px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
     border: 2px solid transparent;
     transition: var(--transition);
-    display: block;
+    display: flex;
+    flex-direction: column;
 }
 
 .candidate-card:active {
@@ -163,14 +179,13 @@
 
 .candidate-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 14px;
+    justify-content: center;
+    margin-bottom: 10px;
 }
 
 .candidate-photo {
-    width: 56px;
-    height: 56px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -183,6 +198,7 @@
     background: linear-gradient(135deg, var(--primary), var(--primary-light));
     cursor: pointer;
     position: relative;
+    margin: 0 auto;
 }
 
 .candidate-photo-img {
@@ -196,30 +212,13 @@
     color: white;
 }
 
-.candidate-badges {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-end;
-}
-
-.position-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, #4361ee, #3f37c9);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
 .candidate-info {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+    text-align: center;
 }
 
 .candidate-name {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
     font-weight: 700;
     margin-bottom: 4px;
     color: var(--dark);
@@ -227,59 +226,65 @@
 }
 
 .candidate-course {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--gray);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     line-height: 1.4;
+}
+
+/* Party List Badge */
+.party-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.party-badge.independent {
+    background: #94a3b8;
+    color: white;
 }
 
 .candidate-platform {
     background: #f8f9fa;
-    padding: 10px;
+    padding: 8px;
     border-radius: 8px;
-    margin-bottom: 12px;
+    margin-top: 8px;
+    text-align: left;
 }
 
 .platform-title {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: var(--dark);
 }
 
 .platform-text {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: var(--gray);
     line-height: 1.4;
     margin: 0;
 }
 
-.candidate-election {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px;
-    background: white;
-    border-radius: 6px;
-    border: 1px solid var(--gray-light);
-    font-size: 0.75rem;
-    color: var(--gray);
-}
-
-.election-icon {
-    font-size: 0.9rem;
-}
-
 .candidate-actions {
     display: flex;
-    justify-content: flex-end;
-    padding-top: 14px;
-    border-top: 1px solid var(--gray-light);
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 8px;
 }
 
 .view-profile-btn {
-    padding: 8px 14px;
-    font-size: 0.75rem;
+    padding: 6px 10px;
+    font-size: 0.65rem;
+    width: 100%;
+    justify-content: center;
 }
 
 /* Filter Card */
@@ -547,33 +552,29 @@
 
 /* Responsive Adjustments */
 @media (max-width: 360px) {
-    .position-tabs {
-        gap: 4px;
-    }
-    
-    .tab-btn {
-        padding: 8px 12px;
-        font-size: 0.75rem;
-    }
-    
     .candidates-grid {
-        gap: 12px;
-    }
-    
-    .candidate-card {
-        padding: 14px;
+        gap: 8px;
     }
     
     .candidate-photo {
-        width: 50px;
-        height: 50px;
-        font-size: 1.1rem;
+        width: 60px;
+        height: 60px;
+    }
+    
+    .candidate-name {
+        font-size: 0.85rem;
     }
 }
 
-@media (min-width: 500px) {
+@media (min-width: 768px) {
     .candidates-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .candidates-grid {
+        grid-template-columns: repeat(4, 1fr);
     }
 }
 

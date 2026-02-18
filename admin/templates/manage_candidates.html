@@ -4,6 +4,66 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_candidates.css') }}">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/positions.css') }}">
+
+<style>
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.container {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides for buttons */
+body.dark-mode .edit-btn {
+    background: #2980b9;
+}
+
+body.dark-mode .delete-btn {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+body.dark-mode .cancel-btn {
+    background: var(--light);
+    color: var(--dark);
+}
+
+/* Ensure modal text colors work in dark mode */
+body.dark-mode .lightbox-content {
+    color: var(--modal-text);
+}
+
+body.dark-mode .lightbox-content h2,
+body.dark-mode .lightbox-content label {
+    color: var(--modal-text);
+}
+
+/* Fix for filter form selects in dark mode */
+body.dark-mode .filter-form select {
+    color: var(--text-color);
+    background-color: var(--card-bg);
+}
+
+/* Fix for table cell colors in dark mode */
+body.dark-mode .candidates-table td {
+    color: var(--text-color);
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -51,6 +111,7 @@
             <tr>
                 <th>Photo</th>
                 <th>Student Name</th>
+                <th>Party List</th>
                 <th>Department</th>
                 <th>Position</th>
                 <th>Actions</th>
@@ -69,6 +130,7 @@
                     {% endif %}
                 </td>
                 <td>{{ c.first_name }} {{ c.last_name }}</td>
+                <td>{{ c.party_list or '' }}</td>
                 <td>{{ c.department.name if c.department else '' }}</td>
                 <td>{{ c.position.name }}</td>
                 <td>
@@ -77,6 +139,7 @@
                        data-id="{{ c.id }}"
                        data-first="{{ c.first_name }}"
                        data-last="{{ c.last_name }}"
+                       data-party="{{ c.party_list or '' }}"
                        data-position="{{ c.position_id }}"
                        data-election="{{ c.election_id }}"
                        data-department="{{ c.department.name if c.department else '' }}"
@@ -223,6 +286,13 @@
                 <input type="text" name="last_name" id="add_last_name" required placeholder=" ">
             </div>
 
+            <!-- NEW: Party List Field -->
+            <div class="form-group">
+                <label>Party List</label>
+                <input type="text" name="party_list" id="add_party_list" placeholder="Enter party list (e.g., Lakas, Aksyon, etc.)">
+                <small style="color: #64748b; font-size: 0.7rem; display: block; margin-top: 4px;">Optional: Leave blank if independent</small>
+            </div>
+
             <div class="form-group">
                 <label>Election Type</label>
                 <select name="election_type" id="add_election_type" required>
@@ -295,6 +365,13 @@
                 <input type="text" name="last_name" id="edit_last" required placeholder=" ">
             </div>
 
+            <!-- NEW: Party List Field for Edit -->
+            <div class="form-group">
+                <label>Party List</label>
+                <input type="text" name="party_list" id="edit_party_list" placeholder="Enter party list">
+                <small style="color: #64748b; font-size: 0.7rem; display: block; margin-top: 4px;">Optional: Leave blank if independent</small>
+            </div>
+
             <div class="form-group">
                 <label>Election Type</label>
                 <select name="election_type" id="edit_election_type" required>
@@ -349,4 +426,91 @@
 
 <script src="{{ url_for('admin.static', filename='js/manage_candidates.js') }}"></script>
 <script src="{{ url_for('admin.static', filename='js/positions.js') }}"></script>
+
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay to catch any late initialization
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the theme toggle button or inside it
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            // Small delay to let localStorage update
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events (if theme changed in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer to watch for class changes on body
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+                applyThemeToMainContent();
+            }
+        });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+    
+    // Also watch for changes to the main-content class
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            // Just ensure theme-applied is present
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// Handle any modal openings to ensure theme is applied
+document.addEventListener('DOMContentLoaded', function() {
+    // Reapply theme when any modal is opened
+    const modalTriggers = document.querySelectorAll('[id^="open"]');
+    modalTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function() {
+            setTimeout(applyThemeToMainContent, 50);
+        });
+    });
+});
+</script>
 {% endblock %}
