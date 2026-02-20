@@ -1,0 +1,868 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Manage Elections{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
+
+<style>
+/* Stack Title + Scope closer and align Description */
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem; /* closer spacing between title and scope */
+    flex: 1;
+}
+
+.description-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.description-column textarea {
+    flex: 1; /* stretch to match left column */
+}
+
+/* Optional: adjust top row spacing */
+.form-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.create-election-page {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+body.dark-mode .election-form-container {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .election-form-group input,
+body.dark-mode .election-form-group select,
+body.dark-mode .election-form-group textarea {
+    background: var(--light-gray);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .election-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .election-card.active {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+body.dark-mode .election-list p {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+/* New styles for scope badges */
+.scope-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.scope-badge.campus {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+}
+
+.scope-badge.department {
+    background: linear-gradient(135deg, #007bff, #0d6efd);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+}
+
+/* Year level badge */
+.year-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 5px;
+    background: linear-gradient(135deg, #ff6b6b, #ee5253);
+    color: white;
+    box-shadow: 0 2px 5px rgba(238, 82, 83, 0.3);
+}
+
+.year-badge.all-years {
+    background: linear-gradient(135deg, #6c5ce7, #a363d9);
+}
+
+/* Required field indicator */
+.required {
+    color: #dc3545;
+    margin-left: 3px;
+}
+
+/* Form hint text */
+.form-hint {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* Year level checkboxes styling */
+.year-level-container {
+    margin-top: 10px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.year-level-container h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.year-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.year-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.year-checkbox-item input[type="checkbox"] {
+    width: auto;
+    margin-right: 3px;
+    cursor: pointer;
+}
+
+.year-checkbox-item label {
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.year-checkbox-all {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.year-checkbox-all input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .year-level-container {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Disabled state for year checkboxes */
+.year-checkbox-item input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.year-checkbox-item.disabled label {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==================== IMPROVED FLASH MESSAGES ==================== */
+.flash-container {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.flash-message {
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInDown 0.5s ease forwards;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left: 5px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Success message - Light green */
+.flash-message.success {
+    background: #d4edda;
+    color: #155724;
+    border-left-color: #28a745;
+}
+
+.flash-message.success::before {
+    content: '✓';
+    background: #28a745;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Error message - Light red */
+.flash-message.error,
+.flash-message.danger {
+    background: #f8d7da;
+    color: #721c24;
+    border-left-color: #dc3545;
+}
+
+.flash-message.error::before,
+.flash-message.danger::before {
+    content: '⚠';
+    background: #dc3545;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Warning message - Light yellow */
+.flash-message.warning {
+    background: #fff3cd;
+    color: #856404;
+    border-left-color: #ffc107;
+}
+
+.flash-message.warning::before {
+    content: '⚠';
+    background: #ffc107;
+    color: #856404;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Info message - Light blue */
+.flash-message.info,
+.flash-message.election {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-left-color: #17a2b8;
+}
+
+.flash-message.info::before,
+.flash-message.election::before {
+    content: 'ℹ';
+    background: #17a2b8;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Close button */
+.flash-message .close-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0 5px;
+    transition: opacity 0.3s ease;
+}
+
+.flash-message .close-btn:hover {
+    opacity: 1;
+}
+
+/* Progress bar for auto-dismiss */
+.flash-message .progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.2);
+    animation: progress 7s linear forwards;
+}
+
+@keyframes progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Animation for flash messages */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+        display: none;
+    }
+}
+
+/* Dark mode adjustments for flash messages */
+body.dark-mode .flash-message.success {
+    background: #1e3a2a;
+    color: #a3d8a3;
+    border-left-color: #28a745;
+}
+
+body.dark-mode .flash-message.error,
+body.dark-mode .flash-message.danger {
+    background: #3a1e1e;
+    color: #f8a5a5;
+    border-left-color: #dc3545;
+}
+
+body.dark-mode .flash-message.warning {
+    background: #3a2e1e;
+    color: #f0d78c;
+    border-left-color: #ffc107;
+}
+
+body.dark-mode .flash-message.info,
+body.dark-mode .flash-message.election {
+    background: #1e3a3a;
+    color: #a8d8d8;
+    border-left-color: #17a2b8;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ADD THIS WRAPPER DIV -->
+<div class="create-election-page">
+    <h1 class="page-title">Create Election</h1>
+    <p class="page-description">Create a new campus-wide or departmental election</p>
+    
+    <!-- Flash messages - IMPROVED VERSION -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container" id="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}" id="flash-{{ loop.index }}">
+                        {{ message }}
+                        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+                        <div class="progress-bar"></div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Add dark-mode class here based on parent's dark mode -->
+    <div class="election-form-container">
+        <h2>Manage Elections</h2>
+
+        <!-- Desktop-style Form -->
+        <form method="POST" class="desktop-form" id="electionForm">
+            <!-- Row 1: Title + Scope and Description -->
+            <div class="form-row">
+                <!-- Left column: Title + Scope -->
+                <div class="form-column">
+                    <div class="election-form-group">
+                        <label for="title">Election Title <span class="required">*</span></label>
+                        <input type="text" id="title" name="title" placeholder="Enter election title" required>
+                    </div>
+                    <div class="election-form-group">
+                        <label for="scope">Election Scope <span class="required">*</span></label>
+                        <select id="scope" name="scope" required onchange="toggleFields()">
+                            <option value="">Select scope</option>
+                            <option value="campus">Campus-Wide (All Students)</option>
+                            <option value="department">Departmental (Specific Department)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Right column: Description -->
+                <div class="description-column election-form-group">
+                    <label for="description">Description (optional)</label>
+                    <textarea id="description" name="description" placeholder="Enter description..."></textarea>
+                </div>
+            </div>
+
+            <!-- Row 2: Department (hidden by default) -->
+            <div class="form-row" id="department_row" style="display: none;">
+                <div class="election-form-group">
+                    <label for="department_id">Department <span class="required">*</span></label>
+                    <select id="department_id" name="department_id">
+                        <option value="">Select department</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 3: Year Level Selection (for campus elections) -->
+            <div class="form-row" id="year_level_row" style="display: none;">
+                <div class="election-form-group" style="width: 100%;">
+                    <label>Target Year Levels <span class="required">*</span></label>
+                    <div class="year-level-container">
+                        <h4>Select which year levels can vote in this election:</h4>
+                        <div class="year-checkbox-group">
+                            <div class="year-checkbox-item">
+                                <input type="checkbox" id="year_1" name="year_levels" value="1">
+                                <label for="year_1">1st Year</label>
+                            </div>
+                            <div class="year-checkbox-item">
+                                <input type="checkbox" id="year_2" name="year_levels" value="2">
+                                <label for="year_2">2nd Year</label>
+                            </div>
+                            <div class="year-checkbox-item">
+                                <input type="checkbox" id="year_3" name="year_levels" value="3">
+                                <label for="year_3">3rd Year</label>
+                            </div>
+                            <div class="year-checkbox-item">
+                                <input type="checkbox" id="year_4" name="year_levels" value="4">
+                                <label for="year_4">4th Year</label>
+                            </div>
+                            <div class="year-checkbox-all">
+                                <input type="checkbox" id="all_years" onclick="toggleAllYears()">
+                                <label for="all_years">All Years</label>
+                            </div>
+                        </div>
+                        <span class="form-hint">Leave unchecked if this election is for all students (equivalent to "All Years")</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 4: Start & End Date -->
+            <div class="form-row">
+                <div class="election-form-group">
+                    <label for="start_date">Start Date & Time <span class="required">*</span></label>
+                    <input type="datetime-local" id="start_date" name="start_date" required>
+                </div>
+                <div class="election-form-group">
+                    <label for="end_date">End Date & Time <span class="required">*</span></label>
+                    <input type="datetime-local" id="end_date" name="end_date" required>
+                </div>
+            </div>
+
+            <!-- Submit button -->
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="create-election-btn">Create Election</button>
+                <button type="button" class="reset-btn" onclick="resetForm()">Reset</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <!-- Upcoming Elections -->
+<h3>Upcoming Elections</h3>
+<div class="election-list">
+    {% if upcoming %}
+        {% for election in upcoming %}
+            <div class="election-card">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">
+                            <strong>{{ election.title }}</strong>
+                            {% if election.scope %}
+                                <span class="scope-badge {{ election.scope }}">{{ election.scope|title }}</span>
+                            {% endif %}
+                            {% if election.year_levels %}
+                                {% if election.year_levels == 'all' %}
+                                    <span class="year-badge all-years">All Years</span>
+                                {% else %}
+                                    <span class="year-badge">Year {{ election.year_levels }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                            {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
+                            {% if election.department %}<br>Department: {{ election.department }}{% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Configure Positions Button -->
+                    <a href="{{ url_for('admin.configure_election_positions', election_id=election.id) }}" 
+                       class="configure-btn"
+                       style="background: #667eea; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                        <span style="font-size: 1.1rem;">⚙️</span> Configure Positions
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-secondary);">No upcoming elections.</p>
+    {% endif %}
+</div>
+
+<!-- Active Elections -->
+<h3>Active Elections</h3>
+<div class="election-list">
+    {% if active %}
+        {% for election in active %}
+            <div class="election-card active">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">
+                            <strong>{{ election.title }}</strong>
+                            {% if election.scope %}
+                                <span class="scope-badge {{ election.scope }}">{{ election.scope|title }}</span>
+                            {% endif %}
+                            {% if election.year_levels %}
+                                {% if election.year_levels == 'all' %}
+                                    <span class="year-badge all-years">All Students</span>
+                                {% else %}
+                                    <span class="year-badge">Year {{ election.year_levels }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                            {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
+                            {% if election.department %}<br>Department: {{ election.department }}{% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Configure Positions Button -->
+                    <a href="{{ url_for('admin.configure_election_positions', election_id=election.id) }}" 
+                       class="configure-btn"
+                       style="background: #667eea; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
+                        <span style="font-size: 1.1rem;">⚙️</span> Configure Positions
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-secondary);">No active elections.</p>
+    {% endif %}
+</div>
+    </div>
+</div>
+
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    // Check current theme from localStorage
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    // Apply or remove dark-mode class - ONLY to mainContent, NOT to body
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    // Ensure content is visible
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply immediately when page loads
+(function() {
+    applyThemeToMainContent();
+    
+    // Also apply after a tiny delay
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            setTimeout(function() {
+                applyThemeToMainContent();
+            }, 50);
+        }
+    });
+    
+    // Listen for storage events
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Create a mutation observer
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        const mainContentObserver = new MutationObserver(function(mutations) {
+            if (!mainContent.classList.contains('theme-applied')) {
+                mainContent.classList.add('theme-applied');
+            }
+        });
+        mainContentObserver.observe(mainContent, { attributes: true });
+    }
+})();
+
+// NEW FUNCTION: Toggle department field and year level field based on scope
+function toggleFields() {
+    const scope = document.getElementById('scope').value;
+    const departmentRow = document.getElementById('department_row');
+    const yearLevelRow = document.getElementById('year_level_row');
+    const departmentSelect = document.getElementById('department_id');
+    const yearCheckboxes = document.querySelectorAll('input[name="year_levels"]');
+    
+    if (scope === 'department') {
+        // Show department, hide year levels
+        departmentRow.style.display = 'block';
+        yearLevelRow.style.display = 'none';
+        departmentSelect.required = true;
+        departmentSelect.disabled = false;
+        
+        // Disable year checkboxes
+        yearCheckboxes.forEach(cb => {
+            cb.disabled = true;
+            cb.checked = false;
+        });
+    } else if (scope === 'campus') {
+        // Show year levels, hide department
+        departmentRow.style.display = 'none';
+        yearLevelRow.style.display = 'block';
+        departmentSelect.required = false;
+        departmentSelect.disabled = true;
+        departmentSelect.value = '';
+        
+        // Enable year checkboxes
+        yearCheckboxes.forEach(cb => {
+            cb.disabled = false;
+        });
+    } else {
+        // No scope selected
+        departmentRow.style.display = 'none';
+        yearLevelRow.style.display = 'none';
+    }
+}
+
+// NEW FUNCTION: Toggle all year checkboxes
+function toggleAllYears() {
+    const allYearsCheckbox = document.getElementById('all_years');
+    const yearCheckboxes = document.querySelectorAll('input[name="year_levels"]');
+    
+    yearCheckboxes.forEach(cb => {
+        cb.checked = allYearsCheckbox.checked;
+    });
+}
+
+// NEW FUNCTION: Reset form
+function resetForm() {
+    document.getElementById('electionForm').reset();
+    toggleFields();
+    
+    // Reset all years checkbox
+    document.getElementById('all_years').checked = false;
+}
+
+// NEW FUNCTION: Validate form before submission
+function validateForm() {
+    const scope = document.getElementById('scope').value;
+    const startDate = new Date(document.getElementById('start_date').value);
+    const endDate = new Date(document.getElementById('end_date').value);
+    
+    // Validate dates
+    if (startDate && endDate && endDate <= startDate) {
+        alert('End date must be later than start date.');
+        return false;
+    }
+    
+    // Validate department selection for department scope
+    if (scope === 'department') {
+        const departmentId = document.getElementById('department_id').value;
+        if (!departmentId) {
+            alert('Please select a department for departmental election.');
+            return false;
+        }
+    }
+    
+    // Validate year level selection for campus scope
+    if (scope === 'campus') {
+        const yearCheckboxes = document.querySelectorAll('input[name="year_levels"]:checked');
+        if (yearCheckboxes.length === 0) {
+            // If none selected, treat as all years (optional)
+            // You can either require selection or default to all
+            // For now, we'll just warn but allow
+            if (!confirm('No year levels selected. This election will be available to ALL students. Continue?')) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
+// AUTO-DISMISS FLASH MESSAGES AFTER 7 SECONDS
+function setupFlashMessages() {
+    const flashMessages = document.querySelectorAll('.flash-message');
+    
+    flashMessages.forEach(message => {
+        // Auto dismiss after 7 seconds
+        setTimeout(() => {
+            if (message.parentElement) {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            }
+        }, 7000);
+        
+        // Add click handler for close button
+        const closeBtn = message.querySelector('.close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            });
+        }
+    });
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    applyThemeToMainContent();
+    toggleFields(); // Initialize field visibility
+    setupFlashMessages(); // Initialize flash message auto-dismiss
+    
+    // Add form validation
+    document.getElementById('electionForm').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+    
+    // Add event listeners for year checkboxes
+    const yearCheckboxes = document.querySelectorAll('input[name="year_levels"]');
+    const allYearsCheckbox = document.getElementById('all_years');
+    
+    yearCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            // Check if all individual checkboxes are checked
+            const allChecked = Array.from(yearCheckboxes).every(c => c.checked);
+            allYearsCheckbox.checked = allChecked;
+            
+            // If any unchecked, uncheck "All Years"
+            if (!this.checked) {
+                allYearsCheckbox.checked = false;
+            }
+        });
+    });
+    
+    // Periodic check for theme
+    let checkCount = 0;
+    const checkInterval = setInterval(function() {
+        if (document.querySelector('.main-content') || checkCount > 20) {
+            clearInterval(checkInterval);
+            applyThemeToMainContent();
+        }
+        checkCount++;
+    }, 100);
+});
+</script>
+
+<style>
+/* Additional styles for reset button */
+.reset-btn {
+    padding: 12px 24px;
+    background: var(--light-gray);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.reset-btn:hover {
+    background: var(--border-color);
+}
+
+/* Style for the election cards */
+.election-card {
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.election-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

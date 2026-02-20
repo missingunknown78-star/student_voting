@@ -1,7 +1,7 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from student.models import Student, Vote
-from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel, Position
+from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel, Position, ElectionPosition
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import func, or_
@@ -992,9 +992,6 @@ from student.models import Vote
 from admin.models import Election, Candidate
 from collections import defaultdict
 
-
-
-
 @student_bp.route('/vote/<int:election_id>', methods=['GET'])
 @login_required
 def vote_page(election_id):
@@ -1015,23 +1012,41 @@ def vote_page(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Fetch candidates and group by position
-    candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidates_by_position = defaultdict(list)
+    # Fetch position limits for this election
+    election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+    position_limits = {ep.position_id: ep.max_votes for ep in election_positions}
     
-    # Get ALL candidate IDs for PHE one-hot vector
+    # Fetch candidates and group by position with limits
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    candidates_by_position = {}
     all_candidate_ids = []
     
     for c in candidates:
         if c.position:
-            candidates_by_position[c.position.name].append(c)
+            position_name = c.position.name
+            if position_name not in candidates_by_position:
+                candidates_by_position[position_name] = {
+                    'candidates': [],
+                    'position_id': c.position_id,
+                    'max_votes': position_limits.get(c.position_id, 1)  # Default to 1 if not set
+                }
+            candidates_by_position[position_name]['candidates'].append(c)
         all_candidate_ids.append(c.id)
+    
+    # ✅ SORT BY POSITION ID (lowest ID first = President, VP, etc.)
+    sorted_positions = sorted(
+        candidates_by_position.items(),
+        key=lambda item: item[1]['position_id']  # Sort by position_id
+    )
+    
+    # Convert back to dictionary (Python 3.7+ preserves insertion order)
+    candidates_by_position = dict(sorted_positions)
 
     return render_template(
         'vote_page.html',
         election=election,
         candidates_by_position=candidates_by_position,
-        all_candidate_ids=all_candidate_ids  # Pass to template
+        all_candidate_ids=all_candidate_ids
     )
 
 
@@ -1121,6 +1136,8 @@ from sqlalchemy import or_
 from flask import flash, redirect, url_for
 from sqlalchemy import or_
 
+# student/routes.py - UPDATE your available_elections route
+
 @student_bp.route('/available_elections')
 @login_required
 def available_elections():
@@ -1132,27 +1149,73 @@ def available_elections():
     now_naive = now_ph.replace(tzinfo=None)
 
     student_department_id = current_user.department_id
+    
+    # FIX: Get the actual year level value from the relationship
+    student_year = None
+    if current_user.year_level:
+        # Extract the numeric part from year_name (e.g., "1st Year" -> "1")
+        year_name = current_user.year_level.year_name
+        # Extract first number from the string
+        import re
+        match = re.search(r'\d+', year_name)
+        if match:
+            student_year = match.group()  # Returns the first number found
+        else:
+            student_year = year_name  # Fallback to full string
+    else:
+        student_year = "0"  # Default value if no year level set
+    
+    # Convert to string for JSON serialization and database comparison
+    student_year_str = str(student_year)
+    
     student_id = current_user.id
 
-    # Filter elections student can vote in
+    # ROBUST FILTERING - Works with both old and new data
+    # Uses multiple conditions for maximum compatibility
     elections = Election.query.filter(
         Election.start_date <= now_naive,
         Election.end_date >= now_naive,
-        or_(
-            Election.department_id == student_department_id,  # department-specific
-            Election.department_id == None  # SSG/general
+        # Campus-wide: either scope='campus' OR election_type='SSG' OR department_id IS NULL
+        # Department: either scope='department' OR election_type='Department' with matching department
+        db.or_(
+            # Campus-wide conditions
+            db.and_(
+                db.or_(
+                    Election.scope == 'campus',
+                    Election.election_type == 'SSG',
+                    Election.department_id.is_(None)
+                ),
+                # For campus elections, check year level filtering
+                db.or_(
+                    Election.year_levels == 'all',  # All years allowed
+                    Election.year_levels.is_(None),  # No year filter (treat as all)
+                    db.and_(
+                        Election.year_levels.isnot(None),
+                        Election.year_levels != 'all',
+                        db.func.find_in_set(student_year_str, Election.year_levels) > 0  # Student's year is in the list
+                    )
+                )
+            ),
+            # Department-specific conditions
+            db.and_(
+                db.or_(
+                    Election.scope == 'department',
+                    Election.election_type == 'Department'
+                ),
+                Election.department_id == student_department_id
+            )
         )
     ).order_by(Election.start_date.asc()).all()
 
     # Calculate voting progress for each election
     election_data = []
     for election in elections:
-        # Count UNIQUE voters for this election (distinct student_id)
+        # Count UNIQUE voters
         unique_voters_count = db.session.query(func.count(func.distinct(Vote.student_id)))\
             .filter(Vote.election_id == election.id)\
             .scalar() or 0
         
-        # Check if current student has already voted in this election
+        # Check if current student has already voted
         student_vote = Vote.query.filter(
             Vote.election_id == election.id, 
             Vote.student_id == student_id
@@ -1163,7 +1226,6 @@ def available_elections():
         # Get vote timestamps if student has voted
         vote_timestamps = None
         if student_has_voted:
-            # Get the first vote record for timestamps (all votes for same election have same timestamps)
             vote_timestamps = {
                 'cast_time': student_vote.cast_timestamp,
                 'recorded_time': student_vote.recorded_timestamp or student_vote.created_at
@@ -1171,19 +1233,90 @@ def available_elections():
         
         # Determine eligible voters count
         if election.department_id is None:
-            # SSG/General election - all students are eligible
-            eligible_voters = Student.query.count()
+            # Campus-wide election - all students (but filter by year level if specified)
+            if election.year_levels and election.year_levels != 'all':
+                # Filter students by year level
+                year_levels_list = election.year_levels.split(',')
+                
+                # Get all students with their year level relationships
+                students = Student.query.options(db.joinedload(Student.year_level)).all()
+                
+                # Filter by year level in Python
+                filtered_count = 0
+                for student in students:
+                    if student.year_level:
+                        # Extract numeric part from year_name
+                        year_name = student.year_level.year_name
+                        match = re.search(r'\d+', year_name)
+                        if match:
+                            student_year_val = match.group()
+                            if student_year_val in year_levels_list:
+                                filtered_count += 1
+                
+                eligible_voters = filtered_count
+            else:
+                # All students
+                eligible_voters = Student.query.count()
         else:
-            # Department election - only students in that department
-            eligible_voters = Student.query.filter_by(
-                department_id=election.department_id
-            ).count()
+            # Department election
+            if election.year_levels and election.year_levels != 'all':
+                # Filter by both department and year level
+                year_levels_list = election.year_levels.split(',')
+                
+                # Get students in the department with their year level
+                students = Student.query.options(db.joinedload(Student.year_level)).filter_by(
+                    department_id=election.department_id
+                ).all()
+                
+                # Filter by year level in Python
+                filtered_count = 0
+                for student in students:
+                    if student.year_level:
+                        # Extract numeric part from year_name
+                        year_name = student.year_level.year_name
+                        match = re.search(r'\d+', year_name)
+                        if match:
+                            student_year_val = match.group()
+                            if student_year_val in year_levels_list:
+                                filtered_count += 1
+                
+                eligible_voters = filtered_count
+            else:
+                # Department only
+                eligible_voters = Student.query.filter_by(
+                    department_id=election.department_id
+                ).count()
         
-        # Calculate percentage (avoid division by zero)
+        # Calculate percentage
         if eligible_voters > 0:
             vote_percentage = (unique_voters_count / eligible_voters) * 100
         else:
             vote_percentage = 0
+        
+        # Determine if this student is eligible based on year level
+        is_eligible_by_year = True
+        if election.scope == 'campus' or election.election_type == 'SSG':
+            if election.year_levels and election.year_levels != 'all':
+                year_levels_list = election.year_levels.split(',')
+                is_eligible_by_year = student_year_str in year_levels_list
+        
+        # Format target years for display
+        target_years_display = 'all'
+        if election.year_levels and election.year_levels != 'all':
+            year_numbers = election.year_levels.split(',')
+            # Convert to ordinal format (1 -> 1st, 2 -> 2nd, etc.)
+            ordinal_years = []
+            for year in year_numbers:
+                year_int = int(year)
+                if year_int == 1:
+                    ordinal_years.append('1st Year')
+                elif year_int == 2:
+                    ordinal_years.append('2nd Year')
+                elif year_int == 3:
+                    ordinal_years.append('3rd Year')
+                else:
+                    ordinal_years.append(f'{year_int}th Year')
+            target_years_display = ', '.join(ordinal_years)
         
         election_data.append({
             'election': election,
@@ -1192,12 +1325,18 @@ def available_elections():
             'vote_percentage': round(vote_percentage, 1),
             'vote_percentage_int': int(vote_percentage),
             'student_has_voted': student_has_voted,
-            'vote_timestamps': vote_timestamps  # NEW: Add timestamps
+            'vote_timestamps': vote_timestamps,
+            'is_eligible_by_year': is_eligible_by_year,
+            'target_years': target_years_display,
+            'target_years_raw': election.year_levels if election.year_levels and election.year_levels != 'all' else 'all'
         })
 
     return render_template('elections_available.html', 
                          election_data=election_data,
-                         current_time=now_ph)
+                         current_time=now_ph,
+                         student_year=student_year_str,
+                         student_year_display=current_user.year_level.year_name if current_user.year_level else 'Not Set')
+
 
 # ------------------- CANDIDATES -------------------
 @student_bp.route('/candidates')

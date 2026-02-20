@@ -3,7 +3,7 @@ from extensions import db, bcrypt
 from flask_login import login_user, logout_user, current_user, login_required
 from datetime import datetime
 from functools import wraps
-from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, CtuStudent, TallyVote
+from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, CtuStudent, TallyVote, ElectionPosition
 from student.models import Student, Vote
 import mysql.connector
 from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
@@ -263,7 +263,7 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
-    # ------------------- Admin 2FA Verification ------------------- #
+# ------------------- Admin 2FA Verification ------------------- #
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
 def verify_2fa():
     if 'pre_2fa_admin_id' not in session:
@@ -293,6 +293,8 @@ def verify_2fa():
         return render_template('admin_2fa_verify.html', error=error)
 
     error = None
+    success_message = session.pop('2fa_success', None)  # Check for existing success message
+    
     if request.method == 'POST':
         # ✅ Ensure totp_secret is generated
         totp_secret = generate_2fa_secret(admin)
@@ -315,8 +317,10 @@ def verify_2fa():
             session.pop(f'2fa_attempts_{ip}', None)
             session.pop(f'2fa_cooldown_{ip}', None)
 
-            flash("2FA verified. Welcome, Admin.", "success")
-            return redirect(url_for('admin.dashboard'))
+            # Set success message in session for this page only
+            session['2fa_success'] = "2FA verified. Welcome, Admin."
+            
+            return redirect(url_for('admin.verify_2fa'))  # Redirect to same page to show success
 
         else:
             # Increment failed 2FA attempts
@@ -342,7 +346,8 @@ def verify_2fa():
             else:
                 error = f"Invalid code. Attempt {attempts} of {MAX_2FA_ATTEMPTS}."
 
-    return render_template('admin_2fa_verify.html', error=error)
+    return render_template('admin_2fa_verify.html', error=error, success=success_message)
+
 
 
 # ------------------- 2FA Secret Generation ------------------- #
@@ -696,7 +701,6 @@ def import_students_table():
             registered_numbers=set()
         )
 
-# ---------------------- MANAGE STUDENTS PAGE (ENHANCED) ---------------------- #
 @admin_bp.route('/students')
 @admin_required
 def manage_students():
@@ -707,9 +711,13 @@ def manage_students():
     departments_data = [{"id": d.id, "name": d.name} for d in departments]
     courses_data = [{"id": c.id, "name": c.course_name} for c in courses]
 
-    # -------------------- Fetch Elections -------------------- #
+    # -------------------- Fetch Elections with scope -------------------- #
     elections = Election.query.order_by(Election.start_date.desc()).all()
-    elections_data = [{"id": e.id, "title": e.title} for e in elections]
+    elections_data = [{
+        "id": e.id, 
+        "title": e.title,
+        "scope": e.scope  # Make sure to include scope!
+    } for e in elections]
 
     # ---------- AUDIT LOG: Manage Students page viewed ----------
     username = getattr(current_user, 'username', 'Unknown')
@@ -738,7 +746,7 @@ def students_data():
     filter_type = request.args.get('filter_type', 'all')
     filter_id = request.args.get('filter_id')
     search = request.args.get('search', '')
-    election_id = request.args.get('election_id')  # NEW: get selected election
+    election_id = request.args.get('election_id')  # Selected election
     page = int(request.args.get('page', 1))
     per_page = 10
 
@@ -762,6 +770,29 @@ def students_data():
             )
         )
 
+    # Get election details if selected
+    election = None
+    if election_id and election_id != "all":
+        election = Election.query.get(int(election_id))
+        
+        # 🎯 NEW: Filter students based on election's year levels
+        if election and election.scope == 'campus' and election.year_levels:
+            # Join with year_level to filter by year
+            if election.year_levels != 'all':
+                # Get list of allowed year levels
+                allowed_years = election.year_levels.split(',')
+                
+                # Filter students whose year_level_id matches allowed years
+                # Assuming year_level_id corresponds to year (1,2,3,4)
+                query = query.filter(Student.year_level_id.in_(allowed_years))
+            
+            # For department elections, we might also want to filter by department
+            # But that's usually handled by the election.department_id field
+            
+        # 🎯 NEW: For department elections, filter by department
+        elif election and election.scope == 'department' and election.department_id:
+            query = query.filter(Student.department_id == election.department_id)
+
     # Pagination
     pagination = query.order_by(Student.last_name).paginate(
         page=page,
@@ -777,15 +808,24 @@ def students_data():
         if election_id and election_id != "all":
             has_voted = Vote.query.filter_by(student_id=s.id, election_id=int(election_id)).first() is not None
 
+        # Get year level name if available
+        year_level_name = ""
+        if s.year_level:
+            year_level_name = s.year_level.year_name
+
         students.append({
             "id": s.id,
             "id_number": s.id_number,
             "first_name": s.first_name,
             "last_name": s.last_name,
             "course": s.course,
-            "year_level": s.year_level_id or "",
-            "has_voted": has_voted  # NEW: send voting status to frontend
+            "year_level": year_level_name,
+            "year_level_id": s.year_level_id,  # Add this for debugging if needed
+            "has_voted": has_voted
         })
+
+    # Log the filter info for debugging
+    current_app.logger.info(f"Students data - Election: {election_id}, Total students: {len(students)}")
 
     # ---------- AUDIT LOG: Student data AJAX request ----------
     username = getattr(current_user, 'username', 'Unknown')
@@ -793,7 +833,7 @@ def students_data():
     
     log_audit(
         action='STUDENTS_DATA_VIEW',
-        description=f"Admin user '{username}' fetched student data via AJAX from IP: {ip} | Filter: {filter_type}, Search: '{search}', Page: {page}"
+        description=f"Admin user '{username}' fetched student data via AJAX from IP: {ip} | Election: {election_id}, Filter: {filter_type}, Search: '{search}', Page: {page}"
     )
 
     return jsonify({
@@ -801,7 +841,7 @@ def students_data():
         "total_pages": pagination.pages,
         "current_page": pagination.page
     })
-
+   
 
 @admin_bp.route('/students/export-excel')
 @admin_required
@@ -829,6 +869,22 @@ def export_students_excel():
             )
         )
 
+    # Get election details if selected
+    election = None
+    if election_id and election_id != "all":
+        election = Election.query.get(int(election_id))
+        
+        # 🎯 NEW: Filter students based on election's year levels
+        if election and election.scope == 'campus' and election.year_levels:
+            if election.year_levels != 'all':
+                # Filter by allowed year levels
+                allowed_years = election.year_levels.split(',')
+                query = query.filter(Student.year_level_id.in_(allowed_years))
+        
+        # 🎯 NEW: For department elections, filter by department
+        elif election and election.scope == 'department' and election.department_id:
+            query = query.filter(Student.department_id == election.department_id)
+
     students = query.order_by(Student.last_name).all()
 
     # ------------------- FETCH SELECTED ELECTION ------------------- #
@@ -849,9 +905,16 @@ def export_students_excel():
     max_col = 6  # A–F
 
     # ------------------- HEADER ROWS ------------------- #
-    # Row 1: Election Title
+    # Row 1: Election Title with Year Info
+    election_title = f"{election.title if election else 'All Elections'}"
+    if election and election.scope == 'campus' and election.year_levels:
+        if election.year_levels == 'all':
+            election_title += " (All Years)"
+        else:
+            election_title += f" (Year {election.year_levels})"
+    
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
-    ws.cell(row=1, column=1, value=f"{election.title if election else 'All Elections'}")
+    ws.cell(row=1, column=1, value=election_title)
     ws.cell(row=1, column=1).font = header_font
     ws.cell(row=1, column=1).fill = mustard_fill
     ws.cell(row=1, column=1).alignment = center_alignment
@@ -864,9 +927,11 @@ def export_students_excel():
             department_text = dept_obj.name
     elif election and election.department:
         department_text = election.department
+    elif election and election.scope == 'campus':
+        department_text = "Campus-Wide"
 
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
-    ws.cell(row=2, column=1, value=f"{department_text}")
+    ws.cell(row=2, column=1, value=f"Department: {department_text}")
     ws.cell(row=2, column=1).font = header_font
     ws.cell(row=2, column=1).fill = mustard_fill
     ws.cell(row=2, column=1).alignment = center_alignment
@@ -880,8 +945,15 @@ def export_students_excel():
     elif election and election.course_rel:
         course_text = election.course_rel.course_name
 
+    # Add year level info to row 3
+    if election and election.scope == 'campus' and election.year_levels:
+        if election.year_levels == 'all':
+            course_text += " | Target: All Year Levels"
+        else:
+            course_text += f" | Target: Year {election.year_levels}"
+
     ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
-    ws.cell(row=3, column=1, value=f"{course_text}")
+    ws.cell(row=3, column=1, value=f"Course: {course_text}")
     ws.cell(row=3, column=1).font = header_font
     ws.cell(row=3, column=1).fill = mustard_fill
     ws.cell(row=3, column=1).alignment = center_alignment
@@ -901,12 +973,17 @@ def export_students_excel():
             has_voted = Vote.query.filter_by(student_id=s.id, election_id=election.id).first() is not None
         status_text = "Voted" if has_voted else "Not Voted"
 
+        # Get year level name
+        year_level_name = ""
+        if s.year_level:
+            year_level_name = s.year_level.year_name
+
         row_values = [
             s.id_number,
             s.first_name,
             s.last_name,
             s.course,
-            s.year_level.year_name if s.year_level else "",
+            year_level_name,
             status_text
         ]
 
@@ -951,7 +1028,6 @@ def export_students_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=students.xlsx"}
     )
-
 
 # ---------------------- DELETE STUDENT ---------------------- #
 @admin_bp.route('/students/delete/<int:id>', methods=['POST'])
@@ -1217,7 +1293,6 @@ def delete_multiple_courses():
 
 
 
-# ---------------------- Manage Candidates ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
@@ -1226,20 +1301,20 @@ def manage_candidates():
     elections = Election.query.order_by(Election.start_date.desc()).all()
 
     # ================= FILTER =================
-    selected_election_type = request.args.get('election_type', default=None)
+    selected_scope = request.args.get('scope', default=None)
     department_id = request.args.get('department_id', type=int)
     page = request.args.get('page', 1, type=int)
     per_page = 10
     selected_department = None
 
-    query = Candidate.query.join(Election, Candidate.election_id == Election.id)
+    query = Candidate.query
 
-    # Filter by election type
-    if selected_election_type:
-        query = query.filter(Election.election_type == selected_election_type)
+    # Filter by scope
+    if selected_scope:
+        query = query.filter(Candidate.scope == selected_scope)
 
-    # Filter by department only if election type is Department
-    if selected_election_type == 'Department' and department_id:
+    # Filter by department
+    if selected_scope == 'department' and department_id:
         selected_department = Department.query.get(department_id)
         if selected_department:
             query = query.filter(Candidate.department_id == department_id)
@@ -1251,23 +1326,48 @@ def manage_candidates():
 
     # ---------- ADD CANDIDATE ----------
     if request.method == 'POST':
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
-        party_list = request.form.get('party_list')  # NEW: Get party list
+        party_list = request.form.get('party_list')
         department_id_form = request.form.get('department_id', type=int)
         position_id = request.form.get('position_id')
         election_id = request.form.get('election_id')
-        election_type = request.form.get('election_type')
+        scope = request.form.get('scope')  # Get scope from form
+
+        # Get election to verify
+        election = Election.query.get(election_id)
+        if not election:
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Selected election does not exist.'})
+            flash('Selected election does not exist.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
 
         # Validate required fields
-        if not all([first_name, last_name, position_id, election_id, election_type]):
+        if not all([first_name, last_name, position_id, election_id, scope]):
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Please fill in all required fields.'})
             flash('Please fill in all required fields.', 'danger')
             return redirect(url_for('admin.manage_candidates'))
 
-        # Only required if Department election
-        if election_type == 'Department' and not department_id_form:
-            flash('Department is required for Department Elections.', 'danger')
-            return redirect(url_for('admin.manage_candidates'))
+        # Validate department based on scope
+        if scope == 'department':
+            if not department_id_form:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Department is required for Department Elections.'})
+                flash('Department is required for Department Elections.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Verify department matches election
+            if election.department_id and election.department_id != department_id_form:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': f'This candidate must belong to {election.department} department.'})
+                flash(f'This candidate must belong to {election.department} department.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+        else:
+            department_id_form = None
 
         # Save photo if uploaded
         photo_file = request.files.get('photo')
@@ -1281,53 +1381,56 @@ def manage_candidates():
             photo_filename = f"{name}_{int(time.time())}{ext}"
             photo_file.save(os.path.join(photo_folder, photo_filename))
 
+        # Create candidate with scope
         new_candidate = Candidate(
             first_name=first_name,
             last_name=last_name,
-            party_list=party_list if party_list else None,  # NEW: Add party list
-            department_id=department_id_form if election_type == 'Department' else None,
+            party_list=party_list if party_list else None,
+            department_id=department_id_form,
             position_id=position_id,
             election_id=election_id,
+            scope=scope,  # Save scope directly
             photo=photo_filename
         )
 
         db.session.add(new_candidate)
         db.session.commit()
 
-        # ---------- AUDIT LOG ----------
+        # Audit log
         department_name = new_candidate.department.name if new_candidate.department else 'N/A'
         position_name = new_candidate.position.name if new_candidate.position else 'N/A'
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
-        party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'  # NEW
+        party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
         
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Added candidate: {first_name} {last_name} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+            description=f"Added candidate: {first_name} {last_name} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title} ({scope})"
         )
 
-        # ---------- AJAX RESPONSE ----------
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Return JSON for AJAX requests
+        if is_ajax:
             return jsonify({
-                "success": True,
-                "id": new_candidate.id,
-                "first_name": new_candidate.first_name,
-                "last_name": new_candidate.last_name,
-                "party_list": new_candidate.party_list,  # NEW: Add party list
-                "department": new_candidate.department.name if new_candidate.department else '',
-                "position": new_candidate.position.name,
-                "position_id": new_candidate.position_id,
-                "election_id": new_candidate.election_id,
-                "election_type": new_candidate.election.election_type if new_candidate.election else '',
-                "photo": url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None,
-                "delete_url": url_for('admin.delete_candidate', id=new_candidate.id)
+                'success': True,
+                'message': 'Candidate added successfully!',
+                'id': new_candidate.id,
+                'first_name': new_candidate.first_name,
+                'last_name': new_candidate.last_name,
+                'party_list': new_candidate.party_list,
+                'department': new_candidate.department.name if new_candidate.department else '',
+                'department_id': new_candidate.department_id,
+                'position': new_candidate.position.name,
+                'position_id': new_candidate.position_id,
+                'election_id': new_candidate.election_id,
+                'scope': new_candidate.scope,
+                'photo': url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None
             })
 
         flash('Candidate added successfully!', 'success')
         return redirect(url_for('admin.manage_candidates'))
 
-    # ----------------- Filter elections for modals -----------------
-    department_elections = [e for e in elections if e.election_type == 'Department']
-    ssg_elections = [e for e in elections if e.election_type == 'SSG']
+    # Filter elections for modals
+    campus_elections = [e for e in elections if e.scope == 'campus']
+    department_elections = [e for e in elections if e.scope == 'department']
 
     return render_template(
         'manage_candidates.html',
@@ -1336,11 +1439,80 @@ def manage_candidates():
         positions=positions,
         departments=departments,
         elections=elections,
+        campus_elections=campus_elections,
         department_elections=department_elections,
-        ssg_elections=ssg_elections,
         selected_department=selected_department,
-        selected_election_type=selected_election_type
+        selected_scope=selected_scope
     )
+
+
+@admin_bp.route('/candidates/filter', methods=['GET'])
+@admin_required
+def filter_candidates():
+    """AJAX endpoint for filtering candidates"""
+    selected_scope = request.args.get('scope', default=None)
+    department_id = request.args.get('department_id', type=int)
+    search = request.args.get('search', default='')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    query = Candidate.query
+
+    # Filter by scope
+    if selected_scope:
+        query = query.filter(Candidate.scope == selected_scope)
+
+    # Filter by department
+    if selected_scope == 'department' and department_id:
+        query = query.filter(Candidate.department_id == department_id)
+
+    # Search functionality
+    if search:
+        search_term = f'%{search}%'
+        query = query.join(Position).join(Election, isouter=True).filter(
+            db.or_(
+                Candidate.first_name.ilike(search_term),
+                Candidate.last_name.ilike(search_term),
+                Candidate.party_list.ilike(search_term),
+                Position.name.ilike(search_term),
+                Election.title.ilike(search_term)
+            )
+        )
+
+    # Paginate
+    pagination = query.order_by(Candidate.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    candidates = pagination.items
+
+    # Format candidates for JSON response
+    candidates_data = []
+    for c in candidates:
+        candidates_data.append({
+            'id': c.id,
+            'first_name': c.first_name,
+            'last_name': c.last_name,
+            'party_list': c.party_list,
+            'department': c.department.name if c.department else '',
+            'department_id': c.department_id,
+            'position': c.position.name if c.position else '',
+            'position_id': c.position_id,
+            'election_id': c.election_id,
+            'election_title': c.election.title if c.election else '',
+            'scope': c.scope,
+            'photo': url_for('admin.static', filename='images/' + c.photo) if c.photo else None
+        })
+
+    return jsonify({
+        'candidates': candidates_data,
+        'pagination': {
+            'current_page': pagination.page,
+            'total_pages': pagination.pages,
+            'total_items': pagination.total,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_page': pagination.prev_num if pagination.has_prev else None,
+            'next_page': pagination.next_num if pagination.has_next else None
+        }
+    })
 
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
@@ -1349,28 +1521,46 @@ def update_candidate(id):
     candidate = Candidate.query.get_or_404(id)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
-    # Store old values for audit log
+    # Store old values
     old_first_name = candidate.first_name
     old_last_name = candidate.last_name
-    old_party_list = candidate.party_list  # NEW: Store old party list
+    old_party_list = candidate.party_list
     old_position = candidate.position.name if candidate.position else 'N/A'
     old_department = candidate.department.name if candidate.department else 'N/A'
+    old_scope = candidate.scope
 
+    # Get form data
     candidate.first_name = request.form.get('first_name')
     candidate.last_name = request.form.get('last_name')
     
-    # NEW: Update party list
     party_list = request.form.get('party_list')
     candidate.party_list = party_list if party_list else None
     
     candidate.position_id = request.form.get('position_id')
     candidate.election_id = request.form.get('election_id')
     
-    election_type = request.form.get('election_type')
+    scope = request.form.get('scope')
+    candidate.scope = scope  # Update scope
+    
     department_id = request.form.get('department_id', type=int)
     
-    # Handle department based on election type
-    if election_type == 'Department' and department_id:
+    # Get election to verify
+    election = Election.query.get(candidate.election_id)
+    
+    # Handle department based on scope
+    if scope == 'department':
+        if not department_id:
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Department is required.'})
+            flash('Department is required.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
+        
+        if election and election.department_id and election.department_id != department_id:
+            if is_ajax:
+                return jsonify({'success': False, 'message': f'Must belong to {election.department}.'})
+            flash(f'Must belong to {election.department}.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
+        
         candidate.department_id = department_id
     else:
         candidate.department_id = None
@@ -1382,38 +1572,37 @@ def update_candidate(id):
         name, ext = os.path.splitext(filename)
         filename = f"{name}_{int(time.time())}{ext}"
         
-        photo_folder = os.path.join(
-            current_app.root_path, 'admin', 'static', 'images'
-        )
+        photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
         os.makedirs(photo_folder, exist_ok=True)
         photo_file.save(os.path.join(photo_folder, filename))
         candidate.photo = filename
 
     db.session.commit()
     
-    # ---------- AUDIT LOG ----------
+    # Audit log
     new_department = candidate.department.name if candidate.department else 'N/A'
     new_position = candidate.position.name if candidate.position else 'N/A'
-    new_party_list = candidate.party_list if candidate.party_list else 'Independent'  # NEW
+    new_party_list = candidate.party_list if candidate.party_list else 'Independent'
     
     log_audit(
         action='UPDATE_CANDIDATE',
-        description=f"Updated candidate: {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
+        description=f"Updated candidate: {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
     )
     
     if is_ajax:
         return jsonify({
             'success': True,
+            'message': 'Candidate updated successfully!',
             'id': candidate.id,
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
-            'party_list': candidate.party_list,  # NEW: Add party list
+            'party_list': candidate.party_list,
             'department': candidate.department.name if candidate.department else '',
             'department_id': candidate.department_id,
             'position': candidate.position.name if candidate.position else '',
             'position_id': candidate.position_id,
             'election_id': candidate.election_id,
-            'election_type': candidate.election.election_type if candidate.election else '',
+            'scope': candidate.scope,
             'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
         })
     
@@ -1421,7 +1610,7 @@ def update_candidate(id):
     return redirect(url_for('admin.manage_candidates'))
 
 
-@admin_bp.route('/candidates/delete/<int:id>', methods=['GET', 'POST', 'DELETE'])
+@admin_bp.route('/candidates/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_candidate(id):
     candidate = Candidate.query.get_or_404(id)
@@ -1429,29 +1618,42 @@ def delete_candidate(id):
     
     # Store candidate info for audit log before deletion
     candidate_name = f"{candidate.first_name} {candidate.last_name}"
-    party_list = candidate.party_list if candidate.party_list else 'Independent'  # NEW
+    party_list = candidate.party_list if candidate.party_list else 'Independent'
     position_name = candidate.position.name if candidate.position else 'N/A'
     department_name = candidate.department.name if candidate.department else 'N/A'
     election_title = candidate.election.title if candidate.election else 'N/A'
     
-    db.session.delete(candidate)
-    db.session.commit()
-    
-    # ---------- AUDIT LOG ----------
-    log_audit(
-        action='DELETE_CANDIDATE',
-        description=f"Deleted candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
-    )
-    
-    if is_ajax:
-        return jsonify({
-            'success': True,
-            'message': 'Candidate deleted successfully!'
-        })
-    
-    flash('Candidate deleted successfully!', 'success')
-    return redirect(url_for('admin.manage_candidates'))
+    try:
+        db.session.delete(candidate)
+        db.session.commit()
+        
+        # ---------- AUDIT LOG ----------
+        log_audit(
+            action='DELETE_CANDIDATE',
+            description=f"Deleted candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+        )
+        
+        # Always return JSON for AJAX requests
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'message': 'Candidate deleted successfully!'
+            })
+        
+        flash('Candidate deleted successfully!', 'success')
+        return redirect(url_for('admin.manage_candidates'))
+        
+    except Exception as e:
+        db.session.rollback()
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'message': f'Error deleting candidate: {str(e)}'
+            }), 500
+        flash(f'Error deleting candidate: {str(e)}', 'error')
+        return redirect(url_for('admin.manage_candidates'))
 
+        
 # ---------------------- Manage Positions ---------------------- #
 @admin_bp.route('/manage_positions', methods=['GET', 'POST'])
 @admin_required
@@ -1610,11 +1812,76 @@ def delete_position(position_id):
     return jsonify({"success": True, "message": f'Position "{position_name}" deleted successfully!'})
 
 
-# ---------------------- Create Department Election ---------------------- #
-@admin_bp.route('/create-department-election', methods=['GET', 'POST'])
+@admin_bp.route('/configure-election-positions/<int:election_id>', methods=['GET', 'POST'])
 @admin_required
-def create_department_election():
+def configure_election_positions(election_id):
+    """Configure which positions are in an election and their vote limits"""
+    # Get the election first
+    election = Election.query.get_or_404(election_id)
+    
+    # Get all positions
+    all_positions = Position.query.order_by(Position.name).all()
+    
+    # Get currently configured positions for this election
+    configured_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+    configured_position_ids = [ep.position_id for ep in configured_positions]
+    configured_positions_dict = {ep.position_id: ep.max_votes for ep in configured_positions}
+    
+    if request.method == 'POST':
+        # Get form data
+        selected_positions = request.form.getlist('positions')
+        
+        # Delete existing configurations
+        ElectionPosition.query.filter_by(election_id=election_id).delete()
+        
+        # Add new configurations
+        display_order = 0
+        for position_id_str in selected_positions:
+            position_id = int(position_id_str)
+            max_votes = request.form.get(f'max_votes_{position_id}', type=int, default=1)
+            
+            ep = ElectionPosition(
+                election_id=election_id,
+                position_id=position_id,
+                max_votes=max_votes,
+                min_votes=1,  # Default minimum
+                display_order=display_order
+            )
+            db.session.add(ep)
+            display_order += 1
+        
+        db.session.commit()
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='CONFIGURE_ELECTION_POSITIONS',
+            description=f"Admin user '{username}' configured {len(selected_positions)} positions for election '{election.title}' (ID: {election_id}) from IP: {ip}"
+        )
+        
+        flash('Election positions configured successfully!', 'success')
+        return redirect(url_for('admin.create_election'))
+    
+    # For GET request, pass ALL needed variables to template
+    return render_template(
+        'configure_election_positions.html',
+        election=election,  # This is the key line that was missing
+        all_positions=all_positions,
+        configured_position_ids=configured_position_ids,
+        configured_positions=configured_positions_dict
+    )
 
+# admin/routes.py - REPLACE your existing create_department_election route
+@admin_bp.route('/create-election', methods=['GET', 'POST'])
+@admin_required
+def create_election():
+    """
+    IMPROVED CREATE ELECTION ROUTE
+    - Handles both campus and department elections
+    - Adds year level filtering for campus elections
+    - Redirects to position configuration after creation
+    """
     # Get all departments
     departments = Department.query.order_by(Department.name).all()
 
@@ -1623,20 +1890,23 @@ def create_department_election():
 
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
-        election_type = request.form.get('election_type', '').strip()
+        scope = request.form.get('scope', '').strip().lower()  # 'campus' or 'department'
         department_id_str = request.form.get('department_id')
         description = request.form.get('description', '').strip()
         start_date_str = request.form.get('start_date', '').strip()
         end_date_str = request.form.get('end_date', '').strip()
-        department_id = int(department_id_str) if department_id_str else None
-
-        if not title or not election_type or not start_date_str or not end_date_str:
+        
+        # Get year levels (for campus elections)
+        year_levels = request.form.getlist('year_levels')
+        
+        # ========== VALIDATION ==========
+        if not all([title, scope, start_date_str, end_date_str]):
             flash('All required fields must be filled.', 'election')
-            return redirect(url_for('admin.create_department_election'))
+            return redirect(url_for('admin.create_election'))
 
-        if election_type == 'Department' and not department_id:
-            flash('Department is required for Department Elections.', 'election')
-            return redirect(url_for('admin.create_department_election'))
+        if scope not in ['campus', 'department']:
+            flash('Invalid election scope. Must be campus or department.', 'election')
+            return redirect(url_for('admin.create_election'))
 
         # Parse dates
         try:
@@ -1644,42 +1914,68 @@ def create_department_election():
             end_date = tz.localize(datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M'))
         except ValueError:
             flash('Invalid date format.', 'election')
-            return redirect(url_for('admin.create_department_election'))
+            return redirect(url_for('admin.create_election'))
 
         if end_date <= start_date:
             flash('End date must be later than start date.', 'election')
-            return redirect(url_for('admin.create_department_election'))
+            return redirect(url_for('admin.create_election'))
 
-        # Department name
+        # Handle department based on scope
+        department_id = None
         department_name = None
-        if election_type == 'Department' and department_id:
+        
+        if scope == 'department':
+            if not department_id_str:
+                flash('Department is required for Department Elections.', 'election')
+                return redirect(url_for('admin.create_election'))
+            
+            department_id = int(department_id_str)
             dept_obj = Department.query.get(department_id)
-            department_name = dept_obj.name if dept_obj else None
+            if not dept_obj:
+                flash('Selected department does not exist.', 'election')
+                return redirect(url_for('admin.create_election'))
+            department_name = dept_obj.name
+        
+        # Handle year levels for campus elections
+        year_levels_str = 'all'  # Default to all years
+        if scope == 'campus' and year_levels:
+            # Sort year levels for consistency
+            year_levels.sort()
+            year_levels_str = ','.join(year_levels)
+        
+        # Map scope to election_type for backward compatibility
+        election_type = 'SSG' if scope == 'campus' else 'Department'
 
-        # Create election
+        # Create election - populate ALL fields
         new_election = Election(
             title=title,
-            election_type=election_type,
+            election_type=election_type,  # For backward compatibility
+            scope=scope,                   # New scalable field
             department_id=department_id,
-            department=department_name,
+            department=department_name,     # Keep redundant field for existing code
+            year_levels=year_levels_str,    # New year levels field
             description=description,
             start_date=start_date,
             end_date=end_date
         )
+        
         db.session.add(new_election)
         db.session.commit()
         
-        # ---------- AUDIT LOG: Create election ----------
+        # ---------- AUDIT LOG ----------
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
+        year_levels_display = 'All Years' if year_levels_str == 'all' else f"Year(s) {year_levels_str}"
+        
         log_audit(
             action='CREATE_ELECTION',
-            description=f"Admin user '{username}' created new {election_type} election: '{title}' from IP: {ip} | Department: {department_name or 'N/A'}, Start: {start_date.strftime('%Y-%m-%d %H:%M')}, End: {end_date.strftime('%Y-%m-%d %H:%M')}"
+            description=f"Admin user '{username}' created new {scope} election: '{title}' from IP: {ip} | Department: {department_name or 'N/A'}, Target: {year_levels_display}, Start: {start_date.strftime('%Y-%m-%d %H:%M')}, End: {end_date.strftime('%Y-%m-%d %H:%M')}"
         )
         
-        flash('Election created successfully!', 'election')
-        return redirect(url_for('admin.create_department_election'))
+        # MODIFIED: Redirect to position configuration instead of back to create page
+        flash('Election created successfully! Now configure positions and vote limits.', 'success')
+        return redirect(url_for('admin.configure_election_positions', election_id=new_election.id))
 
     # GET request: fetch elections
     elections_all = Election.query.order_by(Election.start_date).all()
@@ -1691,11 +1987,11 @@ def create_department_election():
         if e.end_date.tzinfo is None:
             e.end_date = tz.localize(e.end_date)
 
-    # Filter elections in Python (reliable!)
+    # Filter elections
     upcoming_elections = [e for e in elections_all if e.start_date > now]
     active_elections = [e for e in elections_all if e.start_date <= now <= e.end_date]
     
-    # ---------- AUDIT LOG: Create election page viewed ----------
+    # AUDIT LOG
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -1705,13 +2001,19 @@ def create_department_election():
     )
 
     return render_template(
-        'create_department_election.html',
+        'create_election.html',
         departments=departments,
-        elections=upcoming_elections + active_elections,  # Optional: show all if you like
         upcoming=upcoming_elections,
         active=active_elections,
         now=now
     )
+
+# Keep the old route for backward compatibility
+@admin_bp.route('/create-department-election', methods=['GET', 'POST'])
+@admin_required
+def create_department_election():
+    """Legacy route - redirects to new unified create election page"""
+    return redirect(url_for('admin.create_election'))
 
 
 # ----------- ANNOUNCEMENTS ROUTE -----------

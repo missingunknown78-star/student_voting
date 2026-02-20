@@ -14,15 +14,34 @@ function closeLightbox() {
 document.getElementById('openAddCandidate').onclick = e => {
     e.preventDefault();
     document.getElementById('addCandidateModal').style.display = 'flex';
+    
+    // Reset form and clear any notifications
+    document.getElementById('addCandidateForm').reset();
+    document.getElementById('add_department_field').style.display = 'none';
+    document.getElementById('addCandidateNotification').style.display = 'none';
+    document.getElementById('addCandidateNotification').className = 'modal-notification';
+    
+    // Hide ALL election options initially
+    const addElection = document.getElementById('add_election');
+    for (let i = 0; i < addElection.options.length; i++) {
+        addElection.options[i].style.display = 'none';
+    }
+    
+    // Show the placeholder option only
+    for (let i = 0; i < addElection.options.length; i++) {
+        if (addElection.options[i].value === "") {
+            addElection.options[i].style.display = 'block';
+            break;
+        }
+    }
 };
 
 function closeAddCandidateModal() {
     document.getElementById('addCandidateModal').style.display = 'none';
     document.getElementById('addCandidateForm').reset();
     
-    // Remove any success message when closing manually
-    const existingMsg = document.querySelector('.modal-success-message');
-    if (existingMsg) existingMsg.remove();
+    // Clear any notification
+    document.getElementById('addCandidateNotification').style.display = 'none';
 }
 
 /* EDIT MODAL */
@@ -34,17 +53,74 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
         document.getElementById('edit_first').value = btn.dataset.first;
         document.getElementById('edit_last').value = btn.dataset.last;
         
-        // NEW: Set party list value
+        // Set party list value
         document.getElementById('edit_party_list').value = btn.dataset.party || '';
         
         document.getElementById('edit_position').value = btn.dataset.position;
+        
+        // Handle scope and department
+        const scope = btn.dataset.scope || 'campus';
+        document.getElementById('edit_scope').value = scope;
+        
+        // Get the election select element
+        const editElection = document.getElementById('edit_election');
+        
+        // First, hide all options
+        for (let i = 0; i < editElection.options.length; i++) {
+            editElection.options[i].style.display = 'none';
+        }
+        
+        // Show the placeholder option
+        for (let i = 0; i < editElection.options.length; i++) {
+            if (editElection.options[i].value === "") {
+                editElection.options[i].style.display = 'block';
+                break;
+            }
+        }
+        
+        if (scope === 'department') {
+            document.getElementById('edit_department_field').style.display = 'block';
+            document.getElementById('edit_department').value = btn.dataset.department_id || '';
+            
+            // Show only department elections for the selected department
+            const departmentId = btn.dataset.department_id;
+            if (departmentId) {
+                for (let i = 0; i < editElection.options.length; i++) {
+                    const option = editElection.options[i];
+                    if (option.value === "") continue;
+                    
+                    const optionScope = option.getAttribute('data-scope');
+                    const optionDept = option.getAttribute('data-department');
+                    
+                    if (optionScope === 'department' && optionDept === departmentId) {
+                        option.style.display = 'block';
+                    }
+                }
+            }
+        } else {
+            document.getElementById('edit_department_field').style.display = 'none';
+            
+            // Show only campus elections
+            for (let i = 0; i < editElection.options.length; i++) {
+                const option = editElection.options[i];
+                if (option.value === "") {
+                    option.style.display = 'block'; // Keep placeholder visible
+                    continue;
+                }
+                
+                const optionScope = option.getAttribute('data-scope');
+                if (optionScope === 'campus') {
+                    option.style.display = 'block';
+                }
+            }
+        }
+        
+        // Set the election value after filtering
         document.getElementById('edit_election').value = btn.dataset.election;
-        document.getElementById('edit_department').value = btn.dataset.department;
-        document.getElementById('edit_election_type').value = btn.dataset.election_type;
 
-        document.getElementById('edit_department_field').style.display =
-            btn.dataset.election_type === 'Department' ? 'block' : 'none';
-
+        // Clear any notification
+        document.getElementById('editCandidateNotification').style.display = 'none';
+        
         document.getElementById('editCandidateModal').style.display = 'flex';
     };
 });
@@ -52,379 +128,743 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
 function closeEditModal() {
     document.getElementById('editCandidateModal').style.display = 'none';
     document.getElementById('editCandidateForm').reset();
+    document.getElementById('editCandidateNotification').style.display = 'none';
 }
 
-/* SHOW/HIDE Department field & FILTER Election dropdown */
-const addElectionType = document.getElementById('add_election_type');
-const addDepartmentField = document.getElementById('add_department_field');
-const addElectionSelect = document.getElementById('add_election');
-addDepartmentField.style.display = 'none';
-
-addElectionType.addEventListener('change', () => {
-    addDepartmentField.style.display = addElectionType.value === 'Department' ? 'block' : 'none';
-    Array.from(addElectionSelect.options).forEach(opt => {
-        if(addElectionType.value === 'Department') opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
-        else if(addElectionType.value === 'SSG') opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
-        else opt.style.display = 'block';
-    });
-    addElectionSelect.value = "";
-});
-
-const editElectionType = document.getElementById('edit_election_type');
-const editDepartmentField = document.getElementById('edit_department_field');
-const editElectionSelect = document.getElementById('edit_election');
-editDepartmentField.style.display = 'none';
-
-editElectionType.addEventListener('change', () => {
-    editDepartmentField.style.display = editElectionType.value === 'Department' ? 'block' : 'none';
-    Array.from(editElectionSelect.options).forEach(opt => {
-        if(editElectionType.value === 'Department') opt.style.display = opt.classList.contains('department') ? 'block' : 'none';
-        else if(editElectionType.value === 'SSG') opt.style.display = opt.classList.contains('ssg') ? 'block' : 'none';
-        else opt.style.display = 'block';
-    });
-});
-
-/* FILTER: election type & department dependent dropdown */
-const filterForm = document.getElementById('filterForm');
-const filterElectionType = document.getElementById('filter_election_type');
-const filterDepartment = document.getElementById('filter_department');
-
-function updateFilterDepartment() {
-    if (filterElectionType.value === 'Department') filterDepartment.style.display = 'inline-block';
-    else { filterDepartment.style.display = 'none'; filterDepartment.value = ""; }
-}
-
-updateFilterDepartment();
-filterElectionType.addEventListener('change', () => { updateFilterDepartment(); filterForm.submit(); });
-filterDepartment.addEventListener('change', () => filterForm.submit());
-
-/* ---------- FUNCTION TO ADD SUCCESS MESSAGE INSIDE MODAL ---------- */
-function showModalSuccessMessage(message) {
-    // Remove any existing success message
-    const existingMsg = document.querySelector('.modal-success-message');
-    if (existingMsg) existingMsg.remove();
+/* SHOW/HIDE Department field & FILTER Election dropdown based on SCOPE */
+function toggleDepartmentField(mode) {
+    const scope = document.getElementById(mode + '_scope').value;
+    const deptField = document.getElementById(mode + '_department_field');
+    const deptSelect = document.getElementById(mode + '_department');
+    const electionSelect = document.getElementById(mode + '_election');
+    const options = electionSelect.options;
     
-    // Create success message element
-    const successMsg = document.createElement('div');
-    successMsg.className = 'modal-success-message';
-    successMsg.innerHTML = `
-        <i class="fa-solid fa-check-circle"></i>
-        <span>${message}</span>
-    `;
+    // First, hide all options
+    for (let i = 0; i < options.length; i++) {
+        options[i].style.display = 'none';
+    }
     
-    // Style the success message
-    successMsg.style.cssText = `
-        background: linear-gradient(135deg, #06d6a0, #059669);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 500;
-        animation: slideDown 0.3s ease-out;
-        grid-column: 1 / -1;
-    `;
-    
-    // Insert at the top of the form
-    const form = document.getElementById('addCandidateForm');
-    form.insertBefore(successMsg, form.firstChild);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        if (successMsg.parentNode) {
-            successMsg.style.animation = 'slideUp 0.3s ease-out forwards';
-            setTimeout(() => {
-                if (successMsg.parentNode) {
-                    successMsg.remove();
-                }
-            }, 300);
+    // Show the placeholder option
+    for (let i = 0; i < options.length; i++) {
+        if (options[i].value === "") {
+            options[i].style.display = 'block';
+            break;
         }
-    }, 3000);
+    }
+    
+    if (scope === 'department') {
+        deptField.style.display = 'block';
+        deptSelect.required = true;
+        deptSelect.value = ''; // Reset department selection
+        
+        // Don't show any department elections yet - wait for department selection
+    } else {
+        deptField.style.display = 'none';
+        deptSelect.required = false;
+        deptSelect.value = '';
+        
+        // Show only campus elections
+        for (let i = 0; i < options.length; i++) {
+            const option = options[i];
+            if (option.value === "") {
+                option.style.display = 'block'; // Keep placeholder visible
+                continue;
+            }
+            
+            const optionScope = option.getAttribute('data-scope');
+            if (optionScope === 'campus') {
+                option.style.display = 'block';
+            }
+        }
+    }
 }
 
-/* ---------- FUNCTION TO CLEAR FORM FIELDS BUT KEEP MODAL OPEN ---------- */
-function resetFormFields() {
-    const form = document.getElementById('addCandidateForm');
+// Add change listeners for department dropdowns
+document.addEventListener('DOMContentLoaded', function() {
+    // Add department change listener
+    const addDept = document.getElementById('add_department');
+    if (addDept) {
+        addDept.addEventListener('change', function() {
+            const scope = document.getElementById('add_scope').value;
+            if (scope === 'department') {
+                const electionSelect = document.getElementById('add_election');
+                const options = electionSelect.options;
+                
+                // Hide all election options first
+                for (let i = 0; i < options.length; i++) {
+                    options[i].style.display = 'none';
+                }
+                
+                // Show the placeholder option
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === "") {
+                        options[i].style.display = 'block';
+                        break;
+                    }
+                }
+                
+                // Show only elections for the selected department
+                if (this.value) {
+                    for (let i = 0; i < options.length; i++) {
+                        const option = options[i];
+                        if (option.value === "") continue;
+                        
+                        const optionDept = option.getAttribute('data-department');
+                        const optionScope = option.getAttribute('data-scope');
+                        
+                        if (optionScope === 'department' && optionDept === this.value) {
+                            option.style.display = 'block';
+                        }
+                    }
+                }
+            }
+        });
+    }
     
-    // Clear text inputs
-    form.querySelectorAll('input[type="text"]').forEach(input => {
-        input.value = '';
+    // Edit department change listener
+    const editDept = document.getElementById('edit_department');
+    if (editDept) {
+        editDept.addEventListener('change', function() {
+            const scope = document.getElementById('edit_scope').value;
+            if (scope === 'department') {
+                const electionSelect = document.getElementById('edit_election');
+                const options = electionSelect.options;
+                
+                // Hide all election options first
+                for (let i = 0; i < options.length; i++) {
+                    options[i].style.display = 'none';
+                }
+                
+                // Show the placeholder option
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === "") {
+                        options[i].style.display = 'block';
+                        break;
+                    }
+                }
+                
+                // Show only elections for the selected department
+                if (this.value) {
+                    for (let i = 0; i < options.length; i++) {
+                        const option = options[i];
+                        if (option.value === "") continue;
+                        
+                        const optionDept = option.getAttribute('data-department');
+                        const optionScope = option.getAttribute('data-scope');
+                        
+                        if (optionScope === 'department' && optionDept === this.value) {
+                            option.style.display = 'block';
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Add scope change listener for add modal
+    const addScope = document.getElementById('add_scope');
+    if (addScope) {
+        addScope.addEventListener('change', function() {
+            toggleDepartmentField('add');
+        });
+    }
+    
+    // Add scope change listener for edit modal
+    const editScope = document.getElementById('edit_scope');
+    if (editScope) {
+        editScope.addEventListener('change', function() {
+            toggleDepartmentField('edit');
+        });
+    }
+
+    // Initialize add modal state
+    const addElection = document.getElementById('add_election');
+    if (addElection) {
+        // Hide all options initially
+        for (let i = 0; i < addElection.options.length; i++) {
+            addElection.options[i].style.display = 'none';
+        }
+        // Show the placeholder option
+        for (let i = 0; i < addElection.options.length; i++) {
+            if (addElection.options[i].value === "") {
+                addElection.options[i].style.display = 'block';
+                break;
+            }
+        }
+    }
+
+    // Initialize filter listeners
+    initFilterListeners();
+    
+    // Initial attachment of pagination listeners
+    setTimeout(function() {
+        attachPaginationListeners();
+    }, 200);
+});
+
+/* ============ AJAX FILTER FUNCTION WITH LOADING SPINNER ============ */
+function filterCandidates(page = null, keepPage = false) {
+    const scope = document.getElementById('filter_scope').value;
+    const departmentId = document.getElementById('filter_department').value;
+    const search = document.getElementById('search_input').value;
+    
+    // Get current page from URL or pagination
+    let currentPage = 1;
+    
+    if (page !== null) {
+        currentPage = page;
+    } else if (keepPage) {
+        // Try to get page from current pagination
+        const currentPageElement = document.querySelector('.pagination .current');
+        if (currentPageElement) {
+            currentPage = parseInt(currentPageElement.textContent);
+        } else {
+            // Try to get from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlPage = urlParams.get('page');
+            if (urlPage) {
+                currentPage = parseInt(urlPage);
+            }
+        }
+    }
+
+    // Show loading state on search button
+    const searchBtn = document.getElementById('search_btn');
+    const buttonText = searchBtn.querySelector('.button-text');
+    const spinner = searchBtn.querySelector('.loading-spinner');
+    
+    buttonText.style.display = 'none';
+    spinner.style.display = 'inline-block';
+    searchBtn.disabled = true;
+
+    // Show loading state on table
+    const tableContainer = document.getElementById('table-container');
+    tableContainer.classList.add('table-loading');
+
+    // Build URL with query parameters
+    let url = `/admin/candidates/filter?page=${currentPage}`;
+    if (scope) url += `&scope=${scope}`;
+    if (departmentId) url += `&department_id=${departmentId}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+
+    // Update browser URL without reload
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set('page', currentPage);
+    if (scope) newUrl.searchParams.set('scope', scope);
+    else newUrl.searchParams.delete('scope');
+    
+    if (departmentId) newUrl.searchParams.set('department_id', departmentId);
+    else newUrl.searchParams.delete('department_id');
+    
+    if (search) newUrl.searchParams.set('search', search);
+    else newUrl.searchParams.delete('search');
+    
+    window.history.pushState({}, '', newUrl);
+
+    return fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return res.json();
+    })
+    .then(data => {
+        updateTable(data.candidates, data.pagination);
+        updatePagination(data.pagination);
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        showGlobalNotification('Error filtering candidates', 'error');
+    })
+    .finally(() => {
+        // Hide loading states
+        buttonText.style.display = 'inline-block';
+        spinner.style.display = 'none';
+        searchBtn.disabled = false;
+        tableContainer.classList.remove('table-loading');
     });
-    
-    // Reset file input
-    const photoInput = document.getElementById('add_photo');
-    if (photoInput) photoInput.value = '';
-    
-    // Reset selects to default
-    const electionType = document.getElementById('add_election_type');
-    electionType.value = '';
-    
-    const department = document.getElementById('add_department');
-    department.value = department.querySelector('option')?.value || '';
-    
-    const election = document.getElementById('add_election');
-    election.value = '';
-    
-    const position = document.getElementById('add_position');
-    position.value = position.querySelector('option')?.value || '';
-    
-    // Hide department field
-    document.getElementById('add_department_field').style.display = 'none';
-    
-    // Reset election options visibility
-    Array.from(election.options).forEach(opt => {
-        opt.style.display = 'block';
+}
+
+/* Update table with new data - MODIFIED to show beautiful empty state */
+function updateTable(candidates, pagination) {
+    const tbody = document.getElementById('candidatesTableBody');
+    if (!tbody) return;
+
+    if (!candidates || candidates.length === 0) {
+        // Create beautiful empty state with 7 columns colspan
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="padding: 0;">
+                    <div class="no-candidates-container">
+                        <div class="no-candidates-icon">
+                            <i class="fa-solid fa-user-slash"></i>
+                        </div>
+                        <h3 class="no-candidates-title">No Candidates Found</h3>
+                        <p class="no-candidates-message">
+                            No candidates match your current filter criteria. Try adjusting your filters or add a new candidate.
+                        </p>
+                        <div class="no-candidates-suggestions">
+                            <div class="suggestion-item highlight" onclick="document.getElementById('openAddCandidate').click()">
+                                <i class="fa-solid fa-user-plus"></i>
+                                <span>Add New Candidate</span>
+                            </div>
+                            <div class="suggestion-item" onclick="resetFilters()">
+                                <i class="fa-solid fa-eraser"></i>
+                                <span>Clear Filters</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    candidates.forEach(c => {
+        const scopeClass = c.scope || 'campus';
+        const scopeDisplay = scopeClass.charAt(0).toUpperCase() + scopeClass.slice(1);
+        const electionTitle = escapeHtml(c.election_title) || 'No Election';
+        
+        html += `
+            <tr id="candidate-${c.id}">
+                <td>
+                    ${c.photo ? 
+                        `<img src="${c.photo}" class="candidate-photo clickable-photo" alt="Candidate Photo">` : 
+                        '<span>No Photo</span>'}
+                </td>
+                <td>${escapeHtml(c.first_name || '')} ${escapeHtml(c.last_name || '')}</td>
+                <td>${escapeHtml(c.party_list) || 'Independent'}</td>
+                <td>${escapeHtml(c.department) || 'N/A'}</td>
+                <td>${escapeHtml(c.position) || ''}</td>
+                <td>
+                    <div class="election-info">
+                        <span class="election-title">${electionTitle}</span>
+                        <span class="scope-badge ${scopeClass}">${scopeDisplay}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <a href="#" class="edit-btn openEditModal" 
+                           data-id="${c.id}" 
+                           data-first="${escapeHtml(c.first_name) || ''}" 
+                           data-last="${escapeHtml(c.last_name) || ''}" 
+                           data-party="${escapeHtml(c.party_list) || ''}"
+                           data-position="${c.position_id || ''}" 
+                           data-election="${c.election_id || ''}" 
+                           data-department="${escapeHtml(c.department) || ''}"
+                           data-department_id="${c.department_id || ''}"
+                           data-scope="${c.scope || 'campus'}">Edit</a>
+                        <a href="#" class="delete-btn delete-candidate" data-id="${c.id}">Delete</a>
+                    </div>
+                </td>
+            </tr>
+        `;
     });
+
+    tbody.innerHTML = html;
+
+    // Re-attach event listeners to new elements
+    attachEventListeners();
+}
+
+// Helper function to reset filters
+function resetFilters() {
+    document.getElementById('filter_scope').value = '';
+    document.getElementById('filter_department').value = '';
+    document.getElementById('filter_department').style.display = 'none';
+    document.getElementById('search_input').value = '';
+    filterCandidates(1, false);
+}
+
+/* ===== PAGINATION FUNCTIONS ===== */
+/* Update pagination links */
+function updatePagination(pagination) {
+    const container = document.getElementById('pagination-container');
+    if (!container) return;
+
+    if (pagination.total_pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '<div class="pagination">';
+    
+    // Previous button
+    if (pagination.has_prev) {
+        html += `<a href="#" class="pagination-link" data-page="${pagination.prev_page}">&laquo; Prev</a>`;
+    } else {
+        html += '<span class="disabled">&laquo; Prev</span>';
+    }
+
+    // Page numbers
+    for (let p = 1; p <= pagination.total_pages; p++) {
+        if (p === pagination.current_page) {
+            html += `<span class="current">${p}</span>`;
+        } else {
+            html += `<a href="#" class="pagination-link" data-page="${p}">${p}</a>`;
+        }
+    }
+
+    // Next button
+    if (pagination.has_next) {
+        html += `<a href="#" class="pagination-link" data-page="${pagination.next_page}">Next &raquo;</a>`;
+    } else {
+        html += '<span class="disabled">Next &raquo;</span>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Attach pagination listeners
+    attachPaginationListeners();
+}
+
+/* Attach pagination listeners */
+function attachPaginationListeners() {
+    const paginationLinks = document.querySelectorAll('.pagination-link');
+    paginationLinks.forEach(link => {
+        // Remove any existing listeners to prevent duplicates
+        link.removeEventListener('click', handlePaginationClick);
+        link.addEventListener('click', handlePaginationClick);
+    });
+}
+
+/* Handle pagination click */
+function handlePaginationClick(e) {
+    e.preventDefault();
+    const page = parseInt(this.dataset.page);
+    filterCandidates(page, true);
+}
+
+/* Escape HTML to prevent XSS */
+function escapeHtml(text) {
+    if (!text) return text;
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/* Attach event listeners to dynamically added elements */
+function attachEventListeners() {
+    // Photo lightbox
+    document.querySelectorAll('.clickable-photo').forEach(img => {
+        img.onclick = () => {
+            document.getElementById('lightbox').style.display = 'flex';
+            document.getElementById('lightbox-img').src = img.src;
+        };
+    });
+
+    // Edit modal triggers
+    document.querySelectorAll('.openEditModal').forEach(btn => {
+        btn.onclick = e => {
+            e.preventDefault();
+            const id = btn.dataset.id;
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_first').value = btn.dataset.first;
+            document.getElementById('edit_last').value = btn.dataset.last;
+            document.getElementById('edit_party_list').value = btn.dataset.party || '';
+            document.getElementById('edit_position').value = btn.dataset.position;
+            
+            // Handle scope and department
+            const scope = btn.dataset.scope || 'campus';
+            document.getElementById('edit_scope').value = scope;
+            
+            // Get the election select element
+            const editElection = document.getElementById('edit_election');
+            
+            // First, hide all options
+            for (let i = 0; i < editElection.options.length; i++) {
+                editElection.options[i].style.display = 'none';
+            }
+            
+            // Show the placeholder option
+            for (let i = 0; i < editElection.options.length; i++) {
+                if (editElection.options[i].value === "") {
+                    editElection.options[i].style.display = 'block';
+                    break;
+                }
+            }
+            
+            if (scope === 'department') {
+                document.getElementById('edit_department_field').style.display = 'block';
+                document.getElementById('edit_department').value = btn.dataset.department_id || '';
+                
+                // Show only department elections for the selected department
+                const departmentId = btn.dataset.department_id;
+                if (departmentId) {
+                    for (let i = 0; i < editElection.options.length; i++) {
+                        const option = editElection.options[i];
+                        if (option.value === "") continue;
+                        
+                        const optionScope = option.getAttribute('data-scope');
+                        const optionDept = option.getAttribute('data-department');
+                        
+                        if (optionScope === 'department' && optionDept === departmentId) {
+                            option.style.display = 'block';
+                        }
+                    }
+                }
+            } else {
+                document.getElementById('edit_department_field').style.display = 'none';
+                
+                // Show only campus elections
+                for (let i = 0; i < editElection.options.length; i++) {
+                    const option = editElection.options[i];
+                    if (option.value === "") {
+                        option.style.display = 'block'; // Keep placeholder visible
+                        continue;
+                    }
+                    
+                    const optionScope = option.getAttribute('data-scope');
+                    if (optionScope === 'campus') {
+                        option.style.display = 'block';
+                    }
+                }
+            }
+            
+            // Set the election value after filtering
+            document.getElementById('edit_election').value = btn.dataset.election;
+
+            document.getElementById('editCandidateNotification').style.display = 'none';
+            document.getElementById('editCandidateModal').style.display = 'flex';
+        };
+    });
+
+    // Delete buttons
+    document.querySelectorAll('.delete-candidate').forEach(btn => {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteCandidate(this.dataset.id);
+        };
+    });
+}
+
+/* Initialize filter listeners */
+function initFilterListeners() {
+    const filterScope = document.getElementById('filter_scope');
+    const filterDepartment = document.getElementById('filter_department');
+    const searchBtn = document.getElementById('search_btn');
+    const searchInput = document.getElementById('search_input');
+    const resetBtn = document.getElementById('reset_filter');
+
+    // Update department visibility
+    function updateFilterDepartment() {
+        if (filterScope.value === 'department') {
+            filterDepartment.style.display = 'inline-block';
+        } else {
+            filterDepartment.style.display = 'none';
+            filterDepartment.value = "";
+        }
+    }
+
+    filterScope.addEventListener('change', () => {
+        updateFilterDepartment();
+        filterCandidates(1, false); // Reset to page 1 when filter changes
+    });
+
+    filterDepartment.addEventListener('change', () => {
+        filterCandidates(1, false); // Reset to page 1 when filter changes
+    });
+
+    searchBtn.addEventListener('click', () => {
+        filterCandidates(1, false); // Reset to page 1 when search
+    });
+
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            filterCandidates(1, false); // Reset to page 1 when search
+        }
+    });
+
+    resetBtn.addEventListener('click', () => {
+        filterScope.value = '';
+        filterDepartment.value = '';
+        filterDepartment.style.display = 'none';
+        searchInput.value = '';
+        filterCandidates(1, false); // Reset to page 1
+    });
+
+    // Initial call to set department visibility
+    updateFilterDepartment();
+}
+
+/* ---------- FUNCTION TO SHOW NOTIFICATION INSIDE MODAL ---------- */
+function showModalNotification(modalId, message, type) {
+    const notification = document.getElementById(modalId + 'Notification');
+    if (!notification) return;
+    
+    notification.className = 'modal-notification ' + type;
+    notification.innerHTML = '<i class="fa ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i>' + message;
+    notification.style.display = 'flex';
+    
+    // Auto hide after 5 seconds
+    setTimeout(function() {
+        notification.style.display = 'none';
+    }, 5000);
 }
 
 /* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
 const addCandidateForm = document.getElementById('addCandidateForm');
-const addSubmitBtn = addCandidateForm.querySelector('.add-btn');
+const addSubmitBtn = document.getElementById('addCandidateSubmitBtn');
 
-addCandidateForm.addEventListener('submit', function(e) {
-    e.preventDefault();
+if (addCandidateForm) {
+    addCandidateForm.addEventListener('submit', function(e) {
+        e.preventDefault();
 
-    // Disable button & show spinner
-    addSubmitBtn.disabled = true;
-    const originalText = addSubmitBtn.innerHTML;
-    addSubmitBtn.innerHTML = `<span class="spinner"></span> Adding...`;
+        // Show loading state
+        addSubmitBtn.disabled = true;
+        const buttonText = addSubmitBtn.querySelector('.button-text');
+        const spinner = addSubmitBtn.querySelector('.loading-spinner');
+        buttonText.style.opacity = '0.7';
+        spinner.style.display = 'inline-block';
 
-    const formData = new FormData(this);
+        const formData = new FormData(this);
 
-    fetch("/admin/candidates", {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-    })
-    .then(data => {
-        if(data.success) {
-            // Show success message INSIDE the modal - MODAL STAYS OPEN
-            showModalSuccessMessage('Candidate added successfully!');
-            
-            // Add new row to table
-            const tbody = document.getElementById('candidatesTableBody');
-            const tr = document.createElement('tr');
-            tr.id = `candidate-${data.id}`;
-            
-            // Handle department name (could be null)
-            const deptName = data.department || '';
-            
-            tr.innerHTML = `
-                <td>
-                    ${data.photo ? 
-                        `<img src="${data.photo}" class="candidate-photo clickable-photo" alt="Candidate Photo">` : 
-                        '<span>No Photo</span>'}
-                </td>
-                <td>${data.first_name || ''} ${data.last_name || ''}</td>
-                <td>${data.party_list || ''}</td>
-                <td>${deptName}</td>
-                <td>${data.position || ''}</td>
-                <td>
-                    <a href="#" class="edit-btn openEditModal" 
-                       data-id="${data.id}" 
-                       data-first="${data.first_name || ''}" 
-                       data-last="${data.last_name || ''}" 
-                       data-party="${data.party_list || ''}"
-                       data-position="${data.position_id || ''}" 
-                       data-election="${data.election_id || ''}" 
-                       data-department="${deptName}" 
-                       data-election_type="${data.election_type || ''}">Edit</a>
-                    <a href="${data.delete_url || '#'}" class="delete-btn delete-candidate" data-id="${data.id}">Delete</a>
-                </td>
-            `;
-            tbody.appendChild(tr);
-
-            // Add event listeners to new elements
-            const newPhoto = tr.querySelector('.clickable-photo');
-            if (newPhoto) {
-                newPhoto.onclick = () => {
-                    document.getElementById('lightbox').style.display = 'flex';
-                    document.getElementById('lightbox-img').src = newPhoto.src;
-                };
+        fetch("/admin/candidates", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
+        })
+        .then(res => {
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return res.json();
+            } else {
+                return res.text().then(text => {
+                    if (text.includes('<!DOCTYPE html>')) {
+                        throw new Error('Server returned HTML instead of JSON. Possible authentication or routing error.');
+                    }
+                    return { success: true, message: 'Candidate added successfully!' };
+                });
+            }
+        })
+        .then(data => {
+            if(data.success) {
+                // Show success message INSIDE the modal - MODAL STAYS OPEN
+                showModalNotification('addCandidate', data.message || 'Candidate added successfully!', 'success');
+                
+                // Refresh the table with current filters but keep page
+                filterCandidates(null, true);
 
-            tr.querySelector('.openEditModal').addEventListener('click', function(e) {
-                e.preventDefault();
-                const id = this.dataset.id;
-                document.getElementById('edit_id').value = id;
-                document.getElementById('edit_first').value = this.dataset.first;
-                document.getElementById('edit_last').value = this.dataset.last;
-                document.getElementById('edit_party_list').value = this.dataset.party || '';
-                document.getElementById('edit_position').value = this.dataset.position;
-                document.getElementById('edit_election').value = this.dataset.election;
-                document.getElementById('edit_department').value = this.dataset.department;
-                document.getElementById('edit_election_type').value = this.dataset.election_type;
-
-                document.getElementById('edit_department_field').style.display =
-                    this.dataset.election_type === 'Department' ? 'block' : 'none';
-
-                document.getElementById('editCandidateModal').style.display = 'flex';
-            });
-
-            tr.querySelector('.delete-candidate').addEventListener('click', function(e) {
-                e.preventDefault();
-                deleteCandidate(this.dataset.id);
-            });
-
-            // Clear form fields but KEEP MODAL OPEN
-            resetFormFields();
-
-        } else {
-            // Show error message inside modal
-            showModalError(data.error || 'Failed to add candidate.');
-        }
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        showModalError('Error submitting form. Please try again.');
-    })
-    .finally(() => {
-        // Restore button
-        addSubmitBtn.disabled = false;
-        addSubmitBtn.innerHTML = originalText;
-    });
-});
-
-/* ---------- FUNCTION TO SHOW ERROR MESSAGE INSIDE MODAL ---------- */
-function showModalError(message) {
-    // Remove any existing message
-    const existingMsg = document.querySelector('.modal-success-message');
-    if (existingMsg) existingMsg.remove();
-    
-    // Create error message element
-    const errorMsg = document.createElement('div');
-    errorMsg.className = 'modal-success-message'; // Reuse same class but style differently
-    errorMsg.innerHTML = `
-        <i class="fa-solid fa-exclamation-circle"></i>
-        <span>${message}</span>
-    `;
-    
-    errorMsg.style.cssText = `
-        background: linear-gradient(135deg, #ef476f, #dc2626);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 500;
-        animation: slideDown 0.3s ease-out;
-        grid-column: 1 / -1;
-    `;
-    
-    const form = document.getElementById('addCandidateForm');
-    form.insertBefore(errorMsg, form.firstChild);
-    
-    setTimeout(() => {
-        if (errorMsg.parentNode) {
-            errorMsg.style.animation = 'slideUp 0.3s ease-out forwards';
-            setTimeout(() => {
-                if (errorMsg.parentNode) {
-                    errorMsg.remove();
+                // Reset form fields but KEEP MODAL OPEN
+                addCandidateForm.reset();
+                document.getElementById('add_department_field').style.display = 'none';
+                document.getElementById('add_scope').value = '';
+                
+                // Reset election dropdown - hide all and show placeholder only
+                const addElection = document.getElementById('add_election');
+                for (let i = 0; i < addElection.options.length; i++) {
+                    addElection.options[i].style.display = 'none';
                 }
-            }, 300);
-        }
-    }, 5000);
+                // Show placeholder option
+                for (let i = 0; i < addElection.options.length; i++) {
+                    if (addElection.options[i].value === "") {
+                        addElection.options[i].style.display = 'block';
+                        break;
+                    }
+                }
+
+            } else {
+                showModalNotification('addCandidate', data.message || 'Failed to add candidate.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showModalNotification('addCandidate', err.message || 'Error adding candidate', 'error');
+        })
+        .finally(() => {
+            // Hide loading state
+            addSubmitBtn.disabled = false;
+            buttonText.style.opacity = '1';
+            spinner.style.display = 'none';
+        });
+    });
 }
 
-/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE ---------- */
+/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - UPDATED TO CLOSE MODAL ---------- */
 const editCandidateForm = document.getElementById('editCandidateForm');
-const editSubmitBtn = editCandidateForm.querySelector('.edit-btn');
+const editSubmitBtn = document.getElementById('editCandidateSubmitBtn');
 
-editCandidateForm.addEventListener('submit', function(e) {
-    e.preventDefault();
+if (editCandidateForm) {
+    editCandidateForm.addEventListener('submit', function(e) {
+        e.preventDefault();
 
-    // Disable button & show spinner
-    editSubmitBtn.disabled = true;
-    const originalText = editSubmitBtn.innerHTML;
-    editSubmitBtn.innerHTML = `<span class="spinner"></span> Updating...`;
+        // Show loading state
+        editSubmitBtn.disabled = true;
+        const buttonText = editSubmitBtn.querySelector('.button-text');
+        const spinner = editSubmitBtn.querySelector('.loading-spinner');
+        buttonText.style.opacity = '0.7';
+        spinner.style.display = 'inline-block';
 
-    const formData = new FormData(this);
-    const candidateId = document.getElementById('edit_id').value;
+        const formData = new FormData(this);
+        const candidateId = document.getElementById('edit_id').value;
 
-    fetch(`/admin/candidates/edit/${candidateId}`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-    })
-    .then(data => {
-        if(data.success) {
-            // Show success notification
-            showNotification('Candidate updated successfully!', 'success');
-            
-            // Update the table row
-            const row = document.getElementById(`candidate-${candidateId}`);
-            if (row) {
-                row.querySelector('td:nth-child(2)').textContent = `${data.first_name || ''} ${data.last_name || ''}`;
-                row.querySelector('td:nth-child(3)').textContent = data.party_list || '';
-                row.querySelector('td:nth-child(4)').textContent = data.department || '';
-                row.querySelector('td:nth-child(5)').textContent = data.position || '';
-                
-                // Update photo if changed
-                if (data.photo) {
-                    const photoCell = row.querySelector('td:first-child');
-                    photoCell.innerHTML = `<img src="${data.photo}" class="candidate-photo clickable-photo" alt="Candidate Photo">`;
-                    
-                    // Add click event to new photo
-                    const newPhoto = photoCell.querySelector('.clickable-photo');
-                    newPhoto.onclick = () => {
-                        document.getElementById('lightbox').style.display = 'flex';
-                        document.getElementById('lightbox-img').src = newPhoto.src;
-                    };
-                }
-
-                // Update edit button data attributes
-                const editBtn = row.querySelector('.openEditModal');
-                editBtn.dataset.first = data.first_name || '';
-                editBtn.dataset.last = data.last_name || '';
-                editBtn.dataset.party = data.party_list || '';
-                editBtn.dataset.position = data.position_id || '';
-                editBtn.dataset.election = data.election_id || '';
-                editBtn.dataset.department = data.department || '';
-                editBtn.dataset.election_type = data.election_type || '';
+        fetch(`/admin/candidates/edit/${candidateId}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
+        })
+        .then(res => {
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return res.json();
+            } else {
+                return res.text().then(text => {
+                    if (text.includes('<!DOCTYPE html>')) {
+                        throw new Error('Server returned HTML instead of JSON. Possible authentication or routing error.');
+                    }
+                    return { success: true, message: 'Candidate updated successfully!' };
+                });
+            }
+        })
+        .then(data => {
+            if(data.success) {
+                // Show success notification
+                showGlobalNotification(data.message || 'Candidate updated successfully!', 'success');
+                
+                // Refresh the table with current filters but keep page
+                filterCandidates(null, true);
+                
+                // CLOSE THE EDIT MODAL
+                closeEditModal();
 
-            // Close modal
-            closeEditModal();
-
-        } else {
-            showNotification(data.error || 'Failed to update candidate.', 'error');
-        }
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        showNotification('Error updating candidate. Please try again.', 'error');
-    })
-    .finally(() => {
-        // Restore button
-        editSubmitBtn.disabled = false;
-        editSubmitBtn.innerHTML = originalText;
+            } else {
+                // Show error inside modal if failed
+                showModalNotification('editCandidate', data.message || 'Failed to update candidate.', 'error');
+                // Hide loading state but keep modal open
+                editSubmitBtn.disabled = false;
+                buttonText.style.opacity = '1';
+                spinner.style.display = 'none';
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showModalNotification('editCandidate', err.message || 'Error updating candidate', 'error');
+            // Hide loading state but keep modal open
+            editSubmitBtn.disabled = false;
+            buttonText.style.opacity = '1';
+            spinner.style.display = 'none';
+        });
     });
-});
+}
 
 /* ---------- AJAX DELETE CANDIDATE ---------- */
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('delete-candidate')) {
         e.preventDefault();
+        e.stopPropagation();
         const candidateId = e.target.dataset.id;
         deleteCandidate(candidateId);
     }
@@ -435,6 +875,18 @@ function deleteCandidate(candidateId) {
         return;
     }
 
+    // Disable the delete button to prevent double-clicking
+    const deleteBtn = document.querySelector(`.delete-candidate[data-id="${candidateId}"]`);
+    if (deleteBtn) {
+        deleteBtn.style.pointerEvents = 'none';
+        deleteBtn.style.opacity = '0.5';
+        deleteBtn.disabled = true;
+    }
+
+    // Get current page before deleting
+    const currentPageElement = document.querySelector('.pagination .current');
+    const currentPage = currentPageElement ? parseInt(currentPageElement.textContent) : 1;
+
     fetch(`/admin/candidates/delete/${candidateId}`, {
         method: 'POST',
         headers: {
@@ -443,70 +895,84 @@ function deleteCandidate(candidateId) {
         }
     })
     .then(res => {
-        if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
+        // Check if response is JSON
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return res.json();
+        } else {
+            // If not JSON, but status is OK, consider it successful if row is gone
+            if (res.ok) {
+                const row = document.getElementById(`candidate-${candidateId}`);
+                if (!row) {
+                    return { success: true, message: 'Candidate deleted successfully!' };
+                }
+            }
+            throw new Error('Server returned non-JSON response');
         }
-        return res.json();
     })
     .then(data => {
-        if(data.success) {
-            showNotification('Candidate deleted successfully!', 'success');
-            // Remove row from table
-            const row = document.getElementById(`candidate-${candidateId}`);
-            if (row) {
-                row.remove();
-            }
+        if (data.success) {
+            showGlobalNotification('Candidate deleted successfully!', 'success');
+            // Refresh the table with current filters and keep page
+            return filterCandidates(currentPage, true);
         } else {
-            showNotification(data.error || 'Failed to delete candidate.', 'error');
+            throw new Error(data.message || 'Failed to delete candidate');
         }
     })
     .catch(err => {
         console.error('Error:', err);
-        showNotification('Error deleting candidate. Please try again.', 'error');
+        
+        // Check if the row still exists - if not, deletion was successful despite error
+        const row = document.getElementById(`candidate-${candidateId}`);
+        if (!row) {
+            showGlobalNotification('Candidate deleted successfully!', 'success');
+            filterCandidates(currentPage, true);
+        } else {
+            showGlobalNotification(err.message || 'Error deleting candidate. Please try again.', 'error');
+            // Re-enable the delete button
+            if (deleteBtn) {
+                deleteBtn.style.pointerEvents = 'auto';
+                deleteBtn.style.opacity = '1';
+                deleteBtn.disabled = false;
+            }
+        }
     });
 }
 
-/* ---------- NOTIFICATION FUNCTION ---------- */
-function showNotification(message, type = 'info') {
-    // Remove existing notification
-    const existingNotification = document.querySelector('.ajax-notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
+/* ---------- GLOBAL NOTIFICATION FUNCTION ---------- */
+function showGlobalNotification(message, type = 'info') {
+    // Remove any existing notifications
+    const existingNotifications = document.querySelectorAll('.global-notification');
+    existingNotifications.forEach(notif => notif.remove());
 
-    // Create notification element
     const notification = document.createElement('div');
-    notification.className = `ajax-notification ${type}`;
-    notification.textContent = message;
+    notification.className = `global-notification ${type}`;
+    notification.innerHTML = `
+        <i class="fa ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
     
-    // Style the notification
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        padding: 12px 20px;
-        border-radius: 8px;
+        padding: 15px 20px;
+        border-radius: 10px;
         color: white;
         font-weight: 500;
         z-index: 100000;
         animation: slideIn 0.3s ease-out;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        max-width: 350px;
-        word-wrap: break-word;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: ${type === 'success' ? 'linear-gradient(135deg, #00c851, #00a844)' : 
+                    type === 'error' ? 'linear-gradient(135deg, #ff4444, #cc0000)' : 
+                    'linear-gradient(135deg, #4361ee, #3b82f6)'};
     `;
-
-    // Set background color based on type
-    if (type === 'success') {
-        notification.style.background = 'linear-gradient(135deg, #06d6a0, #059669)';
-    } else if (type === 'error') {
-        notification.style.background = 'linear-gradient(135deg, #ef476f, #dc2626)';
-    } else {
-        notification.style.background = 'linear-gradient(135deg, #4361ee, #3b82f6)';
-    }
 
     document.body.appendChild(notification);
 
-    // Auto-remove after 5 seconds
     setTimeout(() => {
         if (notification.parentNode) {
             notification.style.animation = 'slideOut 0.3s ease-out forwards';
@@ -517,36 +983,36 @@ function showNotification(message, type = 'info') {
             }, 300);
         }
     }, 5000);
-
-    // Add click to dismiss
-    notification.addEventListener('click', () => {
-        notification.style.animation = 'slideOut 0.3s ease-out forwards';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 300);
-    });
 }
 
-/* Animation keyframes */
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+/* Animation keyframes - FIXED VERSION */
+(function addAnimationStyles() {
+    // Check if styles already exist
+    if (document.getElementById('notification-animation-styles')) {
+        return;
     }
-    @keyframes slideOut {
-        from { transform: translateX(100%); opacity: 1; }
-        to { transform: translateX(0); opacity: 0; }
-    }
-    @keyframes slideDown {
-        from { transform: translateY(-20px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes slideUp {
-        from { transform: translateY(0); opacity: 1; }
-        to { transform: translateY(-20px); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
+    
+    const style = document.createElement('style');
+    style.id = 'notification-animation-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// Make sure filterCandidates returns a promise for chaining
+window.filterCandidates = filterCandidates;

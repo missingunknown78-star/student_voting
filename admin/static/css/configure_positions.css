@@ -1,0 +1,741 @@
+/* ==================== CONFIGURE ELECTION POSITIONS STYLES ==================== */
+/* Following the same pattern as manage_departments.css - with proper sidebar margin */
+
+/* ==================== CSS VARIABLES ==================== */
+:root {
+    --sidebar-width: 280px;  /* Match your sidebar width */
+    
+    /* Light mode colors */
+    --primary-blue: #1a56db;
+    --secondary-blue: #3b82f6;
+    --accent-teal: #06b6d4;
+    --success-green: #10b981;
+    --warning-amber: #f59e0b;
+    --danger-red: #ef4444;
+    
+    /* Card & UI colors */
+    --card-radius: 12px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Color variables */
+    --bg-color: #f8fafc;
+    --text-color: #2d3748;
+    --text-secondary: #6b7280;
+    --card-bg: #ffffff;
+    --border-color: #eaeaea;
+    --input-bg: #ffffff;
+    --disabled-bg: #f1f5f9;
+    --button-primary: #667eea;
+    --button-primary-hover: #5a67d8;
+    --button-success: #10b981;
+    --button-success-hover: #059669;
+    --link-color: #667eea;
+}
+
+/* Dark mode variables */
+.dark-mode {
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --card-bg: #1e293b;
+    --border-color: rgba(51, 65, 85, 0.8);
+    --input-bg: #1e293b;
+    --disabled-bg: #334155;
+    --button-primary: #818cf8;
+    --button-primary-hover: #6366f1;
+    --button-success: #34d399;
+    --button-success-hover: #10b981;
+    --link-color: #818cf8;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.configure-positions-page {
+    background: transparent !important;
+    width: 100%;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* ==================== PAGE LAYOUT ==================== */
+/* MAIN FIX: Add margin-left to account for sidebar - NOW RESPONSIVE */
+.config-container {
+    width: calc(100% - var(--sidebar-width));  /* Use calc instead of fixed margin */
+    margin-left: var(--sidebar-width);
+    padding: clamp(15px, 3vw, 40px);  /* Responsive padding using clamp */
+    min-height: 100vh;
+    box-sizing: border-box;
+    transition: var(--transition);
+    background: transparent;
+    position: relative;
+}
+
+/* Dark mode container - inherits from main-content */
+.dark-mode .config-container {
+    background: transparent;
+}
+
+/* ==================== PAGE TITLE ==================== */
+.page-title {
+    font-size: clamp(1.5rem, 4vw, 2rem);  /* Responsive font size */
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.page-description {
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    transition: var(--transition);
+}
+
+/* ==================== ELECTION HEADER CARD ==================== */
+.election-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: clamp(20px, 3vw, 25px);
+    border-radius: var(--card-radius);
+    margin-bottom: 30px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease-out;
+    transition: var(--transition);
+}
+
+.election-header:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.election-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.election-header h2 {
+    margin: 0 0 10px 0;
+    font-size: clamp(1.4rem, 3vw, 1.8rem);
+    position: relative;
+    z-index: 1;
+    font-weight: 600;
+}
+
+.election-meta {
+    display: flex;
+    gap: clamp(10px, 2vw, 20px);
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+}
+
+.election-meta span {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    transition: var(--transition);
+    font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+}
+
+.election-meta span:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-2px);
+}
+
+/* ==================== INSTRUCTION BOX ==================== */
+.instruction-box {
+    background: var(--card-bg);
+    border-left: 4px solid #667eea;
+    padding: clamp(15px, 2.5vw, 20px);
+    border-radius: var(--card-radius);
+    margin-bottom: 25px;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.05s;
+}
+
+.instruction-box:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-left-color: var(--button-primary-hover);
+}
+
+.instruction-box h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+    font-size: clamp(1.1rem, 2.5vw, 1.2rem);
+    font-weight: 600;
+}
+
+.instruction-box p {
+    margin: 5px 0;
+    color: var(--text-secondary);
+    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+}
+
+/* ==================== SELECT ALL BAR ==================== */
+.select-all-bar {
+    background: var(--card-bg);
+    padding: clamp(12px, 2vw, 15px) clamp(15px, 2.5vw, 20px);
+    border-radius: var(--card-radius);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: clamp(10px, 2vw, 20px);
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.1s;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.select-all-bar:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--button-primary);
+}
+
+.select-all-bar label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: clamp(0.9rem, 2vw, 1rem);
+}
+
+.select-all-bar input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--button-primary);
+    transition: var(--transition);
+}
+
+.select-all-bar input[type="checkbox"]:hover {
+    transform: scale(1.1);
+}
+
+.selection-counter {
+    background: var(--bg-color);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: clamp(0.85rem, 1.8vw, 0.9rem);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    margin-left: auto;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.selection-counter strong {
+    color: var(--button-primary);
+    font-size: 1.1rem;
+}
+
+/* ==================== POSITION CARDS ==================== */
+.position-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: clamp(15px, 2.5vw, 20px);
+    margin-bottom: 15px;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: clamp(15px, 2.5vw, 20px);
+    box-shadow: var(--shadow-md);
+    animation: slideIn 0.3s ease-out;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.position-card:hover {
+    transform: translateX(5px) translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--button-primary);
+}
+
+.position-card.selected {
+    border-color: var(--success-green);
+    background: rgba(16, 185, 129, 0.05);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+/* Stagger animation for cards */
+.position-card:nth-child(odd) {
+    animation-delay: 0.15s;
+}
+.position-card:nth-child(even) {
+    animation-delay: 0.2s;
+}
+
+/* Checkbox column */
+.position-checkbox {
+    flex: 0 0 30px;
+}
+
+.position-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--button-primary);
+    transition: var(--transition);
+}
+
+.position-checkbox input[type="checkbox"]:hover {
+    transform: scale(1.15);
+}
+
+/* Position info column */
+.position-info {
+    flex: 2;
+    min-width: 150px; /* Minimum width before wrapping */
+}
+
+.position-name {
+    font-weight: 600;
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    margin-bottom: 5px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Badge */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--button-primary);
+    color: white;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Vote limit column - FIXED: Added margin-right for gap from edge */
+.vote-limit {
+    flex: 1;
+    min-width: 140px; /* Smaller minimum width */
+    margin-right: 10px;
+}
+
+.vote-limit label {
+    display: block;
+    font-size: clamp(0.8rem, 1.5vw, 0.85rem);
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.vote-limit input {
+    width: 100%;
+    padding: clamp(8px, 1.5vw, 10px);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: clamp(0.9rem, 1.8vw, 1rem);
+    text-align: center;
+    background: var(--input-bg);
+    color: var(--text-color);
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.vote-limit input:hover {
+    border-color: var(--button-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.vote-limit input:focus {
+    outline: none;
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.vote-limit input:disabled {
+    background: var(--disabled-bg);
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.vote-limit input:disabled:hover {
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.limit-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    text-align: center;
+}
+
+/* ==================== SCOPE BADGE ==================== */
+.scope-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.scope-badge.campus {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.scope-badge.department {
+    background: linear-gradient(135deg, #007bff, #0d6efd);
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    justify-content: flex-end;
+    animation: fadeIn 0.3s ease-out;
+    animation-delay: 0.3s;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.save-btn {
+    background: linear-gradient(135deg, var(--success-green), #059669);
+    color: white;
+    border: none;
+    padding: clamp(12px, 2vw, 15px) clamp(30px, 4vw, 40px);
+    border-radius: 8px;
+    font-size: clamp(1rem, 2vw, 1.1rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.save-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    filter: brightness(1.1);
+}
+
+.save-btn:active {
+    transform: translateY(-1px);
+}
+
+.cancel-btn {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: clamp(12px, 2vw, 15px) clamp(30px, 4vw, 40px);
+    border-radius: 8px;
+    font-size: clamp(1rem, 2vw, 1.1rem);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+}
+
+.cancel-btn:hover {
+    background: var(--border-color);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--button-primary);
+}
+
+/* ==================== DARK MODE SPECIFIC OVERRIDES ==================== */
+.dark-mode .position-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.dark-mode .position-card.selected {
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.dark-mode .vote-limit input {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.dark-mode .vote-limit input:disabled {
+    background: var(--disabled-bg);
+}
+
+.dark-mode .select-all-bar {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.dark-mode .instruction-box {
+    background: var(--card-bg);
+}
+
+.dark-mode .cancel-btn {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.dark-mode .cancel-btn:hover {
+    background: var(--border-color);
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0; 
+        transform: translateX(-20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
+}
+
+/* Force hardware acceleration */
+.config-container * {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* ==================== RESPONSIVE BREAKPOINTS ==================== */
+/* Large Desktop */
+@media (min-width: 1400px) {
+    .config-container {
+        padding: 40px 60px;
+    }
+}
+
+/* Desktop */
+@media (max-width: 1200px) {
+    .config-container {
+        padding: 30px;
+    }
+}
+
+/* Small Desktop / Tablet Landscape */
+@media (max-width: 1024px) {
+    .config-container {
+        margin-left: 250px;
+        width: calc(100% - 250px);
+        padding: 25px;
+    }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    .config-container {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .position-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .position-card:hover {
+        transform: translateY(-3px) translateX(0);
+    }
+
+    .position-checkbox {
+        flex: 0 0 auto;
+        align-self: flex-start;
+    }
+
+    .position-info {
+        width: 100%;
+    }
+
+    .vote-limit {
+        width: 100%;
+        min-width: auto;
+        margin-right: 0;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .save-btn, .cancel-btn {
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
+    }
+
+    .election-meta {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .election-meta span {
+        width: fit-content;
+    }
+
+    .select-all-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .selection-counter {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
+        white-space: normal;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .config-container {
+        padding: 15px;
+    }
+
+    .election-header h2 {
+        font-size: 1.4rem;
+    }
+
+    .position-name {
+        font-size: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .badge {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+
+    .election-header {
+        padding: 20px;
+    }
+
+    .instruction-box {
+        padding: 15px;
+    }
+
+    .select-all-bar {
+        padding: 12px 15px;
+    }
+    
+    .position-card {
+        padding: 15px;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 360px) {
+    .config-container {
+        padding: 10px;
+    }
+    
+    .vote-limit {
+        min-width: 100%;
+    }
+    
+    .position-checkbox {
+        align-self: center;
+    }
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+    .config-container {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .election-header {
+        background: #667eea;
+        color: black;
+        box-shadow: none;
+    }
+
+    .position-card {
+        box-shadow: none;
+        border: 1px solid #000;
+        break-inside: avoid;
+        transform: none;
+    }
+
+    .action-buttons,
+    .select-all-bar input,
+    .vote-limit input {
+        display: none;
+    }
+}

@@ -37,15 +37,13 @@ class Position(db.Model):
     candidates = db.relationship('Candidate', backref='position', lazy=True)
 
 
-
-# ------------------- CANDIDATE -------------------
 class Candidate(db.Model):
     __tablename__ = 'candidates'
 
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    party_list = db.Column(db.String(200), nullable=True)  # New party list field
+    party_list = db.Column(db.String(200), nullable=True)
     
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     department = db.relationship('Department', backref='candidates', lazy=True)
@@ -53,26 +51,60 @@ class Candidate(db.Model):
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))
+    
+    # NEW: Add scope field
+    scope = db.Column(db.String(50), nullable=False)  # 'campus' or 'department'
+    
+    # Relationships
     election = db.relationship('Election', backref='candidates', lazy=True)
 
     @property
     def vote_count(self):
-        # This will be calculated dynamically using encrypted votes
         from student.routes import count_votes_for_candidate
         return count_votes_for_candidate(self.id)
+    
+    @property
+    def election_type(self):
+        """Backward compatibility"""
+        return 'SSG' if self.scope == 'campus' else 'Department'
+    
+    # NEW: Helper to get max votes for this candidate's position in this election
+    @property
+    def max_votes_for_position(self):
+        """Get the maximum votes allowed for this position in this election"""
+        if self.election_id:
+            ep = ElectionPosition.query.filter_by(
+                election_id=self.election_id, 
+                position_id=self.position_id
+            ).first()
+            return ep.max_votes if ep else 1
+        return 1
 
-# ------------------- ELECTION -------------------
+
+# admin/models.py - Replace ONLY the Election class with this
+
 class Election(db.Model):
     __tablename__ = 'elections'
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
-    election_type = db.Column(db.String(50), nullable=False)  # Department or SSG
-
-    # Store both ID and name
+    
+    # EXISTING: Keep for backward compatibility
+    election_type = db.Column(db.String(50), nullable=False)  # 'Department' or 'SSG'
+    
+    # EXISTING: Keep both ID and name (your code uses both)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
-    department = db.Column(db.String(100), nullable=True)  # department name
+    department = db.Column(db.String(100), nullable=True)  # department name (redundant but needed)
+    
+    # NEW: More scalable scope field
+    # Values: 'campus' or 'department'
+    scope = db.Column(db.Enum('campus', 'department', name='election_scope'), 
+                      nullable=True)  # Nullable initially for migration
+
+    # NEW: Year level filtering for campus elections
+    # Values: comma-separated string like "1,2,3,4" or "all" for all years
+    year_levels = db.Column(db.String(50), nullable=True, default='all')
 
     description = db.Column(db.Text)
     start_date = db.Column(db.DateTime, nullable=False)
@@ -85,7 +117,6 @@ class Election(db.Model):
     # Relationships
     department_rel = db.relationship('Department', backref='elections')
     course_rel = db.relationship('Course', backref='elections')
-
 
     @property
     def status(self):
@@ -107,7 +138,28 @@ class Election(db.Model):
             return "Ended"
         else:
             return "Open"
-
+    
+    @property
+    def year_levels_list(self):
+        """Return year levels as a list for easier checking"""
+        if not self.year_levels or self.year_levels == 'all':
+            return ['1', '2', '3', '4']  # All years
+        return self.year_levels.split(',')
+    
+    def can_vote(self, student_year):
+        """Check if a student with given year level can vote in this election"""
+        if self.scope == 'department':
+            # Department elections are filtered by department, not year
+            return True
+        
+        if not self.year_levels or self.year_levels == 'all':
+            return True
+        
+        year_levels = self.year_levels.split(',')
+        return str(student_year) in year_levels
+    
+    def __repr__(self):
+        return f'<Election {self.id}: {self.title}>'
 
 # ------------------- DEPARTMENT -------------------
 class Department(db.Model):
@@ -204,3 +256,40 @@ class AuditLog(db.Model):
 
     def __repr__(self):
         return f"<AuditLog {self.action}>"
+    
+    
+
+    # Add this after your Position model (around line 40-50)
+
+class ElectionPosition(db.Model):
+    """Junction table linking elections to positions with vote limits"""
+    __tablename__ = 'election_positions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+    position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
+    
+    # THIS IS THE KEY FIELD - how many votes allowed for this position in this election
+    max_votes = db.Column(db.Integer, nullable=False, default=1)
+    
+    # Optional: Add min votes if needed (for positions that require minimum)
+    min_votes = db.Column(db.Integer, nullable=False, default=1)
+    
+    # Optional: Display order in ballot
+    display_order = db.Column(db.Integer, default=0)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.current_timestamp())
+
+    # Relationships
+    election = db.relationship('Election', backref=db.backref('election_positions', cascade='all, delete-orphan'))
+    position = db.relationship('Position', backref=db.backref('election_positions', cascade='all, delete-orphan'))
+
+    # Ensure unique combination of election and position
+    __table_args__ = (
+        db.UniqueConstraint('election_id', 'position_id', name='unique_election_position'),
+    )
+
+    def __repr__(self):
+        return f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}>'

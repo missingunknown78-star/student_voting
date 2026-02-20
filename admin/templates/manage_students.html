@@ -27,11 +27,25 @@
 }
 
 /* Fixed widths for predictable layout */
-#filterElection { width: 200px; }
-#filterType     { width: 170px; }
-#filterValue    { width: 180px; }
-#searchInput    { width: 200px; }   /* Adjusted to prevent wrapping */
-.export-btn     { min-width: 150px; }
+#filterScope     { width: 180px; }
+#filterElection  { width: 220px; }
+#filterType      { width: 170px; }
+#filterValue     { width: 180px; }
+#searchInput     { width: 200px; }
+.export-btn      { min-width: 150px; }
+
+/* Disabled state styling */
+#filterElection:disabled {
+    background-color: #f5f5f5;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Dark mode disabled state */
+body.dark-mode #filterElection:disabled {
+    background-color: #2d3748;
+    opacity: 0.5;
+}
 
 /* ---------------- PAGINATION ---------------- */
 .pagination {
@@ -39,6 +53,7 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    justify-content: center;
 }
 .pagination button {
     padding: 6px 12px;
@@ -96,30 +111,164 @@
 .delete-btn { background-color: #c0392b; color: #fff; }
 .delete-btn:hover { background-color: #e74c3c; transform: translateY(-1px); }
 
+/* ==================== EMPTY STATE STYLES ==================== */
+.empty-state-container {
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--card-bg);
+    border-radius: 12px;
+    margin: 20px 0;
+    border: 1px dashed var(--border-color);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.7;
+}
+
+.empty-state-icon i {
+    font-size: 4rem;
+    color: var(--text-secondary);
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.empty-state-message {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+}
+
+.empty-state-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.suggestion-item {
+    background: rgba(67, 97, 238, 0.1);
+    padding: 12px 20px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+    font-size: 0.9rem;
+    border: 1px solid rgba(67, 97, 238, 0.2);
+}
+
+.suggestion-item i {
+    font-size: 1rem;
+}
+
+.suggestion-item.highlight {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.suggestion-item.highlight i {
+    color: white;
+}
+
+/* Scope selection empty state */
+.scope-empty-state {
+    padding: 60px 20px;
+}
+
+.scope-empty-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.7; transform: scale(1); }
+}
+
+/* No elections empty state */
+.no-elections-empty-state {
+    background: rgba(247, 37, 133, 0.05);
+    border-color: rgba(247, 37, 133, 0.3);
+}
+
+.no-elections-icon {
+    color: #f72585;
+}
+
+/* No students empty state */
+.no-students-empty-state {
+    background: rgba(255, 193, 7, 0.05);
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+.no-students-icon {
+    color: #ffc107;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(67, 97, 238, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s ease-in-out infinite;
+    margin: 30px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Year level badge in election dropdown (for the select options) */
+.election-year-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 5px;
+    background: linear-gradient(135deg, #6c5ce7, #a363d9);
+    color: white;
+    vertical-align: middle;
+}
+
 /* ==================== THEME TRANSITION FIXES ==================== */
-/* Force main-content to have transitions */
 .main-content {
     transition: background-color 0.3s ease, background-image 0.3s ease !important;
 }
 
-/* Ensure the background shows through */
 .manage-students-page {
     background: transparent !important;
 }
 
-/* Dark mode main content background */
 body.dark-mode .main-content,
 .main-content.dark-mode {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
 }
 
-/* Light mode main content background */
 body:not(.dark-mode) .main-content,
 .main-content:not(.dark-mode) {
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
-/* Dark mode specific overrides */
 body.dark-mode .status-badge.voted {
     background-color: #27ae60;
 }
@@ -135,6 +284,20 @@ body.dark-mode .edit-btn {
 body.dark-mode .delete-btn {
     background-color: #e74c3c;
 }
+
+body.dark-mode .empty-state-container {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .suggestion-item {
+    background: rgba(102, 126, 234, 0.2);
+    color: var(--text-color);
+}
+
+body.dark-mode .suggestion-item.highlight {
+    background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
+}
 </style>
 {% endblock %}
 
@@ -147,32 +310,42 @@ body.dark-mode .delete-btn {
     <!-- ================= FILTER BAR ================= -->
     <div class="filter-bar">
 
-        <select id="filterElection">
-            <option value="all">All Elections</option>
-            {% for election in elections %}
-            <option value="{{ election.id }}">{{ election.title }}</option>
-            {% endfor %}
+        <!-- 1. SCOPE FILTER -->
+        <select id="filterScope">
+            <option value="">-- Select Scope --</option>
+            <option value="campus">Campus-Wide Election</option>
+            <option value="department">Department Election</option>
         </select>
 
+        <!-- 2. ELECTION FILTER - Initially empty/disabled -->
+        <select id="filterElection" disabled>
+            <option value="all">All Elections</option>
+        </select>
+
+        <!-- 3. FILTER TYPE (All/Department/Course) -->
         <select id="filterType">
             <option value="all">All Students</option>
             <option value="department">By Department</option>
             <option value="course">By Course</option>
         </select>
 
+        <!-- 4. FILTER VALUE (Dynamic based on filter type) -->
         <select id="filterValue" style="display:none"></select>
 
+        <!-- 5. SEARCH INPUT -->
         <input type="text" id="searchInput" placeholder="Search by ID, name, or course...">
 
+        <!-- 6. EXPORT BUTTON -->
         <button class="export-btn" onclick="exportExcel()">
             <i class="fa-solid fa-file-excel"></i> Export Excel
         </button>
 
     </div>
 
-    <!-- ================= TABLE ================= -->
+    <!-- ================= TABLE CONTAINER ================= -->
     <div class="table-container">
-        <table class="students-table">
+        <!-- Students Table -->
+        <table class="students-table" id="studentsTable" style="display: none;">
             <thead>
                 <tr>
                     <th>Student ID</th>
@@ -189,6 +362,70 @@ body.dark-mode .delete-btn {
             </tbody>
         </table>
 
+        <!-- Empty State: No Scope Selected -->
+        <div id="noScopeState" class="empty-state-container scope-empty-state">
+            <div class="empty-state-icon scope-empty-icon">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <h3 class="empty-state-title">Select an Election Scope</h3>
+            <p class="empty-state-message">
+                Please select whether you want to view students for Campus-Wide or Department elections.
+                This will help filter the elections available and monitor students' participation in election process effectively.
+            </p>
+            <div class="empty-state-suggestions">
+                <div class="suggestion-item">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Campus-Wide Elections</span>
+                </div>
+                <div class="suggestion-item">
+                    <i class="fa-solid fa-building"></i>
+                    <span>Department Elections</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State: No Elections Available for Selected Scope -->
+        <div id="noElectionsState" class="empty-state-container no-elections-empty-state" style="display: none;">
+            <div class="empty-state-icon no-elections-icon">
+                <i class="fa-solid fa-calendar-xmark"></i>
+            </div>
+            <h3 class="empty-state-title">No Elections Available</h3>
+            <p class="empty-state-message" id="noElectionsMessage">
+                There are no elections available for the selected scope.
+            </p>
+            <div class="empty-state-suggestions">
+                <a href="{{ url_for('admin.create_election') }}" class="suggestion-item highlight">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <span>Create New Election</span>
+                </a>
+                <div class="suggestion-item">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Select Different Scope</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State: No Students Found -->
+        <div id="noStudentsState" class="empty-state-container no-students-empty-state" style="display: none;">
+            <div class="empty-state-icon no-students-icon">
+                <i class="fa-solid fa-users-slash"></i>
+            </div>
+            <h3 class="empty-state-title">No Students Found</h3>
+            <p class="empty-state-message" id="noStudentsMessage">
+                No students match your current filter criteria.
+            </p>
+            <div class="empty-state-suggestions">
+                <div class="suggestion-item" onclick="clearAllFilters()" style="cursor: pointer;">
+                    <i class="fa-solid fa-eraser"></i>
+                    <span>Clear All Filters</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;"></div>
+
+        <!-- Pagination -->
         <div class="pagination" id="pagination"></div>
     </div>
 
@@ -197,17 +434,134 @@ body.dark-mode .delete-btn {
 <!-- ================= SAFE JSON DATA ================= -->
 <script type="application/json" id="departments-data">{{ departments | tojson }}</script>
 <script type="application/json" id="courses-data">{{ courses | tojson }}</script>
+<script type="application/json" id="elections-data">{{ elections | tojson }}</script>
 
 <!-- ================= JAVASCRIPT ================= -->
 <script>
 // === DATA ===
 const departments = JSON.parse(document.getElementById("departments-data").textContent);
 const courses = JSON.parse(document.getElementById("courses-data").textContent);
+const allElections = JSON.parse(document.getElementById("elections-data").textContent);
 
 let currentPage = 1;
+const filterScopeEl = document.getElementById("filterScope");
 const filterElectionEl = document.getElementById("filterElection");
 const filterTypeEl = document.getElementById("filterType");
 const filterValueEl = document.getElementById("filterValue");
+
+// DOM Elements for empty states
+const studentsTable = document.getElementById("studentsTable");
+const noScopeState = document.getElementById("noScopeState");
+const noElectionsState = document.getElementById("noElectionsState");
+const noStudentsState = document.getElementById("noStudentsState");
+const loadingSpinner = document.getElementById("loadingSpinner");
+const noElectionsMessage = document.getElementById("noElectionsMessage");
+const noStudentsMessage = document.getElementById("noStudentsMessage");
+
+// === FILTER ELECTIONS BY SCOPE ===
+function filterElectionsByScope(scope) {
+    // Clear current options
+    filterElectionEl.innerHTML = '<option value="all">All Elections</option>';
+    
+    if (!scope) {
+        // No scope selected - disable election filter
+        filterElectionEl.disabled = true;
+        
+        // Show no scope state, hide others
+        showEmptyState('noScope');
+        return;
+    }
+    
+    // Filter elections based on scope
+    const filteredElections = allElections.filter(election => {
+        if (scope === 'campus') {
+            return election.scope === 'campus';
+        } else if (scope === 'department') {
+            return election.scope === 'department';
+        }
+        return false;
+    });
+    
+    // Add filtered elections to dropdown with year level info
+    filteredElections.forEach(election => {
+        const option = document.createElement('option');
+        option.value = election.id;
+        
+        // Add year level info to the display text
+        let displayText = election.title;
+        if (election.scope === 'campus' && election.year_levels) {
+            if (election.year_levels === 'all') {
+                displayText += ' (All Years)';
+            } else {
+                displayText += ` (Year ${election.year_levels})`;
+            }
+        }
+        
+        option.textContent = displayText;
+        filterElectionEl.appendChild(option);
+    });
+    
+    if (filteredElections.length === 0) {
+        // No elections for this scope
+        filterElectionEl.innerHTML = '<option value="all">No Elections Available</option>';
+        filterElectionEl.disabled = true;
+        
+        // Show no elections state
+        let scopeText = scope === 'campus' ? 'Campus-Wide' : 'Department';
+        noElectionsMessage.textContent = `There are no ${scopeText} elections available. Create one to get started.`;
+        showEmptyState('noElections');
+    } else {
+        // Elections found - enable dropdown and load data
+        filterElectionEl.disabled = false;
+        loadStudents(1);
+    }
+}
+
+// === SHOW EMPTY STATE ===
+function showEmptyState(type) {
+    // Hide all
+    studentsTable.style.display = 'none';
+    noScopeState.style.display = 'none';
+    noElectionsState.style.display = 'none';
+    noStudentsState.style.display = 'none';
+    document.getElementById('pagination').innerHTML = '';
+    
+    // Show requested state
+    if (type === 'noScope') {
+        noScopeState.style.display = 'block';
+    } else if (type === 'noElections') {
+        noElectionsState.style.display = 'block';
+    } else if (type === 'noStudents') {
+        noStudentsState.style.display = 'block';
+    }
+}
+
+// === SHOW LOADING ===
+function showLoading(show) {
+    if (show) {
+        loadingSpinner.style.display = 'block';
+        studentsTable.style.display = 'none';
+        noScopeState.style.display = 'none';
+        noElectionsState.style.display = 'none';
+        noStudentsState.style.display = 'none';
+        document.getElementById('pagination').innerHTML = '';
+    } else {
+        loadingSpinner.style.display = 'none';
+    }
+}
+
+// === CLEAR ALL FILTERS ===
+function clearAllFilters() {
+    filterScopeEl.value = '';
+    filterElectionEl.innerHTML = '<option value="all">All Elections</option>';
+    filterElectionEl.disabled = true;
+    filterTypeEl.value = 'all';
+    filterValueEl.style.display = 'none';
+    filterValueEl.innerHTML = '';
+    document.getElementById('searchInput').value = '';
+    
+    showEmptyState('noScope');
+}
 
 // === LOAD STUDENTS ===
 function loadStudents(page = 1) {
@@ -216,6 +570,22 @@ function loadStudents(page = 1) {
     const filterType = filterTypeEl.value;
     const filterValue = filterValueEl.value;
     const electionId = filterElectionEl.value;
+    const scope = filterScopeEl.value;
+
+    // Don't load if no scope selected
+    if (!scope) {
+        showEmptyState('noScope');
+        return;
+    }
+
+    // Check if election dropdown is disabled (no elections available)
+    if (filterElectionEl.disabled && filterElectionEl.options.length === 1 && filterElectionEl.options[0].text === 'No Elections Available') {
+        showEmptyState('noElections');
+        return;
+    }
+
+    // Show loading spinner
+    showLoading(true);
 
     let url = `/admin/students/data?page=${page}&search=${encodeURIComponent(search)}`;
     if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
@@ -224,11 +594,41 @@ function loadStudents(page = 1) {
     fetch(url)
         .then(res => res.json())
         .then(data => {
+            // Hide loading spinner
+            showLoading(false);
+            
             const body = document.getElementById("studentsBody");
             const pagination = document.getElementById("pagination");
             body.innerHTML = "";
             pagination.innerHTML = "";
 
+            if (data.students.length === 0) {
+                // No students found
+                studentsTable.style.display = 'none';
+                
+                // Customize message based on filters
+                let message = 'No students match your current filter criteria.';
+                if (search) {
+                    message = `No students found matching "${search}".`;
+                } else if (filterType !== 'all' && filterValue) {
+                    const filterName = filterType === 'department' ? 'department' : 'course';
+                    message = `No students found in this ${filterName}.`;
+                } else if (electionId && electionId !== 'all') {
+                    // Get election title
+                    const selectedElection = Array.from(filterElectionEl.options).find(opt => opt.value === electionId);
+                    const electionTitle = selectedElection ? selectedElection.text : 'this election';
+                    message = `No eligible students found for ${electionTitle}.`;
+                }
+                
+                noStudentsMessage.textContent = message;
+                showEmptyState('noStudents');
+                return;
+            }
+
+            // Show table
+            studentsTable.style.display = 'table';
+            
+            // Populate table
             data.students.forEach(s => {
                 const statusClass = s.has_voted ? "voted" : "not-voted";
                 const statusText = s.has_voted ? "Voted" : "Not Voted";
@@ -243,23 +643,41 @@ function loadStudents(page = 1) {
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>
                         <div class="action-buttons">
-                            <button class="edit-btn"><i class="fa-solid fa-pen"></i></button>
-                            <button class="delete-btn"><i class="fa-solid fa-trash"></i></button>
+                            <button class="edit-btn" onclick="editStudent(${s.id})"><i class="fa-solid fa-pen"></i></button>
+                            <button class="delete-btn" onclick="deleteStudent(${s.id})"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>`;
             });
 
+            // Pagination
             for (let i = 1; i <= data.total_pages; i++) {
                 pagination.innerHTML += `<button onclick="loadStudents(${i})" ${i === data.current_page ? "disabled" : ""}>${i}</button>`;
             }
             
             // Ensure theme is applied to newly loaded content
             applyThemeToMainContent();
+        })
+        .catch(error => {
+            console.error('Error loading students:', error);
+            showLoading(false);
+            alert('Error loading students. Please try again.');
         });
 }
 
-// === FILTER LOGIC ===
+// === SCOPE CHANGE HANDLER ===
+filterScopeEl.addEventListener("change", () => {
+    const scope = filterScopeEl.value;
+    filterElectionsByScope(scope);
+    
+    // Reset other filters
+    filterTypeEl.value = "all";
+    filterValueEl.style.display = "none";
+    filterValueEl.innerHTML = "";
+    document.getElementById('searchInput').value = '';
+});
+
+// === FILTER TYPE CHANGE HANDLER ===
 filterTypeEl.addEventListener("change", () => {
     filterValueEl.innerHTML = "";
     if (filterTypeEl.value === "all") {
@@ -273,12 +691,19 @@ filterTypeEl.addEventListener("change", () => {
     loadStudents(1);
 });
 
+// === OTHER EVENT HANDLERS ===
 filterValueEl.addEventListener("change", () => loadStudents(1));
 document.getElementById("searchInput").addEventListener("keyup", () => loadStudents(1));
 filterElectionEl.addEventListener("change", () => loadStudents(1));
 
 // === EXPORT ===
 function exportExcel() {
+    const scope = filterScopeEl.value;
+    if (!scope) {
+        alert("Please select a scope first");
+        return;
+    }
+    
     const filterType = filterTypeEl.value;
     const filterValue = filterValueEl.value;
     const search = document.getElementById("searchInput").value;
@@ -291,25 +716,41 @@ function exportExcel() {
     window.location.href = url;
 }
 
+// === EDIT STUDENT (placeholder - implement as needed) ===
+function editStudent(id) {
+    alert('Edit functionality for student ' + id + ' - Implement as needed');
+}
+
+// === DELETE STUDENT (placeholder - implement as needed) ===
+function deleteStudent(id) {
+    if (confirm('Are you sure you want to delete this student?')) {
+        fetch(`/admin/students/delete/${id}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadStudents(currentPage);
+                } else {
+                    alert('Error deleting student');
+                }
+            });
+    }
+}
+
 // =============== THEME SYNCHRONIZATION FIX ===============
-// This ensures the theme applies immediately without refresh
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
     
-    // Check current theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
     
-    // Apply or remove dark-mode class
     if (isDark) {
         mainContent.classList.add('dark-mode');
     } else {
         mainContent.classList.remove('dark-mode');
     }
     
-    // Ensure content is visible
     mainContent.classList.add('theme-applied');
 }
 
@@ -317,30 +758,24 @@ function applyThemeToMainContent() {
 (function() {
     applyThemeToMainContent();
     
-    // Also apply after a tiny delay to catch any late initialization
     setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
-    // Listen for theme toggle button clicks
     document.addEventListener('click', function(e) {
-        // Check if the clicked element is the theme toggle button or inside it
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            // Small delay to let localStorage update
             setTimeout(function() {
                 applyThemeToMainContent();
             }, 50);
         }
     });
     
-    // Listen for storage events (if theme changed in another tab)
     window.addEventListener('storage', function(e) {
         if (e.key === 'theme') {
             applyThemeToMainContent();
         }
     });
     
-    // Create a mutation observer to watch for class changes on body
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.attributeName === 'class') {
@@ -351,11 +786,9 @@ function applyThemeToMainContent() {
     
     observer.observe(document.body, { attributes: true });
     
-    // Also watch for changes to the main-content class
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {
         const mainContentObserver = new MutationObserver(function(mutations) {
-            // Just ensure theme-applied is present
             if (!mainContent.classList.contains('theme-applied')) {
                 mainContent.classList.add('theme-applied');
             }
@@ -366,13 +799,16 @@ function applyThemeToMainContent() {
 })();
 
 // Handle any future AJAX loads
-$(document).ajaxComplete(function() {
-    setTimeout(applyThemeToMainContent, 50);
-});
+if (typeof $ !== 'undefined') {
+    $(document).ajaxComplete(function() {
+        setTimeout(applyThemeToMainContent, 50);
+    });
+}
 
 // === INIT ===
 document.addEventListener("DOMContentLoaded", () => {
-    loadStudents();
+    // Initially, show no scope selected state
+    showEmptyState('noScope');
     applyThemeToMainContent();
 });
 </script>

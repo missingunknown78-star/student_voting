@@ -4,6 +4,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_candidates.css') }}">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/positions.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 /* ==================== THEME TRANSITION FIXES ==================== */
@@ -54,7 +55,8 @@ body.dark-mode .lightbox-content label {
 }
 
 /* Fix for filter form selects in dark mode */
-body.dark-mode .filter-form select {
+body.dark-mode .filter-form select,
+body.dark-mode .search-input {
     color: var(--text-color);
     background-color: var(--card-bg);
 }
@@ -62,6 +64,373 @@ body.dark-mode .filter-form select {
 /* Fix for table cell colors in dark mode */
 body.dark-mode .candidates-table td {
     color: var(--text-color);
+}
+
+/* New styles for scope badges */
+.scope-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 5px;
+    text-transform: uppercase;
+}
+
+.scope-badge.campus {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.scope-badge.department {
+    background: linear-gradient(135deg, #007bff, #0d6efd);
+    color: white;
+}
+
+/* Election option styling */
+.election-option {
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.election-option.campus {
+    border-left: 3px solid #28a745;
+    background: rgba(40, 167, 69, 0.05);
+}
+
+.election-option.department {
+    border-left: 3px solid #007bff;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+/* Department hint */
+.department-hint {
+    display: block;
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.required {
+    color: #dc3545;
+    margin-left: 3px;
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Notification styles inside modal - BRIGHT COLORS */
+.modal-notification {
+    padding: 15px 20px;
+    margin-bottom: 25px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideDown 0.3s ease;
+    border-left: 5px solid transparent;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Light mode success - Bright green */
+.modal-notification.success {
+    background: #00c851;
+    background: linear-gradient(135deg, #00c851, #00a844);
+    color: white;
+    border-left-color: #007e33;
+}
+
+/* Dark mode success - Even brighter green */
+body.dark-mode .modal-notification.success {
+    background: #00e676;
+    background: linear-gradient(135deg, #00e676, #00c853);
+    color: white;
+    border-left-color: #00a844;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Light mode error - Bright red */
+.modal-notification.error {
+    background: #ff4444;
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    border-left-color: #a70000;
+}
+
+/* Dark mode error - Even brighter red */
+body.dark-mode .modal-notification.error {
+    background: #ff5e5e;
+    background: linear-gradient(135deg, #ff5e5e, #ff1a1a);
+    color: white;
+    border-left-color: #cc0000;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.modal-notification i {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Disabled button state */
+.add-btn:disabled,
+.edit-btn:disabled,
+.search-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Modal content positioning */
+.lightbox-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-content {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+body.dark-mode .lightbox-content {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+.close {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #666;
+    z-index: 10;
+}
+
+.close:hover {
+    color: #000;
+}
+
+body.dark-mode .close {
+    color: #94a3b8;
+}
+
+body.dark-mode .close:hover {
+    color: #f1f5f9;
+}
+
+/* Search bar styles */
+.search-container {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.search-input {
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 0.9rem;
+    width: 250px;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.search-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+}
+
+.search-btn:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+/* Loading overlay for table */
+.table-loading {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.table-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* ==================== NO CANDIDATES EMPTY STATE ==================== */
+.no-candidates-container {
+    padding: 60px 20px;
+    text-align: center;
+    background: var(--card-bg);
+    border-radius: 16px;
+    margin: 20px 0;
+    border: 1px dashed var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.no-candidates-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.7;
+    color: #ffc107;
+}
+
+.no-candidates-icon i {
+    font-size: 4rem;
+}
+
+.no-candidates-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.no-candidates-message {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+}
+
+.no-candidates-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.suggestion-item {
+    background: rgba(67, 97, 238, 0.1);
+    padding: 12px 20px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+    font-size: 0.9rem;
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.suggestion-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
+}
+
+.suggestion-item i {
+    font-size: 1rem;
+}
+
+.suggestion-item.highlight {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.suggestion-item.highlight i {
+    color: white;
+}
+
+body.dark-mode .no-candidates-container {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .suggestion-item {
+    background: rgba(102, 126, 234, 0.2);
+    color: var(--text-color);
+}
+
+body.dark-mode .suggestion-item.highlight {
+    background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
+}
+
+/* No results message - fallback */
+.no-results {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 </style>
 {% endblock %}
@@ -81,118 +450,139 @@ body.dark-mode .candidates-table td {
         </div>
     </div>
     
-    <!-- ACTION BAR: Add Button and Filter side by side -->
-    <div class="action-bar">
+    <!-- ACTION BAR: Add Button, Filter, and Search -->
+    <div class="action-bar" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
         <!-- Add Candidate Button -->
         <a href="#" class="add-btn" id="openAddCandidate">+ Add Candidate</a>
 
-        <!-- FILTER BY ELECTION TYPE & DEPARTMENT -->
-        <form method="GET" class="filter-form" id="filterForm">
-            <select name="election_type" id="filter_election_type">
-                <option value="">General</option>
-                <option value="Department" {% if selected_election_type=='Department' %}selected{% endif %}>
-                    Department Election
-                </option>
+        <!-- FILTER BY SCOPE & DEPARTMENT (AJAX) -->
+        <div class="filter-form" style="display: flex; gap: 10px; align-items: center;">
+            <select name="scope" id="filter_scope" style="padding: 8px; border-radius: 5px;">
+                <option value="">All Elections</option>
+                <option value="campus">Campus-Wide Elections</option>
+                <option value="department">Department Elections</option>
             </select>
 
-            <select name="department_id" id="filter_department" style="display:none;">
+            <select name="department_id" id="filter_department" style="display:none; padding: 8px; border-radius: 5px;">
                 <option value="">All Departments</option>
                 {% for dept in departments %}
-                <option value="{{ dept.id }}" {% if selected_department and selected_department.id == dept.id %}selected{% endif %}>
-                    {{ dept.name }}
-                </option>
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
                 {% endfor %}
             </select>
-        </form>
+
+            <!-- Search Bar with Loading Spinner -->
+            <div class="search-container">
+                <input type="text" id="search_input" class="search-input" placeholder="Search by name, party, position..." value="{{ request.args.get('search', '') }}">
+                <button type="button" id="search_btn" class="search-btn">
+                    <span class="button-text"><i class="fa-solid fa-search"></i> Search</span>
+                    <span class="loading-spinner" style="display: none;"></span>
+                </button>
+            </div>
+
+            <!-- Reset button -->
+            <button type="button" id="reset_filter" class="cancel-btn" style="padding: 8px 15px;">
+                <i class="fa-solid fa-undo"></i> Reset
+            </button>
+        </div>
     </div>
 
-    <table class="candidates-table">
-        <thead>
-            <tr>
-                <th>Photo</th>
-                <th>Student Name</th>
-                <th>Party List</th>
-                <th>Department</th>
-                <th>Position</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="candidatesTableBody">
-            {% for c in candidates %}
-            <tr id="candidate-{{ c.id }}">
-                <td>
-                    {% if c.photo %}
-                        <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}"
-                             class="candidate-photo clickable-photo"
-                             alt="Candidate Photo">
+    <!-- Table container for AJAX updates -->
+    <div id="table-container">
+        <table class="candidates-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Student Name</th>
+                    <th>Party List</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Election</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="candidatesTableBody">
+                {% for c in candidates %}
+                <tr id="candidate-{{ c.id }}">
+                    <td>
+                        {% if c.photo %}
+                            <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}"
+                                 class="candidate-photo clickable-photo"
+                                 alt="Candidate Photo">
+                        {% else %}
+                            <span>No Photo</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ c.first_name }} {{ c.last_name }}</td>
+                    <td>{{ c.party_list or 'Independent' }}</td>
+                    <td>{{ c.department.name if c.department else 'N/A' }}</td>
+                    <td>{{ c.position.name }}</td>
+                    <td>
+                        <div class="election-info">
+                            <span class="election-title">{{ c.election.title if c.election else 'N/A' }}</span>
+                            {% if c.scope %}
+                                <span class="scope-badge {{ c.scope }}">{{ c.scope|title }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="#"
+                               class="edit-btn openEditModal"
+                               data-id="{{ c.id }}"
+                               data-first="{{ c.first_name }}"
+                               data-last="{{ c.last_name }}"
+                               data-party="{{ c.party_list or '' }}"
+                               data-position="{{ c.position_id }}"
+                               data-election="{{ c.election_id }}"
+                               data-department="{{ c.department.name if c.department else '' }}"
+                               data-department_id="{{ c.department_id or '' }}"
+                               data-scope="{{ c.scope }}">
+                               Edit
+                            </a>
+                            
+                            <!-- FIXED: Remove the href that points to the actual URL -->
+                            <a href="#" 
+                                class="delete-btn delete-candidate" 
+                                data-id="{{ c.id }}">
+                                Delete
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- PAGINATION (will be updated via AJAX) -->
+        <div id="pagination-container">
+            {% if candidates_pagination.pages > 1 %}
+            <div class="pagination">
+                {% if candidates_pagination.has_prev %}
+                    <a href="#" class="pagination-link" data-page="{{ candidates_pagination.prev_num }}">&laquo; Prev</a>
+                {% else %}
+                    <span class="disabled">&laquo; Prev</span>
+                {% endif %}
+
+                {% for p in range(1, candidates_pagination.pages + 1) %}
+                    {% if p == candidates_pagination.page %}
+                        <span class="current">{{ p }}</span>
                     {% else %}
-                        <span>No Photo</span>
+                        <a href="#" class="pagination-link" data-page="{{ p }}">{{ p }}</a>
                     {% endif %}
-                </td>
-                <td>{{ c.first_name }} {{ c.last_name }}</td>
-                <td>{{ c.party_list or '' }}</td>
-                <td>{{ c.department.name if c.department else '' }}</td>
-                <td>{{ c.position.name }}</td>
-                <td>
-                    <a href="#"
-                       class="edit-btn openEditModal"
-                       data-id="{{ c.id }}"
-                       data-first="{{ c.first_name }}"
-                       data-last="{{ c.last_name }}"
-                       data-party="{{ c.party_list or '' }}"
-                       data-position="{{ c.position_id }}"
-                       data-election="{{ c.election_id }}"
-                       data-department="{{ c.department.name if c.department else '' }}"
-                       data-election_type="{{ c.election.election_type }}">
-                       Edit
-                    </a>
+                {% endfor %}
 
-                    <a href="{{ url_for('admin.delete_candidate', id=c.id) }}" 
-                        class="delete-btn delete-candidate" 
-                        data-id="{{ c.id }}">
-                        Delete
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- PAGINATION -->
-    {% if candidates_pagination.pages > 1 %}
-    <div class="pagination">
-        {% if candidates_pagination.has_prev %}
-            <a href="{{ url_for('admin.manage_candidates', page=candidates_pagination.prev_num, 
-                                election_type=selected_election_type, 
-                                department_id=selected_department.id if selected_department else None) }}">&laquo; Prev</a>
-        {% else %}
-            <span class="disabled">&laquo; Prev</span>
-        {% endif %}
-
-        {% for p in range(1, candidates_pagination.pages + 1) %}
-            {% if p == candidates_pagination.page %}
-                <span class="current">{{ p }}</span>
-            {% else %}
-                <a href="{{ url_for('admin.manage_candidates', page=p, 
-                                    election_type=selected_election_type, 
-                                    department_id=selected_department.id if selected_department else None) }}">{{ p }}</a>
+                {% if candidates_pagination.has_next %}
+                    <a href="#" class="pagination-link" data-page="{{ candidates_pagination.next_num }}">Next &raquo;</a>
+                {% else %}
+                    <span class="disabled">Next &raquo;</span>
+                {% endif %}
+            </div>
             {% endif %}
-        {% endfor %}
-
-        {% if candidates_pagination.has_next %}
-            <a href="{{ url_for('admin.manage_candidates', page=candidates_pagination.next_num, 
-                                election_type=selected_election_type, 
-                                department_id=selected_department.id if selected_department else None) }}">Next &raquo;</a>
-        {% else %}
-            <span class="disabled">Next &raquo;</span>
-        {% endif %}
+        </div>
     </div>
-    {% endif %}
-
 </div>
 
 <!-- ================= MODALS ================= -->
-
 <!-- ADD POSITION MODAL -->
 <div id="addPositionModal" class="lightbox-modal">
     <div class="lightbox-content">
@@ -264,7 +654,7 @@ body.dark-mode .candidates-table td {
     </div>
 </div>
 
-<!-- Existing Modals -->
+<!-- Lightbox for photo preview -->
 <div id="lightbox" onclick="closeLightbox()">
     <img id="lightbox-img">
 </div>
@@ -275,36 +665,41 @@ body.dark-mode .candidates-table td {
         <span class="close" onclick="closeAddCandidateModal()">&times;</span>
         <h2>Add Candidate</h2>
 
-        <form id="addCandidateForm" enctype="multipart/form-data" autocomplete="off">
+        <!-- Notification container inside modal -->
+        <div id="addCandidateNotification" class="modal-notification" style="display: none;"></div>
+
+        <form id="addCandidateForm" enctype="multipart/form-data">
             <div class="form-group">
-                <label>First Name</label>
+                <label>First Name <span class="required">*</span></label>
                 <input type="text" name="first_name" id="add_first_name" required placeholder=" ">
             </div>
 
             <div class="form-group">
-                <label>Last Name</label>
+                <label>Last Name <span class="required">*</span></label>
                 <input type="text" name="last_name" id="add_last_name" required placeholder=" ">
             </div>
 
-            <!-- NEW: Party List Field -->
+            <!-- Party List Field -->
             <div class="form-group">
                 <label>Party List</label>
                 <input type="text" name="party_list" id="add_party_list" placeholder="Enter party list (e.g., Lakas, Aksyon, etc.)">
-                <small style="color: #64748b; font-size: 0.7rem; display: block; margin-top: 4px;">Optional: Leave blank if independent</small>
+                <small class="form-hint">Optional: Leave blank if independent</small>
             </div>
 
+            <!-- ELECTION SCOPE -->
             <div class="form-group">
-                <label>Election Type</label>
-                <select name="election_type" id="add_election_type" required>
-                    <option value="" disabled selected>Select Election Type</option>
-                    <option value="Department">Department Election</option>
-                    <option value="SSG">Supreme Student Government (SSG)</option>
+                <label>Election Scope <span class="required">*</span></label>
+                <select name="scope" id="add_scope" required onchange="toggleDepartmentField('add')">
+                    <option value="" disabled selected>Select Election Scope</option>
+                    <option value="campus">Campus-Wide Election</option>
+                    <option value="department">Department Election</option>
                 </select>
             </div>
 
-            <div class="form-group" id="add_department_field">
-                <label>Department</label>
+            <div class="form-group" id="add_department_field" style="display: none;">
+                <label>Department <span class="required">*</span></label>
                 <select name="department_id" id="add_department">
+                    <option value="">Select department</option>
                     {% for dept in departments %}
                     <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
@@ -312,21 +707,24 @@ body.dark-mode .candidates-table td {
             </div>
 
             <div class="form-group">
-                <label>Election</label>
+                <label>Election <span class="required">*</span></label>
                 <select name="election_id" id="add_election" required>
+                    <option value="" disabled selected>Select election</option>
                     {% for election in elections %}
-                        {% if election.election_type == 'Department' %}
-                            <option value="{{ election.id }}" class="department">{{ election.title }}</option>
-                        {% else %}
-                            <option value="{{ election.id }}" class="ssg">{{ election.title }}</option>
-                        {% endif %}
+                        <option value="{{ election.id }}" 
+                                data-scope="{{ election.scope }}"
+                                data-department="{{ election.department_id }}"
+                                style="display: none;">
+                            {{ election.title }} ({{ election.scope|title }})
+                        </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Position</label>
+                <label>Position <span class="required">*</span></label>
                 <select name="position_id" id="add_position" required>
+                    <option value="" disabled selected>Select position</option>
                     {% for position in positions %}
                     <option value="{{ position.id }}">{{ position.name }}</option>
                     {% endfor %}
@@ -339,7 +737,10 @@ body.dark-mode .candidates-table td {
             </div>
 
             <div class="button-group">
-                <button type="submit" class="add-btn">Add</button>
+                <button type="submit" class="add-btn" id="addCandidateSubmitBtn">
+                    <span class="button-text">Add Candidate</span>
+                    <span class="loading-spinner" style="display: none;"></span>
+                </button>
                 <button type="button" class="cancel-btn" onclick="closeAddCandidateModal()">Cancel</button>
             </div>
         </form>
@@ -352,37 +753,42 @@ body.dark-mode .candidates-table td {
         <span class="close" onclick="closeEditModal()">&times;</span>
         <h2>Edit Candidate</h2>
 
-        <form id="editCandidateForm" enctype="multipart/form-data" autocomplete="off">
+        <!-- Notification container inside modal -->
+        <div id="editCandidateNotification" class="modal-notification" style="display: none;"></div>
+
+        <form id="editCandidateForm" enctype="multipart/form-data">
             <input type="hidden" id="edit_id" name="id">
 
             <div class="form-group">
-                <label>First Name</label>
+                <label>First Name <span class="required">*</span></label>
                 <input type="text" name="first_name" id="edit_first" required placeholder=" ">
             </div>
 
             <div class="form-group">
-                <label>Last Name</label>
+                <label>Last Name <span class="required">*</span></label>
                 <input type="text" name="last_name" id="edit_last" required placeholder=" ">
             </div>
 
-            <!-- NEW: Party List Field for Edit -->
+            <!-- Party List Field for Edit -->
             <div class="form-group">
                 <label>Party List</label>
                 <input type="text" name="party_list" id="edit_party_list" placeholder="Enter party list">
-                <small style="color: #64748b; font-size: 0.7rem; display: block; margin-top: 4px;">Optional: Leave blank if independent</small>
+                <small class="form-hint">Optional: Leave blank if independent</small>
             </div>
 
+            <!-- ELECTION SCOPE -->
             <div class="form-group">
-                <label>Election Type</label>
-                <select name="election_type" id="edit_election_type" required>
-                    <option value="Department">Department Election</option>
-                    <option value="SSG">Supreme Student Government (SSG)</option>
+                <label>Election Scope <span class="required">*</span></label>
+                <select name="scope" id="edit_scope" required onchange="toggleDepartmentField('edit')">
+                    <option value="campus">Campus-Wide Election</option>
+                    <option value="department">Department Election</option>
                 </select>
             </div>
 
             <div class="form-group" id="edit_department_field">
-                <label>Department</label>
+                <label>Department <span class="required">*</span></label>
                 <select name="department_id" id="edit_department">
+                    <option value="">Select department</option>
                     {% for dept in departments %}
                     <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
@@ -390,20 +796,21 @@ body.dark-mode .candidates-table td {
             </div>
 
             <div class="form-group">
-                <label>Election</label>
+                <label>Election <span class="required">*</span></label>
                 <select name="election_id" id="edit_election" required>
+                    <option value="">Select election</option>
                     {% for election in elections %}
-                        {% if election.election_type == 'Department' %}
-                            <option value="{{ election.id }}" class="department">{{ election.title }}</option>
-                        {% else %}
-                            <option value="{{ election.id }}" class="ssg">{{ election.title }}</option>
-                        {% endif %}
+                        <option value="{{ election.id }}" 
+                                data-scope="{{ election.scope }}"
+                                data-department="{{ election.department_id }}">
+                            {{ election.title }} ({{ election.scope|title }})
+                        </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Position</label>
+                <label>Position <span class="required">*</span></label>
                 <select name="position_id" id="edit_position" required>
                     {% for position in positions %}
                     <option value="{{ position.id }}">{{ position.name }}</option>
@@ -417,15 +824,15 @@ body.dark-mode .candidates-table td {
             </div>
 
             <div class="button-group">
-                <button type="submit" class="edit-btn">Update</button>
+                <button type="submit" class="edit-btn" id="editCandidateSubmitBtn">
+                    <span class="button-text">Update Candidate</span>
+                    <span class="loading-spinner" style="display: none;"></span>
+                </button>
                 <button type="button" class="cancel-btn" onclick="closeEditModal()">Cancel</button>
             </div>
         </form>
     </div>
 </div>
-
-<script src="{{ url_for('admin.static', filename='js/manage_candidates.js') }}"></script>
-<script src="{{ url_for('admin.static', filename='js/positions.js') }}"></script>
 
 <!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
@@ -434,83 +841,43 @@ function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
     
-    // Check current theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
     
-    // Apply or remove dark-mode class
     if (isDark) {
         mainContent.classList.add('dark-mode');
     } else {
         mainContent.classList.remove('dark-mode');
     }
     
-    // Ensure content is visible
     mainContent.classList.add('theme-applied');
 }
 
-// Apply immediately when page loads
+// Apply theme
 (function() {
     applyThemeToMainContent();
     
-    // Also apply after a tiny delay to catch any late initialization
     setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
-    // Listen for theme toggle button clicks
     document.addEventListener('click', function(e) {
-        // Check if the clicked element is the theme toggle button or inside it
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            // Small delay to let localStorage update
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
+            setTimeout(applyThemeToMainContent, 50);
         }
     });
     
-    // Listen for storage events (if theme changed in another tab)
     window.addEventListener('storage', function(e) {
         if (e.key === 'theme') {
             applyThemeToMainContent();
         }
     });
-    
-    // Create a mutation observer to watch for class changes on body
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
-                applyThemeToMainContent();
-            }
-        });
-    });
-    
-    observer.observe(document.body, { attributes: true });
-    
-    // Also watch for changes to the main-content class
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            // Just ensure theme-applied is present
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
-            }
-        });
-        
-        mainContentObserver.observe(mainContent, { attributes: true });
-    }
 })();
 
-// Handle any modal openings to ensure theme is applied
-document.addEventListener('DOMContentLoaded', function() {
-    // Reapply theme when any modal is opened
-    const modalTriggers = document.querySelectorAll('[id^="open"]');
-    modalTriggers.forEach(trigger => {
-        trigger.addEventListener('click', function() {
-            setTimeout(applyThemeToMainContent, 50);
-        });
-    });
-});
+
 </script>
+
+<script src="{{ url_for('admin.static', filename='js/manage_candidates.js') }}"></script>
+<script src="{{ url_for('admin.static', filename='js/positions.js') }}"></script>
 {% endblock %}

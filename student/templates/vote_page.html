@@ -6,7 +6,7 @@
     <title>Vote - {{ election.title }}</title>
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
     <style>
-        /* Additional styles for PHE info */
+        /* Additional styles for PHE info - KEEPING YOUR ORIGINAL */
         .phe-info {
             background-color: #f0f7ff;
             border-left: 4px solid #2563eb;
@@ -33,7 +33,7 @@
             margin-left: 10px;
         }
         
-        /* Party list badge style */
+        /* Party list badge style - KEEPING YOUR ORIGINAL */
         .party-badge {
             display: inline-block;
             background: #e2e8f0;
@@ -69,12 +69,16 @@
             font-weight: 500;
         }
         
-        /* Card layout adjustments */
+        /* Card layout adjustments - KEEPING YOUR ORIGINAL */
         .candidate-row {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            padding: 10px;
+            border-radius: 12px;
         }
         
         .candidate-info {
@@ -120,7 +124,7 @@
             text-align: center;
         }
         
-        /* Hide radio button but keep functionality */
+        /* Hide radio/checkbox but keep functionality - USING candidate-radio CLASS */
         .candidate-radio {
             position: absolute;
             opacity: 0;
@@ -128,32 +132,93 @@
             height: 0;
         }
         
-        /* Selected state */
+        /* Selected state for single selection (radio) - YOUR ORIGINAL GREEN */
         .candidate-row.selected {
             border: 2px solid #22c55e;
             background: #f0fdf4;
             position: relative;
+            padding: 8px; /* Adjust for border */
         }
         
         .candidate-row.selected::after {
             content: '✓';
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 5px;
+            right: 5px;
             background: #22c55e;
             color: white;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
         }
         
-        /* Responsive adjustments */
+        /* NEW: Selected state for multiple selection - BLUE to differentiate */
+        .candidate-row.selected-multi {
+            border: 2px solid #3b82f6;
+            background: #eff6ff;
+            position: relative;
+            padding: 8px; /* Adjust for border */
+        }
+        
+        .candidate-row.selected-multi::after {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #3b82f6;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* NEW: Vote limit badge */
+        .vote-limit-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+        
+        /* NEW: Selection counter - matches your design */
+        .selection-counter {
+            margin-top: 10px;
+            padding: 6px;
+            font-size: 0.8rem;
+            color: #64748b;
+            text-align: center;
+            background: #f8fafc;
+            border-radius: 20px;
+            border: 1px dashed #cbd5e1;
+        }
+        
+        .selection-counter .selected-count {
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        
+        /* Make entire row clickable - YOUR ORIGINAL */
+        .candidate-row {
+            cursor: pointer;
+        }
+        
+        /* Responsive adjustments - KEEPING YOUR ORIGINAL */
         @media (max-width: 480px) {
             .party-badge {
                 min-width: 70px;
@@ -197,6 +262,19 @@
         <h4>🔐 Privacy-Protected Voting</h4>
         <p>Your vote is encrypted using advanced cryptography. Your choices remain private while ensuring vote integrity.</p>
         <p><strong>Instructions: </strong>Please click your preferred candidates to vote for them. Once submitted, your vote cannot be changed.</p>
+        <p><strong>Vote limits per position:</strong></p>
+        <ul style="margin-top: 5px; padding-left: 20px;">
+            {% for position_name, position_data in candidates_by_position.items() %}
+            <li style="font-size: 0.8rem;">
+                <strong>{{ position_name }}:</strong> 
+                {% if position_data.max_votes > 1 %}
+                    Select up to {{ position_data.max_votes }} candidates
+                {% else %}
+                    Select 1 candidate
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
     </section>
 
     <!-- Candidates Form -->
@@ -212,12 +290,21 @@
         <input type="hidden" name="all_candidate_ids" id="all-candidate-ids" 
                value="{{ all_candidate_ids|join(',') }}">
         
-        {% for position, candidates in candidates_by_position.items() %}
-        <div class="position-group">
-            <h3 class="position-title">{{ position }}</h3>
+        {% for position_name, position_data in candidates_by_position.items() %}
+        <div class="position-group" data-position-id="{{ position_data.position_id }}" data-max-votes="{{ position_data.max_votes }}">
+            <h3 class="position-title">
+                {{ position_name }}
+                <span class="vote-limit-badge">
+                    {% if position_data.max_votes > 1 %}
+                        Max {{ position_data.max_votes }}
+                    {% else %}
+                        Single
+                    {% endif %}
+                </span>
+            </h3>
             <div class="position-candidates">
-                {% for candidate in candidates %}
-                <label class="candidate-row">
+                {% for candidate in position_data.candidates %}
+                <label class="candidate-row" for="candidate-{{ candidate.id }}">
                     <div class="candidate-info">
                         <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) if candidate.photo else url_for('static', filename='default_avatar.png') }}" 
                              alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
@@ -242,15 +329,34 @@
                             {% endif %}
                         </div>
                     </div>
-                    <!-- Radio button with position ID -->
-                    <input type="radio" 
-                           name="position_{{ candidate.position_id }}" 
-                           value="{{ candidate.id }}" 
-                           class="candidate-radio"
-                           required>
+                    
+                    <!-- Input field - changes based on max_votes, with unique ID -->
+                    {% if position_data.max_votes > 1 %}
+                        <input type="checkbox" 
+                               name="position_{{ position_data.position_id }}" 
+                               value="{{ candidate.id }}" 
+                               id="candidate-{{ candidate.id }}"
+                               class="candidate-radio"
+                               data-position-id="{{ position_data.position_id }}">
+                    {% else %}
+                        <input type="radio" 
+                               name="position_{{ position_data.position_id }}" 
+                               value="{{ candidate.id }}" 
+                               id="candidate-{{ candidate.id }}"
+                               class="candidate-radio"
+                               data-position-id="{{ position_data.position_id }}"
+                               required>
+                    {% endif %}
                 </label>
                 {% endfor %}
             </div>
+            
+            <!-- Selection counter for multiple selection positions -->
+            {% if position_data.max_votes > 1 %}
+            <div class="selection-counter" id="counter-{{ position_data.position_id }}">
+                Selected: <span class="selected-count">0</span> / {{ position_data.max_votes }} candidates
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
 
@@ -280,7 +386,6 @@
     const deadline = new Date("{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}").getTime();
     const countdownEl = document.getElementById("countdown");
     const submitBtn = document.getElementById("submitBtn");
-    const voteForm = document.getElementById("voteForm");
 
     function updateCountdown() {
         const now = new Date().getTime();
@@ -294,9 +399,11 @@
             countdownEl.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
         } else {
             countdownEl.innerHTML = "Voting period has ended ⏰";
-            if(submitBtn) submitBtn.disabled = true;
-            if(submitBtn) submitBtn.textContent = "Voting Closed";
-            submitBtn.style.backgroundColor = "#999";
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Voting Closed";
+                submitBtn.style.backgroundColor = "#999";
+            }
             
             // Disable all radio buttons
             document.querySelectorAll('.candidate-radio').forEach(radio => {
@@ -305,73 +412,133 @@
         }
     }
 
-    // Initial call and set interval
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
 
-    // Validate that at least one position is voted for
+    // Update selection counter for multi-select positions
+    function updateSelectionCounter(positionId, maxVotes) {
+        const checkboxes = document.querySelectorAll(`input[name="position_${positionId}"]:checked`);
+        const counter = document.getElementById(`counter-${positionId}`);
+        
+        if (counter) {
+            const countSpan = counter.querySelector('.selected-count');
+            countSpan.textContent = checkboxes.length;
+        }
+    }
+
+    // Validate vote before submission - PRESERVING YOUR VALIDATION STYLE
     function validateVote() {
-        // Get all position groups
         const positionGroups = document.querySelectorAll('.position-group');
         let allPositionsVoted = true;
         
         positionGroups.forEach(group => {
             const positionName = group.querySelector('.position-title').textContent;
-            const radios = group.querySelectorAll('input[type="radio"]');
-            let positionVoted = false;
+            const maxVotes = parseInt(group.dataset.maxVotes);
             
-            radios.forEach(radio => {
-                if (radio.checked) {
-                    positionVoted = true;
+            if (maxVotes === 1) {
+                // Single selection - check radios
+                const radios = group.querySelectorAll('input[type="radio"]:checked');
+                if (radios.length === 0) {
+                    allPositionsVoted = false;
+                    group.style.border = "2px solid #e53e3e";
+                    group.style.borderRadius = "8px";
+                    group.style.padding = "10px";
+                } else {
+                    group.style.border = "";
+                    group.style.padding = "";
                 }
-            });
-            
-            if (!positionVoted) {
-                allPositionsVoted = false;
-                // Highlight the position group
-                group.style.border = "2px solid #e53e3e";
-                group.style.borderRadius = "8px";
-                group.style.padding = "10px";
             } else {
-                group.style.border = "";
-                group.style.padding = "";
+                // Multiple selection - check checkboxes
+                const checkboxes = group.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkboxes.length === 0) {
+                    allPositionsVoted = false;
+                    group.style.border = "2px solid #e53e3e";
+                    group.style.borderRadius = "8px";
+                    group.style.padding = "10px";
+                } else {
+                    group.style.border = "";
+                    group.style.padding = "";
+                }
             }
         });
         
         if (!allPositionsVoted) {
-            alert("Please select a candidate for each position before submitting your vote.");
+            alert("Please select candidates for all positions before submitting your vote.");
             return false;
         }
         
-        // Final confirmation
         return confirm("Are you sure you want to submit your vote?\n\nYour vote will be encrypted and cannot be changed.");
     }
 
-    // Add visual feedback when selecting candidates
+    // Add visual feedback when selecting candidates - FIXED CLICK BEHAVIOR
     document.querySelectorAll('.candidate-row').forEach(row => {
-        const radio = row.querySelector('input[type="radio"]');
+        const radio = row.querySelector('.candidate-radio');
         
-        radio.addEventListener('change', function() {
-            // Remove selected class from all candidates in this position
-            const positionGroup = this.closest('.position-group');
-            positionGroup.querySelectorAll('.candidate-row').forEach(r => {
-                r.classList.remove('selected');
+        if (radio) {
+            radio.addEventListener('change', function(e) {
+                const positionGroup = this.closest('.position-group');
+                const maxVotes = parseInt(positionGroup.dataset.maxVotes);
+                const positionId = positionGroup.dataset.positionId;
+                
+                if (this.type === 'radio') {
+                    // Single selection - remove all selected, add to this
+                    positionGroup.querySelectorAll('.candidate-row').forEach(r => {
+                        r.classList.remove('selected');
+                    });
+                    if (this.checked) {
+                        row.classList.add('selected');
+                    }
+                } else {
+                    // Multiple selection - toggle blue class
+                    if (this.checked) {
+                        row.classList.add('selected-multi');
+                    } else {
+                        row.classList.remove('selected-multi');
+                    }
+                    
+                    // Enforce max limit
+                    const checkboxes = positionGroup.querySelectorAll('input[type="checkbox"]:checked');
+                    if (checkboxes.length > maxVotes) {
+                        this.checked = false;
+                        row.classList.remove('selected-multi');
+                        alert(`You can only select up to ${maxVotes} candidates for this position.`);
+                    }
+                    
+                    updateSelectionCounter(positionId, maxVotes);
+                }
+                
+                // Stop propagation to prevent double events
+                e.stopPropagation();
             });
-            
-            // Add selected class to this candidate
-            if (this.checked) {
-                this.closest('.candidate-row').classList.add('selected');
-            }
-        });
+        }
         
-        // Also make the entire row clickable
+        // Make entire row clickable - FIXED
         row.addEventListener('click', function(e) {
-            if (e.target.tagName !== 'INPUT') {
-                const radio = this.querySelector('input[type="radio"]');
-                radio.checked = true;
-                radio.dispatchEvent(new Event('change'));
+            // Prevent clicking on the input itself to avoid double triggering
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                const radio = this.querySelector('.candidate-radio');
+                if (radio && !radio.disabled) {
+                    e.preventDefault();
+                    if (radio.type === 'radio') {
+                        radio.checked = true;
+                    } else {
+                        radio.checked = !radio.checked;
+                    }
+                    // Trigger change event manually
+                    const event = new Event('change', { bubbles: true });
+                    radio.dispatchEvent(event);
+                }
             }
         });
+    });
+
+    // Initialize counters
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for position_name, position_data in candidates_by_position.items() %}
+            {% if position_data.max_votes > 1 %}
+                updateSelectionCounter({{ position_data.position_id }}, {{ position_data.max_votes }});
+            {% endif %}
+        {% endfor %}
     });
 </script>
 

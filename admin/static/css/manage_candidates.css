@@ -50,7 +50,8 @@ body:not(.dark-mode) {
     --text-color: #212529;
     --text-secondary: #6c757d;
     --card-bg: #ffffff;
-    --table-header-bg: #2c3e50;
+    --table-header-bg: #4a9eff; /* Light blue for header */
+    --table-header-text: #ffffff; /* White text for header */
     --table-row-hover: #f1f2f6;
     --input-bg: white;
     --input-border: #e9ecef;
@@ -64,7 +65,8 @@ body:not(.dark-mode) {
     --text-color: #f1f5f9;
     --text-secondary: #cbd5e1;
     --card-bg: #1e293b;
-    --table-header-bg: #334155;
+    --table-header-bg: #3a7bc8; /* Darker light blue for dark mode */
+    --table-header-text: #ffffff; /* White text for header */
     --table-row-hover: rgba(51, 65, 85, 0.3);
     --input-bg: #1e293b;
     --input-border: rgba(51, 65, 85, 0.8);
@@ -261,18 +263,6 @@ body:not(.dark-mode) {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
 }
 
-.edit-btn {
-    background: #3498db;
-    color: white;
-    box-shadow: var(--box-shadow);
-}
-
-.edit-btn:hover {
-    background: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-}
-
 /* ---------------- Table - FLOATING CARD ---------------- */
 .candidates-table {
     width: 100%;
@@ -294,15 +284,23 @@ body:not(.dark-mode) {
 
 .candidates-table th {
     background: var(--table-header-bg);
-    color: #ffffff;
-    padding: 12px;
+    color: var(--table-header-text);
+    padding: 15px 12px;
     text-align: left;
     font-weight: 600;
     transition: var(--transition);
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Style for the Actions column header */
+.candidates-table th:last-child {
+    text-align: center;
 }
 
 .candidates-table td {
-    padding: 12px;
+    padding: 15px 12px;
     border-bottom: 1px solid var(--input-border);
     vertical-align: middle;
     color: var(--text-color);
@@ -311,6 +309,71 @@ body:not(.dark-mode) {
 
 .candidates-table tr:hover {
     background: var(--table-row-hover);
+}
+
+/* Actions cell styling */
+.candidates-table td:last-child {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Container for action buttons */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Edit button styling */
+.candidates-table .edit-btn {
+    display: inline-block;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    box-shadow: var(--box-shadow);
+    width: 70px; /* Fixed width for consistency */
+    margin: 0 auto;
+}
+
+.candidates-table .edit-btn:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+}
+
+/* Delete button styling */
+.candidates-table .delete-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    box-shadow: var(--box-shadow);
+    width: 70px; /* Same fixed width as edit button */
+    margin: 0 auto;
+}
+
+.candidates-table .delete-btn:hover {
+    background: linear-gradient(135deg, #c0392b, #962d22);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(231, 76, 60, 0.5);
 }
 
 /* Candidate Photo - FIXED SIZE */
@@ -520,34 +583,6 @@ body:not(.dark-mode) {
     to { transform: scale(1); opacity: 1; }
 }
 
-/* ---------------- Delete Button ---------------- */
-.delete-btn {
-    display: inline-block;
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: #fff;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    font-size: 0.9rem;
-    font-weight: bold;
-    padding: 8px 16px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: var(--transition);
-    text-align: center;
-    box-shadow: var(--box-shadow);
-}
-
-.delete-btn:hover {
-    background: linear-gradient(135deg, #c0392b, #962d22);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5);
-}
-
-/* For table cells specifically */
-.candidates-table .delete-btn {
-    padding: 6px 12px;
-    font-size: 0.85rem;
-}
 
 /* ---------------- TWO-COLUMN MODAL FORM LAYOUT ---------------- */
 .lightbox-content {
@@ -785,6 +820,14 @@ body:not(.dark-mode) {
     .candidates-table:hover {
         transform: translateY(-3px);
     }
+    
+    /* Adjust action buttons for mobile */
+    .candidates-table .edit-btn,
+    .candidates-table .delete-btn {
+        width: 60px;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -807,8 +850,8 @@ body:not(.dark-mode) {
     
     .candidates-table th,
     .candidates-table td {
-        padding: 8px 10px;
-        font-size: 0.9rem;
+        padding: 10px 8px;
+        font-size: 0.85rem;
     }
     
     .candidate-photo {
@@ -819,4 +862,71 @@ body:not(.dark-mode) {
     .action-bar {
         gap: 12px;
     }
+    
+    /* Stack buttons vertically in actions cell */
+    .action-buttons {
+        gap: 5px;
+    }
+    
+    .candidates-table .edit-btn,
+    .candidates-table .delete-btn {
+        width: 55px;
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+}
+
+
+/* Election cell styling */
+.candidates-table td:nth-child(6) {
+    text-align: left;
+    vertical-align: middle;
+}
+
+/* Election title */
+.election-title {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--text-color);
+}
+
+/* Container for election info */
+.election-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+}
+
+/* Scope badge styling - always under the title */
+.scope-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    align-self: flex-start; /* Align to left */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.scope-badge.campus {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.scope-badge.department {
+    background: linear-gradient(135deg, #007bff, #0d6efd);
+    color: white;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .scope-badge.campus {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+body.dark-mode .scope-badge.department {
+    background: linear-gradient(135deg, #3498db, #2980b9);
 }

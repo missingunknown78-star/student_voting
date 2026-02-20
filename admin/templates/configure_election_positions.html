@@ -1,0 +1,168 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Configure Election Positions{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/configure_positions.css') }}">
+<!-- No inline styles needed anymore - all moved to configure_positions.css -->
+{% endblock %}
+
+{% block content %}
+<div class="config-container">
+    <div class="election-header">
+        <h2>⚡ Configure Election Positions</h2>
+        <div class="election-meta">
+            <span>{{ election.title }}</span>
+            <span class="scope-badge {{ election.scope }}">{{ election.scope|title }} Election</span>
+            {% if election.department %}
+                <span>{{ election.department }}</span>
+            {% endif %}
+            <span>{{ election.start_date.strftime('%B %d, %Y') }} - {{ election.end_date.strftime('%B %d, %Y') }}</span>
+        </div>
+    </div>
+
+    <div class="instruction-box">
+        <h3>📋 How to Configure</h3>
+        <p>Select which positions will be included in this election and set how many candidates students can vote for per position.</p>
+        <p><strong>Example:</strong> For Senators, set "Max Votes" to 12 if students can vote for 12 senators.</p>
+    </div>
+
+    <form method="POST">
+        <div class="select-all-bar">
+            <label>
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <strong>Select All Positions</strong>
+            </label>
+            <span class="selection-counter">
+                <strong id="selected-count">0</strong> positions selected
+            </span>
+        </div>
+
+        {% for position in all_positions %}
+        <div class="position-card" id="position-{{ position.id }}">
+            <div class="position-checkbox">
+                <input type="checkbox" 
+                       name="positions" 
+                       value="{{ position.id }}" 
+                       id="pos_{{ position.id }}"
+                       onchange="togglePositionSelection({{ position.id }})"
+                       {% if position.id in configured_position_ids %}checked{% endif %}>
+            </div>
+            
+            <div class="position-info">
+                <div class="position-name">
+                    {{ position.name }}
+                    {% if position.description %}
+                        <span class="badge">{{ position.description|truncate(30) }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="vote-limit">
+                <label for="max_votes_{{ position.id }}">Max Votes Allowed</label>
+                <input type="number" 
+                       name="max_votes_{{ position.id }}" 
+                       id="max_votes_{{ position.id }}"
+                       min="1" 
+                       max="50"
+                       value="{{ configured_positions.get(position.id, 1) }}"
+                       {% if position.id not in configured_position_ids %}disabled{% endif %}
+                       onchange="validateVoteLimit(this)">
+                <div class="limit-hint">How many can voters select?</div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="action-buttons">
+            <a href="{{ url_for('admin.create_election') }}" class="cancel-btn">← Back to Elections</a>
+            <button type="submit" class="save-btn">
+                <i class="fa-solid fa-save"></i> Save Configuration
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('input[name="positions"]:checked');
+    document.getElementById('selected-count').textContent = checkboxes.length;
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('input[name="positions"]');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+        const positionId = checkbox.value;
+        togglePositionSelection(positionId);
+    });
+    updateSelectedCount();
+}
+
+function togglePositionSelection(positionId) {
+    const checkbox = document.getElementById(`pos_${positionId}`);
+    const card = document.getElementById(`position-${positionId}`);
+    const limitInput = document.getElementById(`max_votes_${positionId}`);
+    
+    if (checkbox.checked) {
+        card.classList.add('selected');
+        limitInput.disabled = false;
+    } else {
+        card.classList.remove('selected');
+        limitInput.disabled = true;
+    }
+    updateSelectedCount();
+}
+
+function validateVoteLimit(input) {
+    let value = parseInt(input.value);
+    if (isNaN(value) || value < 1) {
+        input.value = 1;
+    } else if (value > 50) {
+        input.value = 50;
+        alert('Maximum votes cannot exceed 50');
+    }
+}
+
+function validateForm() {
+    const checkboxes = document.querySelectorAll('input[name="positions"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one position for this election.');
+        return false;
+    }
+    
+    let valid = true;
+    checkboxes.forEach(checkbox => {
+        const positionId = checkbox.value;
+        const limitInput = document.getElementById(`max_votes_${positionId}`);
+        const value = parseInt(limitInput.value);
+        
+        if (isNaN(value) || value < 1) {
+            const positionName = checkbox.closest('.position-card').querySelector('.position-name').textContent.trim();
+            alert(`Please set a valid vote limit for ${positionName}`);
+            valid = false;
+        }
+    });
+    
+    if (!valid) return false;
+    return confirm('Save these position configurations?');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    {% for position in all_positions %}
+        togglePositionSelection({{ position.id }});
+    {% endfor %}
+    
+    // Add form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
