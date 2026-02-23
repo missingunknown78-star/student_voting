@@ -1,0 +1,263 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Confirm Deletion{% endblock %}
+
+{% block extra_head %}
+<style>
+    .confirm-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    
+    body.dark-mode .confirm-container {
+        background: #1e293b;
+        color: #e2e8f0;
+    }
+    
+    .warning-header {
+        background: #fff3cd;
+        border-left: 6px solid #ffc107;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-radius: 8px;
+        color: #856404;
+    }
+    
+    body.dark-mode .warning-header {
+        background: #2d2a1a;
+        color: #ffd966;
+        border-left-color: #ffb347;
+    }
+    
+    .warning-header h2 {
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .warning-icon {
+        font-size: 2rem;
+    }
+    
+    .items-list {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    body.dark-mode .items-list {
+        background: #0f172a;
+    }
+    
+    .item {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    body.dark-mode .item {
+        border-bottom-color: #334155;
+    }
+    
+    .item:last-child {
+        border-bottom: none;
+    }
+    
+    .item-name {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .item-details {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    body.dark-mode .item-details {
+        color: #94a3b8;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .stat-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.3s;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+        text-decoration: none;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="confirm-container">
+    <div class="warning-header">
+        <h2>
+            <span class="warning-icon">⚠️</span>
+            Warning: Cascade Deletion
+        </h2>
+        <p>You are about to delete <strong>{{ items|length }} {{ item_type }}</strong>. This action CANNOT be undone and will permanently delete all related records.</p>
+    </div>
+    
+    <div class="items-list">
+        <h3 style="margin-bottom: 1rem;">Items to be deleted:</h3>
+        {% for item in items %}
+        <div class="item">
+            <div>
+                <div class="item-name">{{ item.name }}</div>
+                {% if item.department %}
+                <div class="item-details">{{ item.department }}</div>
+                {% endif %}
+            </div>
+            <div class="item-details">
+                {% if item.student_count > 0 %}{{ item.student_count }} students{% endif %}
+                {% if item.course_count > 0 %}, {{ item.course_count }} courses{% endif %}
+                {% if item.candidate_count > 0 %}, {{ item.candidate_count }} candidates{% endif %}
+                {% if item.election_count > 0 %}, {{ item.election_count }} elections{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <h3 style="margin-bottom: 1rem;">This will also delete:</h3>
+    <div class="stats-grid">
+        {% if totals.students > 0 %}
+        <div class="stat-card warning">
+            <div class="stat-number">{{ totals.students }}</div>
+            <div class="stat-label">Students</div>
+        </div>
+        {% endif %}
+        
+        {% if totals.courses > 0 %}
+        <div class="stat-card warning">
+            <div class="stat-number">{{ totals.courses }}</div>
+            <div class="stat-label">Courses</div>
+        </div>
+        {% endif %}
+        
+        {% if totals.candidates > 0 %}
+        <div class="stat-card warning">
+            <div class="stat-number">{{ totals.candidates }}</div>
+            <div class="stat-label">Candidates</div>
+        </div>
+        {% endif %}
+        
+        {% if totals.elections > 0 %}
+        <div class="stat-card warning">
+            <div class="stat-number">{{ totals.elections }}</div>
+            <div class="stat-label">Elections</div>
+        </div>
+        {% endif %}
+        
+        {% if totals.students == 0 and totals.courses == 0 and totals.candidates == 0 and totals.elections == 0 %}
+        <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">No related records</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <form method="POST" action="{{ url_for('admin.delete_multiple_departments' if item_type == 'departments' else 'admin.delete_multiple_courses') }}">
+        {% for id in ids %}
+        <input type="hidden" name="{{ 'department_ids' if item_type == 'departments' else 'course_ids' }}" value="{{ id }}">
+        {% endfor %}
+        <input type="hidden" name="confirmed" value="true">
+        
+        <div class="action-buttons">
+            <a href="{{ url_for('admin.manage_departments') }}" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-danger" onclick="return confirm('This will permanently delete ALL related records. Are you absolutely sure?')">
+                Yes, Delete Everything
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Theme synchronization
+    function applyThemeToMainContent() {
+        const mainContent = document.querySelector('.main-content');
+        if (!mainContent) return;
+        
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+        
+        if (isDark) {
+            mainContent.classList.add('dark-mode');
+        } else {
+            mainContent.classList.remove('dark-mode');
+        }
+    }
+    
+    applyThemeToMainContent();
+</script>
+{% endblock %}

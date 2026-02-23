@@ -1063,7 +1063,7 @@ def submit_vote(election_id):
         except:
             cast_timestamp = datetime.utcnow()
     
-    # Get all candidate IDs from hidden input (for PHE one-hot vector)
+    # GET ALL CANDIDATE IDs FROM HIDDEN INPUT FIRST!
     all_candidate_ids_str = request.form.get('all_candidate_ids', '')
     if not all_candidate_ids_str:
         flash("Voting data error. Please try again.", "danger")
@@ -1072,12 +1072,27 @@ def submit_vote(election_id):
     # Convert string to list of integers
     all_candidate_ids = [int(id_str) for id_str in all_candidate_ids_str.split(',') if id_str.strip()]
     
-    # Get selected candidates - FIXED: look for 'position_' prefix
+    # Get selected candidates - Use getlist() for checkboxes
     selected_candidates = {}
-    for key, value in request.form.items():
-        if key.startswith('position_'):  # Changed from 'candidate_' to 'position_'
+    
+    # First, get all form keys that start with 'position_'
+    for key in request.form.keys():
+        if key.startswith('position_'):
             position_id = key.replace('position_', '')
-            selected_candidates[position_id] = int(value)
+            
+            # Use getlist() to get ALL values for this key (for checkboxes)
+            values = request.form.getlist(key)
+            
+            # Convert each value to integer
+            candidate_ids = []
+            for val in values:
+                try:
+                    candidate_ids.append(int(val))
+                except ValueError:
+                    continue
+            
+            if candidate_ids:
+                selected_candidates[position_id] = candidate_ids
 
     if not selected_candidates:
         flash("Please select at least one candidate before submitting.", "warning")
@@ -1089,17 +1104,14 @@ def submit_vote(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Record votes for each position WITH ENCRYPTION
+    # Record ONE vote per position (with multiple selections encoded)
     recorded_timestamp = datetime.utcnow()
     
-    for position_id, candidate_id in selected_candidates.items():
-        # Encrypt the vote using Paillier
-        encrypted_vote = encrypt_vote_for_candidates(all_candidate_ids, candidate_id)
-        
-        # Debug: print what we're storing
-        print(f"DEBUG: Encrypting vote for candidate {candidate_id}")
-        print(f"DEBUG: All candidate IDs: {all_candidate_ids}")
-        print(f"DEBUG: Encrypted vote (first 200 chars): {encrypted_vote[:200]}")
+    # For each position, create ONE encrypted vote that represents ALL selections
+    for position_id, candidate_ids in selected_candidates.items():
+        # Create a combined encrypted vote for this position
+        # USING YOUR EXISTING public_key VARIABLE
+        encrypted_vote = encrypt_vote_for_multiple_candidates(all_candidate_ids, candidate_ids)
         
         # Validate it's proper JSON
         try:
@@ -1117,7 +1129,7 @@ def submit_vote(election_id):
             recorded_timestamp=recorded_timestamp
         )
         db.session.add(vote)
-        print(f"DEBUG: Added vote for position {position_id}, candidate {candidate_id}")
+        print(f"DEBUG: Added vote for position {position_id} with candidates {candidate_ids}")
 
     try:
         db.session.commit()
@@ -1130,6 +1142,46 @@ def submit_vote(election_id):
         flash(f"Error saving your vote: {str(e)}", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
 
+# Add this helper function - MODIFIED to use your existing public_key
+def encrypt_vote_for_multiple_candidates(all_candidate_ids, selected_candidate_ids):
+    """Create one-hot encrypted vote vector for multiple selected candidates"""
+    # Create one-hot vector: 1 for each selected candidate, 0 for others
+    vote_vector = [1 if candidate_id in selected_candidate_ids else 0 
+                  for candidate_id in all_candidate_ids]
+    
+    # Encrypt each element using the global public_key
+    enc_vote = [public_key.encrypt(x) for x in vote_vector]
+    
+    # Serialize for storage
+    vote_json = json.dumps([
+        {"ciphertext": str(e.ciphertext()), "exponent": e.exponent} 
+        for e in enc_vote
+    ])
+    
+    return vote_json
+
+# You might also want to update your vote counting function to handle multiple selections
+def count_votes_for_multiple_candidates(election_id, candidate_ids):
+    """Count votes for candidates when multiple selections are allowed"""
+    votes = Vote.query.filter_by(election_id=election_id).all()
+    
+    if not votes:
+        return {candidate_id: 0 for candidate_id in candidate_ids}
+    
+    # Initialize with encrypted zeros
+    total_encrypted = [public_key.encrypt(0) for _ in candidate_ids]
+    
+    # Add all votes homomorphically
+    for vote in votes:
+        enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+        for i in range(len(total_encrypted)):
+            total_encrypted[i] = total_encrypted[i] + enc_votes[i]
+    
+    # Decrypt final totals
+    decrypted_totals = [private_key.decrypt(x) for x in total_encrypted]
+    
+    # Map to candidate IDs
+    return dict(zip(candidate_ids, decrypted_totals))
 
 from sqlalchemy import or_
 

@@ -4,6 +4,9 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/voting_trends.css') }}">
+<!-- Add Chart.js for the charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -51,6 +54,43 @@
         <p>{{ voter_turnout if voter_turnout else "0%" }}</p>
     </div>
 
+</div>
+
+<!-- ================= VOTING TRENDS CHART ================= -->
+<div class="voting-trends-container">
+    <div class="trends-header">
+        <h3>
+            <i class="fa-solid fa-chart-line"></i>
+            Voting Trends
+            <span id="currentElectionTitle" style="font-size: 0.8rem; color: #64748b; font-weight: normal; margin-left: 8px;">
+                All Elections Combined
+            </span>
+        </h3>
+        <div class="election-filters" id="electionFilters">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Stats for selected election -->
+    <div class="election-stats">
+        <div class="stat-item">
+            <div class="stat-label">Total Votes</div>
+            <div class="stat-value" id="totalVotes">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Eligible Voters</div>
+            <div class="stat-value" id="eligibleVoters">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Turnout</div>
+            <div class="stat-value" id="turnoutPercent">0%</div>
+        </div>
+    </div>
+
+    <!-- Chart container -->
+    <div class="chart-container">
+        <canvas id="votingTrendsChart"></canvas>
+    </div>
 </div>
 
 <!-- ================= RECENT ELECTIONS ================= -->
@@ -137,5 +177,7 @@
 </div>
 
 <script src="{{ url_for('admin.static', filename='js/admin_dashboard.js') }}"></script>
+<!-- Voting Trends JavaScript -->
+<script src="{{ url_for('admin.static', filename='js/voting_trends.js') }}"></script>
 
 {% endblock %}

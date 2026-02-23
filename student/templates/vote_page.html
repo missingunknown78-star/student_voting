@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Vote - {{ election.title }}</title>
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
     <style>
@@ -45,6 +45,11 @@
             letter-spacing: 0.3px;
             text-align: center;
             min-width: 80px;
+            max-width: 100%;
+            box-sizing: border-box;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.2;
         }
         
         .party-badge.independent {
@@ -67,9 +72,11 @@
             font-size: 0.75rem;
             color: #64748b;
             font-weight: 500;
+            word-break: break-word;
+            max-width: 100%;
         }
         
-        /* Card layout adjustments - KEEPING YOUR ORIGINAL */
+        /* Card layout adjustments - FIXED FOR MOBILE */
         .candidate-row {
             display: flex;
             flex-direction: column;
@@ -77,8 +84,11 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.15s ease;
-            padding: 10px;
+            padding: 10px 6px;
             border-radius: 12px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         
         .candidate-info {
@@ -101,6 +111,8 @@
             color: #0f172a;
             margin: 6px 0 2px 0;
             text-align: center;
+            word-break: break-word;
+            max-width: 100%;
         }
         
         .candidate-photo {
@@ -111,6 +123,7 @@
             border: 3px solid white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 4px;
+            max-width: 100%;
         }
         
         .candidate-platform {
@@ -122,6 +135,8 @@
             margin-top: 8px;
             width: 100%;
             text-align: center;
+            word-break: break-word;
+            box-sizing: border-box;
         }
         
         /* Hide radio/checkbox but keep functionality - USING candidate-radio CLASS */
@@ -137,7 +152,7 @@
             border: 2px solid #22c55e;
             background: #f0fdf4;
             position: relative;
-            padding: 8px; /* Adjust for border */
+            padding: 8px 4px;
         }
         
         .candidate-row.selected::after {
@@ -163,7 +178,7 @@
             border: 2px solid #3b82f6;
             background: #eff6ff;
             position: relative;
-            padding: 8px; /* Adjust for border */
+            padding: 8px 4px;
         }
         
         .candidate-row.selected-multi::after {
@@ -218,25 +233,59 @@
             cursor: pointer;
         }
         
-        /* Responsive adjustments - KEEPING YOUR ORIGINAL */
+        /* Responsive adjustments - FIXED FOR MOBILE */
         @media (max-width: 480px) {
             .party-badge {
-                min-width: 70px;
-                font-size: 10px;
-                padding: 3px 8px;
+                min-width: 60px;
+                font-size: 9px;
+                padding: 3px 6px;
             }
             
             .candidate-photo {
-                width: 70px;
-                height: 70px;
+                width: 60px;
+                height: 60px;
             }
             
             .candidate-name {
-                font-size: 0.75rem;
+                font-size: 0.7rem;
             }
             
             .course-name {
+                font-size: 0.6rem;
+            }
+            
+            .candidate-row {
+                padding: 8px 3px;
+            }
+            
+            .position-candidates {
+                gap: 4px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .party-badge {
+                min-width: 50px;
+                font-size: 8px;
+                padding: 2px 4px;
+            }
+            
+            .candidate-photo {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .candidate-name {
                 font-size: 0.65rem;
+            }
+            
+            .course-name {
+                font-size: 0.55rem;
+            }
+            
+            .vote-limit-badge {
+                font-size: 0.55rem;
+                padding: 2px 4px;
             }
         }
     </style>

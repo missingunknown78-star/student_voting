@@ -853,3 +853,58 @@ body:not(.dark-mode) {
         opacity: 1;
     }
 }
+
+
+
+/* Additional styles for simplified winners table */
+.winner-position-header {
+    background: rgba(245, 158, 11, 0.15);
+    padding: 12px 25px;
+    border-bottom: 1px solid var(--border-color);
+    border-top: 2px solid #f59e0b;
+    font-weight: 700;
+    color: #f59e0b;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.winner-position-title {
+    display: flex;
+    align-items: center;
+}
+
+.winner-position-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-weight: normal;
+}
+
+/* Update grid template for simplified layout */
+.winner-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 120px;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.3s;
+    gap: 15px;
+    background: rgba(245, 158, 11, 0.02);
+}
+
+.winner-subrow {
+    display: grid;
+    grid-template-columns: 60px 1fr 120px 120px;
+    align-items: center;
+    padding: 15px 25px 15px 85px;
+    border-bottom: 1px dashed var(--border-color);
+    background: rgba(245, 158, 11, 0.01);
+}
+
+/* Update table header to match */
+.winners-table .table-header.winner-row {
+    grid-template-columns: 60px 1fr 120px 120px;
+    background: linear-gradient(135deg, #f59e0b, #f39c12);
+    color: white;
+}

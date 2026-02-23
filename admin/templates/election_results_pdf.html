@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ election.title }} - Official Results</title>
+    <style>
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.5;
+            color: #333333;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .pdf-header {
+            text-align: center;
+            padding: 20px 0 15px 0;
+            border-bottom: 3px solid #003366;
+            margin-bottom: 20px;
+        }
+        
+        .pdf-header img {
+            max-height: 90px;
+            max-width: 300px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+        
+        .pdf-header h1 {
+            color: #003366;
+            font-size: 24px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        
+        .pdf-header .school-name {
+            color: #666666;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        .pdf-header .election-date {
+            color: #888888;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        /* Footer */
+        .pdf-footer {
+            text-align: center;
+            padding: 15px 0 20px 0;
+            border-top: 3px solid #003366;
+            margin-top: 30px;
+            font-size: 11px;
+            color: #666666;
+        }
+        
+        .pdf-footer img {
+            max-height: 50px;
+            max-width: 200px;
+            object-fit: contain;
+            margin-bottom: 8px;
+        }
+        
+        .pdf-footer .footer-text div {
+            margin: 2px 0;
+        }
+        
+        /* Encryption Note */
+        .encryption-note {
+            background-color: #e8f4fd;
+            border-left: 5px solid #003366;
+            padding: 12px 15px;
+            margin: 20px 0 25px 0;
+            font-size: 12px;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .encryption-note strong {
+            color: #003366;
+        }
+        
+        /* Results Summary Cards */
+        .results-summary {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin: 25px 0 30px 0;
+        }
+        
+        .summary-card {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .summary-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #003366;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 13px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Section Titles */
+        .section-title {
+            color: #003366;
+            font-size: 18px;
+            margin: 30px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #003366;
+            font-weight: bold;
+        }
+        
+        /* Winners Grid */
+        .winners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .winner-card {
+            background: linear-gradient(135deg, #fff3cd, #fff9e6);
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .winner-position {
+            color: #856404;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .winner-name {
+            color: #003366;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .winner-votes {
+            color: #28a745;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .winner-percentage {
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0 30px 0;
+            font-size: 13px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        th {
+            background-color: #003366;
+            color: white;
+            font-weight: bold;
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 13px;
+        }
+        
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .winner-row {
+            background-color: #fff3cd !important;
+            font-weight: 500;
+        }
+        
+        .winner-row td {
+            border-bottom: 1px solid #ffc107;
+        }
+        
+        .winner-badge {
+            display: inline-block;
+            background-color: #f39c12;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+        
+        /* Vote count formatting */
+        .vote-count {
+            font-weight: 600;
+            color: #28a745;
+        }
+        
+        .vote-percentage {
+            color: #6c757d;
+        }
+        
+        /* Voter turnout section */
+        .turnout-section {
+            margin: 25px 0;
+        }
+        
+        .turnout-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .turnout-stat {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .turnout-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #003366;
+        }
+        
+        .turnout-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        /* Watermark */
+        .watermark {
+            position: fixed;
+            bottom: 150px;
+            right: 50px;
+            opacity: 0.05;
+            font-size: 80px;
+            transform: rotate(-15deg);
+            pointer-events: none;
+            z-index: -1;
+            color: #003366;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Watermark -->
+    <div class="watermark">OFFICIAL</div>
+    
+    <!-- Header -->
+    <div class="pdf-header">
+        <img src="{{ url_for('admin.static', filename='images/CTU HEADER.png') }}" alt="CTU Logo">
+        <h1>{{ election.title }}</h1>
+        <div class="school-name">Cebu Technological University</div>
+        <div class="election-date">{{ election.start_date.strftime('%B %d, %Y') }} - {{ election.end_date.strftime('%B %d, %Y') }}</div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="content-container">
+        
+        <!-- Encryption Note -->
+        <div class="encryption-note">
+            <strong>🔒 Privacy Protected Results:</strong> These results are calculated from encrypted votes using 
+            Paillier Homomorphic Encryption. Individual votes remain private while ensuring accurate totals.
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="results-summary">
+            <div class="summary-card">
+                <div class="summary-number">{{ total_votes_cast }}</div>
+                <div class="summary-label">Votes Cast</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-number">{{ voter_turnout }}%</div>
+                <div class="summary-label">Voter Turnout</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-number">{{ candidate_results|length }}</div>
+                <div class="summary-label">Candidates</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-number">{{ total_eligible_voters }}</div>
+                <div class="summary-label">Total Voters</div>
+            </div>
+        </div>
+        
+        <!-- Winners Section -->
+        {% if winners_by_position %}
+        <div>
+            <h2 class="section-title">🏆 Election Winners</h2>
+            <div class="winners-grid">
+                {% for position, winner in winners_by_position.items() %}
+                <div class="winner-card">
+                    <div class="winner-position">{{ position }}</div>
+                    <div class="winner-name">{{ winner.first_name }} {{ winner.last_name }}</div>
+                    <div class="winner-votes">{{ winner.vote_count }} votes</div>
+                    <div class="winner-percentage">{{ winner.vote_percentage }}% of total</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Complete Results Table -->
+        <div>
+            <h2 class="section-title">📊 Complete Results</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Candidate</th>
+                        <th>Position</th>
+                        <th>Votes</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for candidate in candidate_results %}
+                    {% set is_winner = winners_by_position.get(candidate.position) and 
+                                       winners_by_position[candidate.position].id == candidate.id %}
+                    <tr {% if is_winner %}class="winner-row"{% endif %}>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ candidate.first_name }} {{ candidate.last_name }}</strong></td>
+                        <td>{{ candidate.position }}</td>
+                        <td class="vote-count">{{ candidate.vote_count }}</td>
+                        <td class="vote-percentage">{{ candidate.vote_percentage }}% 
+                            {% if is_winner %}<span class="winner-badge">WINNER</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Voter Turnout Details -->
+        <div class="turnout-section">
+            <h2 class="section-title">📈 Voter Turnout Details</h2>
+            <div class="turnout-stats">
+                <div class="turnout-stat">
+                    <div class="turnout-value">{{ total_eligible_voters }}</div>
+                    <div class="turnout-label">Registered Students</div>
+                </div>
+                <div class="turnout-stat">
+                    <div class="turnout-value">{{ total_votes_cast }}</div>
+                    <div class="turnout-label">Students Who Voted</div>
+                </div>
+                <div class="turnout-stat">
+                    <div class="turnout-value">{{ students_not_voted }}</div>
+                    <div class="turnout-label">Did Not Vote</div>
+                </div>
+                <div class="turnout-stat">
+                    <div class="turnout-value">{{ voter_turnout }}%</div>
+                    <div class="turnout-label">Turnout Rate</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Additional Information -->
+        <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-size: 11px; color: #6c757d;">
+            <p><strong>Report Generated:</strong> {{ now.strftime('%B %d, %Y at %I:%M:%S %p') }}</p>
+            <p><strong>Election ID:</strong> {{ election.id }}</p>
+            <p><strong>Tally Status:</strong> {% if is_tallied %}Officially Tallied{% else %}Unofficial Results{% endif %}</p>
+            {% if is_tallied and tally_timestamp %}
+            <p><strong>Last Tallied:</strong> {{ tally_timestamp.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            {% endif %}
+        </div>
+        
+    </div>
+    
+    <!-- Footer -->
+    <div class="pdf-footer">
+        <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png') }}" alt="CTU Logo">
+        <div class="footer-text">
+            <div><strong>Official Election Results - {{ election.title }}</strong></div>
+            <div>Generated on {{ now.strftime('%B %d, %Y at %I:%M %p') }}</div>
+            <div>Cebu Technological University - Student Government</div>
+            <div style="margin-top: 8px; font-style: italic;">This document is electronically generated and verified</div>
+        </div>
+    </div>
+</body>
+</html>

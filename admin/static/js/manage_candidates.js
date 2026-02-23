@@ -48,6 +48,10 @@ function closeAddCandidateModal() {
 document.querySelectorAll('.openEditModal').forEach(btn => {
     btn.onclick = e => {
         e.preventDefault();
+        
+        // Reset the edit button state before opening modal
+        resetEditButtonState();
+        
         const id = btn.dataset.id;
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_first').value = btn.dataset.first;
@@ -125,10 +129,28 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
     };
 });
 
+// Helper function to reset edit button state
+function resetEditButtonState() {
+    const editSubmitBtn = document.getElementById('editCandidateSubmitBtn');
+    if (editSubmitBtn) {
+        editSubmitBtn.disabled = false;
+        const buttonText = editSubmitBtn.querySelector('.button-text');
+        const spinner = editSubmitBtn.querySelector('.loading-spinner');
+        if (buttonText) {
+            buttonText.innerHTML = 'Update Candidate';
+            buttonText.style.opacity = '1';
+        }
+        if (spinner) spinner.style.display = 'none';
+    }
+}
+
 function closeEditModal() {
     document.getElementById('editCandidateModal').style.display = 'none';
     document.getElementById('editCandidateForm').reset();
     document.getElementById('editCandidateNotification').style.display = 'none';
+    
+    // Reset the edit button state
+    resetEditButtonState();
 }
 
 /* SHOW/HIDE Department field & FILTER Election dropdown based on SCOPE */
@@ -564,6 +586,10 @@ function attachEventListeners() {
     document.querySelectorAll('.openEditModal').forEach(btn => {
         btn.onclick = e => {
             e.preventDefault();
+            
+            // Reset the edit button state before opening modal
+            resetEditButtonState();
+            
             const id = btn.dataset.id;
             document.getElementById('edit_id').value = id;
             document.getElementById('edit_first').value = btn.dataset.first;
@@ -723,8 +749,8 @@ if (addCandidateForm) {
         addSubmitBtn.disabled = true;
         const buttonText = addSubmitBtn.querySelector('.button-text');
         const spinner = addSubmitBtn.querySelector('.loading-spinner');
-        buttonText.style.opacity = '0.7';
-        spinner.style.display = 'inline-block';
+        if (buttonText) buttonText.style.opacity = '0.7';
+        if (spinner) spinner.style.display = 'inline-block';
 
         const formData = new FormData(this);
 
@@ -785,13 +811,13 @@ if (addCandidateForm) {
         .finally(() => {
             // Hide loading state
             addSubmitBtn.disabled = false;
-            buttonText.style.opacity = '1';
-            spinner.style.display = 'none';
+            if (buttonText) buttonText.style.opacity = '1';
+            if (spinner) spinner.style.display = 'none';
         });
     });
 }
 
-/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - UPDATED TO CLOSE MODAL ---------- */
+/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - FIXED VERSION ---------- */
 const editCandidateForm = document.getElementById('editCandidateForm');
 const editSubmitBtn = document.getElementById('editCandidateSubmitBtn');
 
@@ -799,12 +825,16 @@ if (editCandidateForm) {
     editCandidateForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Show loading state
+        // Show loading state - change button text to "Updating..."
         editSubmitBtn.disabled = true;
         const buttonText = editSubmitBtn.querySelector('.button-text');
         const spinner = editSubmitBtn.querySelector('.loading-spinner');
-        buttonText.style.opacity = '0.7';
-        spinner.style.display = 'inline-block';
+        
+        if (buttonText) {
+            buttonText.innerHTML = 'Updating...';
+            buttonText.style.opacity = '0.7';
+        }
+        if (spinner) spinner.style.display = 'inline-block';
 
         const formData = new FormData(this);
         const candidateId = document.getElementById('edit_id').value;
@@ -837,25 +867,31 @@ if (editCandidateForm) {
                 // Refresh the table with current filters but keep page
                 filterCandidates(null, true);
                 
-                // CLOSE THE EDIT MODAL
+                // CLOSE THE EDIT MODAL - this will also reset the button state via closeEditModal
                 closeEditModal();
 
             } else {
                 // Show error inside modal if failed
                 showModalNotification('editCandidate', data.message || 'Failed to update candidate.', 'error');
-                // Hide loading state but keep modal open
+                // Reset button state but keep modal open
                 editSubmitBtn.disabled = false;
-                buttonText.style.opacity = '1';
-                spinner.style.display = 'none';
+                if (buttonText) {
+                    buttonText.innerHTML = 'Update Candidate';
+                    buttonText.style.opacity = '1';
+                }
+                if (spinner) spinner.style.display = 'none';
             }
         })
         .catch(err => {
             console.error('Error:', err);
             showModalNotification('editCandidate', err.message || 'Error updating candidate', 'error');
-            // Hide loading state but keep modal open
+            // Reset button state but keep modal open
             editSubmitBtn.disabled = false;
-            buttonText.style.opacity = '1';
-            spinner.style.display = 'none';
+            if (buttonText) {
+                buttonText.innerHTML = 'Update Candidate';
+                buttonText.style.opacity = '1';
+            }
+            if (spinner) spinner.style.display = 'none';
         });
     });
 }
