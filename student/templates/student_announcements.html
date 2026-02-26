@@ -4,27 +4,49 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/student_announcements.css') }}">
-<link rel="stylesheet" href="{{ url_for('student.static', filename='css/dashboard.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <h2 class="section-title">Announcements & Reminders</h2>
+<div class="announcements-container">
+    <!-- Centered Page Title (no background) -->
+    <h1 class="page-title">Announcements</h1>
 
-    {% if announcements and announcements|length > 0 %}
-        {% for ann in announcements %}
-            <div class="announcement-card">
-                <h3>{{ ann.title }}</h3>
-                <p>{{ ann.content }}</p>
-                <div class="date">{{ ann.date.strftime('%b %d, %Y') }}</div>
+    <!-- Announcements List - Compact like desktop view -->
+    <div class="announcements-list">
+        {% if announcements and announcements|length > 0 %}
+            {% for ann in announcements %}
+                <div class="announcement-card">
+                    <div class="announcement-badge">
+                        {% if loop.first %}
+                            <span class="badge-new">NEW</span>
+                        {% endif %}
+                    </div>
+                    <h3 class="announcement-title">{{ ann.title }}</h3>
+                    <p class="announcement-content">{{ ann.content }}</p>
+                    <div class="announcement-footer">
+                        <span class="announcement-source">COMELEC</span>
+                        <span class="announcement-date">
+                            <i class="fa fa-calendar-alt"></i>
+                            {{ ann.date.strftime('%b %d, %Y') }}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📢</div>
+                <h3>No Announcements Yet</h3>
+                <p>Check back later for updates from COMELEC.</p>
             </div>
-        {% endfor %}
-    {% else %}
-        <p>No announcements available.</p>
-    {% endif %}
+        {% endif %}
+    </div>
 
-    <a href="{{ url_for('student.dashboard') }}" class="view-all-link">
-        Back to Dashboard <i class="fa fa-arrow-left"></i>
-    </a>
+    <!-- Back Button - Close to last card -->
+    <div class="back-button-wrapper">
+        <a href="{{ url_for('student.dashboard') }}" class="back-btn">
+            <i class="fa fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+    </div>
 </div>
 {% endblock %}

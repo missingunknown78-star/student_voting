@@ -1,62 +1,231 @@
-.dashboard-container {
-    margin-top: 90px;
-    padding: 20px;
+/* ============================================
+   ANNOUNCEMENTS PAGE - MOBILE OPTIMIZED
+   ============================================ */
+
+/* Container */
+.announcements-container {
+    min-height: 100vh;
+    background: #f8faff;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
 }
 
-.section-title {
+/* Centered Page Title - No Background */
+.page-title {
     font-size: 1.8rem;
     font-weight: 700;
     color: #2c3e50;
-    margin-bottom: 25px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #ecf0f1;
+    font-family: 'Poppins', sans-serif;
+    text-align: center;
+    margin: 8px 0 24px 0;
+    padding: 0;
+    background: none;
+    border: none;
 }
 
+/* Announcements List - Compact like desktop */
+.announcements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* Announcement Card - Clean container, no side colors */
 .announcement-card {
-    background: #fff;
+    background: white;
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: relative;
+    transition: all 0.2s ease;
+    animation: slideIn 0.3s ease;
 }
 
-.announcement-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+.announcement-card:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.1);
 }
 
-.announcement-card h3 {
-    font-size: 1.3rem;
-    margin-bottom: 10px;
-    color: #34495e;
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.announcement-card p {
-    font-size: 1rem;
+/* Badge - Smaller for compact look */
+.announcement-badge {
+    margin-bottom: 8px;
+}
+
+.badge-new {
+    background: linear-gradient(135deg, #f72585, #b5179e);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+/* Title - More compact */
+.announcement-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Content - More compact */
+.announcement-content {
+    font-size: 0.9rem;
     color: #555;
     line-height: 1.5;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    word-wrap: break-word;
 }
 
-.announcement-card .date {
-    font-size: 0.85rem;
+/* Footer - More compact */
+.announcement-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid #ecf0f1;
+    font-size: 0.8rem;
+}
+
+.announcement-source {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4361ee;
+    background: rgba(67, 97, 238, 0.1);
+    padding: 3px 10px;
+    border-radius: 16px;
+}
+
+.announcement-date {
+    font-size: 0.7rem;
     color: #888;
-    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.view-all-link {
+.announcement-date i {
+    font-size: 0.65rem;
+}
+
+/* Back Button Wrapper - Close to last card */
+.back-button-wrapper {
+    margin-top: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.back-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    margin-top: 20px;
-    color: #2c7be5;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #4361ee, #3f37c9);
+    color: white;
     text-decoration: none;
+    border-radius: 30px;
     font-weight: 600;
+    font-size: 0.95rem;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.25);
+    min-width: 200px;
 }
 
-.view-all-link:hover {
-    gap: 12px;
-    color: #1a5bb8;
+.back-btn:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+}
+
+.back-btn i {
+    font-size: 0.9rem;
+}
+
+/* Empty State - More Compact */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin: 20px 0;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.2rem;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.empty-state p {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 0;
+}
+
+/* Small screens */
+@media (max-width: 360px) {
+    .announcements-container {
+        padding: 12px;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+        margin: 4px 0 20px 0;
+    }
+    
+    .announcement-card {
+        padding: 14px;
+    }
+    
+    .announcement-title {
+        font-size: 1rem;
+    }
+    
+    .announcement-content {
+        font-size: 0.85rem;
+    }
+    
+    .back-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        min-width: 180px;
+    }
+    
+    .back-button-wrapper {
+        margin-top: 4px;
+    }
+}
+
+/* iOS safe area support */
+@supports (-webkit-touch-callout: none) {
+    .announcements-container {
+        padding-top: max(16px, env(safe-area-inset-top));
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
 }

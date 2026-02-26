@@ -18,8 +18,20 @@
     </style>
 </head>
 <body>
+    <!-- FLOATING NOTIFICATION CONTAINER -->
+    <div id="floatingNotification" class="floating-notification">
+        <div class="floating-notification-content">
+            <span class="floating-notification-icon">✓</span>
+            <span class="floating-notification-message" id="notificationMessage"></span>
+            <button class="floating-notification-close" onclick="hideNotification()">×</button>
+        </div>
+        <div class="floating-notification-progress">
+            <div class="floating-notification-progress-bar"></div>
+        </div>
+    </div>
+
     <div class="container">
-        <!-- Header -->
+        <!-- Header with Hamburger Menu -->
         <header class="header">
             <div class="header-content">
                 <div class="logo-container">
@@ -31,6 +43,32 @@
                     <!-- Fallback text if image fails to load -->
                     <h1 class="logo-text">CTU - Moalboal</h1>
                 </div>
+                
+                <!-- Hamburger Menu Button (moved from dashboard) -->
+                <div class="mobile-fab">
+                    <button class="fab-btn" onclick="toggleFabMenu()">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Floating Menu (initially hidden) - EXACTLY as in dashboard -->
+            <div class="fab-menu" id="fabMenu">
+                <button type="button" class="fab-item">
+                    <i class="fa fa-list"></i> Activity Log
+                </button>
+
+                <button type="button" class="fab-item">
+                    <i class="fa fa-history"></i> History
+                </button>
+
+                <button type="button" class="fab-item">
+                    <i class="fa fa-cog"></i> Settings
+                </button>
+
+                <a href="{{ url_for('student.logout') }}" class="fab-item logout">
+                    <i class="fa fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </header>
 
@@ -52,7 +90,7 @@
             <nav class="nav-menu">
                 <!-- HOME -->
                 <a href="{{ url_for('student.dashboard') }}" 
-                   class="nav-item footer-menu-item {% if active_page == 'dashboard' %}active{% endif %}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.dashboard' %}active{% endif %}" 
                    data-item="home">
                     <span class="nav-icon">🏠</span>
                     <span class="nav-label">Home</span>
@@ -60,7 +98,7 @@
                 
                 <!-- PROFILE -->
                 <a href="{{ url_for('student.profile') }}" 
-                   class="nav-item footer-menu-item {% if active_page == 'profile' %}active{% endif %}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.profile' %}active{% endif %}" 
                    data-item="profile">
                     <span class="nav-icon">👤</span>
                     <span class="nav-label">Profile</span>
@@ -68,7 +106,7 @@
                 
                 <!-- VOTE -->
                 <a href="{{ url_for('student.available_elections') }}" 
-                   class="nav-item footer-menu-item {% if active_page == 'vote' %}active{% endif %}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.available_elections' %}active{% endif %}" 
                    data-item="vote">
                     <span class="nav-icon">🗳️</span>
                     <span class="nav-label">Vote</span>
@@ -76,7 +114,7 @@
                 
                 <!-- CANDIDATES -->
                 <a href="{{ url_for('student.candidates') }}" 
-                   class="nav-item footer-menu-item {% if active_page == 'candidates' %}active{% endif %}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.candidates' %}active{% endif %}" 
                    data-item="candidates">
                     <span class="nav-icon">👥</span>
                     <span class="nav-label">Candidates</span>
@@ -84,7 +122,7 @@
                 
                 <!-- RESULTS -->
                 <a href="{{ url_for('student.results') }}" 
-                   class="nav-item footer-menu-item {% if active_page == 'results' %}active{% endif %}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.results' %}active{% endif %}" 
                    data-item="results">
                     <span class="nav-icon">📊</span>
                     <span class="nav-label">Results</span>
@@ -92,7 +130,7 @@
                 
                 <!-- RECEIPT -->
                 <a href="{{ url_for('student.receipt') }}" 
-                   class="nav-item footer-menu-item {% if active_page == 'receipt' %}active{% endif %}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.receipt' %}active{% endif %}" 
                    data-item="receipt">
                     <span class="nav-icon">🧾</span>
                     <span class="nav-label">Receipt</span>
@@ -101,42 +139,63 @@
         </footer>
     </div>
 
+    <!-- JavaScript for Floating Notification -->
+    <script>
+        // Floating Notification System
+        function showNotification(message, type = 'success', duration = 5000) {
+            const notification = document.getElementById('floatingNotification');
+            const messageEl = document.getElementById('notificationMessage');
+            const iconEl = notification.querySelector('.floating-notification-icon');
+            
+            // Set message
+            messageEl.textContent = message;
+            
+            // Set type class
+            notification.className = 'floating-notification';
+            notification.classList.add(type);
+            
+            // Set icon based on type
+            if (type === 'success') iconEl.innerHTML = '✓';
+            else if (type === 'error') iconEl.innerHTML = '✗';
+            else if (type === 'warning') iconEl.innerHTML = '⚠';
+            else if (type === 'info') iconEl.innerHTML = 'ℹ';
+            
+            // Show notification
+            notification.classList.add('show');
+            
+            // Auto hide after duration
+            setTimeout(hideNotification, duration);
+        }
+
+        function hideNotification() {
+            const notification = document.getElementById('floatingNotification');
+            notification.classList.remove('show');
+        }
+
+        // Check for flash messages on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        // Map flash categories to notification types
+                        let type = '{{ category }}';
+                        if (type === 'danger') type = 'error';
+                        if (type === 'success') {
+                            showNotification('{{ message }}', type);
+                        }
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        });
+    </script>
+
     <!-- JavaScript for Footer Menu Highlight -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const footerMenuItems = document.querySelectorAll('.footer-menu-item');
         
-        // Function to set active menu item
-        function setActiveMenuItem(clickedItem) {
-            // Remove active class from all items
-            footerMenuItems.forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Add active class to clicked item
-            clickedItem.classList.add('active');
-            
-            // Store the active item in localStorage for persistence
-            const itemId = clickedItem.getAttribute('data-item');
-            localStorage.setItem('activeFooterItem', itemId);
-            
-            // Update URL parameter if needed (optional)
-            const url = new URL(clickedItem.href);
-            const pageName = url.pathname.split('/').pop() || 'dashboard';
-            history.replaceState(null, '', `?page=${pageName}`);
-        }
-        
-        // Add click event listeners to all footer menu items
+        // Add touch feedback for mobile
         footerMenuItems.forEach(item => {
-            item.addEventListener('click', function(e) {
-                // Prevent default only if it's not a real link
-                if (this.getAttribute('href') === '#') {
-                    e.preventDefault();
-                }
-                setActiveMenuItem(this);
-            });
-            
-            // Add touch feedback for mobile
             item.addEventListener('touchstart', function() {
                 this.style.transform = 'scale(0.97)';
                 this.style.transition = 'transform 0.1s ease';
@@ -150,33 +209,33 @@
                 this.style.transform = 'scale(1)';
             });
         });
-        
-        // Restore active state from localStorage on page load
-        const savedActiveItem = localStorage.getItem('activeFooterItem');
-        if (savedActiveItem) {
-            footerMenuItems.forEach(item => {
-                const itemId = item.getAttribute('data-item');
-                if (itemId === savedActiveItem) {
-                    item.classList.add('active');
-                }
-            });
-        }
-        
-        // Highlight based on current page URL
-        function highlightCurrentPage() {
-            const currentPath = window.location.pathname;
-            footerMenuItems.forEach(item => {
-                const itemUrl = new URL(item.href);
-                if (itemUrl.pathname === currentPath) {
-                    item.classList.add('active');
-                    localStorage.setItem('activeFooterItem', item.getAttribute('data-item'));
-                }
-            });
-        }
-        
-        // Call on page load
-        highlightCurrentPage();
     });
+    </script>
+
+    <!-- JavaScript for Hamburger Menu (EXACTLY as in dashboard) -->
+    <script>
+        // Toggle floating menu
+        function toggleFabMenu() {
+            const menu = document.getElementById("fabMenu");
+            menu.classList.toggle("show");
+        }
+
+        // Close menu when tapping outside
+        document.addEventListener("click", function(e) {
+            const fab = document.querySelector(".mobile-fab");
+            const menu = document.getElementById("fabMenu");
+            if (fab && !fab.contains(e.target) && menu) {
+                menu.classList.remove("show");
+            }
+        });
+
+        // Staggered animation for menu items
+        document.addEventListener('DOMContentLoaded', function() {
+            const fabMenuItems = document.querySelectorAll(".fab-menu .fab-item");
+            fabMenuItems.forEach((item, index) => {
+                item.style.transition = `transform 0.35s ease ${index * 0.05}s, opacity 0.35s ease ${index * 0.05}s`;
+            });
+        });
     </script>
 
     {% block extra_js %}{% endblock %}

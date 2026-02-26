@@ -57,39 +57,218 @@ body {
     position: relative;
 }
 
-/* Header Styles */
+/* ============================================
+   HEADER & HAMBURGER MENU STYLES - STATIC SIZE
+   ============================================ */
+
+/* Header Styles - Fixed height */
 .header {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    padding: 16px 12px;
+    padding: 12px 16px;
     position: sticky;
     top: 0;
     z-index: 1000;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    height: 60px; /* Fixed height */
+    display: flex;
+    align-items: center;
 }
 
 .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 100%;
-    padding: 0 4px;
+    width: 100%;
+    height: 100%;
 }
 
-.logo {
+/* Logo Container - Fixed size */
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+}
+
+.ctu-logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 20px;
+}
+
+.logo-text {
     font-family: 'Poppins', sans-serif;
     font-weight: 700;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     letter-spacing: -0.5px;
+    color: white;
+    line-height: 1;
 }
 
-.status-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 500;
+/* Hamburger Menu Button - Same size as logo */
+.mobile-fab {
+    position: relative;
+    margin-left: auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
 }
+
+.fab-btn {
+    width: 32px; /* Same as logo height */
+    height: 32px; /* Same as logo height */
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent to match header */
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white; /* White icon to match header text */
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.fab-btn i {
+    font-size: 1.1rem;
+}
+
+.fab-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Floating Menu - Position adjusted for new header height */
+.fab-menu {
+    position: absolute;
+    top: 45px; /* Adjusted to be just below header */
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+    min-width: 200px;
+    z-index: 1001;
+    display: none;
+    overflow: hidden;
+    animation: slideIn 0.2s ease;
+}
+
+.fab-menu.show {
+    display: block;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fab-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 0.95rem;
+    color: var(--dark);
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.fab-item i {
+    width: 20px;
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.fab-item:hover {
+    background: #f5f5f5;
+}
+
+.fab-item:active {
+    background: #e8e8e8;
+}
+
+.fab-item.logout {
+    color: var(--danger);
+    border-top: 1px solid #eee;
+}
+
+.fab-item.logout i {
+    color: var(--danger);
+}
+
+/* Main Content - Adjusted padding to account for fixed header */
+.main-content {
+    padding: 16px 12px;
+    padding-bottom: 80px;
+    max-width: 100%;
+    min-height: calc(100vh - 130px); /* 60px header + 70px footer */
+}
+
+/* Extra Small Screens */
+@media (max-width: 320px) {
+    .header {
+        height: 55px;
+        padding: 8px 12px;
+    }
+    
+    .ctu-logo {
+        height: 28px;
+    }
+    
+    .fab-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 1rem;
+    }
+    
+    .logo-text {
+        font-size: 1rem;
+    }
+    
+    .fab-menu {
+        top: 40px;
+        min-width: 180px;
+    }
+}
+
+/* Small Screens */
+@media (max-width: 360px) {
+    .header {
+        padding: 8px 12px;
+    }
+    
+    .logo-text {
+        font-size: 1.1rem;
+    }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+    .header {
+        height: calc(60px + env(safe-area-inset-top));
+        padding-top: env(safe-area-inset-top);
+    }
+    
+    .main-content {
+        min-height: calc(100vh - 130px - env(safe-area-inset-top));
+    }
+}
+
 
 /* Main Content Area */
 .main-content {
@@ -98,22 +277,25 @@ body {
     max-width: 100%;
 }
 
-/* Footer Navigation - ALWAYS VISIBLE */
-/* Footer Navigation - ALWAYS VISIBLE */
-.footer-nav {
+/* ============================================
+   FOOTER NAVIGATION - ENHANCED VISIBILITY
+   ============================================ */
+
+   .footer-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
-    border-top: 1px solid var(--gray-light);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-top: none;
+    box-shadow: 0 -4px 15px rgba(67, 97, 238, 0.3);
     z-index: 1000;
     width: 100%;
     height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(10px);
 }
 
 .nav-menu {
@@ -130,40 +312,44 @@ body {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    color: var(--gray);
+    color: rgba(255, 255, 255, 0.7); /* Light white for inactive */
     padding: 8px 2px;
     transition: var(--transition);
     -webkit-tap-highlight-color: transparent;
-    border-radius: 6px;
-    margin: 0 1px;
+    border-radius: 12px;
+    margin: 0 2px;
     cursor: pointer;
     position: relative;
 }
 
-/* Active state - Light Blue Highlight */
+/* Active state - Bright White with Glow */
 .nav-item.active {
-    color: #007AFF; /* Blue text color */
-    background: rgba(0, 122, 255, 0.1); /* Light blue background */
+    color: white;
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent white */
+    text-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
 }
 
-/* Add a subtle blue dot indicator for active item */
+/* Remove the blue dot and replace with bottom indicator */
 .nav-item.active::after {
     content: '';
     position: absolute;
-    top: 4px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #007AFF;
+    bottom: 4px;
+    width: 20px;
+    height: 3px;
+    border-radius: 3px;
+    background: white;
+    box-shadow: 0 0 10px white;
+    top: auto; /* Override previous top property */
 }
 
 .nav-item:active {
-    background: rgba(0, 122, 255, 0.15); /* Slightly darker light blue on tap */
+    background: rgba(255, 255, 255, 0.15);
     transform: scale(0.95);
 }
 
 .nav-icon {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     margin-bottom: 3px;
     display: flex;
     align-items: center;
@@ -171,11 +357,13 @@ body {
     height: 24px;
     width: 24px;
     transition: var(--transition);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .nav-item.active .nav-icon {
-    color: #007AFF; /* Ensure icon is blue when active */
-    transform: translateY(-1px); /* Slight lift effect */
+    color: white;
+    transform: translateY(-1px);
+    filter: drop-shadow(0 4px 6px rgba(255, 255, 255, 0.4));
 }
 
 .nav-label {
@@ -184,39 +372,85 @@ body {
     text-align: center;
     line-height: 1.1;
     transition: var(--transition);
+    letter-spacing: 0.3px;
 }
 
 .nav-item.active .nav-label {
-    color: #007AFF; /* Ensure label is blue when active */
-    font-weight: 600; /* Make it slightly bolder */
+    color: white;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
-/* If you want a more prominent light blue highlight */
-.nav-item.active {
-    /* Alternative more prominent style */
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(0, 122, 255, 0.05));
-    border-top: 2px solid rgba(0, 122, 255, 0.3);
-}
-
-/* Touch-friendly hover states (only for devices that support hover) */
+/* Hover effects for devices that support hover */
 @media (hover: hover) {
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    }
-    
-    .btn:hover {
-        transform: translateY(-2px);
-    }
-    
     .nav-item:hover {
-        background: rgba(0, 122, 255, 0.08);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
     }
     
     .nav-item.active:hover {
-        background: rgba(0, 122, 255, 0.2);
+        background: rgba(255, 255, 255, 0.25);
+        box-shadow: 0 2px 15px rgba(255, 255, 255, 0.3);
+    }
+    
+    .nav-item:hover .nav-icon {
+        transform: translateY(-2px);
     }
 }
+
+/* Extra Small Screens */
+@media (max-width: 320px) {
+    .footer-nav {
+        height: 65px;
+    }
+    
+    .nav-menu {
+        padding: 4px 0;
+        gap: 1px;
+    }
+    
+    .nav-item {
+        padding: 6px 1px;
+    }
+    
+    .nav-icon {
+        font-size: 1.1rem;
+        height: 22px;
+        width: 22px;
+    }
+    
+    .nav-label {
+        font-size: 0.6rem;
+    }
+    
+    .nav-item.active::after {
+        width: 16px;
+        height: 2px;
+    }
+}
+
+/* Small Screens */
+@media (max-width: 360px) {
+    .nav-menu {
+        gap: 0;
+    }
+    
+    .nav-item {
+        margin: 0;
+        padding: 6px 1px;
+    }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+    .footer-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+        height: calc(70px + env(safe-area-inset-bottom));
+    }
+}
+
+
+
 /* Alerts */
 .alert {
     padding: 12px 16px;
@@ -587,4 +821,236 @@ body {
     font-size: 1.3rem;
     letter-spacing: -0.5px;
     color: white;
+}
+
+
+
+/* ============================================
+   FLOATING NOTIFICATION STYLES
+   ============================================ */
+
+   .floating-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 350px;
+    min-width: 280px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+.floating-notification.show {
+    transform: translateX(0);
+}
+
+.floating-notification-content {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+}
+
+.floating-notification.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.floating-notification.error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.floating-notification.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.floating-notification.info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.floating-notification-icon {
+    font-size: 24px;
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.floating-notification-message {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.floating-notification-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    margin-left: 10px;
+    padding: 0 5px;
+}
+
+.floating-notification-close:hover {
+    opacity: 1;
+}
+
+.floating-notification-progress {
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    width: 100%;
+}
+
+.floating-notification-progress-bar {
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    width: 100%;
+    animation: progress-shrink 5s linear forwards;
+}
+
+@keyframes progress-shrink {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    .floating-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        width: auto;
+    }
+}
+
+/* Hide old alerts since we're using floating notifications */
+.alert {
+    display: none;
+}
+
+/* If you want to keep old alerts visible for other pages, remove the above .alert style */
+
+
+
+/* ============================================
+   HAMBURGER MENU STYLES (moved from dashboard)
+   ============================================ */
+
+/* Mobile FAB Menu */
+.mobile-fab {
+    position: relative;
+    margin-left: auto;
+}
+
+.fab-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    font-size: 1.3rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    transition: all 0.2s ease;
+}
+
+.fab-btn:active {
+    transform: scale(0.9);
+    background: #f0f0f0;
+}
+
+/* Floating Menu */
+.fab-menu {
+    position: absolute;
+    top: 60px;
+    right: 12px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+    min-width: 200px;
+    z-index: 1001;
+    display: none;
+    overflow: hidden;
+    animation: slideIn 0.2s ease;
+}
+
+.fab-menu.show {
+    display: block;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fab-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 0.95rem;
+    color: var(--dark);
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.fab-item i {
+    width: 20px;
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.fab-item:hover {
+    background: #f5f5f5;
+}
+
+.fab-item:active {
+    background: #e8e8e8;
+}
+
+.fab-item.logout {
+    color: var(--danger);
+    border-top: 1px solid #eee;
+}
+
+.fab-item.logout i {
+    color: var(--danger);
+}
+
+/* Adjust header layout for hamburger */
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.logo-container {
+    flex: 1;
 }

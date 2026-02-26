@@ -8,6 +8,7 @@ import json
 from phe import paillier
 import pickle
 import base64
+import pytz
 
 # DO NOT CREATE ANOTHER db INSTANCE HERE!
 # Remove this line: db = SQLAlchemy()
@@ -48,6 +49,7 @@ class Student(db.Model, UserMixin):
     course_rel = db.relationship('Course', backref='students')
 
 
+
 class Vote(db.Model):
     __tablename__ = "votes"
 
@@ -56,6 +58,9 @@ class Vote(db.Model):
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
     encrypted_vote = db.Column(db.Text, nullable=False)  # Or db.LONGTEXT
     
+    # NEW: Add finder_hash for vote verification
+    finder_hash = db.Column(db.String(256), unique=True, nullable=True)
+    
     cast_timestamp = db.Column(db.DateTime, nullable=True)
     recorded_timestamp = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -63,7 +68,6 @@ class Vote(db.Model):
     # Relationships
     student = db.relationship("Student", backref="student_votes")
     election = db.relationship("Election", backref="election_votes")
-    # Note: NO candidate relationship anymore
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -84,14 +88,11 @@ class Vote(db.Model):
     @staticmethod
     def encrypt_vote_for_candidates(candidate_ids, selected_candidate_id, public_key):
         """Create one-hot encrypted vote vector for all candidates"""
-        # Create one-hot vector: 1 for selected candidate, 0 for others
         vote_vector = [1 if candidate_id == selected_candidate_id else 0 
                       for candidate_id in candidate_ids]
         
-        # Encrypt each element
         enc_vote = [public_key.encrypt(x) for x in vote_vector]
         
-        # Serialize for storage
         vote_json = json.dumps([
             {"ciphertext": str(e.ciphertext()), "exponent": e.exponent} 
             for e in enc_vote
@@ -107,16 +108,92 @@ class Vote(db.Model):
         if not votes:
             return [0] * len(candidate_ids)
         
-        # Initialize sum with encrypted zeros
         total = [public_key.encrypt(0) for _ in candidate_ids]
         
-        # Add each vote using homomorphic addition
         for vote in votes:
             enc_votes = vote.get_encrypted_vote_as_list(public_key)
             for i in range(len(total)):
                 total[i] = total[i] + enc_votes[i]
         
         return total
+    
+    @property
+    def cast_timestamp_manila(self):
+        """Get cast_timestamp in Manila time (stored as Manila time)"""
+        if self.cast_timestamp:
+            local_tz = pytz.timezone("Asia/Manila")
+            
+            # Cast timestamp is stored as Manila time (no conversion needed)
+            if self.cast_timestamp.tzinfo is None:
+                # Just localize it to Manila (since it's already Manila time)
+                return local_tz.localize(self.cast_timestamp)
+            return self.cast_timestamp.astimezone(local_tz)
+        return None
+    
+    @property
+    def recorded_timestamp_manila(self):
+        """Get recorded_timestamp in Manila time (converted from UTC)"""
+        if self.recorded_timestamp:
+            local_tz = pytz.timezone("Asia/Manila")
+            utc_tz = pytz.UTC
+            
+            # recorded_timestamp is always UTC (from datetime.utcnow())
+            if self.recorded_timestamp.tzinfo is None:
+                # First tell Python it's UTC
+                utc_dt = utc_tz.localize(self.recorded_timestamp)
+                # Then convert to Manila
+                return utc_dt.astimezone(local_tz)
+            return self.recorded_timestamp.astimezone(local_tz)
+        return None
+    
+    @property
+    def created_at_manila(self):
+        """Get created_at in Manila time (converted from UTC)"""
+        if self.created_at:
+            local_tz = pytz.timezone("Asia/Manila")
+            utc_tz = pytz.UTC
+            
+            # created_at is always UTC (from default=datetime.utcnow)
+            if self.created_at.tzinfo is None:
+                utc_dt = utc_tz.localize(self.created_at)
+                return utc_dt.astimezone(local_tz)
+            return self.created_at.astimezone(local_tz)
+        return None
+    
+    @property
+    def recorded_timestamp_formatted(self):
+        """Get formatted recorded timestamp in Manila time"""
+        manila_time = self.recorded_timestamp_manila
+        if manila_time:
+            return manila_time.strftime("%I:%M:%S %p")
+        return None
+    
+    @property
+    def cast_timestamp_formatted(self):
+        """Get formatted cast timestamp in Manila time"""
+        manila_time = self.cast_timestamp_manila
+        if manila_time:
+            return manila_time.strftime("%I:%M:%S %p")
+        return None
+    
+    @property
+    def created_at_formatted(self):
+        """Get formatted created at in Manila time"""
+        manila_time = self.created_at_manila
+        if manila_time:
+            return manila_time.strftime("%I:%M:%S %p")
+        return None
+    
+    def get_all_times(self):
+        """Get all times in Manila time as formatted strings"""
+        return {
+            'cast': self.cast_timestamp_formatted,
+            'recorded': self.recorded_timestamp_formatted,
+            'created': self.created_at_formatted,
+            'cast_full': self.cast_timestamp_manila.strftime("%Y-%m-%d %I:%M:%S %p") if self.cast_timestamp_manila else None,
+            'recorded_full': self.recorded_timestamp_manila.strftime("%Y-%m-%d %I:%M:%S %p") if self.recorded_timestamp_manila else None,
+            'created_full': self.created_at_manila.strftime("%Y-%m-%d %I:%M:%S %p") if self.created_at_manila else None
+        }
 
 
 class TrustedDevice(db.Model):

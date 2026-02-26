@@ -8,8 +8,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <h2 class="page-title">Help & Support</h2>
+<div class="dashboard-container help-container">
+
+    <h1 class="help-title">Help & Support</h1>
 
     <!-- COMMON ISSUES -->
     <div class="help-card">
@@ -18,8 +19,8 @@
             <li>Cannot log in — check your student ID and password.</li>
             <li>Voting page not loading — ensure stable internet connection.</li>
             <li>Browser compatibility issues — try Chrome or Edge.</li>
-            <li>Fingerprint login not working — register fingerprint in your profile.</li>
-            <li>Already voted message — ensure you are logged in with your correct account.</li>
+            <li>Fingerprint login not working — register fingerprint in your dashboard.</li>
+            <li>Already voted status — ensure you are logged in with your correct account.</li>
         </ul>
     </div>
 
@@ -41,8 +42,17 @@
         <ul>
             <li><a href="{{ url_for('student.guidelines') }}">Voting Guidelines</a></li>
             <li><a href="{{ url_for('student.student_announcements') }}">Latest Announcements</a></li>
-            <li><a href="{{ url_for('student.profile') }}">Profile / Fingerprint Setup</a></li>
+            <li><a href="{{ url_for('student.dashboard') }}">Fingerprint Setup</a></li>
         </ul>
     </div>
+
+    <!-- Back Button at Bottom -->
+    <div class="back-button-wrapper">
+        <a href="{{ url_for('student.dashboard') }}" class="back-btn">
+            <i class="fa fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+    </div>
+
 </div>
 {% endblock %}

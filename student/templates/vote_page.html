@@ -6,7 +6,7 @@
     <title>Vote - {{ election.title }}</title>
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
     <style>
-        /* Additional styles for PHE info - KEEPING YOUR ORIGINAL */
+        /* All your existing styles remain EXACTLY the same */
         .phe-info {
             background-color: #f0f7ff;
             border-left: 4px solid #2563eb;
@@ -33,7 +33,6 @@
             margin-left: 10px;
         }
         
-        /* Party list badge style - KEEPING YOUR ORIGINAL */
         .party-badge {
             display: inline-block;
             background: #e2e8f0;
@@ -76,7 +75,6 @@
             max-width: 100%;
         }
         
-        /* Card layout adjustments - FIXED FOR MOBILE */
         .candidate-row {
             display: flex;
             flex-direction: column;
@@ -139,7 +137,6 @@
             box-sizing: border-box;
         }
         
-        /* Hide radio/checkbox but keep functionality - USING candidate-radio CLASS */
         .candidate-radio {
             position: absolute;
             opacity: 0;
@@ -147,7 +144,6 @@
             height: 0;
         }
         
-        /* Selected state for single selection (radio) - YOUR ORIGINAL GREEN */
         .candidate-row.selected {
             border: 2px solid #22c55e;
             background: #f0fdf4;
@@ -173,7 +169,6 @@
             box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
         }
         
-        /* NEW: Selected state for multiple selection - BLUE to differentiate */
         .candidate-row.selected-multi {
             border: 2px solid #3b82f6;
             background: #eff6ff;
@@ -199,7 +194,6 @@
             box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
         
-        /* NEW: Vote limit badge */
         .vote-limit-badge {
             display: inline-block;
             padding: 2px 8px;
@@ -209,9 +203,49 @@
             font-size: 0.65rem;
             font-weight: 600;
             margin-left: 6px;
+            vertical-align: middle;
         }
         
-        /* NEW: Selection counter - matches your design */
+        /* NEW: Candidate count badge */
+        .candidate-count-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            background: #475569;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        
+        /* UPDATED: Position header with flex for right alignment */
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            width: 100%;
+            gap: 10px;
+        }
+        
+        .position-title-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+            min-width: 0; /* Allows flex item to shrink below content size */
+        }
+        
+        .position-title {
+            margin: 0;
+            font-size: 1.1rem;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+        
         .selection-counter {
             margin-top: 10px;
             padding: 6px;
@@ -228,12 +262,96 @@
             color: #3b82f6;
         }
         
-        /* Make entire row clickable - YOUR ORIGINAL */
         .candidate-row {
             cursor: pointer;
         }
         
-        /* Responsive adjustments - FIXED FOR MOBILE */
+        /* Loading Overlay Styles */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(5px);
+        }
+        
+        .loading-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            width: 350px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #2563eb;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-container h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+        
+        .loading-container p {
+            color: #64748b;
+            margin: 8px 0;
+            font-size: 1rem;
+        }
+        
+        .secure-badge {
+            background: #e8f0fe;
+            color: #2563eb;
+            padding: 8px 15px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+        
+        /* UPDATED: Mobile responsive styles */
+        @media (max-width: 768px) {
+            .position-header {
+                flex-wrap: nowrap;
+            }
+            
+            .position-title {
+                font-size: 1rem;
+            }
+            
+            .vote-limit-badge {
+                font-size: 0.6rem;
+                padding: 2px 6px;
+            }
+            
+            .candidate-count-badge {
+                font-size: 0.6rem;
+                padding: 2px 8px;
+                white-space: nowrap;
+            }
+        }
+        
         @media (max-width: 480px) {
             .party-badge {
                 min-width: 60px;
@@ -261,6 +379,48 @@
             .position-candidates {
                 gap: 4px;
             }
+            
+            .loading-container {
+                padding: 25px;
+                width: 280px;
+            }
+            
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border-width: 4px;
+            }
+            
+            /* UPDATED: Keep everything in one line on mobile */
+            .position-header {
+                flex-wrap: nowrap;
+                gap: 8px;
+            }
+            
+            .position-title-container {
+                flex-wrap: nowrap;
+                gap: 4px;
+            }
+            
+            .position-title {
+                font-size: 0.9rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 120px;
+            }
+            
+            .vote-limit-badge {
+                font-size: 0.55rem;
+                padding: 2px 5px;
+                white-space: nowrap;
+            }
+            
+            .candidate-count-badge {
+                font-size: 0.55rem;
+                padding: 2px 6px;
+                white-space: nowrap;
+            }
         }
 
         @media (max-width: 360px) {
@@ -284,13 +444,36 @@
             }
             
             .vote-limit-badge {
-                font-size: 0.55rem;
-                padding: 2px 4px;
+                font-size: 0.5rem;
+                padding: 1px 4px;
+            }
+            
+            .candidate-count-badge {
+                font-size: 0.5rem;
+                padding: 1px 5px;
+            }
+            
+            .position-title {
+                font-size: 0.8rem;
+                max-width: 100px;
             }
         }
     </style>
 </head>
 <body>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <h3>🔐 Encrypting Your Vote</h3>
+        <p>Please wait while we secure your ballot...</p>
+        <p style="font-size: 0.9rem; color: #94a3b8;">This may take a few moments</p>
+        <div class="secure-badge">
+            ⚡ End-to-End Encrypted
+        </div>
+    </div>
+</div>
 
 <div class="vote-container">
 
@@ -317,9 +500,9 @@
             <li style="font-size: 0.8rem;">
                 <strong>{{ position_name }}:</strong> 
                 {% if position_data.max_votes > 1 %}
-                    Select up to {{ position_data.max_votes }} candidates
+                    Select up to {{ position_data.max_votes }} candidates ({{ position_data.candidates|length }} candidates running)
                 {% else %}
-                    Select 1 candidate
+                    Select 1 candidate ({{ position_data.candidates|length }} candidates running)
                 {% endif %}
             </li>
             {% endfor %}
@@ -340,17 +523,28 @@
                value="{{ all_candidate_ids|join(',') }}">
         
         {% for position_name, position_data in candidates_by_position.items() %}
+        {% set candidate_count = position_data.candidates|length %}
         <div class="position-group" data-position-id="{{ position_data.position_id }}" data-max-votes="{{ position_data.max_votes }}">
-            <h3 class="position-title">
-                {{ position_name }}
-                <span class="vote-limit-badge">
-                    {% if position_data.max_votes > 1 %}
-                        Max {{ position_data.max_votes }}
-                    {% else %}
-                        Single
-                    {% endif %}
+            <!-- UPDATED: Position header with title + badge on left, candidate count on right -->
+            <div class="position-header">
+                <div class="position-title-container">
+                    <h3 class="position-title">
+                        {{ position_name }}
+                    </h3>
+                    <span class="vote-limit-badge">
+                        {% if position_data.max_votes > 1 %}
+                            Max {{ position_data.max_votes }}
+                        {% else %}
+                            Single
+                        {% endif %}
+                    </span>
+                </div>
+                <!-- Candidate count badge in upper right - stays on same line on mobile -->
+                <span class="candidate-count-badge">
+                    🗳️ {{ candidate_count }} Candidate{% if candidate_count != 1 %}s{% endif %}
                 </span>
-            </h3>
+            </div>
+            
             <div class="position-candidates">
                 {% for candidate in position_data.candidates %}
                 <label class="candidate-row" for="candidate-{{ candidate.id }}">
@@ -417,7 +611,7 @@
 
         <!-- Submit Button -->
         <div class="submit-vote">
-            <button type="submit" id="submitBtn">Submit Form</button>
+            <button type="submit" id="submitBtn">Submit Vote</button>
             <p class="submit-note">Your vote will be encrypted for maximum privacy</p>
         </div>
     </form>
@@ -425,10 +619,32 @@
 </div>
 
 <script>
-    // Set cast timestamp when form is submitted
+    // FIXED: Set cast timestamp in Manila time and show loading when form is submitted
     document.getElementById('voteForm').onsubmit = function() {
-        document.getElementById('cast-timestamp').value = new Date().toISOString();
-        return true;
+        // Get current time in Manila timezone
+        const now = new Date();
+        
+        // Format as ISO string WITHOUT the Z (which indicates UTC)
+        // This sends the local time (Manila) to the server
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        
+        // Format: YYYY-MM-DD HH:MM:SS (Manila local time)
+        const manilaTimeStr = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+        
+        document.getElementById('cast-timestamp').value = manilaTimeStr;
+        
+        // Show loading overlay
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        
+        // Disable submit button to prevent double submission
+        document.getElementById('submitBtn').disabled = true;
+        
+        return true; // Allow form to submit
     };
 
     // Countdown Timer
@@ -458,6 +674,9 @@
             document.querySelectorAll('.candidate-radio').forEach(radio => {
                 radio.disabled = true;
             });
+            
+            // Hide loading overlay if shown
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
     }
 
@@ -588,6 +807,9 @@
                 updateSelectionCounter({{ position_data.position_id }}, {{ position_data.max_votes }});
             {% endif %}
         {% endfor %}
+        
+        // Hide loading overlay if it was showing from previous page load
+        document.getElementById('loadingOverlay').style.display = 'none';
     });
 </script>
 

@@ -548,40 +548,23 @@
                     </div>
                     
                     <!-- TIMESTAMPS SECTION - ONLY SHOW IF STUDENT HAS VOTED -->
-                    {% if data.vote_timestamps %}
-                    <div class="timestamps-container">
-                        <div class="timestamp-item">
-                            <span class="timestamp-label">Time Submitted:</span>
-                            <span class="timestamp-value">
-                                {% if data.vote_timestamps.cast_time %}
-                                    {% set cast_time = data.vote_timestamps.cast_time %}
-                                    {% if cast_time.microsecond > 0 %}
-                                        {{ cast_time.replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S') }}
-                                    {% else %}
-                                        {{ cast_time.strftime('%Y-%m-%d %H:%M:%S') }}
-                                    {% endif %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </span>
-                        </div>
-                        <div class="timestamp-item">
-                            <span class="timestamp-label">Vote Recorded:</span>
-                            <span class="timestamp-value">
-                                {% if data.vote_timestamps.recorded_time %}
-                                    {% set recorded_time = data.vote_timestamps.recorded_time %}
-                                    {% if recorded_time.microsecond > 0 %}
-                                        {{ recorded_time.replace(microsecond=0).strftime('%Y-%m-%d %H:%M:%S') }}
-                                    {% else %}
-                                        {{ recorded_time.strftime('%Y-%m-%d %H:%M:%S') }}
-                                    {% endif %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    {% endif %}
+                    <!-- TIMESTAMPS SECTION - ONLY SHOW IF STUDENT HAS VOTED -->
+{% if data.vote_timestamps %}
+<div class="timestamps-container">
+    <div class="timestamp-item">
+        <span class="timestamp-label">Time Submitted:</span>
+        <span class="timestamp-value">
+            {{ data.vote_timestamps.cast_time_formatted or 'N/A' }}
+        </span>
+    </div>
+    <div class="timestamp-item">
+        <span class="timestamp-label">Vote Recorded:</span>
+        <span class="timestamp-value">
+            {{ data.vote_timestamps.recorded_time_formatted or 'N/A' }}
+        </span>
+    </div>
+</div>
+{% endif %}
                     
                 {% elif data.is_eligible_by_year %}
                     <!-- Student hasn't voted yet and is eligible by year -->
@@ -630,7 +613,7 @@
         <!-- No Elections Available -->
         <div class="card election-card">
             <div class="no-elections-content">
-                <div class="no-elections-icon">📅</div>
+                <div class="no-elections-icon"></div>
                 <h3>No Elections Available</h3>
                 <p>There are currently no active elections for you to vote in. Please check back later!</p>
                 <div class="upcoming-notice">

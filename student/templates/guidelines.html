@@ -8,9 +8,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="dashboard-container guidelines-container">
 
-    <h2 class="page-title">Voting Guidelines</h2>
+    <h1 class="guidelines-title">Voting Guidelines</h1>
 
     <div class="info-card">
         <h3>📌 Purpose of the Election</h3>
@@ -60,14 +60,22 @@
         </ul>
     </div>
 
-    <!-- NEW: Fingerprint Login Info -->
+    <!-- Fingerprint Login Info -->
     <div class="info-card info">
         <h3>🔑 Fingerprint Login</h3>
         <p>
             To enable fingerprint login for faster access, go to your 
-            <strong>Profile</strong> page and register your fingerprint. 
+            <strong>Home Page</strong> and register your fingerprint. 
             Once registered, you can log in securely using your fingerprint on supported devices.
         </p>
+    </div>
+
+    <!-- Back Button at Bottom -->
+    <div class="back-button-wrapper">
+        <a href="{{ url_for('student.dashboard') }}" class="back-btn">
+            <i class="fa fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
     </div>
 
 </div>

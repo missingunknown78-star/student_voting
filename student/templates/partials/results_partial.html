@@ -1,0 +1,81 @@
+<!-- Position Results - Grouped and Sorted by Position ID -->
+{% if positions_data %}
+    {% for position in positions_data %}
+    <div class="position-results">
+        <h2 class="position-title">
+            <span class="position-icon">
+                {% if 'president' in position.name|lower %}👑
+                {% elif 'vice' in position.name|lower %}👔
+                {% elif 'secretary' in position.name|lower %}📝
+                {% elif 'treasurer' in position.name|lower %}💰
+                {% elif 'auditor' in position.name|lower %}🔍
+                {% elif 'pio' in position.name|lower %}📢
+                {% elif 'representative' in position.name|lower %}👥
+                {% else %}⭐{% endif %}
+            </span>
+            {{ position.name }}
+            <span class="total-votes-badge">{{ position.total_votes }} total votes</span>
+        </h2>
+        
+        {% if position.description %}
+        <p class="position-description">{{ position.description }}</p>
+        {% endif %}
+        
+        <div class="results-list">
+            {% for candidate in position.candidates %}
+            <div class="result-card {% if candidate.is_winner %}winner{% endif %}">
+                <div class="result-header">
+                    <div class="candidate-info">
+                        <div class="candidate-photo" 
+                             data-photo-url="{% if candidate.photo %}{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
+                             data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                             onclick="openCandidatePhoto(this)">
+                            {% if candidate.photo %}
+                                <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
+                                     alt="{{ candidate.first_name }} {{ candidate.last_name }}"
+                                     class="candidate-photo-img"
+                                     onerror="this.style.display='none'; this.parentElement.classList.add('no-image');">
+                            {% endif %}
+                            {% if not candidate.photo %}
+                                <span class="candidate-initials">
+                                    {{ candidate.first_name[0] }}{{ candidate.last_name[0] }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="candidate-details">
+                            <h3 class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</h3>
+                            {% if candidate.party_list %}
+                            <span class="party-badge">{{ candidate.party_list }}</span>
+                            {% endif %}
+                            {% if candidate.department %}
+                            <p class="candidate-course">{{ candidate.department }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if candidate.is_winner %}
+                    <div class="result-badge">WINNER</div>
+                    {% endif %}
+                </div>
+                
+                <div class="result-stats">
+                    <div class="vote-count">
+                        <span class="count-number">{{ candidate.vote_count }}</span>
+                        <span class="count-label">Votes</span>
+                    </div>
+                    <div class="vote-percentage">
+                        <span class="percentage-number">{{ candidate.vote_percentage }}%</span>
+                        <div class="percentage-bar">
+                            <div class="bar-fill" style="width: {{ candidate.vote_percentage }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="position-results">
+        <p style="text-align: center; color: var(--gray); padding: 20px;">No candidates found for this election.</p>
+    </div>
+{% endif %}

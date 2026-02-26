@@ -135,28 +135,6 @@
         </div>
     </div>
 
-    <!-- Election Status -->
-    <div class="card status-card">
-        <div class="card-header">
-            <h2 class="card-title">Active Election</h2>
-            <span class="badge badge-active">ACTIVE</span>
-        </div>
-        <h3 class="election-name">Student Government Election 2024</h3>
-        <p class="election-desc">Elect your student leaders for the 2024-2025 academic year</p>
-        <div class="election-meta">
-            <div class="meta-item">
-                <span class="meta-icon">⏳</span>
-                <span class="meta-text">Closes: Dec 15, 2024</span>
-            </div>
-            <div class="meta-item">
-                <span class="meta-icon">👥</span>
-                <span class="meta-text">{{ total_voters }} voters</span>
-            </div>
-        </div>
-    </div>
-
- 
-
     <!-- Announcements -->
     <div class="card announcements-card">
         <h2 class="card-title">📢 Latest Announcements</h2>
@@ -242,31 +220,6 @@
   </div>
 </div>
 
-<!-- MOBILE FLOATING MENU -->
-<div class="mobile-fab">
-    <button class="fab-btn" onclick="toggleFabMenu()">
-        <i class="fa fa-bars"></i>
-    </button>
-
-    <div class="fab-menu" id="fabMenu">
-        <button type="button" class="fab-item">
-            <i class="fa fa-list"></i> Activity Log
-        </button>
-
-        <button type="button" class="fab-item">
-            <i class="fa fa-history"></i> History
-        </button>
-
-        <button type="button" class="fab-item">
-            <i class="fa fa-cog"></i> Settings
-        </button>
-
-        <a href="{{ url_for('student.logout') }}" class="fab-item logout">
-            <i class="fa fa-sign-out-alt"></i> Logout
-        </a>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -348,7 +301,19 @@ async function registerFingerprint() {
         }
 
     } catch (err) {
-        statusDiv.textContent = "Error: " + err.message;
+        // User-friendly error messages
+        let errorMessage = "Fingerprint registration failed. Please try again.";
+        
+        // Check for specific error types
+        if (err.message.includes("timed out") || err.message.includes("timeout")) {
+            errorMessage = "Registration timed out. Please try again.";
+        } else if (err.message.includes("not allowed") || err.message.includes("cancelled")) {
+            errorMessage = "Registration was cancelled. Please try again when ready.";
+        } else if (err.message.includes("not supported")) {
+            errorMessage = "Fingerprint is not supported on this device.";
+        }
+        
+        statusDiv.textContent = errorMessage;
         btn.innerHTML = '<span class="btn-icon">📱</span> Register Fingerprint';
         btn.disabled = false;
     }
@@ -394,27 +359,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.querySelector('.dashboard-container');
     const trustPrompt = container.dataset.trustPrompt === 'true';
     if (trustPrompt) openTrustModal();
-});
-
-// ==================== MOBILE FLOATING MENU WITH ANIMATION ====================
-function toggleFabMenu() {
-    const menu = document.getElementById("fabMenu");
-    menu.classList.toggle("show");
-}
-
-// Close menu when tapping outside
-document.addEventListener("click", function(e) {
-    const fab = document.querySelector(".mobile-fab");
-    const menu = document.getElementById("fabMenu");
-    if (fab && !fab.contains(e.target)) {
-        menu.classList.remove("show");
-    }
-});
-
-// Optional: Staggered animation for menu items
-const fabMenuItems = document.querySelectorAll(".fab-menu .fab-item");
-fabMenuItems.forEach((item, index) => {
-    item.style.transition = `transform 0.35s ease ${index * 0.05}s, opacity 0.35s ease ${index * 0.05}s`;
 });
 </script>
 {% endblock %}

@@ -50,7 +50,7 @@
     </div>
 
     {% if candidates %}
-        <!-- Position Tabs -->
+        <!-- Position Tabs (keep at top for quick navigation) -->
         <div class="position-tabs">
             {% set positions_set = {} %}
             {% for c in candidates %}
@@ -65,6 +65,70 @@
                     {{ position_name }}
                 </button>
             {% endfor %}
+        </div>
+
+        <!-- ===== COLLAPSIBLE FILTER CARD ===== -->
+        <div class="filter-container">
+            <!-- Filter Header (always visible) -->
+            <div class="filter-header" id="filterHeader">
+                <div class="filter-header-left">
+                    <span class="filter-icon">🔍</span>
+                    <span class="filter-title">Filter Candidates</span>
+                </div>
+                <div class="filter-header-right">
+                    <span class="filter-count" id="activeFilterCount"></span>
+                    <button class="filter-toggle" id="filterToggle">
+                        <span class="toggle-icon">▼</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Content (collapsible) -->
+            <div class="filter-content" id="filterContent">
+                <!-- Close button inside filter card -->
+                <button class="filter-close" id="filterClose">&times;</button>
+                
+                <div class="filter-options">
+                    <div class="filter-group">
+                        <label class="filter-label">By Position:</label>
+                        <div class="position-filters">
+                            <label class="position-filter active" data-position="all">
+                                <input type="radio" name="position-filter" value="all" checked>
+                                <span>All Positions</span>
+                            </label>
+                            {% for position_name in positions_set.values()|sort %}
+                            <label class="position-filter" data-position="{{ position_name|lower|replace(' ', '-') }}">
+                                <input type="radio" name="position-filter" value="{{ position_name|lower|replace(' ', '-') }}">
+                                <span>{{ position_name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    {% if grouped|length > 1 %}
+                    <div class="filter-group">
+                        <label class="filter-label">By Election:</label>
+                        <div class="election-filters">
+                            <label class="election-filter active" data-election="all">
+                                <input type="radio" name="election-filter" value="all" checked>
+                                <span>All Elections</span>
+                            </label>
+                            {% for election_title in grouped.keys() %}
+                            <label class="election-filter" data-election="{{ election_title|lower|replace(' ', '-') }}">
+                                <input type="radio" name="election-filter" value="{{ election_title|lower|replace(' ', '-') }}">
+                                <span>{{ election_title }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="filter-actions">
+                    <button class="btn btn-sm btn-primary" id="applyFilters">Apply Filters</button>
+                    <button class="btn btn-sm btn-secondary" id="resetFilters">Reset</button>
+                </div>
+            </div>
         </div>
 
         {# ===============================
@@ -173,47 +237,6 @@
         </div>
         {% endfor %}
 
-        <!-- Filter Options -->
-        <div class="filter-card">
-            <h3 class="filter-title">🔍 Filter Candidates</h3>
-            
-            <div class="filter-options">
-                <div class="filter-group">
-                    <label class="filter-label">By Position:</label>
-                    <div class="position-filters">
-                        <label class="position-filter active" data-position="all">
-                            <input type="radio" name="position-filter" checked>
-                            <span>All Positions</span>
-                        </label>
-                        {% for position_name in positions_set.values()|sort %}
-                        <label class="position-filter" data-position="{{ position_name|lower|replace(' ', '-') }}">
-                            <input type="radio" name="position-filter">
-                            <span>{{ position_name }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                {% if grouped|length > 1 %}
-                <div class="filter-group">
-                    <label class="filter-label">By Election:</label>
-                    <div class="election-filters">
-                        <label class="election-filter active" data-election="all">
-                            <input type="radio" name="election-filter" checked>
-                            <span>All Elections</span>
-                        </label>
-                        {% for election_title in grouped.keys() %}
-                        <label class="election-filter" data-election="{{ election_title|lower|replace(' ', '-') }}">
-                            <input type="radio" name="election-filter">
-                            <span>{{ election_title }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
     {% else %}
         <!-- No Candidates Available -->
         <div class="no-candidates-card">
@@ -285,31 +308,140 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const position = this.dataset.position;
             filterCandidates(position);
+            
+            // Also update radio buttons to match
+            updateRadioFromTab(position);
         });
     });
+
+    // Filter toggle functionality
+    const filterHeader = document.getElementById('filterHeader');
+    const filterContent = document.getElementById('filterContent');
+    const filterToggle = document.getElementById('filterToggle');
+    const filterClose = document.getElementById('filterClose');
+    const filterContainer = document.querySelector('.filter-container');
+
+    // Toggle filter on header click
+    filterHeader.addEventListener('click', function(e) {
+        // Don't toggle if clicking on the toggle button (it has its own handler)
+        if (!e.target.closest('.filter-toggle')) {
+            toggleFilter();
+        }
+    });
+
+    // Toggle filter on arrow click
+    filterToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleFilter();
+    });
+
+    // Close filter on X button click
+    filterClose.addEventListener('click', function(e) {
+        e.stopPropagation();
+        closeFilter();
+    });
+
+    // Close filter when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!filterContainer.contains(e.target) && filterContent.classList.contains('show')) {
+            closeFilter();
+        }
+    });
+
+    function toggleFilter() {
+        filterContent.classList.toggle('show');
+        const toggleIcon = filterToggle.querySelector('.toggle-icon');
+        if (filterContent.classList.contains('show')) {
+            toggleIcon.textContent = '▲';
+        } else {
+            toggleIcon.textContent = '▼';
+        }
+    }
+
+    function closeFilter() {
+        filterContent.classList.remove('show');
+        const toggleIcon = filterToggle.querySelector('.toggle-icon');
+        toggleIcon.textContent = '▼';
+    }
 
     // Position filters
     const positionFilters = document.querySelectorAll('.position-filter');
     positionFilters.forEach(filter => {
-        filter.addEventListener('click', function() {
+        filter.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            
             positionFilters.forEach(f => f.classList.remove('active'));
             this.classList.add('active');
             
             const position = this.dataset.position;
             filterCandidates(position);
+            
+            // Update active filter count
+            updateFilterCount();
         });
     });
 
     // Election filters
     const electionFilters = document.querySelectorAll('.election-filter');
     electionFilters.forEach(filter => {
-        filter.addEventListener('click', function() {
+        filter.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            
             electionFilters.forEach(f => f.classList.remove('active'));
             this.classList.add('active');
             
             const election = this.dataset.election;
             filterElections(election);
+            
+            // Update active filter count
+            updateFilterCount();
         });
+    });
+
+    // Apply Filters button
+    const applyBtn = document.getElementById('applyFilters');
+    applyBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Filters are already applied via radio clicks, just close the panel
+        closeFilter();
+    });
+
+    // Reset Filters button
+    const resetBtn = document.getElementById('resetFilters');
+    resetBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // Reset position filter to All
+        const allPositionFilter = document.querySelector('.position-filter[data-position="all"]');
+        allPositionFilter.querySelector('input[type="radio"]').checked = true;
+        positionFilters.forEach(f => f.classList.remove('active'));
+        allPositionFilter.classList.add('active');
+        
+        // Reset election filter to All if exists
+        const allElectionFilter = document.querySelector('.election-filter[data-election="all"]');
+        if (allElectionFilter) {
+            allElectionFilter.querySelector('input[type="radio"]').checked = true;
+            electionFilters.forEach(f => f.classList.remove('active'));
+            allElectionFilter.classList.add('active');
+        }
+        
+        // Reset all views
+        filterCandidates('all');
+        filterElections('all');
+        
+        // Reset active tab
+        tabBtns.forEach(b => b.classList.remove('active'));
+        document.querySelector('.tab-btn[data-position="all"]').classList.add('active');
+        
+        // Update filter count
+        updateFilterCount();
+        
+        // Close filter panel
+        closeFilter();
     });
 
     function filterCandidates(position) {
@@ -346,8 +478,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function updateRadioFromTab(position) {
+        const radio = document.querySelector(`.position-filter[data-position="${position}"] input[type="radio"]`);
+        if (radio) {
+            radio.checked = true;
+            positionFilters.forEach(f => f.classList.remove('active'));
+            radio.closest('.position-filter').classList.add('active');
+        }
+    }
+
+    function updateFilterCount() {
+        const activePosition = document.querySelector('.position-filter.active span').textContent;
+        const activeElection = document.querySelector('.election-filter.active span')?.textContent || 'All Elections';
+        const countEl = document.getElementById('activeFilterCount');
+        
+        if (activePosition === 'All Positions' && activeElection === 'All Elections') {
+            countEl.textContent = '';
+        } else {
+            countEl.textContent = `${activePosition} · ${activeElection}`;
+        }
+    }
+
     // Initialize with all candidates visible
     filterCandidates('all');
+    updateFilterCount();
 });
 
 // Photo modal functions
@@ -383,6 +537,12 @@ function viewCandidateProfile(candidateId) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closePhotoModal();
+        // Also close filter if open
+        const filterContent = document.getElementById('filterContent');
+        if (filterContent.classList.contains('show')) {
+            filterContent.classList.remove('show');
+            document.querySelector('.toggle-icon').textContent = '▼';
+        }
     }
 });
 
@@ -392,9 +552,6 @@ document.getElementById('photoModal').addEventListener('click', function(e) {
         closePhotoModal();
     }
 });
-
-// Close modal when clicking the close button
-document.querySelector('.photo-modal-close').addEventListener('click', closePhotoModal);
 
 // Prevent modal content clicks from closing the modal
 document.querySelector('.photo-modal-content').addEventListener('click', function(e) {

@@ -1,0 +1,780 @@
+/* ======================
+   RESULTS PAGE STYLES
+   Matching vote.css aesthetic
+====================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+    color: #1e293b;
+}
+
+.results-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px;
+}
+
+/* ======================
+   HEADER
+====================== */
+
+.results-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    margin-bottom: 16px;
+}
+
+.results-header .logo {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+}
+
+.results-header h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.3;
+    flex: 1;
+}
+
+/* ======================
+   ELECTION SELECTOR
+====================== */
+
+.election-selector {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.election-selector h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.election-selector h2::before {
+    content: '🗳️';
+    font-size: 1.1rem;
+}
+
+.election-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.election-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.election-card:hover {
+    background: #f1f5f9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.election-card.selected {
+    background: #eef2ff;
+    border: 2px solid #4f46e5;
+    padding: 11px;
+}
+
+.election-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #4f46e5;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.election-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+    padding-right: 20px;
+}
+
+.election-date {
+    font-size: 0.7rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.election-date::before {
+    content: '📅';
+    font-size: 0.7rem;
+}
+
+.election-status {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+}
+
+.status-completed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-ongoing {
+    background: #fee2e2;
+    color: #991b1b;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ======================
+   RESULTS SUMMARY
+====================== */
+
+.results-summary {
+    background: white;
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.summary-header h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.summary-header h2::before {
+    content: '📊';
+    font-size: 1.3rem;
+}
+
+.election-badge {
+    background: #4f46e5;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 12px 8px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.progress-container {
+    background: #f1f5f9;
+    border-radius: 30px;
+    height: 8px;
+    overflow: hidden;
+    margin: 12px 0 8px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4f46e5, #818cf8);
+    border-radius: 30px;
+    transition: width 0.3s ease;
+}
+
+.turnout-text {
+    font-size: 0.8rem;
+    color: #475569;
+    text-align: right;
+}
+
+/* ======================
+   POSITION RESULTS
+====================== */
+
+.position-results {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.position-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.position-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.position-title::before {
+    content: '📋';
+    font-size: 1.2rem;
+}
+
+.position-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 0.75rem;
+}
+
+.total-votes-badge {
+    background: #e2e8f0;
+    color: #334155;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.winner-badge {
+    background: #fbbf24;
+    color: #92400e;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.winner-badge::before {
+    content: '👑';
+    font-size: 0.8rem;
+}
+
+/* ======================
+   CANDIDATES GRID
+====================== */
+
+.candidates-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.candidate-result-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.candidate-result-card.winner {
+    background: #fef9e7;
+    border: 2px solid #fbbf24;
+    padding: 15px;
+}
+
+.candidate-result-card.winner::before {
+    content: '🏆';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    font-size: 1.2rem;
+    background: #fbbf24;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.candidate-photo {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.candidate-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.candidate-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+
+.candidate-course {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.party-badge {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #1e293b;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.party-badge.independent {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px dashed #94a3b8;
+}
+
+.vote-stats {
+    margin-top: 8px;
+}
+
+.vote-count {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vote-count span {
+    color: #4f46e5;
+    font-size: 1.1rem;
+    margin-right: 4px;
+}
+
+.vote-percentage {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.vote-bar {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 6px 0;
+}
+
+.vote-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4f46e5, #818cf8);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.candidate-result-card.winner .vote-bar-fill {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+/* ======================
+   VERIFICATION SECTION
+====================== */
+
+.verification-section {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+}
+
+.verification-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.verification-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.verification-header::before {
+    content: '🔍';
+    font-size: 1.2rem;
+}
+
+.verification-info {
+    background: #eef2ff;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-left: 4px solid #4f46e5;
+}
+
+.verification-info p {
+    font-size: 0.8rem;
+    color: #334155;
+    margin: 4px 0;
+}
+
+.verification-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-row label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.form-row label::before {
+    content: '🔑';
+    font-size: 0.8rem;
+}
+
+.form-row select,
+.form-row input {
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    transition: all 0.15s ease;
+}
+
+.form-row select:focus,
+.form-row input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    background: white;
+}
+
+.verify-btn {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.verify-btn:hover {
+    background: #4338ca;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.verify-btn:active {
+    transform: translateY(0);
+}
+
+.verify-btn i {
+    font-size: 1rem;
+}
+
+/* Verification Result */
+.verification-result {
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: none;
+}
+
+.verification-result.show {
+    display: block;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.verification-result.success {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.verification-result.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.result-icon {
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.result-message {
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.result-details {
+    font-size: 0.8rem;
+    color: #475569;
+    text-align: center;
+    background: white;
+    padding: 10px;
+    border-radius: 12px;
+    margin-top: 8px;
+}
+
+.result-details strong {
+    color: #0f172a;
+}
+
+/* ======================
+   NO DATA STATE
+====================== */
+
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 20px;
+    margin: 20px 0;
+}
+
+.no-data-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.no-data h3 {
+    font-size: 1.1rem;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.no-data p {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+/* ======================
+   RESPONSIVE
+====================== */
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .candidates-results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .position-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .position-stats {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .election-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .candidate-result-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .candidate-photo {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .vote-bar {
+        margin: 8px 0;
+    }
+    
+    .form-row select,
+    .form-row input {
+        padding: 12px 14px;
+        font-size: 0.85rem;
+    }
+    
+    .verify-btn {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 360px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .summary-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .candidate-photo {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+/* ======================
+   PRINT STYLES
+====================== */
+
+@media print {
+    body {
+        background: white;
+    }
+    
+    .election-selector,
+    .verification-section,
+    .footer-nav,
+    .fab-menu {
+        display: none;
+    }
+    
+    .position-results {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .candidate-result-card.winner {
+        border: 2px solid #000;
+        background: #f9f9f9;
+    }
+}

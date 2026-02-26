@@ -435,102 +435,6 @@
     margin-bottom: 6px;
 }
 
-/* TOP-RIGHT FLOATING MENU */
-.mobile-fab {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    z-index: 1000;
-    display: block !important; /* Force display */
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-.fab-btn {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    font-size: 1.3rem;
-    cursor: pointer;
-    box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4);
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.fab-btn:active {
-    transform: rotate(90deg) scale(0.95);
-    box-shadow: 0 5px 18px rgba(102, 126, 234, 0.6);
-}
-
-.fab-menu {
-    position: absolute;
-    top: 56px; /* Position below the button */
-    right: 0;
-    display: none;
-    flex-direction: column;
-    gap: 6px;
-    background: white;
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    min-width: 160px;
-    transform-origin: top right;
-    animation: fabMenuShow 0.3s ease forwards;
-    z-index: 1001;
-}
-
-.fab-menu.show {
-    display: flex;
-}
-
-@keyframes fabMenuShow {
-    from {
-        opacity: 0;
-        transform: scale(0.8) translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.fab-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: none;
-    border: none;
-    border-radius: 8px;
-    color: #2c3e50;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    text-align: left;
-    text-decoration: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.fab-item:active {
-    background: #f7fafc;
-}
-
-.fab-item i {
-    width: 18px;
-    text-align: center;
-    font-size: 0.9rem;
-}
-
-.fab-item.logout {
-    color: #e53e3e;
-}
-
 /* Small Mobile Adjustments */
 @media (max-width: 360px) {
     .home-container {
@@ -569,17 +473,6 @@
     .action-text {
         font-size: 0.7rem;
     }
-    
-    .fab-btn {
-        width: 46px;
-        height: 46px;
-        font-size: 1.2rem;
-    }
-    
-    .fab-menu {
-        min-width: 150px;
-        top: 52px;
-    }
 }
 
 /* Animation for fingerprint status */
@@ -605,15 +498,6 @@
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     }
     
-    .fab-btn:hover {
-        transform: rotate(90deg);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-    }
-    
-    .fab-item:hover {
-        background: #f7fafc;
-    }
-    
     .view-all-link:hover i {
         transform: translateX(4px);
     }
@@ -630,30 +514,13 @@
     .home-container {
         padding-top: 55px;
     }
-    
-    .mobile-fab {
-        top: 10px;
-        right: 10px;
-    }
 }
-
-/* Fix for iOS Safari */
-@supports (-webkit-touch-callout: none) {
-    .mobile-fab {
-        position: -webkit-sticky;
-        position: sticky;
-        top: 15px;
-        right: 15px;
-        align-self: flex-end;
-    }
-}
-
 
 /* Add space between quick actions and quick reminder */
 .quick-actions {
-    margin-bottom: 16px; /* Add this line */
+    margin-bottom: 16px;
 }
 
 .quick-reminder-card {
-    margin-top: 0 !important; /* Remove any top margin if present */
+    margin-top: 0 !important;
 }
