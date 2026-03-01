@@ -6,356 +6,6 @@
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/election_results_detail.css') }}">
 <!-- Add html2pdf library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<style>
-/* PDF Export Button Styles */
-.export-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: flex-end;
-    margin: 20px 0;
-}
-
-.export-btn {
-    background: linear-gradient(135deg, #27ae60, #2ecc71);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-    text-decoration: none;
-    border: none;
-}
-
-.export-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4);
-    color: white;
-}
-
-.export-btn i {
-    font-size: 1.2rem;
-}
-
-/* Hidden PDF template that will be used for export */
-.pdf-template {
-    display: none;
-}
-
-/* PDF Styles - These will be applied when generating PDF */
-.pdf-header {
-    text-align: center;
-    padding: 20px 0;
-    border-bottom: 2px solid #3498db;
-    margin-bottom: 20px;
-}
-
-.pdf-header img {
-    max-height: 80px;
-    margin-bottom: 10px;
-}
-
-.pdf-header h1 {
-    color: #2c3e50;
-    font-size: 24px;
-    margin: 10px 0;
-}
-
-.pdf-header .school-name {
-    color: #7f8c8d;
-    font-size: 14px;
-}
-
-.pdf-footer {
-    text-align: center;
-    padding: 20px 0;
-    border-top: 2px solid #3498db;
-    margin-top: 30px;
-    font-size: 12px;
-    color: #7f8c8d;
-}
-
-.pdf-footer img {
-    max-height: 50px;
-    margin-bottom: 10px;
-}
-
-.pdf-footer .footer-text {
-    margin-top: 10px;
-}
-
-.pdf-watermark {
-    position: fixed;
-    bottom: 100px;
-    right: 50px;
-    opacity: 0.1;
-    font-size: 60px;
-    transform: rotate(-15deg);
-    pointer-events: none;
-    z-index: 1000;
-}
-
-/* Loading overlay for PDF generation */
-.pdf-loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
-.pdf-loading-content {
-    background: white;
-    padding: 30px 50px;
-    border-radius: 16px;
-    text-align: center;
-    animation: fadeIn 0.3s ease;
-}
-
-.pdf-loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
-}
-
-.pdf-loading-content p {
-    color: #2c3e50;
-    font-size: 1.1rem;
-    margin: 0;
-}
-
-/* ===== WINNERS TABLE STYLES - ALL YELLOW, NO GREEN ===== */
-.winners-table {
-    background: var(--card-bg) !important;
-    border-radius: var(--card-radius) !important;
-    overflow: hidden !important;
-    box-shadow: var(--shadow-md) !important;
-    margin-bottom: 30px !important;
-    border: 1px solid var(--border-color) !important;
-}
-
-.winners-table .table-header {
-    background: linear-gradient(135deg, #f59e0b, #f39c12) !important;
-    color: white !important;
-    padding: 20px 25px !important;
-    font-weight: 700 !important;
-    border-bottom: 2px solid rgba(255,255,255,0.2) !important;
-    font-size: 14px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-
-/* Winner row grid - 4 columns */
-.winner-row {
-    display: grid !important;
-    grid-template-columns: 60px 1fr 120px 120px !important;
-    align-items: center !important;
-    padding: 20px 25px !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    gap: 15px !important;
-    background: rgba(245, 158, 11, 0.02) !important;
-}
-
-.winner-row:hover {
-    background: rgba(245, 158, 11, 0.05) !important;
-}
-
-.winner-row .winner-rank {
-    font-weight: 700 !important;
-    color: #f59e0b !important;
-    font-size: 18px !important;
-    text-align: center !important;
-}
-
-.winner-row .winner-info {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
-
-.winner-row .winner-photo {
-    width: 45px !important;
-    height: 45px !important;
-    border-radius: 50% !important;
-    object-fit: cover !important;
-    border: 3px solid #f59e0b !important;
-}
-
-.winner-row .winner-name {
-    font-weight: 600 !important;
-    color: var(--text-color) !important;
-    font-size: 16px !important;
-}
-
-.winner-row .winner-position-label {
-    font-size: 12px !important;
-    color: var(--text-secondary) !important;
-    margin-top: 2px !important;
-    font-weight: normal !important;
-}
-
-.winner-row .winner-vote-count {
-    font-weight: 700 !important;
-    color: #f59e0b !important;
-    font-size: 18px !important;
-    text-align: center !important;
-}
-
-/* YELLOW percentage badge - NO GREEN - WITH !IMPORTANT */
-.winner-row .winner-percentage-badge {
-    background: linear-gradient(135deg, #f59e0b, #f39c12) !important;
-    color: white !important;
-    padding: 8px 16px !important;
-    border-radius: 20px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-    min-width: 80px !important;
-    display: inline-block !important;
-}
-
-/* Position header for multiple winners */
-.winner-position-header {
-    background: rgba(245, 158, 11, 0.15) !important;
-    padding: 12px 25px !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    border-top: 2px solid #f59e0b !important;
-    font-weight: 700 !important;
-    color: #f59e0b !important;
-    font-size: 16px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-
-.winner-position-title {
-    display: flex !important;
-    align-items: center !important;
-}
-
-.winner-position-title i {
-    color: #f59e0b !important;
-}
-
-/* Subrow for multiple winners - indented */
-.winner-subrow {
-    display: grid !important;
-    grid-template-columns: 60px 1fr 120px 120px !important;
-    align-items: center !important;
-    padding: 15px 25px 15px 85px !important;
-    border-bottom: 1px dashed var(--border-color) !important;
-    background: rgba(245, 158, 11, 0.01) !important;
-}
-
-.winner-subrow:last-child {
-    border-bottom: none !important;
-}
-
-.winner-subrow .winner-rank-small {
-    font-weight: 600 !important;
-    color: #f59e0b !important;
-    font-size: 14px !important;
-    text-align: center !important;
-}
-
-.winner-subrow .winner-info {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
-
-.winner-subrow .winner-photo-small {
-    width: 35px !important;
-    height: 35px !important;
-    border-radius: 50% !important;
-    object-fit: cover !important;
-    border: 2px solid #f59e0b !important;
-}
-
-.winner-subrow .winner-name-small {
-    font-weight: 500 !important;
-    color: var(--text-color) !important;
-    font-size: 14px !important;
-}
-
-.winner-subrow .winner-vote-count-small {
-    font-weight: 600 !important;
-    color: #f59e0b !important;
-    font-size: 16px !important;
-    text-align: center !important;
-}
-
-/* YELLOW small percentage badge - NO GREEN */
-.winner-subrow .winner-percentage-small {
-    background: rgba(245, 158, 11, 0.1) !important;
-    color: #f59e0b !important;
-    padding: 4px 12px !important;
-    border-radius: 20px !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-    min-width: 70px !important;
-    display: inline-block !important;
-}
-
-/* No winners message */
-.no-winners-message {
-    padding: 15px !important;
-    text-align: center !important;
-    color: #95a5a6 !important;
-    font-style: italic !important;
-    background: rgba(255,255,255,0.1) !important;
-    border-radius: 8px !important;
-}
-
-/* Override any green that might be coming from main CSS */
-.winners-table .winner-row .winner-percentage-badge,
-.winners-table .winner-subrow .winner-percentage-small,
-.winners-table .winner-percentage-badge,
-.winners-table .winner-percentage-small {
-    background: linear-gradient(135deg, #f59e0b, #f39c12) !important;
-    color: white !important;
-}
-
-.winners-table .winner-subrow .winner-percentage-small {
-    background: rgba(245, 158, 11, 0.1) !important;
-    color: #f59e0b !important;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* Dark mode adjustments for PDF export */
-body.dark-mode .pdf-loading-content {
-    background: #2c3e50;
-    color: white;
-}
-
-body.dark-mode .pdf-loading-content p {
-    color: white;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -427,12 +77,12 @@ body.dark-mode .pdf-loading-content p {
         </div>
     </div>
     
-    <!-- Results Summary - DIFFERENT BEHAVIOR BASED ON STATE -->
+    <!-- Results Summary -->
     <div class="results-summary">
         <div class="summary-card voters">
             <i class="fa-solid fa-users" style="color: #3498db; font-size: 24px;"></i>
-            <div class="summary-number">{{ total_votes_cast }}</div>
-            <div class="summary-label">Votes Cast</div>
+            <div class="summary-number">{{ total_voters }}</div>
+            <div class="summary-label">Total Voters</div>
         </div>
         <div class="summary-card turnout">
             <i class="fa-solid fa-percentage" style="color: #27ae60; font-size: 24px;"></i>
@@ -513,12 +163,12 @@ body.dark-mode .pdf-loading-content p {
                 <div class="candidate-position">{{ candidate.position }}</div>
                 <div class="vote-percentage-cell">
                     <span class="vote-percentage">
-                        {{ candidate.vote_percentage }}%
+                        {{ candidate.voter_percentage }}%
                     </span>
                 </div>
                 <div class="vote-bar-cell">
                     <div class="vote-bar-container">
-                        <div class="vote-bar" style="width: {{ candidate.vote_percentage }}%;"></div>
+                        <div class="vote-bar" style="width: {{ candidate.voter_percentage }}%;"></div>
                     </div>
                 </div>
             </div>
@@ -547,7 +197,7 @@ body.dark-mode .pdf-loading-content p {
                     <div class="voter-stat-label">Registered Students</div>
                 </div>
                 <div class="voter-stat">
-                    <div class="voter-stat-value">{{ total_votes_cast }}</div>
+                    <div class="voter-stat-value">{{ total_voters }}</div>
                     <div class="voter-stat-label">Students Voted</div>
                 </div>
                 <div class="voter-stat">
@@ -563,7 +213,7 @@ body.dark-mode .pdf-loading-content p {
             <div class="turnout-breakdown">
                 <div class="turnout-item">
                     <span class="turnout-label">Voted:</span>
-                    <span class="turnout-value">{{ total_votes_cast }} students</span>
+                    <span class="turnout-value">{{ total_voters }} students</span>
                 </div>
                 <div class="turnout-item">
                     <span class="turnout-label">Not Voted:</span>
@@ -578,7 +228,7 @@ body.dark-mode .pdf-loading-content p {
     <!-- ============================================ -->
     {% else %}
 
-    <!-- ===== WINNERS SECTION - ALL YELLOW, NO GREEN ===== -->
+    <!-- ===== WINNERS SECTION - ALL YELLOW ===== -->
     {% if winners_by_position %}
     <div class="results-section">
         <h2 class="section-title">
@@ -619,11 +269,11 @@ body.dark-mode .pdf-loading-content p {
                             </div>
                             <div class="winner-vote-count">{{ winner.vote_count }}</div>
                             <div>
-                                <span class="winner-percentage-badge">{{ winner.vote_percentage }}%</span>
+                                <span class="winner-percentage-badge">{{ winner.voter_percentage }}%</span>
                             </div>
                         </div>
                     {% else %}
-                        <!-- Multiple winners for this position - position header only -->
+                        <!-- Multiple winners for this position -->
                         <div class="winner-position-header">
                             <div class="winner-position-title">
                                 <i class="fa-solid fa-users" style="margin-right: 8px;"></i>
@@ -631,7 +281,7 @@ body.dark-mode .pdf-loading-content p {
                             </div>
                         </div>
                         
-                        <!-- List each winner without repeating position -->
+                        <!-- List each winner -->
                         {% for winner in winners %}
                         <div class="winner-subrow">
                             <div class="winner-rank-small">#{{ loop.index }}</div>
@@ -648,7 +298,7 @@ body.dark-mode .pdf-loading-content p {
                             </div>
                             <div class="winner-vote-count-small">{{ winner.vote_count }}</div>
                             <div>
-                                <span class="winner-percentage-small">{{ winner.vote_percentage }}%</span>
+                                <span class="winner-percentage-small">{{ winner.voter_percentage }}%</span>
                             </div>
                         </div>
                         {% endfor %}
@@ -676,7 +326,7 @@ body.dark-mode .pdf-loading-content p {
     </div>
     {% endif %}
     
-    <!-- ===== FINAL DETAILED RESULTS TABLE (GREEN FOR WINNERS) ===== -->
+    <!-- ===== FINAL DETAILED RESULTS TABLE ===== -->
     <div class="results-section" id="resultsContent">
         <h2 class="section-title">
             <i class="fa-solid fa-list-check" style="color: #3498db;"></i> 
@@ -726,7 +376,7 @@ body.dark-mode .pdf-loading-content p {
                 <div class="vote-count">{{ candidate.vote_count }}</div>
                 <div class="vote-percentage-cell">
                     <span class="vote-percentage {% if is_winner %}winner-percentage{% else %}regular-percentage{% endif %}">
-                        {{ candidate.vote_percentage }}%
+                        {{ candidate.voter_percentage }}%
                     </span>
                 </div>
                 <div class="status-cell">

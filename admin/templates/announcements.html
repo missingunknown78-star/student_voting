@@ -4,107 +4,208 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
-
-<style>
-/* ==================== THEME TRANSITION FIXES ==================== */
-/* Force main-content to have transitions */
-.main-content {
-    transition: background-color 0.3s ease, background-image 0.3s ease !important;
-}
-
-/* Ensure the background shows through */
-.announcements-page {
-    background: transparent !important;
-}
-
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-}
-
-/* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
-    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-}
-
-/* Dark mode specific overrides */
-body.dark-mode .announcements-page .announcement-card {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .announcements-page .modal-content {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .announcements-page .modal-content input,
-body.dark-mode .announcements-page .modal-content textarea,
-body.dark-mode .announcements-page .modal-content select {
-    background: var(--light-gray);
-    color: var(--text-color);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .announcements-page .announcement-card .date {
-    color: var(--text-secondary);
-    border-top-color: var(--border-color);
-}
-</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 {% endblock %}
 
 {% block content %}
-<!-- ADD THIS WRAPPER DIV -->
 <div class="announcements-page">
-    <h2 class="announcements-title">Announcements & Reminders</h2>
+    <div class="page-header">
+        <h2 class="announcements-title">📢 Announcements & Reminders</h2>
+        <p class="page-description">Create and manage announcements for students and departments</p>
+    </div>
+
+    <!-- Flash Messages - Only visible on this page -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message }}
+                        <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
+                        <div class="flash-progress"></div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
     <!-- Add Announcement Button -->
-    <a href="javascript:void(0)" class="add-announcement-btn" id="openModalBtn">+ Add Announcement</a>
+    <button class="add-announcement-btn" id="openModalBtn">
+        <i class="fa-solid fa-plus"></i> Add Announcement
+    </button>
 
-    <!-- Modal -->
-    <div id="announcementModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="closeModalBtn">&times;</span>
-            <h3>Add New Announcement</h3>
-            <form id="announcementForm" method="POST" action="{{ url_for('admin.announcements') }}">
-                
-                <label for="title">Title</label>
-                <input type="text" id="title" name="title" placeholder="Enter announcement title" required>
+    <!-- Add Modal - Desktop Style Layout -->
+    <div id="addModal" class="modal">
+        <div class="modal-content desktop-modal">
+            <span class="close-btn" id="closeAddModalBtn">&times;</span>
+            <h3><i class="fa-solid fa-bullhorn"></i> Add New Announcement</h3>
+            <form id="addAnnouncementForm" method="POST" action="{{ url_for('admin.announcements') }}" class="desktop-form">
+                <div class="form-left">
+                    <div class="form-group">
+                        <label for="add_title">Title</label>
+                        <input type="text" id="add_title" name="title" placeholder="Enter announcement title" required>
+                    </div>
 
-                <label for="content">Content</label>
-                <textarea id="content" name="content" rows="4" placeholder="Enter announcement details" required></textarea>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add_date">Date</label>
+                            <input type="date" id="add_date" name="date" required>
+                        </div>
 
-                <label for="date">Date</label>
-                <input type="date" id="date" name="date" required>
+                        <div class="form-group">
+                            <label for="add_department">Department</label>
+                            <select id="add_department" name="department" required>
+                                <option value="all">All Departments</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
-                <label for="department">Department</label>
-                <select id="department" name="department" required>
-                    <option value="all">All</option>
-                    {% for dept in departments %}
-                    <option value="{{ dept.id }}">{{ dept.name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="form-right">
+                    <div class="form-group">
+                        <label for="add_content">Content</label>
+                        <textarea id="add_content" name="content" rows="6" placeholder="Enter announcement details" required></textarea>
+                    </div>
+                </div>
 
-                <button type="submit" class="add-announcement-btn">Submit</button>
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">
+                        <i class="fa-solid fa-check"></i> Publish Announcement
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- Example announcement cards -->
-    <div class="announcement-card">
-        <h3>Election Schedule Released</h3>
-        <p>The election schedule for the upcoming student government elections has been published. Please check your department notice boards for details.</p>
-        <div class="date">Dec 26, 2025</div>
+    <!-- Edit Modal - Desktop Style Layout -->
+    <div id="editModal" class="modal">
+        <div class="modal-content desktop-modal">
+            <span class="close-btn" id="closeEditModalBtn">&times;</span>
+            <h3><i class="fa-solid fa-pen"></i> Edit Announcement</h3>
+            <form id="editAnnouncementForm" method="POST" action="" class="desktop-form">
+                <input type="hidden" id="edit_id" name="id">
+                
+                <div class="form-left">
+                    <div class="form-group">
+                        <label for="edit_title">Title</label>
+                        <input type="text" id="edit_title" name="title" placeholder="Enter announcement title" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_date">Date</label>
+                            <input type="date" id="edit_date" name="date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit_department">Department</label>
+                            <select id="edit_department" name="department" required>
+                                <option value="all">All Departments</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-right">
+                    <div class="form-group">
+                        <label for="edit_content">Content</label>
+                        <textarea id="edit_content" name="content" rows="6" placeholder="Enter announcement details" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn edit-submit">
+                        <i class="fa-solid fa-save"></i> Update Announcement
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div class="announcement-card">
-        <h3>Reminder: Voter Registration Deadline</h3>
-        <p>All students must register as voters by Dec 30, 2025 to be eligible to vote. Late registrations will not be accepted.</p>
-        <div class="date">Dec 25, 2025</div>
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content delete-modal">
+            <span class="close-btn" id="closeDeleteModalBtn">&times;</span>
+            <div class="delete-icon">
+                <i class="fa-solid fa-exclamation-triangle"></i>
+            </div>
+            <h3>Delete Announcement</h3>
+            <p>Are you sure you want to delete "<span id="deleteTitle"></span>"?</p>
+            <p class="delete-warning">This action cannot be undone.</p>
+            
+            <form id="deleteAnnouncementForm" method="POST" action="">
+                <input type="hidden" id="delete_id" name="id">
+                <div class="delete-actions">
+                    <button type="button" class="cancel-delete-btn" id="cancelDeleteBtn">
+                        <i class="fa-solid fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="confirm-delete-btn">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</div> <!-- END announcements-page wrapper -->
+
+    <!-- Announcements List -->
+    <div class="announcements-list">
+        {% if announcements %}
+            {% for announcement in announcements %}
+            <div class="announcement-card" id="announcement-{{ announcement.id }}">
+                <div class="announcement-header">
+                    <div class="announcement-title-section">
+                        <h3>{{ announcement.title }}</h3>
+                        <div class="announcement-badges">
+                            {% if announcement.department_id %}
+                                <span class="dept-badge">
+                                    <i class="fa-solid fa-building"></i> {{ announcement.department.name }}
+                                </span>
+                            {% else %}
+                                <span class="dept-badge all-depts">
+                                    <i class="fa-solid fa-globe"></i> All Departments
+                                </span>
+                            {% endif %}
+                            <span class="date-badge">
+                                <i class="fa-solid fa-calendar"></i> {{ announcement.date.strftime('%b %d, %Y') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="announcement-actions">
+                        <button class="edit-btn" onclick="openEditModal({{ announcement.id }})">
+                            <i class="fa-solid fa-pen"></i> Edit
+                        </button>
+                        <button class="delete-btn" onclick="openDeleteModal({{ announcement.id }}, '{{ announcement.title|escape }}')">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+                <div class="announcement-content">
+                    <p>{{ announcement.content }}</p>
+                </div>
+                <div class="announcement-footer">
+                    <span class="timestamp">
+                        <i class="fa-solid fa-clock"></i> 
+                        Posted {{ announcement.created_at.strftime('%b %d, %Y at %I:%M %p') if announcement.created_at else announcement.date.strftime('%b %d, %Y') }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-announcements">
+                <i class="fa-solid fa-bullhorn"></i>
+                <h3>No Announcements Yet</h3>
+                <p>Click the "Add Announcement" button to create your first announcement.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
 
 <!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
@@ -129,89 +230,323 @@ function applyThemeToMainContent() {
     mainContent.classList.add('theme-applied');
 }
 
+// Auto-dismiss flash messages after 5 seconds
+function setupFlashMessages() {
+    const flashMessages = document.querySelectorAll('.flash-message');
+    
+    flashMessages.forEach(message => {
+        // Auto dismiss after 5 seconds
+        setTimeout(() => {
+            if (message.parentElement) {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            }
+        }, 5000);
+        
+        // Add click handler for close button
+        const closeBtn = message.querySelector('.flash-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            });
+        }
+    });
+}
+
 // Apply immediately when page loads
 (function() {
     applyThemeToMainContent();
     
-    // Also apply after a tiny delay to catch any late initialization
+    // Also apply after a tiny delay
     setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
     // Listen for theme toggle button clicks
     document.addEventListener('click', function(e) {
-        // Check if the clicked element is the theme toggle button or inside it
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            // Small delay to let localStorage update
             setTimeout(function() {
                 applyThemeToMainContent();
             }, 50);
         }
     });
     
-    // Listen for storage events (if theme changed in another tab)
+    // Listen for storage events
     window.addEventListener('storage', function(e) {
         if (e.key === 'theme') {
             applyThemeToMainContent();
         }
     });
     
-    // Create a mutation observer to watch for class changes on main-content ONLY
+    // Create a mutation observer
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {
         const mainContentObserver = new MutationObserver(function(mutations) {
-            // Just ensure theme-applied is present
             if (!mainContent.classList.contains('theme-applied')) {
                 mainContent.classList.add('theme-applied');
             }
         });
-        
         mainContentObserver.observe(mainContent, { attributes: true });
     }
 })();
 
-// Modal Script
+// ==================== MODAL FUNCTIONALITY ====================
 document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('announcementModal');
-    const openBtn = document.getElementById('openModalBtn');
-    const closeBtn = document.getElementById('closeModalBtn');
+    // Setup flash messages
+    setupFlashMessages();
+    
+    // Get all modals
+    const addModal = document.getElementById('addModal');
+    const editModal = document.getElementById('editModal');
+    const deleteModal = document.getElementById('deleteModal');
+    
+    // Get all buttons
+    const openAddBtn = document.getElementById('openModalBtn');
+    const closeAddBtn = document.getElementById('closeAddModalBtn');
+    const closeEditBtn = document.getElementById('closeEditModalBtn');
+    const closeDeleteBtn = document.getElementById('closeDeleteModalBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
 
-    if (!openBtn || !modal || !closeBtn) return; // Exit if elements not found
+    // Open Add Modal
+    if (openAddBtn && addModal) {
+        openAddBtn.addEventListener('click', () => {
+            addModal.classList.add('show');
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    }
 
-    // Open modal
-    openBtn.addEventListener('click', () => {
-        modal.classList.add('show'); // uses flex centering
-        // Reapply theme when modal opens
-        setTimeout(applyThemeToMainContent, 10);
-    });
+    // Close Add Modal
+    if (closeAddBtn && addModal) {
+        closeAddBtn.addEventListener('click', () => {
+            addModal.classList.remove('show');
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    }
 
-    // Close modal with X button
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
-        // Reapply theme when modal closes
-        setTimeout(applyThemeToMainContent, 10);
-    });
+    // Close Edit Modal
+    if (closeEditBtn && editModal) {
+        closeEditBtn.addEventListener('click', () => {
+            editModal.classList.remove('show');
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    }
 
-    // Close modal when clicking outside modal-content
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('show');
-            // Reapply theme when modal closes
+    // Close Delete Modal
+    if (closeDeleteBtn && deleteModal) {
+        closeDeleteBtn.addEventListener('click', () => {
+            deleteModal.classList.remove('show');
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    }
+
+    // Cancel Delete
+    if (cancelDeleteBtn && deleteModal) {
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteModal.classList.remove('show');
+            setTimeout(applyThemeToMainContent, 10);
+        });
+    }
+
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === addModal) {
+            addModal.classList.remove('show');
+            setTimeout(applyThemeToMainContent, 10);
+        }
+        if (e.target === editModal) {
+            editModal.classList.remove('show');
+            setTimeout(applyThemeToMainContent, 10);
+        }
+        if (e.target === deleteModal) {
+            deleteModal.classList.remove('show');
             setTimeout(applyThemeToMainContent, 10);
         }
     });
-    
-    // Add event listeners to form elements to reapply theme on interaction
-    const formElements = document.querySelectorAll('.modal-content input, .modal-content textarea, .modal-content select');
-    formElements.forEach(element => {
-        element.addEventListener('focus', function() {
-            setTimeout(applyThemeToMainContent, 10);
-        });
-        element.addEventListener('change', function() {
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    });
 });
+
+// ==================== EDIT FUNCTION ====================
+function openEditModal(announcementId) {
+    // Fetch announcement data via AJAX
+    fetch(`/admin/get-announcement/${announcementId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = document.getElementById('editModal');
+                const form = document.getElementById('editAnnouncementForm');
+                
+                // Fill the form
+                document.getElementById('edit_id').value = data.announcement.id;
+                document.getElementById('edit_title').value = data.announcement.title;
+                document.getElementById('edit_content').value = data.announcement.content;
+                document.getElementById('edit_date').value = data.announcement.date;
+                
+                // Set department select
+                const deptSelect = document.getElementById('edit_department');
+                if (data.announcement.department_id) {
+                    deptSelect.value = data.announcement.department_id;
+                } else {
+                    deptSelect.value = 'all';
+                }
+                
+                // Set form action
+                form.action = `/admin/update-announcement/${announcementId}`;
+                
+                // Show modal
+                modal.classList.add('show');
+                setTimeout(applyThemeToMainContent, 10);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to load announcement data');
+        });
+}
+
+// ==================== DELETE FUNCTION ====================
+function openDeleteModal(announcementId, announcementTitle) {
+    const modal = document.getElementById('deleteModal');
+    const form = document.getElementById('deleteAnnouncementForm');
+    const titleSpan = document.getElementById('deleteTitle');
+    
+    // Set the title
+    titleSpan.textContent = announcementTitle;
+    
+    // Set the ID
+    document.getElementById('delete_id').value = announcementId;
+    
+    // Set form action
+    form.action = `/admin/delete-announcement/${announcementId}`;
+    
+    // Show modal
+    modal.classList.add('show');
+    setTimeout(applyThemeToMainContent, 10);
+}
 </script>
 
+<style>
+/* Flash message styles - only for announcements page */
+.flash-container {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.flash-message {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInDown 0.5s ease forwards;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left: 5px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.flash-message.success {
+    background: #d4edda;
+    color: #155724;
+    border-left-color: #28a745;
+}
+
+.flash-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left-color: #dc3545;
+}
+
+.flash-message.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-left-color: #17a2b8;
+}
+
+.flash-message i {
+    font-size: 1.2rem;
+}
+
+.flash-close-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0 5px;
+    transition: opacity 0.3s ease;
+}
+
+.flash-close-btn:hover {
+    opacity: 1;
+}
+
+.flash-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.2);
+    animation: progress 5s linear forwards;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+        display: none;
+    }
+}
+
+@keyframes progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Dark mode adjustments */
+.dark-mode .flash-message.success {
+    background: #1e3a2a;
+    color: #a3d8a3;
+    border-left-color: #28a745;
+}
+
+.dark-mode .flash-message.error {
+    background: #3a1e1e;
+    color: #f8a5a5;
+    border-left-color: #dc3545;
+}
+
+.dark-mode .flash-message.info {
+    background: #1e3a3a;
+    color: #a8d8d8;
+    border-left-color: #17a2b8;
+}
+</style>
 {% endblock %}

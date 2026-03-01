@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Verify OTP</title>
 
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/otp.css') }}">
+<!-- NO INLINE STYLES HERE - All styles come from otp.css -->
 </head>
 <body>
 
@@ -23,9 +24,16 @@
         {% endwith %}
 
         <form method="POST" id="otpForm">
-            <div class="otp-container">
+            <div class="otp-container" id="otpContainer">
                 {% for i in range(6) %}
-                <input type="text" name="otp{{i}}" maxlength="1" pattern="\d" required>
+                <input type="text" 
+                       id="otp{{i}}" 
+                       name="otp{{i}}" 
+                       maxlength="1" 
+                       pattern="\d" 
+                       inputmode="numeric"
+                       autocomplete="off"
+                       required>
                 {% endfor %}
             </div>
             <div id="otpError" class="field-error-text"></div>
@@ -44,56 +52,129 @@
 </div>
 
 <script>
-    const inputs = document.querySelectorAll('.otp-container input');
-    const fullOtpInput = document.getElementById('fullOtp');
-    const otpForm = document.getElementById('otpForm');
-    const otpError = document.getElementById('otpError');
-    
-    // Move focus and validate individual input
-    inputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            const value = e.target.value;
-            if (/^\d$/.test(value)) {
-                // Move to next input if exists
-                if (index < inputs.length - 1) inputs[index + 1].focus();
-            } else {
-                e.target.value = '';
-            }
-        });
-    
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                inputs[index - 1].focus();
-            }
-        });
-    
-        // ✅ Handle paste event
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pasteData = (e.clipboardData || window.clipboardData).getData('text');
-            const digits = pasteData.replace(/\D/g, '').split('').slice(0, inputs.length); // max 6 digits
-            digits.forEach((digit, i) => {
-                inputs[i].value = digit;
+    (function() {
+        const inputs = document.querySelectorAll('.otp-container input');
+        const fullOtpInput = document.getElementById('fullOtp');
+        const otpForm = document.getElementById('otpForm');
+        const otpError = document.getElementById('otpError');
+        
+        // Move focus and validate individual input
+        inputs.forEach((input, index) => {
+            // Handle input event for single character entry
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+                
+                // Only allow digits
+                if (value && !/^\d$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Auto-advance to next input if this one is filled
+                if (value && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
             });
-            // Move focus to the last filled box
-            const lastIndex = digits.length - 1;
-            if (lastIndex >= 0 && lastIndex < inputs.length - 1) {
-                inputs[lastIndex + 1].focus();
+        
+            // Handle backspace to go to previous input
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+            
+            // Handle keyup for better cursor positioning
+            input.addEventListener('keyup', (e) => {
+                // If we're at the last input and it's filled, keep focus there
+                if (index === inputs.length - 1 && e.target.value) {
+                    e.target.focus();
+                }
+            });
+        
+            // Handle paste event properly
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                
+                // Get pasted data
+                const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+                
+                // Extract only digits from the pasted text
+                const digits = pasteData.replace(/\D/g, '');
+                
+                if (digits.length === 0) return;
+                
+                // Fill the inputs with digits
+                for (let i = 0; i < inputs.length; i++) {
+                    if (i < digits.length) {
+                        inputs[i].value = digits[i];
+                    } else {
+                        inputs[i].value = '';
+                    }
+                }
+                
+                // Focus the next empty input, or the last input if all are filled
+                const nextEmptyIndex = digits.length;
+                if (nextEmptyIndex < inputs.length) {
+                    inputs[nextEmptyIndex].focus();
+                } else {
+                    inputs[inputs.length - 1].focus();
+                }
+            });
+        });
+        
+        // Also add paste handler to the container
+        document.getElementById('otpContainer').addEventListener('paste', (e) => {
+            e.preventDefault();
+            
+            // Get pasted data
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+            
+            // Extract only digits
+            const digits = pasteData.replace(/\D/g, '');
+            
+            if (digits.length === 0) return;
+            
+            // Fill the inputs with digits
+            for (let i = 0; i < inputs.length; i++) {
+                if (i < digits.length) {
+                    inputs[i].value = digits[i];
+                } else {
+                    inputs[i].value = '';
+                }
+            }
+            
+            // Focus the next empty input, or the last input if all are filled
+            const nextEmptyIndex = digits.length;
+            if (nextEmptyIndex < inputs.length) {
+                inputs[nextEmptyIndex].focus();
+            } else {
+                inputs[inputs.length - 1].focus();
             }
         });
-    });
-    
-    // Combine all inputs before submit
-    otpForm.addEventListener('submit', (e) => {
-        let otp = '';
-        inputs.forEach(i => otp += i.value);
-        if (otp.length !== inputs.length) {
-            e.preventDefault();
-            otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
-        } else {
-            fullOtpInput.value = otp;
-        }
-    });
-    </script>
+        
+        // Combine all inputs before submit
+        otpForm.addEventListener('submit', (e) => {
+            let otp = '';
+            inputs.forEach(i => otp += i.value);
+            
+            if (otp.length !== inputs.length) {
+                e.preventDefault();
+                otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
+            } else if (!/^\d+$/.test(otp)) {
+                e.preventDefault();
+                otpError.textContent = 'OTP must contain only numbers';
+            } else {
+                fullOtpInput.value = otp;
+            }
+        });
+        
+        // Clear error when user starts typing
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                otpError.textContent = '';
+            });
+        });
+    })();
+</script>
 </body>
 </html>

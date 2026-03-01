@@ -447,6 +447,26 @@ def dashboard():
         turnout_percentage = (total_votes / total_students) * 100
         voter_turnout = f"{turnout_percentage:.1f}%"
 
+    # ================================
+    # Convert elections to JSON-serializable format for calendar
+    # ================================
+    elections_for_calendar = []
+    for election in recent_elections_all:
+        elections_for_calendar.append({
+            'id': election.id,
+            'title': election.title,
+            'description': election.description,
+            'election_type': election.election_type,
+            'scope': election.scope,
+            'department': election.department,  # department name
+            'department_id': election.department_id,
+            'start_date': election.start_date.isoformat() if election.start_date else None,
+            'end_date': election.end_date.isoformat() if election.end_date else None,
+            'status': election.status,  # This calls the property method
+            'year_levels': election.year_levels,
+            'year_levels_list': election.year_levels_list,
+        })
+
     # ---------- AUDIT LOG: Dashboard viewed ----------
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
@@ -467,9 +487,9 @@ def dashboard():
         voter_turnout=voter_turnout,
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
+        elections_for_calendar=elections_for_calendar,  # This is the serializable version
         now=now
     )
-
 
 
 # Add these imports at the top of your admin/routes.py if not already present
@@ -1267,33 +1287,6 @@ def delete_student(id):
     return jsonify({"success": True})
 
 
-# ---------------------- EDIT STUDENT ---------------------- #
-@admin_bp.route('/students/edit/<int:id>', methods=['POST'])
-@admin_required
-def edit_student(id):
-    student = Student.query.get_or_404(id)
-    
-    # Store old values for audit log
-    old_first_name = student.first_name
-    old_last_name = student.last_name
-    old_course = student.course
-
-    student.first_name = request.form.get('first_name')
-    student.last_name = request.form.get('last_name')
-    student.course = request.form.get('course')
-
-    db.session.commit()
-    
-    # ---------- AUDIT LOG: Edit student ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='EDIT_STUDENT',
-        description=f"Admin user '{username}' edited student ID: {student.id_number} from IP: {ip} | Name: {old_first_name} {old_last_name} → {student.first_name} {student.last_name} | Course: {old_course} → {student.course}"
-    )
-    
-    return jsonify({"success": True})
 
 # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
@@ -2234,6 +2227,8 @@ def create_department_election():
 @login_required
 def announcements():
     departments = Department.query.all()  # For dropdown
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)  # Get current datetime
 
     if request.method == 'POST':
         title = request.form.get('title')
@@ -2282,7 +2277,89 @@ def announcements():
         description=f"Admin user '{username}' viewed the announcements page from IP: {ip} | Total announcements: {len(announcements_list)}"
     )
 
-    return render_template('announcements.html', departments=departments, announcements=announcements_list)
+    return render_template(
+        'announcements.html', 
+        departments=departments, 
+        announcements=announcements_list,
+        now=now  # Pass current datetime to template
+    )
+
+
+    # ----------- GET ANNOUNCEMENT FOR EDIT -----------
+@admin_bp.route('/get-announcement/<int:announcement_id>')
+@login_required
+def get_announcement(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    
+    return jsonify({
+        'success': True,
+        'announcement': {
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'date': announcement.date.strftime('%Y-%m-%d'),
+            'department_id': announcement.department_id
+        }
+    })
+
+# ----------- UPDATE ANNOUNCEMENT -----------
+@admin_bp.route('/update-announcement/<int:announcement_id>', methods=['POST'])
+@login_required
+def update_announcement(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    
+    title = request.form.get('title')
+    content = request.form.get('content')
+    date = request.form.get('date')
+    department_id = request.form.get('department')
+    
+    if department_id == "all":
+        department_id = None
+    else:
+        department_id = int(department_id)
+    
+    announcement.title = title
+    announcement.content = content
+    announcement.date = datetime.strptime(date, '%Y-%m-%d').date()
+    announcement.department_id = department_id
+    
+    db.session.commit()
+    
+    # Audit log
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='UPDATE_ANNOUNCEMENT',
+        description=f"Admin user '{username}' updated announcement: '{title}' (ID: {announcement_id}) from IP: {ip}"
+    )
+    
+    flash('Announcement updated successfully!', 'success')
+    return redirect(url_for('admin.announcements'))
+
+# ----------- DELETE ANNOUNCEMENT -----------
+@admin_bp.route('/delete-announcement/<int:announcement_id>', methods=['POST'])
+@login_required
+def delete_announcement(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    title = announcement.title
+    
+    db.session.delete(announcement)
+    db.session.commit()
+    
+    # Audit log
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='DELETE_ANNOUNCEMENT',
+        description=f"Admin user '{username}' deleted announcement: '{title}' (ID: {announcement_id}) from IP: {ip}"
+    )
+    
+    flash('Announcement deleted successfully!', 'success')
+    return redirect(url_for('admin.announcements'))
+
+
 
 @admin_bp.route('/results')
 @admin_required
@@ -2385,8 +2462,8 @@ def election_results(election_id):
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
-        print(f"DEBUG: Position {ep.position_id} max_votes = {ep.max_votes}")  # For debugging
     
+    # FIRST PASS: Get vote counts for all candidates
     if is_tallied and TALLY_VOTE_AVAILABLE:
         tally_records = TallyVote.query.filter_by(election_id=election_id).all()
         tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
@@ -2403,7 +2480,7 @@ def election_results(election_id):
                 'position_id': candidate.position_id,
                 'department': candidate.department.name if candidate.department else "All Departments",
                 'vote_count': vote_count,
-                'vote_percentage': 0,
+                'voter_percentage': 0,  # Percentage based on voters
                 'is_tallied': True
             })
             total_votes_cast += vote_count
@@ -2420,18 +2497,19 @@ def election_results(election_id):
                 'position_id': candidate.position_id,
                 'department': candidate.department.name if candidate.department else "All Departments",
                 'vote_count': vote_count,
-                'vote_percentage': 0,
+                'voter_percentage': 0,  # Percentage based on voters
                 'is_tallied': is_tallied
             })
             total_votes_cast += vote_count
     
-    # Calculate percentages based on total votes (for candidate rankings)
-    if total_votes_cast > 0:
+    # ===== CORRECTED: Calculate percentages based on UNIQUE VOTERS =====
+    # This works the same for both single and multi-winner positions
+    if unique_voters > 0:
         for candidate in candidate_results:
-            candidate['vote_percentage'] = round((candidate['vote_count'] / total_votes_cast) * 100, 2)
+            # Percentage of voters who voted for this candidate
+            candidate['voter_percentage'] = round((candidate['vote_count'] / unique_voters) * 100, 2)
     
-    # ===== FIXED: GROUP BY POSITION AND SELECT MULTIPLE WINNERS =====
-    # First, group candidates by position
+    # Group candidates by position for winner determination
     candidates_by_position = {}
     for candidate in candidate_results:
         position = candidate['position']
@@ -2443,20 +2521,15 @@ def election_results(election_id):
     for position in candidates_by_position:
         candidates_by_position[position].sort(key=lambda x: x['vote_count'], reverse=True)
     
-    # Now determine winners for each position based on max_votes
+    # Determine winners for each position based on max_votes
     winners_by_position = {}
     
     for position_name, candidates_in_pos in candidates_by_position.items():
-        # Get the position_id from the first candidate in this position
         if candidates_in_pos:
             position_id = candidates_in_pos[0]['position_id']
-            
-            # Get max winners for this position (default to 1 if not found)
             max_winners = position_limits.get(position_id, 1)
-            print(f"DEBUG: Position '{position_name}' (ID: {position_id}) will have {max_winners} winners")
             
             # Take the top N candidates where N = max_winners
-            # Only include candidates with votes > 0
             winners = []
             for i, candidate in enumerate(candidates_in_pos):
                 if i < max_winners and candidate['vote_count'] > 0:
@@ -2464,29 +2537,23 @@ def election_results(election_id):
                 else:
                     break
             
-            # Store winners for this position (as a list)
             winners_by_position[position_name] = winners
     
-    # ===== ADD THIS SORTING CODE =====
     # Sort winners_by_position by position_id
-    # First, create a list of (position_name, position_id) tuples for sorting
     position_order = []
     for position_name, candidates_in_pos in candidates_by_position.items():
         if candidates_in_pos:
             position_id = candidates_in_pos[0]['position_id']
             position_order.append((position_id, position_name))
     
-    # Sort by position_id
     position_order.sort(key=lambda x: x[0])
     
-    # Recreate winners_by_position in sorted order
     sorted_winners_by_position = {}
     for position_id, position_name in position_order:
         if position_name in winners_by_position:
             sorted_winners_by_position[position_name] = winners_by_position[position_name]
     
-    # Also sort candidate_results by position_id first, then by vote count
-    # First group candidates by position_id
+    # Sort candidate_results by position_id first, then by vote count
     candidates_by_pos_id = {}
     for candidate in candidate_results:
         pos_id = candidate['position_id']
@@ -2494,11 +2561,9 @@ def election_results(election_id):
             candidates_by_pos_id[pos_id] = []
         candidates_by_pos_id[pos_id].append(candidate)
     
-    # Sort each position's candidates by vote count
     for pos_id in candidates_by_pos_id:
         candidates_by_pos_id[pos_id].sort(key=lambda x: x['vote_count'], reverse=True)
     
-    # Flatten back to list in order of position_id
     sorted_candidate_results = []
     for pos_id in sorted(candidates_by_pos_id.keys()):
         sorted_candidate_results.extend(candidates_by_pos_id[pos_id])
@@ -2508,13 +2573,10 @@ def election_results(election_id):
     else:
         total_eligible_voters = Student.query.count()
     
-    # Use UNIQUE VOTERS for turnout calculation (not total votes)
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
-    
-    # Students who haven't voted yet
     students_not_voted = total_eligible_voters - unique_voters
     
-    # ---------- AUDIT LOG: Election results detail viewed ----------
+    # ---------- AUDIT LOG ----------
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -2526,10 +2588,10 @@ def election_results(election_id):
     return render_template(
         'election_results_detail.html',
         election=election,
-        candidate_results=sorted_candidate_results,  # Use sorted version
-        winners_by_position=sorted_winners_by_position,  # Use sorted version
-        total_votes_cast=unique_voters,
-        total_votes_for_positions=total_votes_cast,
+        candidate_results=sorted_candidate_results,
+        winners_by_position=sorted_winners_by_position,
+        total_voters=unique_voters,  # Renamed for clarity
+        total_votes_cast=total_votes_cast,
         total_eligible_voters=total_eligible_voters,
         voter_turnout=voter_turnout,
         students_not_voted=students_not_voted,
@@ -2538,7 +2600,6 @@ def election_results(election_id):
         is_tallied=is_tallied,
         tally_timestamp=tally_timestamp
     )
-
 
     
 @admin_bp.route('/results/<int:election_id>/tally', methods=['POST'])

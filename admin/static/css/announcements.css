@@ -4,18 +4,15 @@
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
-/* Set initial dark background to prevent flash */
 body {
-    background-color: #0f172a; /* Dark background as default */
+    background-color: #0f172a;
     transition: background-color 0.3s ease;
 }
 
-/* Light mode override */
 body:not(.dark-mode) {
     background-color: #f5f7fb;
 }
 
-/* Quick fade-in to hide any remaining flash */
 @keyframes quickFadeIn {
     from { opacity: 0.99; }
     to { opacity: 1; }
@@ -28,7 +25,6 @@ body:not(.dark-mode) {
 
 /* ==================== CSS VARIABLES ==================== */
 :root {
-    /* Light mode colors */
     --primary-blue: #1a56db;
     --secondary-blue: #3b82f6;
     --accent-teal: #06b6d4;
@@ -38,7 +34,6 @@ body:not(.dark-mode) {
     --dark-gray: #1f2937;
     --light-gray: #f8fafc;
     --sidebar-width: 280px;
-    --header-height: 80px;
     --card-radius: 12px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
@@ -49,17 +44,14 @@ body:not(.dark-mode) {
     --text-color: #2c3e50;
     --text-secondary: #6c757d;
     --card-bg: white;
-    --header-bg: rgba(255, 255, 255, 0.95);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Dark mode variables */
 .dark-mode {
     --bg-color: #0f172a;
     --text-color: #f1f5f9;
     --text-secondary: #cbd5e1;
     --card-bg: #1e293b;
-    --header-bg: rgba(30, 41, 59, 0.95);
     --light-gray: #334155;
     --dark-gray: #e2e8f0;
     --border-color: rgba(51, 65, 85, 0.8);
@@ -68,18 +60,39 @@ body:not(.dark-mode) {
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
+/* ==================== THEME TRANSITION FIXES ==================== */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+.announcements-page {
+    background: transparent !important;
+}
+
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
 /* ==================== PAGE LAYOUT ==================== */
 .announcements-page {
     margin-left: var(--sidebar-width);
     padding: 20px 40px;
     min-height: 100vh;
-    /* REMOVED solid background - now transparent to show gradient from main template */
     background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
 }
 
-/* Title - Scoped to announcements-page */
+.announcements-page .page-header {
+    margin-bottom: 20px;
+}
+
 .announcements-page .announcements-title {
     font-size: 1.8rem;
     font-weight: 600;
@@ -88,7 +101,6 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-/* Description text - Scoped */
 .announcements-page .page-description {
     font-size: 0.95rem;
     color: var(--text-secondary);
@@ -120,21 +132,18 @@ body:not(.dark-mode) {
     box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
 }
 
-.announcements-page .add-announcement-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+/* ==================== ANNOUNCEMENTS LIST ==================== */
+.announcements-page .announcements-list {
+    margin-top: 30px;
 }
 
-/* ==================== ANNOUNCEMENT CARDS - FLOATING CARDS ==================== */
+/* ==================== ANNOUNCEMENT CARDS ==================== */
 .announcements-page .announcement-card {
     background: var(--card-bg);
     border-radius: var(--card-radius);
     padding: 25px 30px;
     margin-bottom: 20px;
     box-shadow: var(--shadow-md);
-    border-left: 5px solid var(--primary-blue);
     border: 1px solid var(--border-color);
     transition: var(--transition);
     animation: fadeIn 0.3s ease-out;
@@ -142,21 +151,36 @@ body:not(.dark-mode) {
     overflow: hidden;
 }
 
-.announcements-page .announcement-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 5px;
-    height: 100%;
-    background: linear-gradient(180deg, var(--primary-blue), var(--secondary-blue));
-    transition: var(--transition);
-}
-
 .announcements-page .announcement-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
     border-color: var(--primary-blue);
+}
+
+/* Stagger animation */
+.announcements-page .announcement-card:nth-child(1) { animation-delay: 0.05s; }
+.announcements-page .announcement-card:nth-child(2) { animation-delay: 0.1s; }
+.announcements-page .announcement-card:nth-child(3) { animation-delay: 0.15s; }
+.announcements-page .announcement-card:nth-child(4) { animation-delay: 0.2s; }
+.announcements-page .announcement-card:nth-child(5) { animation-delay: 0.25s; }
+.announcements-page .announcement-card:nth-child(6) { animation-delay: 0.3s; }
+.announcements-page .announcement-card:nth-child(7) { animation-delay: 0.35s; }
+.announcements-page .announcement-card:nth-child(8) { animation-delay: 0.4s; }
+.announcements-page .announcement-card:nth-child(9) { animation-delay: 0.45s; }
+.announcements-page .announcement-card:nth-child(10) { animation-delay: 0.5s; }
+
+/* Announcement Header */
+.announcements-page .announcement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.announcements-page .announcement-title-section {
+    flex: 1;
 }
 
 .announcements-page .announcement-card h3 {
@@ -170,7 +194,107 @@ body:not(.dark-mode) {
     color: var(--primary-blue);
 }
 
-.announcements-page .announcement-card p {
+/* Badges - Light Mode */
+.announcements-page .announcement-badges {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.announcements-page .dept-badge,
+.announcements-page .date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: var(--light-gray);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+/* Dark Mode Badges - SOLID GREEN with DARK TEXT (FIXED) */
+.dark-mode .announcements-page .dept-badge,
+.dark-mode .announcements-page .date-badge {
+    background: #10b981 !important;  /* Solid green */
+    color: #0f172a !important;  /* Dark text for maximum contrast */
+    border-color: #10b981 !important;
+    font-weight: 600;
+}
+
+/* Hover effect for dark mode badges */
+.dark-mode .announcements-page .dept-badge:hover,
+.dark-mode .announcements-page .date-badge:hover {
+    background: #0f9d6e !important;
+    transform: translateY(-2px);
+}
+
+/* All Departments badge - special styling */
+.announcements-page .dept-badge.all-depts {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    color: var(--primary-blue);
+}
+
+/* Dark mode all departments badge */
+.dark-mode .announcements-page .dept-badge.all-depts {
+    background: linear-gradient(135deg, #667eea40, #764ba240) !important;
+    color: #a5b4fc !important;
+    border-color: #667eea !important;
+}
+
+/* Action Buttons */
+.announcements-page .announcement-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.announcements-page .edit-btn,
+.announcements-page .delete-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+}
+
+.announcements-page .edit-btn {
+    background: var(--primary-blue);
+    color: white;
+}
+
+.announcements-page .edit-btn:hover {
+    background: var(--secondary-blue);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.announcements-page .delete-btn {
+    background: var(--danger-red);
+    color: white;
+}
+
+.announcements-page .delete-btn:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Announcement Content */
+.announcements-page .announcement-content {
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 15px 0;
+}
+
+.announcements-page .announcement-content p {
     font-size: 0.95rem;
     color: var(--text-secondary);
     margin: 0;
@@ -178,34 +302,47 @@ body:not(.dark-mode) {
     transition: var(--transition);
 }
 
-.announcements-page .announcement-card .date {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+/* Announcement Footer */
+.announcements-page .announcement-footer {
     margin-top: 15px;
-    text-align: right;
-    opacity: 0.8;
-    transition: var(--transition);
-    border-top: 1px dashed var(--border-color);
     padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
 }
 
-.announcements-page .announcement-card:hover .date {
-    opacity: 1;
+.announcements-page .timestamp {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-/* Stagger animation for announcement cards */
-.announcements-page .announcement-card:nth-child(1) { animation-delay: 0.05s; }
-.announcements-page .announcement-card:nth-child(2) { animation-delay: 0.1s; }
-.announcements-page .announcement-card:nth-child(3) { animation-delay: 0.15s; }
-.announcements-page .announcement-card:nth-child(4) { animation-delay: 0.2s; }
-.announcements-page .announcement-card:nth-child(5) { animation-delay: 0.25s; }
-.announcements-page .announcement-card:nth-child(6) { animation-delay: 0.3s; }
-.announcements-page .announcement-card:nth-child(7) { animation-delay: 0.35s; }
-.announcements-page .announcement-card:nth-child(8) { animation-delay: 0.4s; }
-.announcements-page .announcement-card:nth-child(9) { animation-delay: 0.45s; }
-.announcements-page .announcement-card:nth-child(10) { animation-delay: 0.5s; }
+/* No Announcements State */
+.announcements-page .no-announcements {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--card-bg);
+    border-radius: var(--card-radius);
+    border: 2px dashed var(--border-color);
+    margin-top: 30px;
+}
 
-/* ==================== MODAL STYLES - FLOATING CARD ==================== */
+.announcements-page .no-announcements i {
+    font-size: 48px;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.announcements-page .no-announcements h3 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.announcements-page .no-announcements p {
+    color: var(--text-secondary);
+}
+
+/* ==================== MODAL STYLES ==================== */
 .announcements-page .modal {
     display: none;
     position: fixed;
@@ -233,21 +370,19 @@ body:not(.dark-mode) {
 .announcements-page .modal-content {
     background: var(--card-bg);
     width: 90%;
-    max-width: 500px;
+    max-width: 800px;
     border-radius: var(--card-radius);
     padding: 30px;
     box-shadow: var(--shadow-lg);
     animation: fadeInModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-color);
     transition: var(--transition);
-    max-height: 90vh;
-    overflow-y: auto;
     position: relative;
 }
 
 .announcements-page .modal-content:hover {
     transform: translateY(-5px);
-    box-shadow: var(--shadow-lg), 0 15px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
     border-color: var(--primary-blue);
 }
 
@@ -259,29 +394,64 @@ body:not(.dark-mode) {
 .announcements-page .modal-content h3 {
     margin-top: 0;
     color: var(--text-color);
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     font-size: 1.3rem;
     padding-right: 30px;
     text-align: center;
     transition: var(--transition);
 }
 
-.announcements-page .modal-content:hover h3 {
-    color: var(--primary-blue);
+/* Desktop Modal Layout */
+.announcements-page .desktop-modal {
+    max-width: 900px;
 }
 
-/* ==================== CLOSE BUTTON ==================== */
+.announcements-page .desktop-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.announcements-page .form-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.announcements-page .form-right {
+    display: flex;
+    flex-direction: column;
+}
+
+.announcements-page .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.announcements-page .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.announcements-page .form-actions {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+}
+
+/* Close Button */
 .announcements-page .close-btn {
     position: absolute;
     top: 15px;
     right: 15px;
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: 24px;
     cursor: pointer;
     color: var(--text-secondary);
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -300,28 +470,19 @@ body:not(.dark-mode) {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* ==================== MODAL FORM STYLES ==================== */
-.announcements-page .modal-content form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 100%;
-}
-
+/* Modal Forms */
 .announcements-page .modal-content label {
     font-weight: 600;
     color: var(--text-color);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     transition: var(--transition);
-    display: block;
-    margin-bottom: 5px;
 }
 
 .announcements-page .modal-content input,
 .announcements-page .modal-content textarea,
 .announcements-page .modal-content select {
-    padding: 12px 14px;
-    border-radius: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
     border: 1px solid var(--border-color);
     font-size: 0.95rem;
     resize: none;
@@ -330,7 +491,6 @@ body:not(.dark-mode) {
     transition: var(--transition);
     width: 100%;
     box-sizing: border-box;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     box-shadow: var(--shadow-sm);
 }
 
@@ -343,8 +503,9 @@ body:not(.dark-mode) {
 }
 
 .announcements-page .modal-content textarea {
-    min-height: 100px;
+    min-height: 120px;
     line-height: 1.5;
+    height: 100%;
 }
 
 .announcements-page .modal-content input:focus,
@@ -354,12 +515,6 @@ body:not(.dark-mode) {
     border-color: var(--primary-blue);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), var(--shadow-md);
     transform: translateY(-2px);
-}
-
-.announcements-page .modal-content input::placeholder,
-.announcements-page .modal-content textarea::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.7;
 }
 
 .announcements-page .modal-content select {
@@ -373,93 +528,125 @@ body:not(.dark-mode) {
 }
 
 .dark-mode .announcements-page .modal-content select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23cbd5e1' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1506 0z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23cbd5e1' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
 }
 
-.announcements-page .modal-content input[type="date"] {
-    cursor: pointer;
-}
-
-.announcements-page .modal-content input[type="date"]::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    opacity: 0.7;
-    filter: invert(0.5);
-    transition: var(--transition);
-}
-
-.announcements-page .modal-content input[type="date"]::-webkit-calendar-picker-indicator:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
-
-.dark-mode .announcements-page .modal-content input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.8);
-}
-
-/* ==================== SUBMIT BUTTON ==================== */
-.announcements-page .modal-content button[type="submit"] {
-    margin-top: 10px;
+/* Submit Buttons */
+.announcements-page .submit-btn {
     width: 100%;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    padding: 14px;
+    background: linear-gradient(135deg, var(--success-green), #059669);
     color: white;
-    font-weight: 500;
-    padding: 12px 0;
-    border-radius: 8px;
     border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     transition: var(--transition);
-    font-size: 0.95rem;
-    box-shadow: var(--shadow-sm);
+    margin-top: 10px;
 }
 
-.announcements-page .modal-content button[type="submit"]:hover {
+.announcements-page .submit-btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+    box-shadow: var(--shadow-lg);
 }
 
-/* ==================== FORM VALIDATION ==================== */
-.announcements-page .modal-content input:invalid,
-.announcements-page .modal-content textarea:invalid,
-.announcements-page .modal-content select:invalid {
-    border-color: var(--danger-red);
+.announcements-page .submit-btn.edit-submit {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
 }
 
-.announcements-page .modal-content input:invalid:focus,
-.announcements-page .modal-content textarea:invalid:focus,
-.announcements-page .modal-content select:invalid:focus {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+/* Delete Modal Specific */
+.announcements-page .delete-modal {
+    max-width: 400px;
+    text-align: center;
+}
+
+.announcements-page .delete-icon {
+    font-size: 48px;
+    color: var(--danger-red);
+    margin-bottom: 15px;
+}
+
+.announcements-page .delete-warning {
+    color: var(--danger-red);
+    font-size: 0.9rem;
+    margin: 10px 0;
+}
+
+.announcements-page .delete-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.announcements-page .cancel-delete-btn,
+.announcements-page .confirm-delete-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.announcements-page .cancel-delete-btn {
+    background: var(--light-gray);
+    color: var(--text-color);
+}
+
+.announcements-page .cancel-delete-btn:hover {
+    background: var(--border-color);
+    transform: translateY(-2px);
+}
+
+.announcements-page .confirm-delete-btn {
+    background: var(--danger-red);
+    color: white;
+}
+
+.announcements-page .confirm-delete-btn:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ==================== DARK MODE SPECIFIC (OTHER ELEMENTS) ==================== */
+.dark-mode .announcements-page .announcement-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.dark-mode .announcements-page .modal-content {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.dark-mode .announcements-page .modal-content input,
+.dark-mode .announcements-page .modal-content textarea,
+.dark-mode .announcements-page .modal-content select {
+    background: var(--light-gray);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.dark-mode .announcements-page .cancel-delete-btn {
+    background: var(--dark-gray);
 }
 
 /* ==================== ANIMATIONS ==================== */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-/* Force repaint on initial load */
-.announcements-page .announcement-card,
-.announcements-page .modal-content,
-.announcements-page .add-announcement-btn,
-.announcements-page .modal-content input,
-.announcements-page .modal-content textarea,
-.announcements-page .modal-content select {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-}
-
-/* ==================== SCROLLBAR HIDING ==================== */
-.announcements-page .modal-content {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.announcements-page .modal-content::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-    background: transparent;
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
@@ -489,23 +676,35 @@ body:not(.dark-mode) {
         padding: 20px;
     }
     
-    .announcements-page .announcement-card:hover {
-        transform: translateY(-3px);
+    .announcements-page .desktop-form {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .announcements-page .form-row {
+        grid-template-columns: 1fr;
     }
     
     .announcements-page .modal-content {
         padding: 20px;
         margin: 10px;
         width: 95%;
-        max-height: 85vh;
+        max-height: 90vh;
+        overflow-y: auto;
     }
     
-    .announcements-page .modal-content:hover {
-        transform: translateY(-3px);
+    .announcements-page .announcement-header {
+        flex-direction: column;
     }
     
-    .announcements-page .modal-content form {
-        gap: 12px;
+    .announcements-page .announcement-actions {
+        width: 100%;
+    }
+    
+    .announcements-page .edit-btn,
+    .announcements-page .delete-btn {
+        flex: 1;
+        justify-content: center;
     }
 }
 
@@ -524,25 +723,14 @@ body:not(.dark-mode) {
     
     .announcements-page .modal-content {
         padding: 15px;
-        width: 95%;
-        max-height: 80vh;
     }
     
     .announcements-page .modal-content h3 {
         font-size: 1.1rem;
-        margin-bottom: 15px;
     }
     
-    .announcements-page .modal-content input,
-    .announcements-page .modal-content textarea,
-    .announcements-page .modal-content select {
-        padding: 10px 12px;
-        font-size: 0.9rem;
-    }
-    
-    .announcements-page .modal-content button[type="submit"] {
-        padding: 10px 0;
-        font-size: 0.9rem;
+    .announcements-page .delete-actions {
+        flex-direction: column;
     }
 }
 
