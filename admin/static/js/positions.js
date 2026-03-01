@@ -3,6 +3,26 @@
 // Get CSRF token
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
+// Predefined color palette for positions
+const colorPalette = [
+    '#3498db', // Blue
+    '#e74c3c', // Red
+    '#2ecc71', // Green
+    '#f39c12', // Orange
+    '#9b59b6', // Purple
+    '#1abc9c', // Turquoise
+    '#e67e22', // Carrot
+    '#34495e', // Dark Blue
+    '#16a085', // Green Sea
+    '#27ae60', // Nephritis
+    '#2980b9', // Belize Hole
+    '#8e44ad', // Wisteria
+    '#2c3e50', // Midnight Blue
+    '#d35400', // Pumpkin
+    '#c0392b', // Pomegranate
+    '#7f8c8d'  // Asbestos
+];
+
 // Initialize event listeners for positions modals
 document.addEventListener('DOMContentLoaded', function() {
     // Add Position Modal
@@ -28,7 +48,63 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editPositionForm) {
         editPositionForm.addEventListener('submit', handleEditPosition);
     }
+
+    // Initialize color pickers
+    initColorPicker('position_color', 'position_color_hex', 'colorPresets');
+    initColorPicker('edit_position_color', 'edit_position_color_hex', 'editColorPresets');
 });
+
+// ================= COLOR PICKER FUNCTIONS =================
+
+// Initialize color picker with presets
+function initColorPicker(colorInputId, hexInputId, presetsContainerId) {
+    const colorInput = document.getElementById(colorInputId);
+    const hexInput = document.getElementById(hexInputId);
+    const presetsContainer = document.getElementById(presetsContainerId);
+
+    if (!colorInput || !hexInput || !presetsContainer) return;
+
+    // Update hex input when color changes
+    colorInput.addEventListener('input', function() {
+        hexInput.value = this.value.toUpperCase();
+    });
+
+    // Update color input when hex is entered
+    hexInput.addEventListener('input', function() {
+        const hex = this.value;
+        if (/^#[0-9A-F]{6}$/i.test(hex)) {
+            colorInput.value = hex;
+        }
+    });
+
+    // Create color presets
+    colorPalette.forEach(color => {
+        const preset = document.createElement('div');
+        preset.className = 'color-preset';
+        preset.style.backgroundColor = color;
+        preset.setAttribute('data-color', color);
+        
+        preset.addEventListener('click', function() {
+            colorInput.value = color;
+            hexInput.value = color.toUpperCase();
+            
+            // Remove selected class from all presets
+            document.querySelectorAll(`#${presetsContainerId} .color-preset`).forEach(p => {
+                p.classList.remove('selected');
+            });
+            
+            // Add selected class to this preset
+            this.classList.add('selected');
+        });
+        
+        presetsContainer.appendChild(preset);
+    });
+
+    // Select the first preset by default
+    if (presetsContainer.children.length > 0) {
+        presetsContainer.children[0].classList.add('selected');
+    }
+}
 
 // ================= MODAL FUNCTIONS =================
 
@@ -38,6 +114,23 @@ function openAddPositionModal() {
     if (modal) {
         modal.style.display = 'flex';
         document.getElementById('position_name').focus();
+        
+        // Reset color to first preset
+        const colorInput = document.getElementById('position_color');
+        const hexInput = document.getElementById('position_color_hex');
+        if (colorInput && hexInput && colorPalette.length > 0) {
+            colorInput.value = colorPalette[0];
+            hexInput.value = colorPalette[0].toUpperCase();
+            
+            // Reset preset selection
+            document.querySelectorAll('#colorPresets .color-preset').forEach((p, index) => {
+                if (index === 0) {
+                    p.classList.add('selected');
+                } else {
+                    p.classList.remove('selected');
+                }
+            });
+        }
     }
 }
 
@@ -68,11 +161,29 @@ function closePositionListModal() {
 }
 
 // Open Edit Position Modal
-function openEditPositionModal(positionId, positionName) {
+function openEditPositionModal(positionId, positionName, positionColor = '#3498db') {
     const modal = document.getElementById('editPositionModal');
     if (modal) {
         document.getElementById('edit_position_id').value = positionId;
         document.getElementById('edit_position_name').value = positionName;
+        
+        const colorInput = document.getElementById('edit_position_color');
+        const hexInput = document.getElementById('edit_position_color_hex');
+        
+        if (colorInput && hexInput) {
+            colorInput.value = positionColor;
+            hexInput.value = positionColor.toUpperCase();
+            
+            // Highlight the matching preset
+            document.querySelectorAll('#editColorPresets .color-preset').forEach(p => {
+                if (p.getAttribute('data-color') === positionColor) {
+                    p.classList.add('selected');
+                } else {
+                    p.classList.remove('selected');
+                }
+            });
+        }
+        
         modal.style.display = 'flex';
         document.getElementById('edit_position_name').focus();
     }
@@ -89,7 +200,7 @@ function closeEditPositionModal() {
 
 // ================= AJAX FUNCTIONS =================
 
-// Load all positions
+// Load all positions (UPDATED - Color column removed)
 async function loadPositions() {
     const tbody = document.getElementById('positionsTableBody');
     if (!tbody) return;
@@ -98,7 +209,7 @@ async function loadPositions() {
     tbody.innerHTML = `
         <tr>
             <td colspan="3" class="loading-positions">
-                <i class="fa-solid fa-spinner"></i> Loading positions...
+                <i class="fa-solid fa-spinner fa-spin"></i> Loading positions...
             </td>
         </tr>
     `;
@@ -131,7 +242,7 @@ async function loadPositions() {
             return;
         }
 
-        // Render positions table
+        // Render positions table (without color column)
         tbody.innerHTML = positions.map((pos, index) => `
             <tr id="position-row-${pos.id}">
                 <td>${index + 1}</td>
@@ -139,7 +250,7 @@ async function loadPositions() {
                 <td>
                     <div class="position-actions">
                         <button class="position-action-btn position-edit-btn" 
-                                onclick="openEditPositionModal(${pos.id}, '${escapeHtml(pos.name)}')">
+                                onclick="openEditPositionModal(${pos.id}, '${escapeHtml(pos.name)}', '${pos.color || '#3498db'}')">
                             <i class="fa-solid fa-edit"></i> Edit
                         </button>
                         <button class="position-action-btn position-delete-btn" 
@@ -171,6 +282,7 @@ async function handleAddPosition(event) {
     const form = event.target;
     const submitBtn = form.querySelector('.add-btn');
     const positionName = document.getElementById('position_name').value.trim();
+    const positionColor = document.getElementById('position_color')?.value || '#3498db';
     
     if (!positionName) {
         showNotification('error', 'Please enter a position name.');
@@ -191,7 +303,8 @@ async function handleAddPosition(event) {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: new URLSearchParams({
-                'position_name': positionName
+                'position_name': positionName,
+                'position_color': positionColor
             })
         });
         
@@ -231,6 +344,7 @@ async function handleEditPosition(event) {
     const submitBtn = form.querySelector('.edit-btn');
     const positionId = document.getElementById('edit_position_id').value;
     const positionName = document.getElementById('edit_position_name').value.trim();
+    const positionColor = document.getElementById('edit_position_color')?.value || '#3498db';
     
     if (!positionName) {
         showNotification('error', 'Please enter a position name.');
@@ -251,7 +365,8 @@ async function handleEditPosition(event) {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
-                position_name: positionName
+                position_name: positionName,
+                position_color: positionColor
             })
         });
         

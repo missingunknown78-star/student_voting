@@ -39,7 +39,8 @@
             </span>
         </div>
 
-        {% for position in all_positions %}
+        <!-- Sort positions by ID -->
+        {% for position in all_positions|sort(attribute='id') %}
         <div class="position-card" id="position-{{ position.id }}">
             <div class="position-checkbox">
                 <input type="checkbox" 
@@ -82,6 +83,9 @@
         </div>
     </form>
 </div>
+
+<!-- Hidden field to store return URL for sidebar highlighting -->
+<input type="hidden" id="return_url" value="{{ url_for('admin.create_election') }}">
 
 <script>
 function updateSelectedCount() {
@@ -163,6 +167,10 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         }
     });
+    
+    // Store the return URL in sessionStorage for when we come back
+    const returnUrl = document.getElementById('return_url').value;
+    sessionStorage.setItem('return_to_elections', 'true');
 });
 </script>
 {% endblock %}

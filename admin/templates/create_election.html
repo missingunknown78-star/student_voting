@@ -304,8 +304,6 @@ function toggleFields() {
     }
 }
 
-// UPDATED FUNCTION: No more toggleAllYears needed
-
 // UPDATED FUNCTION: Reset form
 function resetForm() {
     document.getElementById('electionForm').reset();
@@ -380,11 +378,77 @@ function setupFlashMessages() {
     });
 }
 
+// =============== FORCE SIDEBAR HIGHLIGHT FIX ===============
+// This ensures the Create Election button stays highlighted when returning to this page
+function highlightCreateElectionLink() {
+    // Get all possible sidebar links
+    const sidebarLinks = document.querySelectorAll('.sidebar-menu a, .nav-link, .sidebar a, .menu a');
+    
+    // Remove active class from all links first
+    sidebarLinks.forEach(link => {
+        link.classList.remove('active', 'current', 'selected', 'is-active');
+        
+        // Also remove from parent li
+        const parentLi = link.closest('li');
+        if (parentLi) {
+            parentLi.classList.remove('active', 'current', 'selected');
+        }
+    });
+    
+    // Find and highlight the Create Election link
+    sidebarLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        const text = link.textContent || link.innerText;
+        
+        // Check if this is the Create Election link
+        if (href && (href.includes('create_election') || href.includes('manage-elections') || href.includes('elections'))) {
+            link.classList.add('active');
+            
+            // Also highlight parent li
+            const parentLi = link.closest('li');
+            if (parentLi) {
+                parentLi.classList.add('active');
+            }
+            
+            // If it's in a dropdown/submenu, expand it
+            const submenu = link.closest('.submenu, .dropdown-menu');
+            if (submenu) {
+                submenu.style.display = 'block';
+                const parentToggle = submenu.previousElementSibling;
+                if (parentToggle) {
+                    parentToggle.classList.add('expanded', 'active');
+                }
+            }
+        } else if (text.toLowerCase().includes('create election') || text.toLowerCase().includes('manage elections')) {
+            link.classList.add('active');
+            
+            const parentLi = link.closest('li');
+            if (parentLi) {
+                parentLi.classList.add('active');
+            }
+            
+            const submenu = link.closest('.submenu, .dropdown-menu');
+            if (submenu) {
+                submenu.style.display = 'block';
+                const parentToggle = submenu.previousElementSibling;
+                if (parentToggle) {
+                    parentToggle.classList.add('expanded', 'active');
+                }
+            }
+        }
+    });
+}
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     applyThemeToMainContent();
     toggleFields(); // Initialize field visibility
     setupFlashMessages(); // Initialize flash message auto-dismiss
+    
+    // Run sidebar highlight
+    setTimeout(highlightCreateElectionLink, 50);
+    setTimeout(highlightCreateElectionLink, 150);
+    setTimeout(highlightCreateElectionLink, 300);
     
     // Add form validation
     document.getElementById('electionForm').addEventListener('submit', function(e) {
@@ -399,9 +463,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.querySelector('.main-content') || checkCount > 20) {
             clearInterval(checkInterval);
             applyThemeToMainContent();
+            highlightCreateElectionLink();
         }
         checkCount++;
     }, 100);
+    
+    // Run on page show (for bfcache/back navigation)
+    window.addEventListener('pageshow', function() {
+        highlightCreateElectionLink();
+    });
+    
+    // Run on popstate (browser back/forward)
+    window.addEventListener('popstate', function() {
+        highlightCreateElectionLink();
+    });
+});
+
+// Also run when the page is fully loaded
+window.addEventListener('load', function() {
+    highlightCreateElectionLink();
 });
 </script>
 {% endblock %}

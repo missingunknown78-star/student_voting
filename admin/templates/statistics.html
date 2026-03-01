@@ -10,12 +10,10 @@
 
 <style>
 /* ==================== THEME TRANSITION FIXES ==================== */
-/* Force main-content to have transitions */
 .main-content {
     transition: background-color 0.3s ease, background-image 0.3s ease !important;
 }
 
-/* Ensure the background shows through */
 .stats-page {
     background: transparent !important;
 }
@@ -32,55 +30,241 @@ body:not(.dark-mode) .main-content,
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
-/* Dark mode specific overrides */
-body.dark-mode .stats-header {
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+/* ==================== DARK MODE TEXT COLOR FIXES ==================== */
+body.dark-mode .stats-page *,
+.main-content.dark-mode .stats-page * {
+    color: #f1f5f9;
 }
 
+/* Override for colored elements */
+body.dark-mode .stats-page .kpi-value,
+body.dark-mode .stats-page .insight-value,
+body.dark-mode .stats-page .election-badge,
+body.dark-mode .stats-page .winner-badge,
+body.dark-mode .stats-page .meta-item i,
+body.dark-mode .stats-page .kpi-icon,
+body.dark-mode .stats-page .insight-icon,
+.main-content.dark-mode .stats-page .kpi-value,
+.main-content.dark-mode .stats-page .insight-value,
+.main-content.dark-mode .stats-page .election-badge,
+.main-content.dark-mode .stats-page .winner-badge,
+.main-content.dark-mode .stats-page .meta-item i,
+.main-content.dark-mode .stats-page .kpi-icon,
+.main-content.dark-mode .stats-page .insight-icon {
+    color: var(--primary-blue) !important;
+}
+
+body.dark-mode .stats-page .election-badge.department,
+.main-content.dark-mode .stats-page .election-badge.department {
+    color: var(--success-green) !important;
+}
+
+body.dark-mode .stats-page .election-badge.wide,
+.main-content.dark-mode .stats-page .election-badge.wide {
+    color: var(--primary-blue) !important;
+}
+
+body.dark-mode .stats-page .change-positive,
+.main-content.dark-mode .stats-page .change-positive {
+    color: var(--success-green) !important;
+}
+
+body.dark-mode .stats-page .bar-legend div,
+.main-content.dark-mode .stats-page .bar-legend div {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Dark mode card backgrounds */
 body.dark-mode .kpi-card,
 body.dark-mode .filter-container,
 body.dark-mode .chart-card,
 body.dark-mode .insights-panel,
+body.dark-mode .winners-panel,
+body.dark-mode .position-stats-panel,
 body.dark-mode .stat-card,
-body.dark-mode .no-data {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .kpi-card:hover,
-body.dark-mode .filter-container:hover,
-body.dark-mode .chart-card:hover,
-body.dark-mode .insights-panel:hover,
-body.dark-mode .stat-card:hover,
-body.dark-mode .no-data:hover {
-    border-color: var(--primary-blue);
+body.dark-mode .no-data,
+.main-content.dark-mode .kpi-card,
+.main-content.dark-mode .filter-container,
+.main-content.dark-mode .chart-card,
+.main-content.dark-mode .insights-panel,
+.main-content.dark-mode .winners-panel,
+.main-content.dark-mode .position-stats-panel,
+.main-content.dark-mode .stat-card,
+.main-content.dark-mode .no-data {
+    background: #1e293b;
+    border-color: #334155;
 }
 
 body.dark-mode .insight-item,
-body.dark-mode .election-meta,
-body.dark-mode .vote-summary,
-body.dark-mode .candidate-row {
-    background: var(--light-gray);
+body.dark-mode .winner-card,
+body.dark-mode .position-stat-item,
+.main-content.dark-mode .insight-item,
+.main-content.dark-mode .winner-card,
+.main-content.dark-mode .position-stat-item {
+    background: #2d3748;
 }
 
-body.dark-mode .filter-group select {
+body.dark-mode .filter-group select,
+.main-content.dark-mode .filter-group select {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: #334155;
+}
+
+/* ==================== NEW SECTION STYLES ==================== */
+.winners-panel,
+.position-stats-panel {
     background: var(--card-bg);
-    color: var(--text-color);
-    border-color: var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
 }
 
-body.dark-mode .period-btn.active {
-    background: white;
+.winners-panel:hover,
+.position-stats-panel:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
+}
+
+.winners-panel h3,
+.position-stats-panel h3 {
+    color: var(--primary-blue);
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.winners-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.winner-card {
+    background: var(--light-gray);
+    border-radius: 8px;
+    padding: 15px;
+    transition: var(--transition);
+    border-left: 4px solid var(--warning-amber);
+}
+
+.winner-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.winner-card h4 {
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.winner-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    margin: 5px 0;
+}
+
+.winner-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.winner-votes {
+    color: var(--success-green);
+    font-weight: 600;
+}
+
+.winner-margin {
+    color: var(--warning-amber);
+    font-weight: 600;
+}
+
+.position-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.position-stat-item {
+    background: var(--light-gray);
+    border-radius: 8px;
+    padding: 15px;
+    transition: var(--transition);
+    border-bottom: 3px solid transparent;
+}
+
+.position-stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.position-stat-item .position-name {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.position-stat-item .position-votes {
+    font-size: 1.3rem;
+    font-weight: 700;
     color: var(--primary-blue);
 }
 
-body.dark-mode .change-neutral {
-    background: var(--light-gray);
-    color: var(--text-color);
+.position-stat-item .position-candidates {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 5px;
 }
 
-body.dark-mode .chart-container {
-    filter: brightness(0.9) contrast(1.1);
+.winner-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    background: var(--warning-amber);
+    color: white;
+    margin-left: 5px;
+}
+
+/* Turnout indicator */
+.turnout-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.turnout-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.turnout-fill {
+    height: 100%;
+    background: var(--success-green);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .winners-grid,
+    .position-stats-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 {% endblock %}
@@ -93,7 +277,7 @@ body.dark-mode .chart-container {
         <h1><i class="fas fa-chart-bar"></i> Election Analytics</h1>
         <div class="header-actions">
             <button class="export-btn" id="exportReport">
-                <i class="fas fa-file-export"></i> Export
+                <i class="fas fa-file-export"></i> Export Report
             </button>
         </div>
     </div>
@@ -106,9 +290,9 @@ body.dark-mode .chart-container {
             </label>
 
             <select id="filter-election-type">
-                <option value="all">All</option>
-                <option value="Department">Department</option>
-                <option value="General">General</option>
+                <option value="all">All Elections</option>
+                <option value="Department">Department Elections</option>
+                <option value="General">General Elections</option>
             </select>
 
             <select id="filter-department" style="display:none">
@@ -124,24 +308,22 @@ body.dark-mode .chart-container {
                 <i class="fas fa-sort"></i> Sort by:
             </label>
             <select id="sort-by">
-                <option value="date">Newest</option>
-                <option value="date-oldest">Oldest</option>
-                <option value="votes">Most Votes</option>
-                <option value="margin">Closest Margin</option>
+                <option value="date">Newest First</option>
+                <option value="date-oldest">Oldest First</option>
+                <option value="votes">Highest Turnout</option>
+                <option value="margin">Closest Race</option>
             </select>
         </div>
     </div>
 
     <!-- KPI CARDS -->
     <div class="kpi-grid">
-
         <div class="kpi-card">
             <div class="kpi-icon" style="background:#4dabf7">
                 <i class="fas fa-poll"></i>
             </div>
             <div class="kpi-value" id="totalElections">{{ election_stats|length }}</div>
             <div class="kpi-label">Total Elections</div>
-            <div class="kpi-change change-positive">Filtered</div>
         </div>
 
         <div class="kpi-card">
@@ -149,33 +331,33 @@ body.dark-mode .chart-container {
                 <i class="fas fa-user-check"></i>
             </div>
             <div class="kpi-value" id="totalVotedStudents">0</div>
-            <div class="kpi-label">Total Voted Students</div>
-            <div class="kpi-change change-positive" id="votedStudentsChange">0 students</div>
+            <div class="kpi-label">Total Votes Cast</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#845ef7">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="kpi-value" id="voterTurnout">0%</div>
+            <div class="kpi-label">Voter Turnout</div>
+            <div class="turnout-indicator">
+                <div class="turnout-bar">
+                    <div class="turnout-fill" id="turnoutBar" style="width:0%"></div>
+                </div>
+            </div>
         </div>
 
         <div class="kpi-card">
             <div class="kpi-icon" style="background:#ff922b">
-                <i class="fas fa-percentage"></i>
-            </div>
-            <div class="kpi-value" id="avgParticipation">0%</div>
-            <div class="kpi-label">Avg Participation</div>
-            <div class="kpi-change change-neutral">Filtered</div>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-icon" style="background:#e64980">
                 <i class="fas fa-trophy"></i>
             </div>
-            <div class="kpi-value" id="closestMarginKPI">0%</div>
-            <div class="kpi-label">Closest Margin</div>
-            <div class="kpi-change change-negative">Filtered</div>
+            <div class="kpi-value" id="avgTurnout">0%</div>
+            <div class="kpi-label">Avg Participation</div>
         </div>
-
     </div>
 
     <!-- CHARTS -->
     <div class="charts-section">
-
         <div class="chart-card">
             <div class="chart-header">
                 <h3><i class="fas fa-chart-pie"></i> Election Types</h3>
@@ -193,34 +375,20 @@ body.dark-mode .chart-container {
                 <canvas id="participationChart"></canvas>
             </div>
         </div>
-
     </div>
 
-    <!-- INSIGHTS -->
+    <!-- INSIGHTS PANEL (Simplified) -->
     <div class="insights-panel">
         <h3><i class="fas fa-lightbulb"></i> Key Insights</h3>
-
         <div class="insights-grid">
-
             <div class="insight-item">
                 <div class="insight-icon">
-                    <i class="fas fa-calendar-check"></i>
+                    <i class="fas fa-users"></i>
                 </div>
                 <div class="insight-content">
-                    <h4>Most Active</h4>
-                    <p class="insight-value" id="mostActiveMonth">--</p>
-                    <p class="insight-desc">Highest elections month</p>
-                </div>
-            </div>
-
-            <div class="insight-item">
-                <div class="insight-icon">
-                    <i class="fas fa-user-friends"></i>
-                </div>
-                <div class="insight-content">
-                    <h4>Largest</h4>
+                    <h4>Highest Turnout</h4>
                     <p class="insight-value" id="largestElection">--</p>
-                    <p class="insight-desc">Most participants</p>
+                    <p class="insight-desc">Most participated election</p>
                 </div>
             </div>
 
@@ -229,23 +397,27 @@ body.dark-mode .chart-container {
                     <i class="fas fa-balance-scale"></i>
                 </div>
                 <div class="insight-content">
-                    <h4>Closest Margin</h4>
+                    <h4>Closest Race</h4>
                     <p class="insight-value" id="closestMarginInsight">0%</p>
                     <p class="insight-desc">Winning margin</p>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="insight-item">
-                <div class="insight-icon">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
-                <div class="insight-content">
-                    <h4>Avg Candidates</h4>
-                    <p class="insight-value" id="avgCandidates">0</p>
-                    <p class="insight-desc">Per election</p>
-                </div>
-            </div>
+    <!-- WINNERS SUMMARY (NEW) -->
+    <div class="winners-panel">
+        <h3><i class="fas fa-crown"></i> Recent Winners</h3>
+        <div class="winners-grid" id="winnersList">
+            <!-- Dynamically populated by JavaScript -->
+        </div>
+    </div>
 
+    <!-- POSITION STATISTICS (NEW) -->
+    <div class="position-stats-panel">
+        <h3><i class="fas fa-chart-pie"></i> Position Statistics</h3>
+        <div class="position-stats-grid" id="positionStats">
+            <!-- Dynamically populated by JavaScript -->
         </div>
     </div>
 
@@ -277,7 +449,6 @@ body.dark-mode .chart-container {
                 </canvas>
             </div>
         </div>
-
         {% else %}
         <div class="no-data">
             <i class="fas fa-chart-bar fa-3x"></i>
@@ -286,7 +457,6 @@ body.dark-mode .chart-container {
         </div>
         {% endfor %}
     </div>
-
 </div>
 
 <!-- JSON DATA -->
@@ -294,103 +464,33 @@ body.dark-mode .chart-container {
 {{ election_stats | tojson }}
 </script>
 
-<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<!-- =============== THEME SYNCHRONIZATION =============== -->
 <script>
-// This ensures the theme applies immediately without refresh
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
     
-    // Check current theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
     
-    // Apply or remove dark-mode class - ONLY to mainContent
     if (isDark) {
         mainContent.classList.add('dark-mode');
     } else {
         mainContent.classList.remove('dark-mode');
     }
-    
-    // Ensure content is visible
-    mainContent.classList.add('theme-applied');
 }
 
-// Apply immediately when page loads
 (function() {
     applyThemeToMainContent();
-    
-    // Also apply after a tiny delay to catch any late initialization
-    setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
-    setTimeout(applyThemeToMainContent, 100);
     
-    // Listen for theme toggle button clicks
     document.addEventListener('click', function(e) {
-        // Check if the clicked element is the theme toggle button or inside it
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            // Small delay to let localStorage update
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
-        }
-    });
-    
-    // Listen for storage events (if theme changed in another tab)
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
-    });
-    
-    // Create a mutation observer to watch for class changes on main-content ONLY
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            // Just ensure theme-applied is present
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
-            }
-        });
-        
-        mainContentObserver.observe(mainContent, { attributes: true });
-    }
-})();
-
-// Reapply theme when charts are updated or interactions happen
-document.addEventListener('DOMContentLoaded', function() {
-    applyThemeToMainContent();
-    
-    // Also check periodically for the first 2 seconds (in case main content loads later)
-    let checkCount = 0;
-    const checkInterval = setInterval(function() {
-        if (document.querySelector('.main-content') || checkCount > 20) {
-            clearInterval(checkInterval);
-            applyThemeToMainContent();
-        }
-        checkCount++;
-    }, 100);
-    
-    // Add event listeners to all interactive elements to reapply theme on interaction
-    const interactiveElements = document.querySelectorAll('.kpi-card, .chart-card, .insight-item, .stat-card, .no-data, .filter-group select, .export-btn');
-    interactiveElements.forEach(element => {
-        element.addEventListener('mouseenter', function() {
-            setTimeout(applyThemeToMainContent, 10);
-        });
-        element.addEventListener('click', function() {
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    });
-    
-    // Watch for filter changes
-    const filterSelects = document.querySelectorAll('#filter-election-type, #filter-department, #sort-by');
-    filterSelects.forEach(select => {
-        select.addEventListener('change', function() {
             setTimeout(applyThemeToMainContent, 50);
-        });
+        }
     });
-});
+})();
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/statistics.js') }}"></script>

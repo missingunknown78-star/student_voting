@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% set active_page = 'results' %}
+
+{% block title %}{{ election.title }} - Results{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/results.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/results-verification.css') }}">
+<style>
+/* Back button at bottom */
+.back-button-container {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0 20px;
+}
+
+.back-to-list {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 10px 24px;
+    background: var(--card-bg);
+    border-radius: 30px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+    min-width: 100px;
+}
+
+.back-to-list:hover {
+    background: var(--light-gray);
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: var(--text-color);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Message Cards */
+.info-message {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+    padding: 20px;
+    border-radius: 14px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.info-message i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.info-message h3 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: white;
+}
+
+.info-message p {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    max-width: 300px;
+    margin: 0 auto;
+    color: white;
+}
+
+.live-message {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.processing-message {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+}
+
+.processing-message h3, 
+.processing-message p,
+.processing-message i {
+    color: #212529 !important;
+}
+
+.final-message {
+    background: linear-gradient(135deg, #28a745, #218838);
+}
+
+/* Hide refresh section when not needed */
+.no-refresh .refresh-section {
+    display: none;
+}
+
+/* Status badge styles */
+.status-badge-live {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3546 !important;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge-processing {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107 !important;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge-final {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745 !important;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-badge-upcoming {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d !important;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Dynamic bar styles */
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), var(--success-light));
+    border-radius: 8px;
+    transition: width 0.5s ease;
+    width: 0%;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .back-to-list {
+    background: var(--dark);
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+body.dark-mode .back-to-list:hover {
+    background: #1a202c;
+    color: #f7fafc;
+}
+
+body.dark-mode .processing-message h3,
+body.dark-mode .processing-message p,
+body.dark-mode .processing-message i {
+    color: #212529 !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set now_naive = now.replace(tzinfo=None) if now.tzinfo else now %}
+<div class="results-container {% if election.end_date < now_naive and not results_published %}no-results{% endif %}">
+    <!-- Results Header - All text white -->
+    <div class="results-header">
+        <h1 class="results-title" style="color: white !important;">{{ election.title }}</h1>
+        <div class="results-meta">
+            <!-- Dynamic Status Based on Election State and Publication -->
+            {% if election.end_date < now_naive %}
+                {% if results_published %}
+                    <span class="status-badge-final">
+                        <i class="fa-solid fa-check-circle"></i> Final Results
+                    </span>
+                {% else %}
+                    <span class="status-badge-processing">
+                        <i class="fa-solid fa-hourglass-half"></i> Processing Results
+                    </span>
+                {% endif %}
+            {% elif election.start_date <= now_naive <= election.end_date %}
+                <span class="status-badge-live">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Live Results
+                </span>
+            {% else %}
+                <span class="status-badge-upcoming">
+                    <i class="fa-solid fa-clock"></i> Upcoming
+                </span>
+            {% endif %}
+            
+            <span class="results-date" style="color: white !important;">{{ results_date.strftime('%b %d, %Y %I:%M %p') }}</span>
+        </div>
+        <p class="results-subtitle" style="color: white !important;">{{ election.description }}</p>
+    </div>
+
+    <!-- Results Summary (Always Visible) -->
+    <div class="card summary-card">
+        <h2 class="card-title">📊 Election Summary</h2>
+        
+        <div class="summary-stats">
+            <div class="summary-stat">
+                <span class="stat-icon">👥</span>
+                <div class="stat-content">
+                    <span class="stat-value">{{ total_voters }}</span>
+                    <span class="stat-label">Registered Voters</span>
+                </div>
+            </div>
+            <div class="summary-stat">
+                <span class="stat-icon">🗳️</span>
+                <div class="stat-content">
+                    <span class="stat-value" id="total-votes">{{ total_votes }}</span>
+                    <span class="stat-label">Votes Cast</span>
+                </div>
+            </div>
+            <div class="summary-stat">
+                <span class="stat-icon">📈</span>
+                <div class="stat-content">
+                    <span class="stat-value" id="voter-turnout">{{ voter_turnout }}%</span>
+                    <span class="stat-label">Voter Turnout</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Turnout chart -->
+        <div class="turnout-chart">
+            <div class="chart-bar">
+                <div class="bar-fill" id="turnout-bar" data-turnout="{{ voter_turnout }}"></div>
+            </div>
+            <div class="chart-labels">
+                <span class="current-percentage" id="current-percentage">{{ voter_turnout }}% Current</span>
+            </div>
+            <div style="text-align: center; margin-top: 5px; font-size: 0.8rem; color: #28a745;">
+                <i class="fa fa-users"></i> <span id="votes-cast">{{ total_votes }}</span> out of <span id="total-voters">{{ total_voters }}</span> students have voted
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Section (Always Visible) -->
+    <section class="verification-section" id="verify-vote">
+        <div class="card verification-card">
+            <div class="verification-header">
+                <h2>🔐 Verify Your Vote</h2>
+                <span class="verification-badge">PHE ENCRYPTED</span>
+            </div>
+            
+            <div class="verification-info">
+                <p><strong>Privacy-Protected Verification:</strong> Use your secret receipt code to verify that your vote was counted correctly.</p>
+                <p style="margin-top: 8px; font-size: 0.85rem;">🔍 Enter the secret code from your voting receipt and select who you voted for.</p>
+            </div>
+
+            <div class="verification-form" id="verificationForm">
+                <div class="form-row">
+                    <label for="candidateSelect">
+                        <i class="fa fa-user"></i> I voted for:
+                    </label>
+                    <select id="candidateSelect" required>
+                        <option value="">-- Select a candidate --</option>
+                        {% for position in positions_data %}
+                            <optgroup label="{{ position.name }}">
+                                {% for candidate in position.candidates %}
+                                <option value="{{ candidate.id }}">
+                                    {{ candidate.first_name }} {{ candidate.last_name }} 
+                                    {% if candidate.party_list %} ({{ candidate.party_list }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="secretCode">
+                        <i class="fa fa-key"></i> My Secret Receipt Code:
+                    </label>
+                    <input type="text" id="secretCode" placeholder="Enter your secret code (e.g., f7a2c9k3...)" required>
+                    <small style="display: block; margin-top: 5px; color: #64748b;">
+                        <i class="fa fa-info-circle"></i> This is the code from your voting receipt
+                    </small>
+                </div>
+
+                <button type="button" class="verify-btn" id="verifyBtn">
+                    <i class="fa fa-check-circle"></i> Verify My Vote
+                </button>
+            </div>
+
+            <!-- Verification Result Container -->
+            <div id="verificationResult" class="verification-result"></div>
+        </div>
+    </section>
+
+    <!-- Content Based on Election State and Publication -->
+    {% if election.end_date < now_naive %}
+        <!-- ELECTION ENDED -->
+        {% if results_published %}
+            <!-- FINAL RESULTS - PUBLISHED -->
+            <div class="info-message final-message">
+                <i class="fa-solid fa-check-circle"></i>
+                <h3>Final Results Published</h3>
+                <p>The official results have been published by the COMELEC.</p>
+                {% if election.results_published_at %}
+                <div style="margin-top: 10px; font-size: 0.8rem; opacity: 0.9;">
+                    Published: {{ election.results_published_at.strftime('%B %d, %Y at %I:%M %p') }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Position Results Container (Final Results) -->
+            <div id="results-container">
+                {% include 'partials/results_partial.html' %}
+            </div>
+        {% else %}
+            <!-- PROCESSING - NOT PUBLISHED YET -->
+            <div class="info-message processing-message">
+                <i class="fa-solid fa-hourglass-half"></i>
+                <h3>Results Are Being Processed</h3>
+                <p>The official results have not been published yet. Please check back later.</p>
+                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.8;">
+                    <i class="fa-regular fa-calendar"></i> Election ended: {{ election.end_date.strftime('%B %d, %Y at %I:%M %p') }}
+                </div>
+            </div>
+            
+            <!-- Hide results container -->
+            <style>
+                #results-container {
+                    display: none;
+                }
+                .refresh-section {
+                    display: none;
+                }
+            </style>
+        {% endif %}
+        
+    {% elif election.start_date <= now_naive <= election.end_date %}
+        <!-- ELECTION ACTIVE - LIVE RESULTS (Always visible) -->
+        <div class="info-message live-message">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <h3>Voting is Ongoing</h3>
+            <p>Live results are being updated in real-time.</p>
+        </div>
+        
+        <!-- Refresh Section -->
+        <div class="refresh-section">
+            <div class="refresh-info">
+                <i class="fa fa-clock"></i>
+                <span>Live results - <span id="last-updated">just now</span></span>
+            </div>
+            <button class="refresh-btn" id="refreshBtn">
+                <i class="fa fa-sync-alt"></i> Refresh Results
+            </button>
+        </div>
+
+        <!-- Position Results Container (Live Results) -->
+        <div id="results-container">
+            {% include 'partials/results_partial.html' %}
+        </div>
+        
+    {% else %}
+        <!-- UPCOMING ELECTION -->
+        <div class="info-message">
+            <i class="fa-solid fa-clock"></i>
+            <h3>Election Has Not Started</h3>
+            <p>This election will begin on {{ election.start_date.strftime('%B %d, %Y at %I:%M %p') }}.</p>
+        </div>
+        
+        <style>
+            #results-container, .refresh-section {
+                display: none;
+            }
+        </style>
+    {% endif %}
+
+    <!-- Results Notice -->
+    <div class="card notice-card">
+        <div class="notice-header">
+            <span class="notice-icon">ℹ️</span>
+            <h3 class="notice-title">Important Notice</h3>
+        </div>
+        
+        <div class="notice-content">
+            <p>These are the official results of the Student Government Elections.</p>
+            {% if election.end_date < now_naive %}
+                {% if results_published %}
+                    <p style="color: #28a745;">✅ These are the final certified results published by COMELEC.</p>
+                {% else %}
+                    <p style="color: #ffc107;">⏳ Results are being finalized and will be published by COMELEC once ready.</p>
+                {% endif %}
+            {% elif election.start_date <= now_naive <= election.end_date %}
+                <p style="color: #dc2626;">⚠️ These are live results and may change until voting ends.</p>
+            {% endif %}
+        </div>
+        
+        <div class="notice-footer">
+            <span class="signature">— Student Commission on Elections (COMELEC)</span>
+        </div>
+    </div>
+
+    <!-- Back Button at Bottom (Centered, Text Only) -->
+    <div class="back-button-container">
+        <a href="{{ url_for('student.results') }}" class="back-to-list">
+            Back
+        </a>
+    </div>
+</div>
+
+<!-- Loading Overlay for AJAX -->
+<div class="results-loading-overlay" id="results-loading">
+    <div class="results-loading-spinner"></div>
+</div>
+
+<!-- Photo Modal -->
+<div id="photoModal" class="modal-overlay photo-modal">
+    <div class="photo-modal-content">
+        <button class="photo-modal-close" id="closePhotoModalBtn">&times;</button>
+        <img id="photoModalImg" class="photo-modal-img">
+        <div class="photo-modal-caption" id="photoModalCaption"></div>
+    </div>
+</div>
+
+<!-- JavaScript to set dynamic widths -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set turnout bar width
+    const turnoutBar = document.getElementById('turnout-bar');
+    if (turnoutBar) {
+        const turnout = turnoutBar.getAttribute('data-turnout');
+        if (turnout) {
+            turnoutBar.style.width = turnout + '%';
+        }
+    }
+});
+</script>
+
+<!-- Pass template variables to JavaScript -->
+<script id="template-data" type="application/json">
+{
+    "recentElectionId": {{ election.id }},
+    "election_id": {{ election.id }},
+    "electionId": {{ election.id }},
+    "resultsPublished": {{ 'true' if results_published else 'false' }}
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('student.static', filename='js/results.js') }}"></script>
+{% endblock %}

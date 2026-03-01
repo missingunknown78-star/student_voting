@@ -24,17 +24,22 @@ class Admin(db.Model, UserMixin):
 
 
 
+
 # ------------------- POSITION -------------------
 class Position(db.Model):
     __tablename__ = 'positions'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    color = db.Column(db.String(20), nullable=False, default='#3498db')  # Hex color code
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
     # Relationship to candidates
     candidates = db.relationship('Candidate', backref='position', lazy=True)
+    
+    def __repr__(self):
+        return f'<Position {self.name}>'
 
 
 class Candidate(db.Model):
@@ -109,6 +114,8 @@ class Election(db.Model):
     description = db.Column(db.Text)
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
+    results_published = db.Column(db.Boolean, default=False)
+    results_published_at = db.Column(db.DateTime, nullable=True)
 
     # Optional link to Course table
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)

@@ -65,15 +65,19 @@
         </div>
         
         <div class="tally-actions">
-            {% if status == 'Completed' or status == 'Active' %}
-            <button class="tally-btn" id="tallyVotesBtn">
-                <i class="fa-solid fa-calculator"></i> 
-                {% if is_tallied %}Re-tally Votes{% else %}Tally Votes Officially{% endif %}
-            </button>
+            {% if status == 'Completed' %}
+                <button class="tally-btn" id="tallyVotesBtn">
+                    <i class="fa-solid fa-calculator"></i> 
+                    {% if is_tallied %}Re-tally Votes{% else %}Tally Votes Officially{% endif %}
+                </button>
+            {% elif status == 'Active' %}
+                <button class="tally-btn disabled" disabled title="Tallying is only available after the election ends">
+                    <i class="fa-solid fa-lock"></i> Tally Locked (Election Active)
+                </button>
+            {% endif %}
             <button class="refresh-btn" id="refreshResultsBtn">
                 <i class="fa-solid fa-sync-alt"></i> Refresh
             </button>
-            {% endif %}
         </div>
     </div>
     

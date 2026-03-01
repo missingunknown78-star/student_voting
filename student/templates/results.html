@@ -1,11 +1,458 @@
 {% extends "base.html" %}
 {% set active_page = 'results' %}
 
-{% block title %}Election Results{% endblock %}
+{% block title %}My Election Results{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/results.css') }}">
-<link rel="stylesheet" href="{{ url_for('student.static', filename='css/results-verification.css') }}">
+<style>
+/* Additional styles for the election selection page - MOBILE FIRST */
+
+/* Results Header - Compact */
+.results-header {
+    background: linear-gradient(135deg, var(--success), var(--success-light));
+    color: white;
+    padding: 14px 12px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 8px rgba(40, 167, 69, 0.15);
+}
+
+.results-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.results-title i {
+    font-size: 1.1rem;
+}
+
+.results-subtitle {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    line-height: 1.3;
+    text-align: center;
+}
+
+/* Elections Grid - Mobile First */
+.elections-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+
+/* Election Card - Mobile First */
+.election-card {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-light);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    transition: var(--transition);
+}
+
+.election-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Card Header - Centered Title */
+.election-card-header {
+    padding: 14px 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    text-align: center;
+}
+
+.election-card-header h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.3;
+    text-align: center;
+}
+
+.election-card-header .election-type {
+    font-size: 0.7rem;
+    opacity: 0.9;
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    color: white;
+}
+
+/* Card Body */
+.election-card-body {
+    padding: 14px 12px;
+    flex: 1;
+    background: white;
+}
+
+/* Department Badge */
+.department-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(67, 97, 238, 0.1);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    color: var(--primary);
+    margin-bottom: 10px;
+    font-weight: 500;
+    flex-wrap: wrap;
+}
+
+.department-badge.wide-election {
+    background: rgba(247, 37, 133, 0.1);
+    color: var(--danger);
+}
+
+.department-badge.department-election {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary);
+}
+
+.badge-icon {
+    font-size: 0.8rem;
+}
+
+/* Election Type Badge */
+.election-type-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.election-type-badge.wide-election {
+    background: rgba(247, 37, 133, 0.1);
+    color: var(--danger);
+    border: 1px solid rgba(247, 37, 133, 0.3);
+}
+
+.election-type-badge.department-election {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(67, 97, 238, 0.3);
+}
+
+/* Election Details */
+.election-detail {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    color: var(--dark);
+    font-size: 0.8rem;
+}
+
+.election-detail i {
+    width: 22px;
+    color: var(--primary);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.election-detail span {
+    color: var(--gray);
+    line-height: 1.3;
+}
+
+/* Status Badge */
+.election-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.status-completed {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
+}
+
+.status-active {
+    background: rgba(243, 156, 18, 0.1);
+    color: #f39c12;
+}
+
+.status-upcoming {
+    background: rgba(66, 153, 225, 0.1);
+    color: #4299e1;
+}
+
+/* Timestamps Container */
+.timestamps-container {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 12px;
+    border-left: 3px solid var(--primary);
+}
+
+.timestamp-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+}
+
+.timestamp-item:last-child {
+    margin-bottom: 0;
+}
+
+.timestamp-label {
+    color: var(--gray);
+    font-weight: 500;
+}
+
+.timestamp-value {
+    color: var(--dark);
+    font-weight: 500;
+}
+
+/* Card Footer */
+.election-card-footer {
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-top: 1px solid var(--gray-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Vote Badge */
+.vote-badge {
+    background: #edf2f7;
+    padding: 4px 10px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    color: var(--dark);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vote-badge i {
+    color: var(--success);
+    font-size: 0.8rem;
+}
+
+/* View Results Button */
+.view-results-btn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+    white-space: nowrap;
+}
+
+.view-results-btn:hover {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.4);
+    text-decoration: none;
+    color: white;
+}
+
+.view-results-btn i {
+    font-size: 0.8rem;
+}
+
+/* No Results State - NO BACK BUTTON */
+.no-results {
+    text-align: center;
+    padding: 40px 16px;
+    background: white;
+    border-radius: 14px;
+    border: 1px dashed var(--border);
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.no-results i {
+    font-size: 3rem;
+    color: var(--gray);
+    margin-bottom: 12px;
+}
+
+.no-results h3 {
+    font-size: 1.2rem;
+    color: var(--dark);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.no-results p {
+    color: var(--gray);
+    margin-bottom: 0;
+    font-size: 0.85rem;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Info Card */
+.info-card {
+    background: #f0f7ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 16px;
+}
+
+.info-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-icon {
+    font-size: 1.3rem;
+    color: var(--primary);
+}
+
+.info-content p {
+    font-size: 0.8rem;
+    color: var(--dark);
+    margin: 0;
+    line-height: 1.3;
+}
+
+/* Responsive - Small phones */
+@media (max-width: 320px) {
+    .election-card-footer {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .view-results-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .vote-badge {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .department-badge {
+        font-size: 0.65rem;
+    }
+    
+    .election-detail {
+        font-size: 0.75rem;
+    }
+}
+
+/* Dark mode overrides */
+body.dark-mode .election-card {
+    background: var(--dark);
+    border-color: #4a5568;
+}
+
+body.dark-mode .election-card-body {
+    background: var(--dark);
+}
+
+body.dark-mode .election-detail {
+    color: #e2e8f0;
+}
+
+body.dark-mode .election-detail span {
+    color: #cbd5e0;
+}
+
+body.dark-mode .election-detail i {
+    color: var(--primary-light);
+}
+
+body.dark-mode .election-card-footer {
+    background: #1a202c;
+    border-top-color: #4a5568;
+}
+
+body.dark-mode .vote-badge {
+    background: #4a5568;
+    color: #e2e8f0;
+}
+
+body.dark-mode .no-results {
+    background: var(--dark);
+    border-color: #4a5568;
+}
+
+body.dark-mode .no-results h3 {
+    color: #f7fafc;
+}
+
+body.dark-mode .no-results p {
+    color: #a0aec0;
+}
+
+body.dark-mode .timestamps-container {
+    background: #1a202c;
+}
+
+body.dark-mode .timestamp-label {
+    color: #a0aec0;
+}
+
+body.dark-mode .timestamp-value {
+    color: #f7fafc;
+}
+
+body.dark-mode .info-card {
+    background: #1a202c;
+    border-color: #4a5568;
+}
+
+body.dark-mode .info-content p {
+    color: #e2e8f0;
+}
+
+body.dark-mode .department-badge {
+    background: rgba(67, 97, 238, 0.2);
+}
+
+body.dark-mode .department-badge.wide-election {
+    background: rgba(247, 37, 133, 0.2);
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -13,253 +460,129 @@
     <!-- Results Header -->
     <div class="results-header">
         <h1 class="results-title">
-            {% if recent_election %}
-                {{ recent_election.title }}
-            {% else %}
-                Election Results
-            {% endif %}
+            <i class="fa-solid fa-square-poll-vertical"></i> My Results
         </h1>
-        <div class="results-meta">
-            <span class="results-status {% if 'LIVE' in results_status %}badge-live{% else %}badge-verified{% endif %}">
-                {% if 'LIVE' in results_status %}
-                    <span class="live-badge">{{ results_status }}</span>
-                {% else %}
-                    {{ results_status }}
-                {% endif %}
-            </span>
-            <span class="results-date">Published: {{ results_date.strftime('%b %d, %Y %I:%M %p') }}</span>
-        </div>
         <p class="results-subtitle">
-            {% if recent_election %}
-                {{ recent_election.description }}
-            {% else %}
-                Official results certified by Student COMELEC
-            {% endif %}
+            Elections you've participated in
         </p>
     </div>
 
-    <!-- Election Selection Dropdown -->
-    {% if all_elections and all_elections|length > 1 %}
-    <div class="card election-selector-card">
-        <label for="election-select" class="selector-label">View Results For:</label>
-        <select id="election-select" class="form-input election-select">
-            {% for election in all_elections %}
-            <option value="{{ election.id }}" 
-                    {% if election.id == recent_election.id %}selected{% endif %}>
-                {{ election.title }} ({{ election.end_date.strftime('%b %d, %Y') }})
-                {% if election.end_date > now %} - ONGOING{% endif %}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-    {% endif %}
-    
-    {% if recent_election %}
-        <!-- Results Summary with FIXED turnout chart -->
-        <div class="card summary-card">
-            <h2 class="card-title">📊 Election Summary</h2>
-            
-            <div class="summary-stats">
-                <div class="summary-stat">
-                    <span class="stat-icon">👥</span>
-                    <div class="stat-content">
-                        <span class="stat-value">{{ total_voters }}</span>
-                        <span class="stat-label">Registered Voters</span>
+    {% if voted_elections %}
+        <!-- Elections Grid -->
+        <div class="elections-grid">
+            {% for election in voted_elections %}
+                <div class="election-card">
+                    <div class="election-card-header">
+                        <h3>{{ election.title }}</h3>
+                        <div class="election-type">
+                            {% if election.election_type == 'Department' %}
+                                {{ election.department.name if election.department else 'Department' }}
+                            {% else %}
+                                SSG Election
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-                <div class="summary-stat">
-                    <span class="stat-icon">🗳️</span>
-                    <div class="stat-content">
-                        <span class="stat-value" id="total-votes">{{ total_votes }}</span>
-                        <span class="stat-label">Votes Cast</span>
-                    </div>
-                </div>
-                <div class="summary-stat">
-                    <span class="stat-icon">📈</span>
-                    <div class="stat-content">
-                        <span class="stat-value" id="voter-turnout">{{ voter_turnout }}%</span>
-                        <span class="stat-label">Voter Turnout</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dynamic turnout chart with active percentage -->
-            <div class="turnout-chart">
-                <div class="chart-bar">
-                    <div class="bar-fill" id="turnout-bar" style="width: {{ voter_turnout }}%;"></div>
-                </div>
-                <div class="chart-labels">
-                    <span class="current-percentage" id="current-percentage">{{ voter_turnout }}% Current</span>
-                </div>
-                <div style="text-align: center; margin-top: 5px; font-size: 0.8rem; color: #28a745;">
-                    <i class="fa fa-users"></i> <span id="votes-cast">{{ total_votes }}</span> out of <span id="total-voters">{{ total_voters }}</span> students have voted
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== VERIFICATION SECTION ========== -->
-        <section class="verification-section" id="verify-vote">
-            <div class="card verification-card">
-                <div class="verification-header">
-                    <h2>🔐 Verify Your Vote</h2>
-                    <span class="verification-badge">PHE ENCRYPTED</span>
-                </div>
-                
-                <div class="verification-info">
-                    <p><strong>Privacy-Protected Verification:</strong> Use your secret receipt code to verify that your vote was counted correctly.</p>
-                    <p style="margin-top: 8px; font-size: 0.85rem;">🔍 Enter the secret code from your voting receipt and select who you voted for.</p>
-                </div>
-
-                <div class="verification-form" id="verificationForm">
-                    <div class="form-row">
-                        <label for="candidateSelect">
-                            <i class="fa fa-user"></i> I voted for:
-                        </label>
-                        <select id="candidateSelect" required>
-                            <option value="">-- Select a candidate --</option>
-                            {% for position in positions_data %}
-                                <optgroup label="{{ position.name }}">
-                                    {% for candidate in position.candidates %}
-                                    <option value="{{ candidate.id }}">
-                                        {{ candidate.first_name }} {{ candidate.last_name }} 
-                                        {% if candidate.party_list %} ({{ candidate.party_list }}){% endif %}
-                                    </option>
-                                    {% endfor %}
-                                </optgroup>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="form-row">
-                        <label for="secretCode">
-                            <i class="fa fa-key"></i> My Secret Receipt Code:
-                        </label>
-                        <input type="text" id="secretCode" placeholder="Enter your secret code (e.g., f7a2c9k3...)" required>
-                        <small style="display: block; margin-top: 5px; color: #64748b;">
-                            <i class="fa fa-info-circle"></i> This is the code from your voting receipt
-                        </small>
-                    </div>
-
-                    <button type="button" class="verify-btn" id="verifyBtn">
-                        <i class="fa fa-check-circle"></i> Verify My Vote
-                    </button>
-                </div>
-
-                <!-- Verification Result Container -->
-                <div id="verificationResult" class="verification-result"></div>
-            </div>
-        </section>
-
-        <!-- REFRESH SECTION -->
-        <div class="refresh-section">
-            <div class="refresh-info">
-                <i class="fa fa-clock"></i>
-                <span>Live results - <span id="last-updated">just now</span></span>
-            </div>
-            <button class="refresh-btn" id="refreshBtn">
-                <i class="fa fa-sync-alt"></i> Refresh Results
-            </button>
-        </div>
-
-        <!-- Position Results Container - THIS PART REFRESHES VIA AJAX -->
-        <div id="results-container">
-            {% include 'partials/results_partial.html' %}
-        </div>
-
-        <!-- Election Timeline -->
-        <div class="card timeline-card">
-            <h2 class="card-title">📅 Election Timeline</h2>
-            
-            <div class="timeline">
-                <div class="timeline-item {% if recent_election.start_date <= now %}complete{% else %}pending{% endif %}">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <h4 class="timeline-title">Campaign Period</h4>
-                        <p class="timeline-date">{{ recent_election.start_date.strftime('%b %d, %Y') }}</p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item {% if recent_election.start_date <= now %}complete{% else %}pending{% endif %}">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <h4 class="timeline-title">Voting Period</h4>
-                        <p class="timeline-date">{{ recent_election.start_date.strftime('%b %d') }} - {{ recent_election.end_date.strftime('%b %d, %Y') }}</p>
-                        {% if recent_election.start_date <= now <= recent_election.end_date %}
-                        <p class="timeline-desc" style="color: #dc2626; font-weight: 600;">🔴 Voting in progress</p>
+                    
+                    <div class="election-card-body">
+                        <!-- Department Badge -->
+                        <div class="department-badge {% if election.department_id is none %}wide-election{% else %}department-election{% endif %}">
+                            <span class="badge-icon">
+                                {% if election.department_id is none %}
+                                    🌐
+                                {% else %}
+                                    🏛️
+                                {% endif %}
+                            </span>
+                            {% if election.department_id is none %}
+                                Wide Election
+                            {% else %}
+                                {{ election.department.name if election.department else 'Department' }}
+                            {% endif %}
+                            
+                            <span class="election-type-badge {% if election.department_id is none %}wide-election{% else %}department-election{% endif %}">
+                                {% if election.department_id is none %}WIDE{% else %}DEPT{% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="election-detail">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span>{{ election.start_date.strftime('%b %d, %Y') }} - {{ election.end_date.strftime('%b %d, %Y') }}</span>
+                        </div>
+                        
+                        <div class="election-detail">
+                            <i class="fa-regular fa-clock"></i>
+                            <span>
+                                {% if election.end_date < now %}
+                                    Ended {{ election.end_date.strftime('%b %d') }}
+                                {% elif election.start_date <= now <= election.end_date %}
+                                    Ends {{ election.end_date.strftime('%b %d') }}
+                                {% else %}
+                                    Starts {{ election.start_date.strftime('%b %d') }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="election-detail">
+                            <i class="fa-solid fa-check-circle" style="color: var(--success);"></i>
+                            <span>You voted in this election</span>
+                        </div>
+                        
+                        <div class="election-status 
+                            {% if election.end_date < now %}
+                                status-completed
+                            {% elif election.start_date <= now <= election.end_date %}
+                                status-active
+                            {% else %}
+                                status-upcoming
+                            {% endif %}">
+                            {% if election.end_date < now %}
+                                <i class="fa-solid fa-check-circle"></i> Completed
+                            {% elif election.start_date <= now <= election.end_date %}
+                                <i class="fa-solid fa-hourglass-half"></i> Ongoing
+                            {% else %}
+                                <i class="fa-solid fa-clock"></i> Upcoming
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Vote Timestamps (if available) -->
+                        {% if election.vote_timestamp %}
+                        <div class="timestamps-container">
+                            <div class="timestamp-item">
+                                <span class="timestamp-label">Voted:</span>
+                                <span class="timestamp-value">{{ election.vote_timestamp.strftime('%b %d, %I:%M %p') }}</span>
+                            </div>
+                        </div>
                         {% endif %}
                     </div>
-                </div>
-                
-                <div class="timeline-item {% if recent_election.end_date < now %}complete{% else %}current{% endif %}">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        <h4 class="timeline-title">Results</h4>
-                        <p class="timeline-date">
-                            {% if recent_election.end_date < now %}
-                                Finalized
-                            {% else %}
-                                Live Results
-                            {% endif %}
-                        </p>
+                    
+                    <div class="election-card-footer">
+                        <div class="vote-badge">
+                            <i class="fa-solid fa-check-circle"></i> Voted
+                        </div>
+                        
+                        <a href="{{ url_for('student.results_detail', election_id=election.id) }}" 
+                           class="view-results-btn">
+                            <i class="fa-solid fa-chart-bar"></i> View
+                        </a>
                     </div>
                 </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Info Card -->
+        <div class="info-card">
+            <div class="info-content">
+                <span class="info-icon">ℹ️</span>
+                <p>Select an election to see detailed results</p>
             </div>
         </div>
-
     {% else %}
-        <!-- No Results Available -->
-        <div class="card no-results-card">
-            <div class="no-results-content">
-                <div class="no-results-icon">📊</div>
-                <h3>No Election Results Available</h3>
-                <p>There are no elections to show results for.</p>
-            </div>
+        <!-- No Results - NO BACK BUTTON -->
+        <div class="no-results">
+            <i class="fa-solid fa-square-poll-vertical"></i>
+            <h3>No Elections Yet</h3>
+            <p>You haven't voted in any elections. Results will appear here after you participate.</p>
         </div>
     {% endif %}
-
-    <!-- Results Notice -->
-    <div class="card notice-card">
-        <div class="notice-header">
-            <span class="notice-icon">ℹ️</span>
-            <h3 class="notice-title">Important Notice</h3>
-        </div>
-        
-        <div class="notice-content">
-            <p>These are the official results of the Student Government Elections.</p>
-            {% if 'LIVE' in results_status %}
-            <p style="color: #dc2626;">⚠️ These are live results and may change until voting ends.</p>
-            {% endif %}
-        </div>
-        
-        <div class="notice-footer">
-            <span class="signature">— Student Commission on Elections (COMELEC)</span>
-        </div>
-    </div>
 </div>
-
-<!-- Loading Overlay for AJAX -->
-<div class="results-loading-overlay" id="results-loading">
-    <div class="results-loading-spinner"></div>
-</div>
-
-<!-- Photo Modal -->
-<div id="photoModal" class="modal-overlay photo-modal">
-    <div class="photo-modal-content">
-        <button class="photo-modal-close" id="closePhotoModalBtn">&times;</button>
-        <img id="photoModalImg" class="photo-modal-img">
-        <div class="photo-modal-caption" id="photoModalCaption"></div>
-    </div>
-</div>
-
-<!-- Pass template variables to JavaScript -->
-<script id="template-data" type="application/json">
-{
-    "recentElectionId": "{{ recent_election.id if recent_election else None }}",
-    "resultsStatus": "{{ results_status }}"
-}
-</script>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('student.static', filename='js/results.js') }}"></script>
 {% endblock %}

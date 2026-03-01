@@ -73,30 +73,161 @@ body.dark-mode .btn.disabled {
 body.dark-mode .card-footer {
     border-top-color: var(--border-color);
 }
+
+/* ==================== ACTIVE ELECTION STYLES ==================== */
+.election-card.active .card-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.election-card.active .progress-badge {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.election-card.active .progress-badge i {
+    font-size: 12px;
+}
+
+/* Ensure buttons are properly styled */
+.election-card .btn-primary {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.election-card .btn-primary:hover {
+    background: var(--secondary-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+}
+
+.election-card .btn-primary i {
+    margin-right: 5px;
+}
+
+/* Empty state improvements */
+.empty-state {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    margin: 20px 0;
+    border: 1px solid var(--border-color);
+}
+
+.empty-state .empty-icon {
+    font-size: 48px;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.empty-state h3 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+}
+
+/* ==================== STATISTICS BUTTON STYLES ==================== */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: auto;
+}
+
+.stats-nav-btn {
+    background: linear-gradient(135deg, #845ef7, #6b3ef0);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(132, 94, 247, 0.3);
+    text-decoration: none;
+}
+
+.stats-nav-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(132, 94, 247, 0.4);
+}
+
+.stats-nav-btn i {
+    font-size: 1.1rem;
+}
+
+/* Dark mode for stats button */
+body.dark-mode .stats-nav-btn {
+    background: linear-gradient(135deg, #9f7aea, #805ad5);
+    box-shadow: 0 4px 12px rgba(159, 122, 234, 0.3);
+}
+
+/* Update results-header to accommodate the button */
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.header-content {
+    flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .stats-nav-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="results-container">
-    <!-- Header -->
+    <!-- Header with Statistics Button -->
     <div class="results-header">
         <div class="header-content">
             <h1><i class="fa-solid fa-trophy"></i> Election Results Dashboard</h1>
             <p>View and analyze election outcomes with real-time vote counts and statistics</p>
         </div>
+        <div class="header-actions">
+            <a href="{{ url_for('admin.statistics') }}" class="stats-nav-btn">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Election Statistics</span>
+            </a>
+        </div>
     </div>
     
     <!-- Stats Summary -->
     <div class="stats-summary">
-        <div class="stat-card">
-            <div class="stat-icon completed">
-                <i class="fa-solid fa-calendar-check"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-number">{{ completed_elections|length }}</div>
-                <div class="stat-label">Completed Elections</div>
-            </div>
-        </div>
         <div class="stat-card">
             <div class="stat-icon active">
                 <i class="fa-solid fa-person-running"></i>
@@ -104,6 +235,15 @@ body.dark-mode .card-footer {
             <div class="stat-content">
                 <div class="stat-number">{{ active_elections|length }}</div>
                 <div class="stat-label">Active Elections</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon completed">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ completed_elections|length }}</div>
+                <div class="stat-label">Completed Elections</div>
             </div>
         </div>
         <div class="stat-card">
@@ -117,7 +257,74 @@ body.dark-mode .card-footer {
         </div>
     </div>
     
-    <!-- Completed Elections Section -->
+    <!-- ===== ACTIVE ELECTIONS SECTION (FIRST) ===== -->
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fa-solid fa-hourglass-half"></i> 
+            Active Elections
+            <span class="badge-count">{{ active_elections|length }}</span>
+        </h2>
+        <p class="section-subtitle">Monitor currently running elections in real-time - view live progress</p>
+    </div>
+    
+    {% if active_elections %}
+    <div class="elections-grid">
+        {% for election in active_elections %}
+        <div class="election-card active">
+            <div class="card-header">
+                <div class="election-title">{{ election.title }}</div>
+                <span class="status-badge status-active">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Active Now
+                </span>
+            </div>
+            
+            <div class="election-details">
+                <div class="detail-item">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>Ends: {{ election.end_date.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-building"></i>
+                    <span>
+                        {% if election.election_type == 'Department' %}
+                            {{ election.department or 'All Departments' }}
+                        {% else %}
+                            SSG Election
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-users"></i>
+                    <span>{{ election.candidates|length }} Candidates</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span class="progress-badge">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Live Results Available
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
+                   class="btn btn-primary">
+                    <i class="fa-solid fa-chart-bar"></i> View Live Results
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="fa-solid fa-hourglass-end"></i>
+        </div>
+        <h3>No Active Elections</h3>
+        <p>There are no elections currently running. Check back during election periods.</p>
+    </div>
+    {% endif %}
+    
+    <!-- ===== COMPLETED ELECTIONS SECTION (SECOND) ===== -->
     <div class="section-header">
         <h2 class="section-title">
             <i class="fa-solid fa-check-circle"></i> 
@@ -174,79 +381,11 @@ body.dark-mode .card-footer {
             <i class="fa-solid fa-calendar-times"></i>
         </div>
         <h3>No Completed Elections</h3>
-        <p>There are no elections that have finished yet.</p>
+        <p>There are no elections that have finished yet. Check back after election periods end.</p>
     </div>
     {% endif %}
     
-    <!-- Active Elections Section -->
-    <div class="section-header">
-        <h2 class="section-title">
-            <i class="fa-solid fa-hourglass-half"></i> 
-            Active Elections
-            <span class="badge-count">{{ active_elections|length }}</span>
-        </h2>
-        <p class="section-subtitle">Monitor currently running elections in real-time</p>
-    </div>
-    
-    {% if active_elections %}
-    <div class="elections-grid">
-        {% for election in active_elections %}
-        <div class="election-card active">
-            <div class="card-header">
-                <div class="election-title">{{ election.title }}</div>
-                <span class="status-badge status-active">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> Active Now
-                </span>
-            </div>
-            
-            <div class="election-details">
-                <div class="detail-item">
-                    <i class="fa-solid fa-clock"></i>
-                    <span>Ends: {{ election.end_date.strftime('%b %d, %Y %I:%M %p') }}</span>
-                </div>
-                <div class="detail-item">
-                    <i class="fa-solid fa-building"></i>
-                    <span>
-                        {% if election.election_type == 'Department' %}
-                            {{ election.department or 'All Departments' }}
-                        {% else %}
-                            SSG Election
-                        {% endif %}
-                    </span>
-                </div>
-                <div class="detail-item">
-                    <i class="fa-solid fa-users"></i>
-                    <span>{{ election.candidates|length }} Candidates</span>
-                </div>
-            </div>
-            
-            <div class="card-footer">
-                {# Use tz_end for timezone-aware comparison #}
-                {% if now > election.tz_end %}
-                <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
-                   class="btn btn-primary">
-                    <i class="fa-solid fa-chart-bar"></i> View Full Results
-                </a>
-                {% else %}
-                <button class="btn btn-primary disabled" disabled>
-                    <i class="fa-solid fa-lock"></i> Results Locked
-                </button>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon">
-            <i class="fa-solid fa-hourglass-end"></i>
-        </div>
-        <h3>No Active Elections</h3>
-        <p>There are no elections currently running.</p>
-    </div>
-    {% endif %}
-    
-    <!-- Upcoming Elections Section -->
+    <!-- ===== UPCOMING ELECTIONS SECTION (THIRD) ===== -->
     <div class="section-header">
         <h2 class="section-title">
             <i class="fa-solid fa-calendar-plus"></i> 
@@ -290,7 +429,7 @@ body.dark-mode .card-footer {
             
             <div class="card-footer">
                 <button class="btn btn-primary disabled" disabled>
-                    <i class="fa-solid fa-clock"></i> Election Not Started
+                    <i class="fa-solid fa-clock"></i> Not Started
                 </button>
             </div>
         </div>
@@ -386,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
     
     // Add event listeners to all interactive elements to reapply theme on interaction
-    const interactiveElements = document.querySelectorAll('.btn, .election-card, .stat-card, .empty-state');
+    const interactiveElements = document.querySelectorAll('.btn, .election-card, .stat-card, .empty-state, .stats-nav-btn');
     interactiveElements.forEach(element => {
         element.addEventListener('mouseenter', function() {
             setTimeout(applyThemeToMainContent, 10);

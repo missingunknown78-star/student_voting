@@ -704,6 +704,7 @@ def get_election_stats(election_id):
             'turnout': '0%'
         })
 
+from student.models import TrustedDevice 
 # ---------------------- IMPORT STUDENTS ---------------------- #
 @admin_bp.route("/import_students", methods=["GET", "POST"])
 def import_students():
@@ -737,6 +738,7 @@ def import_students():
 
             # STEP 4: Build set of StudentNos from Excel
             excel_student_nos = set()
+            excel_students_data = {}  # Store full data for later use
 
             imported = 0
             updated = 0
@@ -755,6 +757,10 @@ def import_students():
                     continue
 
                 excel_student_nos.add(student_number)
+                excel_students_data[student_number] = {
+                    'first_name': first_name,
+                    'last_name': last_name
+                }
 
                 exists = CtuStudent.query.filter_by(
                     student_number=student_number
@@ -776,15 +782,53 @@ def import_students():
                     db.session.add(s)
                     imported += 1
 
-            # STEP 5: Delete students NOT in Excel
+            # STEP 5: Get all current CTU students
             db_students = CtuStudent.query.all()
+            
+            deleted_from_ctu = 0
+            deleted_from_registration = 0
+            kept_with_votes = 0
 
-            deleted = 0
+            # STEP 6: Check each student in CTU list
             for s in db_students:
                 if s.student_number not in excel_student_nos:
+                    # This student is NOT in the new Excel file
+                    
+                    # Check if this student is registered in students table
+                    registered_student = Student.query.filter_by(id_number=s.student_number).first()
+                    
+                    if registered_student:
+                        # Check if this student has any votes
+                        votes = Vote.query.filter_by(student_id=registered_student.id).count()
+                        
+                        if votes > 0:
+                            # Student has votes - keep for audit
+                            kept_with_votes += 1
+                            print(f"Student {registered_student.id_number} has {votes} votes - keeping record")
+                            
+                            # OPTIONAL: You can mark them as inactive if you have a status field
+                            # registered_student.status = 'graduated'
+                            # db.session.add(registered_student)
+                        else:
+                            # NO votes - SAFE TO DELETE from students table
+                            # First, manually delete related trusted devices
+                            from student.models import TrustedDevice
+                            TrustedDevice.query.filter_by(student_id=registered_student.id).delete()
+                            
+                            # Also delete any other related records if needed
+                            # (votes are already checked and are 0, so no need to delete votes)
+                            
+                            # Now delete the student
+                            db.session.delete(registered_student)
+                            deleted_from_registration += 1
+                            print(f"Deleted registered student: {registered_student.id_number}")
+                    
+                    # ALWAYS delete from ctu_students table
                     db.session.delete(s)
-                    deleted += 1
+                    deleted_from_ctu += 1
+                    print(f"Deleted from CTU list: {s.student_number}")
 
+            # STEP 7: Commit all changes
             db.session.commit()
 
             # ---------- AUDIT LOG: Student import completed ----------
@@ -794,18 +838,32 @@ def import_students():
             
             log_audit(
                 action='IMPORT_STUDENTS',
-                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {imported}, Updated: {updated}, Deleted: {deleted}"
+                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {imported}, Updated: {updated}, Deleted from CTU: {deleted_from_ctu}, Deleted registered: {deleted_from_registration}, Kept with votes: {kept_with_votes}"
             )
 
-            flash(
-                f"Sync complete. "
-                f"Imported {imported}, Updated {updated}, Deleted {deleted}.",
-                "import-success"
-            )
+            # Create appropriate flash message
+            if deleted_from_registration > 0:
+                flash(
+                    f"✅ Sync complete!\n"
+                    f"📥 Imported: {imported}\n"
+                    f"🔄 Updated: {updated}\n"
+                    f"🗑️ Removed from CTU list: {deleted_from_ctu}\n"
+                    f"🚫 Removed registered students: {deleted_from_registration}\n"
+                    f"⚠️ Kept (with votes): {kept_with_votes}",
+                    "import-success"
+                )
+            else:
+                flash(
+                    f"Sync complete. Imported: {imported}, Updated: {updated}, "
+                    f"Removed from CTU list: {deleted_from_ctu}",
+                    "import-success"
+                )
+                
             return redirect(url_for("admin.import_students"))
 
         except Exception as e:
             db.session.rollback()
+            print(f"ERROR: {str(e)}")  # For debugging
             
             # ---------- AUDIT LOG: Student import failed ----------
             username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
@@ -840,7 +898,7 @@ def import_students():
         .paginate(page=page, per_page=20, error_out=False)
 
     # ------------------ TOTAL STUDENTS ------------------
-    total_students = CtuStudent.query.count()  # Always get current count
+    total_students = CtuStudent.query.count()
 
     # ---------- AUDIT LOG: Import students page viewed ----------
     if request.method == "GET" and current_user.is_authenticated:
@@ -857,6 +915,25 @@ def import_students():
         students=students,
         total_students=total_students
     )
+
+
+
+# Add this import with your other imports at the top of admin/routes.py
+from admin.utils import sync_registered_students_with_ctu
+
+@admin_bp.route('/sync-registered-students', methods=['POST'])
+@admin_required
+def sync_registered_students():
+    """Manual sync endpoint"""
+    try:
+        result = sync_registered_students_with_ctu()
+        return jsonify({
+            'success': True,
+            'deleted': result['deleted'],
+            'kept_with_votes': result['kept_with_votes']
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # import_students_table function remains EXACTLY THE SAME - no changes needed
@@ -1866,6 +1943,11 @@ def delete_candidate(id):
 def manage_positions():
     if request.method == 'POST':
         position_name = request.form.get('position_name', '').strip()
+        position_color = request.form.get('position_color', '#3498db').strip()
+        
+        if not position_color.startswith('#'):
+            position_color = f'#{position_color}'
+        
         if position_name:
             existing = Position.query.filter_by(name=position_name).first()
             if existing:
@@ -1880,7 +1962,7 @@ def manage_positions():
                     return jsonify({"success": False, "message": f'Position "{position_name}" already exists!'})
                 flash(f'Position "{position_name}" already exists!', 'warning')
             else:
-                new_position = Position(name=position_name)
+                new_position = Position(name=position_name, color=position_color)
                 db.session.add(new_position)
                 db.session.commit()
                 
@@ -1889,7 +1971,7 @@ def manage_positions():
                 ip = request.remote_addr
                 log_audit(
                     action='ADD_POSITION',
-                    description=f"Admin user '{username}' added new position: '{position_name}' from IP: {ip}"
+                    description=f"Admin user '{username}' added new position: '{position_name}' with color: {position_color} from IP: {ip}"
                 )
                 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1903,7 +1985,7 @@ def manage_positions():
     
     # Return JSON for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        positions_data = [{"id": p.id, "name": p.name} for p in positions]
+        positions_data = [{"id": p.id, "name": p.name, "color": p.color} for p in positions]
         
         # ---------- AUDIT LOG: Get positions data via AJAX ----------
         username = getattr(current_user, 'username', 'Unknown')
@@ -1931,7 +2013,7 @@ def manage_positions():
 @admin_required
 def get_positions_data():
     positions = Position.query.all()
-    positions_data = [{"id": p.id, "name": p.name} for p in positions]
+    positions_data = [{"id": p.id, "name": p.name, "color": p.color} for p in positions]
     
     # ---------- AUDIT LOG: Get positions data endpoint ----------
     username = getattr(current_user, 'username', 'Unknown')
@@ -1950,12 +2032,18 @@ def get_positions_data():
 def update_position(position_id):
     position = Position.query.get_or_404(position_id)
     old_name = position.name
+    old_color = position.color
     data = request.get_json()
     
     if not data or 'position_name' not in data:
         return jsonify({"success": False, "message": "Position name is required"}), 400
     
     position_name = data['position_name'].strip()
+    position_color = data.get('position_color', '#3498db').strip()
+    
+    if not position_color.startswith('#'):
+        position_color = f'#{position_color}'
+    
     if not position_name:
         return jsonify({"success": False, "message": "Position name cannot be empty"}), 400
     
@@ -1972,6 +2060,7 @@ def update_position(position_id):
         return jsonify({"success": False, "message": f'Position "{position_name}" already exists!'})
     
     position.name = position_name
+    position.color = position_color
     db.session.commit()
     
     # ---------- AUDIT LOG: Update position ----------
@@ -1979,7 +2068,7 @@ def update_position(position_id):
     ip = request.remote_addr
     log_audit(
         action='UPDATE_POSITION',
-        description=f"Admin user '{username}' updated position from '{old_name}' to '{position_name}' (ID: {position_id}) from IP: {ip}"
+        description=f"Admin user '{username}' updated position from '{old_name}' (color: {old_color}) to '{position_name}' (color: {position_color}) (ID: {position_id}) from IP: {ip}"
     )
     
     return jsonify({"success": True, "message": f'Position "{position_name}" updated successfully!'})
@@ -2016,6 +2105,8 @@ def delete_position(position_id):
     )
     
     return jsonify({"success": True, "message": f'Position "{position_name}" deleted successfully!'})
+
+
 
 
 @admin_bp.route('/configure-election-positions/<int:election_id>', methods=['GET', 'POST'])
@@ -3084,7 +3175,8 @@ def statistics():
 
     for election in past_elections:
         votes_per_candidate = {}
-        candidate_roles = {}  # Store the role/position
+        candidate_roles = {}  # Store the role/position name
+        candidate_roles_with_id = {}  # Store position details with ID and color
         voter_ids = set()
         total_votes = 0
 
@@ -3096,7 +3188,22 @@ def statistics():
             total_votes += vote_count
 
             # Store role/position as string (JSON serializable)
-            candidate_roles[full_name] = candidate.position.name if candidate.position else 'Other'
+            position_name = candidate.position.name if candidate.position else 'Other'
+            candidate_roles[full_name] = position_name
+            
+            # Store position details with ID and color for sorting
+            if candidate.position:
+                candidate_roles_with_id[full_name] = {
+                    'position_id': candidate.position.id,
+                    'name': candidate.position.name,
+                    'color': candidate.position.color or '#adb5bd'
+                }
+            else:
+                candidate_roles_with_id[full_name] = {
+                    'position_id': 999,  # Default high number for 'Other'
+                    'name': 'Other',
+                    'color': '#adb5bd'
+                }
 
         # Get all unique voters for this election
         voter_ids = get_all_voters_for_election(election.id)
@@ -3121,6 +3228,7 @@ def statistics():
             'end_date': election.end_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
             'votes': votes_per_candidate,
             'candidate_roles': candidate_roles,
+            'candidate_roles_with_id': candidate_roles_with_id,  # New: includes position_id and color
             'winner': winner,
             'total_voters': total_voted_students,
             'winning_percentage': winning_percentage
@@ -3184,7 +3292,6 @@ def statistics():
         most_active_month=most_active_month,
         largest_election=largest_election
     )
-
 
 
 @admin_bp.route("/audit-logs", methods=["GET"])

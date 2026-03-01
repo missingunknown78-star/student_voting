@@ -209,3 +209,49 @@ def log_audit(action, description=None):
     db.session.commit()
     
     return log
+
+
+
+# Add to admin/utils.py or create a new file admin/sync_utils.py
+
+def sync_registered_students_with_ctu():
+    """
+    Manual function to sync registered students with CTU master list.
+    Can be called from admin dashboard or via a management command.
+    """
+    from admin.models import CtuStudent
+    from student.models import Student, Vote
+    from extensions import db
+    
+    # Get all active CTU students
+    ctu_students = CtuStudent.query.all()
+    ctu_student_numbers = {s.student_number for s in ctu_students}
+    
+    # Get all registered students
+    registered_students = Student.query.all()
+    
+    deleted_count = 0
+    kept_with_votes = 0
+    
+    for student in registered_students:
+        if student.id_number not in ctu_student_numbers:
+            # Check if student has votes
+            votes = Vote.query.filter_by(student_id=student.id).count()
+            
+            if votes == 0:
+                # Safe to delete
+                db.session.delete(student)
+                deleted_count += 1
+            else:
+                # Student has votes - keep for audit but maybe mark as inactive
+                kept_with_votes += 1
+                # You could add a status field to mark them as graduated
+                # student.status = 'graduated'
+                # db.session.add(student)
+    
+    db.session.commit()
+    
+    return {
+        'deleted': deleted_count,
+        'kept_with_votes': kept_with_votes
+    }

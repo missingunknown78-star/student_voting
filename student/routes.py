@@ -1604,123 +1604,126 @@ from sqlalchemy import func
 @student_bp.route('/results')
 @login_required
 def results():
-    # Get all elections (both completed and ongoing)
-    local_tz = pytz.timezone("Asia/Manila")
-    now = datetime.now(local_tz)
+    """Show elections that the current student has voted in"""
+    student_id = current_user.id
+    now = datetime.now()
     
-    # Make now timezone-naive for database comparison
-    now_naive = now.replace(tzinfo=None)
+    # Get all elections the student has voted in
+    voted_elections_ids = db.session.query(Vote.election_id).filter_by(
+        student_id=student_id
+    ).distinct().subquery()
     
-    # Get ALL elections that have started (both ongoing and completed)
-    all_elections = Election.query.filter(
-        Election.start_date <= now_naive
+    voted_elections = Election.query.filter(
+        Election.id.in_(voted_elections_ids),
+        Election.start_date <= now  # Only show elections that have started
     ).order_by(Election.end_date.desc()).all()
     
-    # Get the most recent election (could be ongoing or completed)
-    recent_election = all_elections[0] if all_elections else None
+    return render_template('results.html',
+                         voted_elections=voted_elections,
+                         now=now)
+
+
+
     
-    if not recent_election:
-        return render_template('results.html', 
-                             recent_election=None,
-                             all_elections=[],
-                             positions_data=[],
-                             total_voters=0,
-                             total_votes=0,
-                             voter_turnout=0,
-                             results_date=now,
-                             results_status="No Elections")
+
+@student_bp.route('/results/<int:election_id>')
+@login_required
+def results_detail(election_id):
+    """Show detailed results for a specific election (only if student voted in it)"""
+    student_id = current_user.id
+    
+    # Check if student voted in this election
+    has_voted = Vote.query.filter_by(
+        student_id=student_id,
+        election_id=election_id
+    ).first() is not None
+    
+    if not has_voted:
+        flash('You can only view results for elections you have participated in.', 'warning')
+        return redirect(url_for('student.results'))  # Fixed: changed from 'student.my_results' to 'student.results'
+    
+    # Get the election
+    election = Election.query.get_or_404(election_id)
+    
+    local_tz = pytz.timezone("Asia/Manila")
+    now = datetime.now(local_tz)
+    now_naive = now.replace(tzinfo=None)
     
     # Determine results status
-    if recent_election.end_date < now_naive:
+    if election.end_date < now_naive:
         results_status = "FINAL RESULTS"
-    elif recent_election.start_date <= now_naive <= recent_election.end_date:
+    elif election.start_date <= now_naive <= election.end_date:
         results_status = "LIVE RESULTS - Ongoing Election"
     else:
         results_status = "UPCOMING ELECTION"
     
     # Calculate total registered voters
-    if recent_election.scope == 'department' and recent_election.department_id:
+    if election.scope == 'department' and election.department_id:
         total_voters = Student.query.filter_by(
-            department_id=recent_election.department_id
+            department_id=election.department_id
         ).count()
     else:
         total_voters = Student.query.count()
     
-    # Calculate UNIQUE voters (students who have voted)
+    # Calculate UNIQUE voters
     unique_voters = db.session.query(Vote.student_id).filter_by(
-        election_id=recent_election.id
+        election_id=election.id
     ).distinct().count()
     
-    # Calculate voter turnout percentage based on UNIQUE voters
+    # Calculate voter turnout
     voter_turnout = (unique_voters / total_voters * 100) if total_voters > 0 else 0
     
     # Get all candidates for this election
-    all_candidates = Candidate.query.filter_by(election_id=recent_election.id).all()
+    all_candidates = Candidate.query.filter_by(election_id=election.id).all()
     
-    # Get position limits from ElectionPosition table
+    # Get position limits
     position_limits = {}
-    election_positions = ElectionPosition.query.filter_by(election_id=recent_election.id).all()
+    election_positions = ElectionPosition.query.filter_by(election_id=election.id).all()
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
     
     # Get all votes for this election
-    all_votes = Vote.query.filter_by(election_id=recent_election.id).all()
+    all_votes = Vote.query.filter_by(election_id=election.id).all()
     
-    # Create a list of all candidate IDs in order (for vector mapping)
+    # Create candidate ID list
     all_candidate_ids = [c.id for c in all_candidates]
     
-    # Initialize vote counts dictionary
+    # Initialize vote counts
     vote_counts = {candidate.id: 0 for candidate in all_candidates}
     
-    # ===== DECRYPT VOTES USING PRIVATE KEY =====
+    # Decrypt votes
     if all_votes and all_candidate_ids:
         try:
-            # Load the PRIVATE key
             private_key = get_private_key()
             
             if private_key:
-                # Initialize total vector with zeros
                 total_vector = [0] * len(all_candidate_ids)
                 
-                # For each vote, decrypt it and add to total
                 for vote in all_votes:
                     try:
-                        # Parse the encrypted vote JSON
                         vote_list = json.loads(vote.encrypted_vote)
                         
-                        # Reconstruct EncryptedNumber objects and decrypt
                         for i, enc_dict in enumerate(vote_list):
                             try:
-                                # Recreate the EncryptedNumber
                                 from phe import paillier
                                 enc_num = paillier.EncryptedNumber(
                                     private_key.public_key,
                                     int(enc_dict["ciphertext"]),
                                     int(enc_dict["exponent"])
                                 )
-                                # Decrypt using private key
                                 decrypted_value = private_key.decrypt(enc_num)
                                 total_vector[i] += decrypted_value
                             except Exception:
-                                # Silently continue on error
                                 continue
-                                
                     except Exception:
-                        # Silently continue on error
                         continue
                 
-                # Map the totals back to candidate IDs
                 for i, candidate_id in enumerate(all_candidate_ids):
                     vote_counts[candidate_id] = total_vector[i]
-            else:
-                # Private key not available - use zeros
-                pass
-                    
         except Exception:
-            # Silently continue on error
             pass
     
-    # ===== GROUP CANDIDATES BY POSITION =====
+    # Group candidates by position
     candidates_by_position = {}
     for candidate in all_candidates:
         position_name = candidate.position.name if candidate.position else "Unknown Position"
@@ -1734,7 +1737,6 @@ def results():
                 'candidates': []
             }
         
-        # Get department name if available
         department_name = candidate.department.name if candidate.department else None
         
         candidates_by_position[position_name]['candidates'].append({
@@ -1749,35 +1751,22 @@ def results():
             'is_winner': False
         })
     
-    # ===== CALCULATE PERCENTAGES CORRECTLY =====
+    # Calculate percentages
     positions_data = []
     
     for position_name, position_data in candidates_by_position.items():
         candidates_list = position_data['candidates']
-        
-        # Calculate total votes for this position
         position_total = sum(c['vote_count'] for c in candidates_list)
-        
-        # Get max votes per voter for this position
         max_votes_per_voter = position_limits.get(position_data['id'], 1)
-        
-        # Use unique voters as denominator for multi-select positions
         total_voters_count = unique_voters if unique_voters > 0 else 1
         
-        # Calculate percentages based on position type
         if total_voters_count > 0:
             for candidate in candidates_list:
                 if max_votes_per_voter > 1:
-                    # FOR MULTI-SELECT POSITIONS (like Senators):
-                    # Percentage = (votes received) / (total voters) * 100
                     candidate['vote_percentage'] = round((candidate['vote_count'] / total_voters_count) * 100, 1)
-                    
-                    # Cap at 100% for display
                     if candidate['vote_percentage'] > 100:
                         candidate['vote_percentage'] = 100
                 else:
-                    # FOR SINGLE-SELECT POSITIONS (like President):
-                    # Percentage = (votes received) / (total votes for position) * 100
                     if position_total > 0:
                         candidate['vote_percentage'] = round((candidate['vote_count'] / position_total) * 100, 1)
                     else:
@@ -1786,15 +1775,10 @@ def results():
             for candidate in candidates_list:
                 candidate['vote_percentage'] = 0
         
-        # Sort candidates by vote count (highest first)
         candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
-        
-        # Get max winners for this position
         max_winners = position_limits.get(position_data['id'], 1)
         
-        # Mark winners (only for completed elections)
-        if recent_election.end_date < now_naive and position_total > 0:
-            # Take top N candidates where N = max_winners
+        if election.end_date < now_naive and position_total > 0:
             for i, candidate in enumerate(candidates_list):
                 if i < max_winners and candidate['vote_count'] > 0:
                     candidate['is_winner'] = True
@@ -1808,20 +1792,21 @@ def results():
             'max_votes': max_winners
         })
     
-    # Sort positions by ID
     positions_data.sort(key=lambda x: x['id'])
     
-    return render_template('results.html',
-                         recent_election=recent_election,
-                         all_elections=all_elections,
+    return render_template('student_results_detail.html',
+                         election=election,
                          positions_data=positions_data,
                          total_voters=total_voters,
                          total_votes=unique_voters,
                          voter_turnout=round(voter_turnout, 1),
                          results_date=now,
                          results_status=results_status,
-                         now=now_naive)
+                         now=now_naive,
+                         results_published=election.results_published)
 
+
+                         
 def get_private_key():
     """Get the Paillier private key for decryption"""
     try:
@@ -1844,8 +1829,7 @@ def get_private_key():
     except Exception:
         # Silently return None on error
         return None
-
-        
+    
 
 @student_bp.route('/verify-my-vote', methods=['POST'])
 @login_required

@@ -233,12 +233,6 @@
                <i class="fa-solid fa-trophy"></i> Results
             </a>
 
-            <!-- STATISTICS -->
-            <a href="{{ url_for('admin.statistics') }}"
-               class="{% if request.endpoint == 'admin.statistics' %}active{% endif %}">
-               <i class="fa-solid fa-chart-bar"></i> Statistics
-            </a>
-
             <!-- AUDIT LOGS -->
             <a href="{{ url_for('admin.audit_logs') }}"
             class="{% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
