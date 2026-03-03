@@ -278,7 +278,7 @@ body {
 }
 
 /* ============================================
-   FOOTER NAVIGATION - ENHANCED VISIBILITY
+   FOOTER NAVIGATION - FIXED FOR 5 BUTTONS
    ============================================ */
 
    .footer-nav {
@@ -299,11 +299,13 @@ body {
 }
 
 .nav-menu {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    display: flex; /* Changed from grid to flex */
+    justify-content: space-around; /* Evenly space items */
+    align-items: center;
     width: 100%;
-    padding: 6px 0;
-    gap: 2px;
+    max-width: 600px; /* Maximum width for larger screens */
+    padding: 6px 10px;
+    gap: 5px; /* Small gap between items */
 }
 
 .nav-item {
@@ -312,25 +314,27 @@ body {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    color: rgba(255, 255, 255, 0.7); /* Light white for inactive */
-    padding: 8px 2px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 8px 0;
     transition: var(--transition);
     -webkit-tap-highlight-color: transparent;
     border-radius: 12px;
-    margin: 0 2px;
     cursor: pointer;
     position: relative;
+    flex: 1; /* Each item takes equal space */
+    min-width: 50px; /* Minimum touch target */
+    max-width: 70px; /* Prevent items from getting too wide */
 }
 
 /* Active state - Bright White with Glow */
 .nav-item.active {
     color: white;
-    background: rgba(255, 255, 255, 0.2); /* Semi-transparent white */
+    background: rgba(255, 255, 255, 0.2);
     text-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
     box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
 }
 
-/* Remove the blue dot and replace with bottom indicator */
+/* Bottom indicator for active item */
 .nav-item.active::after {
     content: '';
     position: absolute;
@@ -340,7 +344,6 @@ body {
     border-radius: 3px;
     background: white;
     box-shadow: 0 0 10px white;
-    top: auto; /* Override previous top property */
 }
 
 .nav-item:active {
@@ -373,6 +376,7 @@ body {
     line-height: 1.1;
     transition: var(--transition);
     letter-spacing: 0.3px;
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 .nav-item.active .nav-label {
@@ -405,12 +409,13 @@ body {
     }
     
     .nav-menu {
-        padding: 4px 0;
-        gap: 1px;
+        padding: 4px 5px;
+        gap: 3px;
     }
     
     .nav-item {
-        padding: 6px 1px;
+        padding: 6px 0;
+        min-width: 45px;
     }
     
     .nav-icon {
@@ -426,18 +431,19 @@ body {
     .nav-item.active::after {
         width: 16px;
         height: 2px;
+        bottom: 3px;
     }
 }
 
 /* Small Screens */
 @media (max-width: 360px) {
     .nav-menu {
-        gap: 0;
+        gap: 2px;
+        padding: 4px 3px;
     }
     
     .nav-item {
-        margin: 0;
-        padding: 6px 1px;
+        min-width: 42px;
     }
 }
 
@@ -449,6 +455,22 @@ body {
     }
 }
 
+/* For very small devices */
+@media (max-width: 280px) {
+    .nav-label {
+        font-size: 0.55rem;
+    }
+    
+    .nav-icon {
+        font-size: 1rem;
+        height: 20px;
+        width: 20px;
+    }
+    
+    .nav-item {
+        min-width: 38px;
+    }
+}
 
 
 /* Alerts */

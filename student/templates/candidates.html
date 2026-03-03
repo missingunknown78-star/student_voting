@@ -24,6 +24,16 @@
             {% endfor %}
             {% set total_positions = positions_set|length %}
             
+            {% set grouped = {} %}
+            {% for c in candidates %}
+                {% set election_title = c.election.title if c.election else 'Other Elections' %}
+                {% if election_title not in grouped %}
+                    {% set _ = grouped.update({ election_title: [] }) %}
+                {% endif %}
+                {% set _ = grouped[election_title].append(c) %}
+            {% endfor %}
+            
+            <!-- Dynamic Stats - Will be updated by JavaScript -->
             <div class="election-stats">
                 <div class="stat">
                     <span class="stat-number">{{ total_candidates }}</span>
@@ -33,14 +43,6 @@
                     <span class="stat-number">{{ total_positions }}</span>
                     <span class="stat-label">Positions</span>
                 </div>
-                {% set grouped = {} %}
-                {% for c in candidates %}
-                    {% set election_title = c.election.title if c.election else 'Other Elections' %}
-                    {% if election_title not in grouped %}
-                        {% set _ = grouped.update({ election_title: [] }) %}
-                    {% endif %}
-                    {% set _ = grouped[election_title].append(c) %}
-                {% endfor %}
                 <div class="stat">
                     <span class="stat-number">{{ grouped|length }}</span>
                     <span class="stat-label">Elections</span>
@@ -50,26 +52,8 @@
     </div>
 
     {% if candidates %}
-        <!-- Position Tabs (keep at top for quick navigation) -->
-        <div class="position-tabs">
-            {% set positions_set = {} %}
-            {% for c in candidates %}
-                {% if c.position %}
-                    {% set _ = positions_set.update({c.position.name: c.position.name}) %}
-                {% endif %}
-            {% endfor %}
-            
-            <button class="tab-btn active" data-position="all">All Positions</button>
-            {% for position_name in positions_set.values()|sort %}
-                <button class="tab-btn" data-position="{{ position_name|lower|replace(' ', '-') }}">
-                    {{ position_name }}
-                </button>
-            {% endfor %}
-        </div>
-
-        <!-- ===== COLLAPSIBLE FILTER CARD ===== -->
+        <!-- Single Dropdown Filter (Tabs Removed) -->
         <div class="filter-container">
-            <!-- Filter Header (always visible) -->
             <div class="filter-header" id="filterHeader">
                 <div class="filter-header-left">
                     <span class="filter-icon">🔍</span>
@@ -83,9 +67,7 @@
                 </div>
             </div>
 
-            <!-- Filter Content (collapsible) -->
             <div class="filter-content" id="filterContent">
-                <!-- Close button inside filter card -->
                 <button class="filter-close" id="filterClose">&times;</button>
                 
                 <div class="filter-options">
@@ -96,7 +78,7 @@
                                 <input type="radio" name="position-filter" value="all" checked>
                                 <span>All Positions</span>
                             </label>
-                            {% for position_name in positions_set.values()|sort %}
+                            {% for position_name in positions_set.keys()|sort %}
                             <label class="position-filter" data-position="{{ position_name|lower|replace(' ', '-') }}">
                                 <input type="radio" name="position-filter" value="{{ position_name|lower|replace(' ', '-') }}">
                                 <span>{{ position_name }}</span>
@@ -113,7 +95,7 @@
                                 <input type="radio" name="election-filter" value="all" checked>
                                 <span>All Elections</span>
                             </label>
-                            {% for election_title in grouped.keys() %}
+                            {% for election_title in grouped.keys()|sort %}
                             <label class="election-filter" data-election="{{ election_title|lower|replace(' ', '-') }}">
                                 <input type="radio" name="election-filter" value="{{ election_title|lower|replace(' ', '-') }}">
                                 <span>{{ election_title }}</span>
@@ -131,9 +113,7 @@
             </div>
         </div>
 
-        {# ===============================
-           GROUP CANDIDATES BY ELECTION
-           =============================== #}
+        {# Group candidates by election #}
         {% set grouped = {} %}
         {% for c in candidates %}
             {% set election_title = c.election.title if c.election else 'Other Elections' %}
@@ -143,10 +123,8 @@
             {% set _ = grouped[election_title].append(c) %}
         {% endfor %}
 
-        {# ===============================
-           DISPLAY EACH ELECTION GROUP
-           =============================== #}
-        {% for election_title, election_candidates in grouped.items() %}
+        {# Display each election group #}
+        {% for election_title, election_candidates in grouped.items()|sort %}
         <div class="election-section" data-election="{{ election_title|lower|replace(' ', '-') }}">
             <!-- Election Header -->
             <div class="election-header-card">
@@ -164,10 +142,9 @@
                 {% if c.position %}
                     {% set position_name = c.position.name %}
                     {% if position_name not in candidates_by_position %}
-                        {% set _ = candidates_by_position.update({position_name: [c]}) %}
-                    {% else %}
-                        {% set _ = candidates_by_position[position_name].append(c) %}
+                        {% set _ = candidates_by_position.update({position_name: []}) %}
                     {% endif %}
+                    {% set _ = candidates_by_position[position_name].append(c) %}
                 {% endif %}
             {% endfor %}
 
@@ -177,7 +154,7 @@
                 <h3 class="position-group-title">{{ position_name }}</h3>
                 <div class="candidates-grid">
                     {% for c in position_candidates %}
-                    <div class="candidate-card" data-position="{{ c.position.name|lower|replace(' ', '-') }}">
+                    <div class="candidate-card" data-candidate-id="{{ c.id }}" data-position="{{ position_name|lower|replace(' ', '-') }}" data-election="{{ election_title|lower|replace(' ', '-') }}">
                         <!-- Candidate Header -->
                         <div class="candidate-header">
                             <div class="candidate-photo" 
@@ -294,268 +271,5 @@
     </div>
 </div>
 
-<script>
-// Tab functionality
-document.addEventListener('DOMContentLoaded', function() {
-    // Position tabs
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            // Remove active class from all tabs
-            tabBtns.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked tab
-            this.classList.add('active');
-            
-            const position = this.dataset.position;
-            filterCandidates(position);
-            
-            // Also update radio buttons to match
-            updateRadioFromTab(position);
-        });
-    });
-
-    // Filter toggle functionality
-    const filterHeader = document.getElementById('filterHeader');
-    const filterContent = document.getElementById('filterContent');
-    const filterToggle = document.getElementById('filterToggle');
-    const filterClose = document.getElementById('filterClose');
-    const filterContainer = document.querySelector('.filter-container');
-
-    // Toggle filter on header click
-    filterHeader.addEventListener('click', function(e) {
-        // Don't toggle if clicking on the toggle button (it has its own handler)
-        if (!e.target.closest('.filter-toggle')) {
-            toggleFilter();
-        }
-    });
-
-    // Toggle filter on arrow click
-    filterToggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleFilter();
-    });
-
-    // Close filter on X button click
-    filterClose.addEventListener('click', function(e) {
-        e.stopPropagation();
-        closeFilter();
-    });
-
-    // Close filter when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!filterContainer.contains(e.target) && filterContent.classList.contains('show')) {
-            closeFilter();
-        }
-    });
-
-    function toggleFilter() {
-        filterContent.classList.toggle('show');
-        const toggleIcon = filterToggle.querySelector('.toggle-icon');
-        if (filterContent.classList.contains('show')) {
-            toggleIcon.textContent = '▲';
-        } else {
-            toggleIcon.textContent = '▼';
-        }
-    }
-
-    function closeFilter() {
-        filterContent.classList.remove('show');
-        const toggleIcon = filterToggle.querySelector('.toggle-icon');
-        toggleIcon.textContent = '▼';
-    }
-
-    // Position filters
-    const positionFilters = document.querySelectorAll('.position-filter');
-    positionFilters.forEach(filter => {
-        filter.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const radio = this.querySelector('input[type="radio"]');
-            radio.checked = true;
-            
-            positionFilters.forEach(f => f.classList.remove('active'));
-            this.classList.add('active');
-            
-            const position = this.dataset.position;
-            filterCandidates(position);
-            
-            // Update active filter count
-            updateFilterCount();
-        });
-    });
-
-    // Election filters
-    const electionFilters = document.querySelectorAll('.election-filter');
-    electionFilters.forEach(filter => {
-        filter.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const radio = this.querySelector('input[type="radio"]');
-            radio.checked = true;
-            
-            electionFilters.forEach(f => f.classList.remove('active'));
-            this.classList.add('active');
-            
-            const election = this.dataset.election;
-            filterElections(election);
-            
-            // Update active filter count
-            updateFilterCount();
-        });
-    });
-
-    // Apply Filters button
-    const applyBtn = document.getElementById('applyFilters');
-    applyBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        // Filters are already applied via radio clicks, just close the panel
-        closeFilter();
-    });
-
-    // Reset Filters button
-    const resetBtn = document.getElementById('resetFilters');
-    resetBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        
-        // Reset position filter to All
-        const allPositionFilter = document.querySelector('.position-filter[data-position="all"]');
-        allPositionFilter.querySelector('input[type="radio"]').checked = true;
-        positionFilters.forEach(f => f.classList.remove('active'));
-        allPositionFilter.classList.add('active');
-        
-        // Reset election filter to All if exists
-        const allElectionFilter = document.querySelector('.election-filter[data-election="all"]');
-        if (allElectionFilter) {
-            allElectionFilter.querySelector('input[type="radio"]').checked = true;
-            electionFilters.forEach(f => f.classList.remove('active'));
-            allElectionFilter.classList.add('active');
-        }
-        
-        // Reset all views
-        filterCandidates('all');
-        filterElections('all');
-        
-        // Reset active tab
-        tabBtns.forEach(b => b.classList.remove('active'));
-        document.querySelector('.tab-btn[data-position="all"]').classList.add('active');
-        
-        // Update filter count
-        updateFilterCount();
-        
-        // Close filter panel
-        closeFilter();
-    });
-
-    function filterCandidates(position) {
-        const positionGroups = document.querySelectorAll('.position-group');
-        
-        positionGroups.forEach(group => {
-            if (position === 'all' || group.dataset.position === position) {
-                group.style.display = 'block';
-            } else {
-                group.style.display = 'none';
-            }
-        });
-        
-        // Update tab buttons
-        const tabs = document.querySelectorAll('.tab-btn');
-        tabs.forEach(tab => {
-            if (tab.dataset.position === position) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-    }
-
-    function filterElections(election) {
-        const electionSections = document.querySelectorAll('.election-section');
-        
-        electionSections.forEach(section => {
-            if (election === 'all' || section.dataset.election === election) {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        });
-    }
-
-    function updateRadioFromTab(position) {
-        const radio = document.querySelector(`.position-filter[data-position="${position}"] input[type="radio"]`);
-        if (radio) {
-            radio.checked = true;
-            positionFilters.forEach(f => f.classList.remove('active'));
-            radio.closest('.position-filter').classList.add('active');
-        }
-    }
-
-    function updateFilterCount() {
-        const activePosition = document.querySelector('.position-filter.active span').textContent;
-        const activeElection = document.querySelector('.election-filter.active span')?.textContent || 'All Elections';
-        const countEl = document.getElementById('activeFilterCount');
-        
-        if (activePosition === 'All Positions' && activeElection === 'All Elections') {
-            countEl.textContent = '';
-        } else {
-            countEl.textContent = `${activePosition} · ${activeElection}`;
-        }
-    }
-
-    // Initialize with all candidates visible
-    filterCandidates('all');
-    updateFilterCount();
-});
-
-// Photo modal functions
-function openCandidatePhoto(element) {
-    const modal = document.getElementById('photoModal');
-    const modalImg = document.getElementById('photoModalImg');
-    const modalCaption = document.getElementById('photoModalCaption');
-    
-    const photoUrl = element.getAttribute('data-photo-url');
-    const candidateName = element.closest('.candidate-card').querySelector('.candidate-name').textContent;
-    
-    modalImg.src = photoUrl;
-    modalCaption.textContent = candidateName + ' - Profile Photo';
-    
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function closePhotoModal() {
-    const modal = document.getElementById('photoModal');
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-}
-
-// View candidate profile (placeholder function)
-function viewCandidateProfile(candidateId) {
-    alert('Candidate profile view functionality would be implemented here.\nCandidate ID: ' + candidateId);
-    // In a real implementation, this would navigate to a candidate profile page
-    // or show a modal with detailed candidate information
-}
-
-// Close modal with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closePhotoModal();
-        // Also close filter if open
-        const filterContent = document.getElementById('filterContent');
-        if (filterContent.classList.contains('show')) {
-            filterContent.classList.remove('show');
-            document.querySelector('.toggle-icon').textContent = '▼';
-        }
-    }
-});
-
-// Close modal when clicking outside the image
-document.getElementById('photoModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closePhotoModal();
-    }
-});
-
-// Prevent modal content clicks from closing the modal
-document.querySelector('.photo-modal-content').addEventListener('click', function(e) {
-    e.stopPropagation();
-});
-</script>
+<script src="{{ url_for('student.static', filename='js/candidates.js') }}"></script>
 {% endblock %}

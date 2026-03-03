@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Email Change</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f4f6fb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.card {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 28px 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+h1 {
+    font-size: 1.4rem;
+    margin: 10px 0;
+    color: #1f2937;
+}
+
+p {
+    font-size: 0.95rem;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.email {
+    font-weight: 600;
+    color: #111827;
+    word-break: break-all;
+    background: #f3f4f6;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin: 25px 0;
+    justify-content: center;
+}
+
+.btn-confirm, .btn-reject {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+    display: inline-block;
+}
+
+.btn-confirm {
+    background: #16a34a;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #15803d;
+}
+
+.btn-reject {
+    background: #e53935;
+    color: white;
+}
+
+.btn-reject:hover {
+    background: #c62828;
+}
+
+.divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 20px 0;
+}
+
+.timer {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 10px;
+}
+
+.footer {
+    margin-top: 20px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+@media (max-width: 360px) {
+    .card {
+        padding: 22px 18px;
+    }
+    
+    .button-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn-confirm, .btn-reject {
+        width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <div class="icon">📧</div>
+    <h1>Verify Email Change</h1>
+
+    <p>
+        We received a request to change your email address.
+        For your security, we sent a verification link to:
+    </p>
+
+    <p class="email">
+        {{ masked_email }}
+    </p>
+
+    <p>
+        Click <strong>Yes, it’s me</strong> to confirm or <strong>No, it’s not me</strong> to reject.
+    </p>
+
+    <div class="button-group">
+        <a href="{{ confirm_url }}" class="btn-confirm">✅ Yes, it's me</a>
+        <a href="{{ reject_url }}" class="btn-reject">❌ No, it's not me</a>
+    </div>
+
+    <div class="divider"></div>
+
+    <p class="timer">This link will expire in 15 minutes.</p>
+
+    <div class="footer">
+        Cebu Technological University Moalboal Campus
+    </div>
+</div>
+
+</body>
+</html>

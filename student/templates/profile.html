@@ -1,3 +1,4 @@
+<!-- profile.html -->
 {% extends "base.html" %}
 {% set active_page = 'profile' %}
 
@@ -5,6 +6,8 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/profile.css') }}">
+<script src="{{ url_for('student.static', filename='js/profile-edit.js') }}" defer></script>
+<script src="{{ url_for('student.static', filename='js/deletion-request.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -21,26 +24,21 @@
             {% endif %}
             <div class="avatar-status {% if device_trusted %}online{% endif %}"></div>
         </div>
-        <h1 class="profile-name">{{ student.first_name }} {{ student.last_name }}</h1>
-        <p class="profile-role">Student Voter • {{ student.course }}</p>
+        <h1 class="profile-name">{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }} {{ student.suffix }}</h1>
+        <p class="profile-role">Student Voter • {{ student.course_rel.course_name if student.course_rel else student.course }}</p>
         <div class="profile-verification">
             <span class="verification-badge badge-verified">✓ Verified</span>
         </div>
     </div>
 
-    <!-- Profile Form -->
-    <div class="card profile-form-card">
+    <!-- Profile Form Card -->
+    <div class="card profile-form-card" id="profileFormCard">
         <div class="card-header">
             <h2 class="card-title">Student Information</h2>
-            {% if student.can_edit_profile %}
-            <a href="{{ url_for('student.edit_profile') }}" class="btn btn-secondary btn-small edit-btn">
-                <span class="btn-icon">✏️</span>
-                Edit Profile
-            </a>
-            {% endif %}
         </div>
 
-        <div class="profile-info">
+        <!-- Display Mode -->
+        <div id="profileDisplayMode" class="profile-info">
             <div class="info-group">
                 <label class="info-label">Student ID</label>
                 <div class="info-value disabled">{{ student.id_number }}</div>
@@ -49,27 +47,43 @@
 
             <div class="info-group">
                 <label class="info-label">Full Name</label>
-                <div class="info-value disabled">{{ student.first_name }} {{ student.last_name }}</div>
+                <div class="info-value disabled">
+                    {{ student.first_name }} 
+                    {% if student.middle_name %}{{ student.middle_name }} {% endif %}
+                    {{ student.last_name }}
+                    {% if student.suffix %} {{ student.suffix }}{% endif %}
+                </div>
+            </div>
+
+            <div class="info-group">
+                <label class="info-label">Username</label>
+                <div class="info-value disabled" id="currentUsername">{{ student.username }}</div>
             </div>
 
             <div class="info-group">
                 <label class="info-label">Email Address</label>
-                <div class="info-value disabled">{{ student.email }}</div>
+                <div class="info-value disabled" id="currentEmail">{{ student.email }}</div>
                 <p class="info-help">Official university email</p>
             </div>
 
             <div class="info-group">
-                <label class="info-label">Course & Year</label>
-                <div class="info-value disabled">
-                    {{ student.course }}
-                    {% if student.year_level %} - {{ student.year_level }}{% endif %}
+                <label class="info-label">Course</label>
+                <div class="info-value disabled" id="currentCourse">
+                    {{ student.course_rel.course_name if student.course_rel else student.course }}
+                </div>
+            </div>            
+
+            <div class="info-group">
+                <label class="info-label">Year Level</label>
+                <div class="info-value disabled" id="currentYear">
+                    {{ student.year_level.year_name if student.year_level else 'Not set' }}
                 </div>
             </div>
 
-            {% if student.section %}
+            {% if student.birth_date %}
             <div class="info-group">
-                <label class="info-label">Section</label>
-                <div class="info-value disabled">{{ student.section }}</div>
+                <label class="info-label">Birth Date</label>
+                <div class="info-value disabled">{{ student.birth_date.strftime('%B %d, %Y') }}</div>
             </div>
             {% endif %}
 
@@ -80,6 +94,65 @@
                     <span class="status-text">Eligible for current elections</span>
                 </div>
             </div>
+        </div>
+
+        <!-- Edit Mode (Hidden by default) -->
+        <div id="profileEditMode" class="profile-info" style="display: none;">
+            <form id="editProfileForm" method="POST" action="{{ url_for('student.edit_profile') }}">
+                <div class="info-group">
+                    <label class="info-label">Student ID</label>
+                    <div class="info-value disabled">{{ student.id_number }}</div>
+                </div>
+
+                <div class="info-group">
+                    <label class="info-label">Full Name</label>
+                    <div class="info-value disabled">
+                        {{ student.first_name }} {{ student.middle_name }} {{ student.last_name }} {{ student.suffix }}
+                    </div>
+                </div>
+
+                <div class="info-group">
+                    <label class="info-label">Username</label>
+                    <input type="text" name="username" value="{{ student.username }}" id="newUsername" required>
+                    <p class="info-help">Choose a unique username</p>
+                </div>
+
+                <div class="info-group">
+                    <label class="info-label">Email Address</label>
+                    <input type="email" name="email" value="{{ student.email }}" id="newEmail" required>
+                    <p class="info-help">Changing email requires confirmation</p>
+                </div>
+
+                <div class="info-group">
+                    <label class="info-label">Course</label>
+                    <select name="course_id" id="courseSelect" required>
+                        <option value="">Select Course</option>
+                        {% for course in courses %}
+                        <option value="{{ course.id }}" 
+                            {% if student.course_id == course.id %}selected{% endif %}>
+                            {{ course.course_name }} ({{ course.course_code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="info-group">
+                    <label class="info-label">Year Level</label>
+                    <select name="year_level_id" required>
+                        <option value="">Select Year Level</option>
+                        {% for year in year_levels %}
+                        <option value="{{ year.id }}" {% if student.year_level_id == year.id %}selected{% endif %}>
+                            {{ year.year_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -207,21 +280,124 @@
         <h2 class="card-title">Account Actions</h2>
         
         <div class="actions-grid">
-            <a href="{{ url_for('student.edit_profile') }}" class="action-btn primary">
+            <button id="editProfileBtn" class="action-btn primary">
                 <span class="btn-icon">✏️</span>
                 Edit Profile
-            </a>
-            
-            <button class="action-btn secondary">
-                <span class="btn-icon">📤</span>
-                Export Data
             </button>
             
-            <button class="action-btn danger">
+            <button id="requestDeletionBtn" class="action-btn danger {% if has_pending_deletion %}disabled{% endif %}" {% if has_pending_deletion %}disabled{% endif %}>
                 <span class="btn-icon">🚫</span>
-                Request Deletion
+                {% if has_pending_deletion %}
+                    ⏳ Waiting for Deletion Approval
+                {% else %}
+                    Request Deletion
+                {% endif %}
             </button>
+        </div>
+        {% if has_pending_deletion %}
+        <p style="text-align: center; color: #f59e0b; font-size: 0.85rem; margin-top: 10px;">
+            Your deletion request is pending admin approval. You will be notified via email once processed.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Email Change Verification Modal -->
+<div id="emailChangeModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <span class="close">&times;</span>
+        
+        <div class="modal-icon">📧</div>
+        <h3>Verify Email Change</h3>
+        
+        <div id="waitingForConfirmation">
+            <p style="font-size: 0.9rem; color: #4b5563;">We sent a verification email to:</p>
+            <p style="font-weight: 600; color: #111827; word-break: break-all; background: #f3f4f6; padding: 8px; border-radius: 6px; font-size: 0.9rem;" id="oldEmailDisplay"></p>
+            <p style="font-size: 0.85rem; color: #4b5563;">Please check your email and click <strong>Yes, it's me</strong> to confirm.</p>
+            
+            <div style="height: 1px; background: #e5e7eb; margin: 15px 0;"></div>
+            
+            <button id="resendEmailBtn" class="btn-secondary" style="width: 100%; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Resend Verification Email</button>
+            
+            <div id="timerText" style="font-size: 0.75rem; color: #6b7280; margin-top: 8px;"></div>
+            
+            <a href="#" id="cancelChangeBtn" style="display: block; margin-top: 12px; color: #dc3545; text-decoration: none; font-size: 0.85rem;">Cancel</a>
+        </div>
+        
+        <!-- Simple OTP Input -->
+        <div id="otpVerification" style="display: none;">
+            <p style="font-size: 0.9rem; color: #4b5563;">Enter the 6-digit code sent to your new email:</p>
+            <input type="text" id="simpleOtpInput" maxlength="6" pattern="\d*" inputmode="numeric" 
+                   style="width: 100%; padding: 10px; font-size: 1.1rem; text-align: center; letter-spacing: 3px; border: 2px solid #dee2e6; border-radius: 6px; margin: 10px 0;">
+            <div id="otpError" style="color: #dc3545; font-size: 0.8rem; min-height: 20px;"></div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button id="verifyOtpBtn" class="btn-primary" style="flex: 1; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Verify</button>
+                <button id="cancelOtpBtn" class="btn-danger" style="flex: 1; padding: 10px; background: #e53935; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Cancel</button>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Account Deletion Modal - Fixed Version -->
+<div id="deletionModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        
+        <div class="modal-icon">⚠️</div>
+        <h3>Request Account Deletion</h3>
+        
+        <div class="modal-description-box">
+            <p>Please provide a detailed explanation for deleting your account. Your feedback is valuable to us.</p>
+        </div>
+        
+        <form id="deletionForm">
+            <div class="form-group">
+                <label class="form-label">
+                    Reason for deletion <span class="required-star">*</span>
+                </label>
+                <textarea 
+                    id="deletionReason" 
+                    name="reason" 
+                    class="deletion-textarea"
+                    placeholder="Please provide your reason for deletion (maximum 5000 characters)..."
+                    required
+                ></textarea>
+                
+                <div class="counter-container">
+                    <span class="char-badge">
+                        <span>📝</span> <strong id="charCount">0</strong>/5000
+                    </span>
+                </div>
+            </div>
+            
+            <div class="warning-box">
+                <span class="warning-icon">⚠️</span>
+                <div class="warning-text">
+                    <p>IMPORTANT: This action cannot be undone</p>
+                    <p>Your account will be deactivated and all data scheduled for permanent deletion after admin approval. You will receive email notification once your account has been successfully deleted.</p>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" id="submitDeletionBtn" class="btn-danger" disabled>
+                    <span class="button-icon">
+                        <span>🗑️</span>
+                        <span>Submit Request</span>
+                    </span>
+                </button>
+                <button type="button" id="cancelDeletionBtn" class="btn-secondary">
+                    <span class="button-icon">
+                        <span>✕</span>
+                        <span>Cancel</span>
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div id="toast" class="toast" style="display: none; position: fixed; top: 20px; right: 20px; background: #16a34a; color: white; padding: 12px 16px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; font-size: 0.9rem;">✅ Success!</div>
+<div id="toastReject" class="toast reject" style="display: none; position: fixed; top: 20px; right: 20px; background: #e53935; color: white; padding: 12px 16px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; font-size: 0.9rem;">❌ Error</div>
 {% endblock %}

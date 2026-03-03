@@ -1,6 +1,6 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
-from student.models import Student, Vote
+from student.models import Student, Vote, DeletionRequest
 from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel, Position, ElectionPosition
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
@@ -203,6 +203,40 @@ def count_votes_for_election(election_id):
             print(f"   Candidate {candidate_id}: {count} votes")
     
     return result
+
+
+def send_email_change_notification(student, old_email, new_email):
+    """Send notification to old email about email change"""
+    try:
+        msg = Message(
+            'Your Email Has Been Changed',
+            recipients=[old_email]
+        )
+        msg.body = f"""
+        Your email address for your voting account has been changed.
+        
+        Old email: {old_email}
+        New email: {new_email}
+        
+        If you did not make this change, please contact support immediately.
+        """
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <p>Hello <strong>{student.first_name}</strong>,</p>
+            <p>Your email address for your voting account has been changed.</p>
+            <p><strong>Old email:</strong> {old_email}<br>
+            <strong>New email:</strong> {new_email}</p>
+            <p>If you did not make this change, please contact support immediately.</p>
+        </div>
+        """
+        
+        mail.send(msg)
+        print(f"Email change notification sent to {old_email}")
+    except Exception as e:
+        print(f"Failed to send email change notification: {e}")
+
+
 # ============= END OF NEW HELPER FUNCTIONS =============
 
 
@@ -1295,7 +1329,7 @@ def submit_vote(election_id):
         
         flash(f"Your vote has been submitted and encrypted successfully! Your secret verification code is: {secret_nonce}", "success")
         
-        return redirect(url_for('student.vote_receipt', election_id=election_id))
+        return redirect(url_for('student.receipt', election_id=election_id))
         
     except Exception as e:
         db.session.rollback()
@@ -1304,34 +1338,49 @@ def submit_vote(election_id):
         return redirect(url_for('student.vote_page', election_id=election_id))
 
 
-@student_bp.route('/vote/<int:election_id>/receipt')
+@student_bp.route('/receipt')
 @login_required
-def vote_receipt(election_id):
-    """Show the voter their receipt with secret code"""
-    # Verify that this user actually voted in this election
-    vote = Vote.query.filter_by(
-        student_id=current_user.id,
-        election_id=election_id
-    ).first()
+def receipt():
+    """Show all voting receipts for the student"""
     
-    if not vote:
-        flash("No voting record found.", "warning")
-        return redirect(url_for('student.available_elections'))
+    # Get all votes for this student, ordered by most recent first
+    votes = Vote.query.filter_by(
+        student_id=current_user.id
+    ).order_by(Vote.created_at.desc()).all()
     
-    # Get the secret nonce from session (or you could store it in the vote record)
-    secret_nonce = session.get('last_vote_secret', 'N/A')
+    if not votes:
+        return render_template('receipt.html', votes=[])
     
-    # Get election details
-    election = Election.query.get(election_id)
+    # Prepare data for each vote
+    votes_data = []
+    for vote in votes:
+        # Extract the secret nonce from the finder_hash
+        secret_nonce = 'N/A'
+        if vote.finder_hash:
+            try:
+                # Try to parse as JSON first
+                finder_data = json.loads(vote.finder_hash)
+                # Check if it's the new format with 'nonce' field
+                if isinstance(finder_data, dict) and 'nonce' in finder_data:
+                    secret_nonce = finder_data['nonce']
+                else:
+                    # If it's a string or something else
+                    secret_nonce = str(finder_data)
+            except json.JSONDecodeError:
+                # If it's not JSON, use the raw string (might be old format)
+                secret_nonce = vote.finder_hash
+        
+        election = Election.query.get(vote.election_id)
+        votes_data.append({
+            'vote': vote,
+            'election': election,
+            'secret_nonce': secret_nonce
+        })
     
-    # Get the candidates they voted for (you'd need to decode this from the vote vector)
-    # For now, we'll just show the secret code
-    
-    return render_template('vote_receipt.html',
-                         election=election,
-                         vote=vote,
-                         secret_nonce=secret_nonce,
+    return render_template('receipt.html',
+                         votes=votes_data,
                          now=datetime.now(pytz.timezone("Asia/Manila")))
+
 
 from sqlalchemy import or_
 
@@ -1594,6 +1643,13 @@ def available_elections():
 def candidates():
     candidates = Candidate.query.order_by(Candidate.last_name).all()
     return render_template('candidates.html', candidates=candidates)
+
+# Optional: Add individual candidate profile route
+@student_bp.route('/candidate/<int:candidate_id>')
+@login_required
+def candidate_profile(candidate_id):
+    candidate = Candidate.query.get_or_404(candidate_id)
+    return render_template('candidate_profile.html', candidate=candidate)
 
 
 from datetime import datetime
@@ -2147,53 +2203,554 @@ def announcements_page():
     ]
     return render_template('announcements.html', announcements=announcements)
 
-# ------------------- RECEIPT -------------------
-@student_bp.route('/receipt')
-@login_required
-def receipt():
-    vote = Vote.query.filter_by(student_id=current_user.id).first()
-    if not vote:
-        flash('No voting record found. You have not voted yet.', 'info')
-        return redirect(url_for('student.dashboard'))
 
-    raw = f"{vote.id}-{current_user.id}-{int(time.time())}"
-    receipt_code = hashlib.sha256(raw.encode()).hexdigest()[:12].upper()
-    timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
-    return render_template('receipt.html', vote=vote, receipt_code=receipt_code, timestamp=timestamp)
 
 # ==================== PROFILE ====================
+# Add these imports at the top
+import random
+import string
+import uuid
+from flask_mail import Message
+from datetime import datetime, timedelta
+import json
+from flask import current_app
+
+# Store verification codes temporarily (in production, use Redis or database)
+verification_codes = {}
+# Store email change requests
+email_change_requests = {}
 
 @student_bp.route('/profile')
 @login_required
 def profile():
     device = is_device_trusted(current_user.id)
+    
+    # Fetch courses and year levels from database
+    courses = Course.query.all()
+    year_levels = YearLevel.query.all()
+    
+    # Check if user has pending deletion request
+    has_pending_deletion = DeletionRequest.query.filter_by(
+        student_id=current_user.id,
+        status='pending'
+    ).first() is not None
 
-    # In your profile route, add these variables:
     return render_template('profile.html',
         student=current_user,
         device_trusted=bool(device),
-        has_fingerprint=False,  # Add your fingerprint check
-        voting_history=[],  # Add your voting history query
-        has_voted_current=False  # Add your current vote check
+        has_fingerprint=False,
+        voting_history=[],
+        has_voted_current=False,
+        courses=courses,
+        year_levels=year_levels,
+        has_pending_deletion=has_pending_deletion
     )
 
-@student_bp.route('/profile/edit', methods=['GET', 'POST'])
+@student_bp.route('/profile/edit', methods=['POST'])
 @login_required
 def edit_profile():
-    student = current_user
-
-    if request.method == 'POST':
-        # Example: update student info
-        student.first_name = request.form.get('first_name')
-        student.last_name = request.form.get('last_name')
-        student.email = request.form.get('email')
+    try:
+        student = current_user
+        
+        # Get form data
+        new_username = request.form.get('username')
+        new_email = request.form.get('email')
+        course_id = request.form.get('course_id')
+        year_level_id = request.form.get('year_level_id')
+        old_email_verified = request.form.get('old_email_verified')
+        new_email_verified = request.form.get('new_email_verified')
+        
+        changes = {}
+        
+        # Update username if changed
+        if new_username and new_username != student.username:
+            # Check if username is already taken
+            from student.models import Student
+            existing_student = Student.query.filter_by(username=new_username).first()
+            if existing_student and existing_student.id != student.id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Username already taken'
+                }), 400
+            
+            student.username = new_username
+            changes['username'] = new_username
+        
+        # Check if email is being changed
+        if new_email and new_email != student.email:
+            # Verify both old and new email verifications
+            if old_email_verified != 'true' or new_email_verified != 'true':
+                return jsonify({
+                    'success': False,
+                    'error': 'Email change requires verification of both old and new emails'
+                }), 400
+            
+            # Check if new email is already taken
+            from student.models import Student
+            existing_student = Student.query.filter_by(email=new_email).first()
+            if existing_student and existing_student.id != student.id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Email already in use'
+                }), 400
+            
+            # Update email
+            old_email = student.email
+            student.email = new_email
+            changes['email'] = {'old': old_email, 'new': new_email}
+            
+            # Send notification to old email
+            send_email_change_notification(student, old_email, new_email)
+        
+        # Update course if changed
+        if course_id and str(student.course_id) != course_id:
+            from admin.models import Course
+            course = Course.query.get(course_id)
+            if course:
+                student.course_id = int(course_id)
+                student.course = course.course_name
+                changes['course'] = course.course_name
+        
+        # Update year level if changed
+        if year_level_id and str(student.year_level_id) != year_level_id:
+            from admin.models import YearLevel
+            year = YearLevel.query.get(year_level_id)
+            if year:
+                student.year_level_id = int(year_level_id)
+                changes['year'] = year.year_name
+        
         db.session.commit()
-        flash("Profile updated successfully!", "success")
-        return redirect(url_for('student.profile'))
+        
+        # Get updated values for response
+        new_course = student.course_rel.course_name if student.course_rel else student.course
+        new_year = student.year_level.year_name if student.year_level else 'Not set'
+        
+        return jsonify({
+            'success': True,
+            'message': 'Profile updated successfully',
+            'changes': changes,
+            'new_username': student.username,
+            'new_email': student.email,
+            'new_course': new_course,
+            'new_year': new_year
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-    return render_template('edit_profile.html', student=student)
+@student_bp.route('/send-email-change-verification', methods=['POST'])
+@login_required
+def send_email_change_verification():
+    data = request.get_json()
+    old_email = data.get('old_email')
+    new_email = data.get('new_email')
+    
+    if not old_email or not new_email:
+        return jsonify({'error': 'Emails are required'}), 400
+    
+    # Generate unique request ID
+    request_id = str(uuid.uuid4())
+    
+    # Store request
+    email_change_requests[request_id] = {
+        'student_id': current_user.id,
+        'old_email': old_email,
+        'new_email': new_email,
+        'status': 'pending',
+        'created_at': datetime.now(),
+        'expiry': datetime.now() + timedelta(minutes=15)
+    }
+    
+    try:
+        # Mask email for display
+        masked_new_email = mask_email(new_email)
+        
+        # Generate confirm and reject URLs
+        confirm_url = url_for('student.confirm_email_change', 
+                            request_id=request_id, 
+                            action='confirm', 
+                            _external=True)
+        reject_url = url_for('student.confirm_email_change', 
+                           request_id=request_id, 
+                           action='reject', 
+                           _external=True)
+        
+        # Render the email template
+        email_html = render_template('verify_email_change.html',
+                                   masked_email=masked_new_email,
+                                   confirm_url=confirm_url,
+                                   reject_url=reject_url)
+        
+        # Send verification email to OLD email
+        msg = Message(
+            'Confirm Email Change Request',
+            recipients=[old_email]
+        )
+        msg.html = email_html
+        
+        mail.send(msg)
+        
+        return jsonify({
+            'success': True,
+            'request_id': request_id
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+@student_bp.route('/confirm-email-change/<request_id>/<action>')
+def confirm_email_change(request_id, action):
+    if request_id not in email_change_requests:
+        return "Invalid or expired request", 404
+    
+    request_data = email_change_requests[request_id]
+    
+    if datetime.now() > request_data['expiry']:
+        return "This request has expired", 400
+    
+    if action == 'confirm':
+        request_data['status'] = 'confirmed'
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">✅</div>
+                <h2>Email Change Confirmed!</h2>
+                <p>You can now return to the application and enter the OTP code.</p>
+                <p>This window can be closed.</p>
+            </div>
+        </body>
+        </html>
+        """
+    elif action == 'reject':
+        request_data['status'] = 'rejected'
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">❌</div>
+                <h2>Email Change Rejected</h2>
+                <p>The email change request has been cancelled.</p>
+                <p>This window can be closed.</p>
+            </div>
+        </body>
+        </html>
+        """
+    
+    return "Invalid action", 400
+
+@student_bp.route('/email-change-status/<request_id>')
+@login_required
+def email_change_status(request_id):
+    if request_id not in email_change_requests:
+        return jsonify({'status': 'unknown'})
+    
+    request_data = email_change_requests[request_id]
+    
+    # Clean up expired requests
+    if datetime.now() > request_data['expiry']:
+        return jsonify({'status': 'expired'})
+    
+    return jsonify({'status': request_data['status']})
+
+@student_bp.route('/send-otp-to-new-email', methods=['POST'])
+@login_required
+def send_otp_to_new_email():
+    data = request.get_json()
+    email = data.get('email')
+    request_id = data.get('request_id')
+    
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+    
+    # Generate 6-digit OTP
+    otp = ''.join(random.choices(string.digits, k=6))
+    
+    # Store OTP
+    session['new_email_otp'] = otp
+    session['new_email_otp_expiry'] = (datetime.now() + timedelta(minutes=10)).timestamp()
+    session['pending_new_email'] = email
+    session['change_request_id'] = request_id
+    
+    try:
+        msg = Message(
+            'Verify Your New Email Address',
+            recipients=[email]
+        )
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif; text-align: center; padding: 30px;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <p>Your verification code for your new email address is:</p>
+            <h1 style="font-size: 36px; letter-spacing: 5px; color: #2563eb;">{otp}</h1>
+            <p>This code will expire in 10 minutes.</p>
+        </div>
+        """
+        
+        mail.send(msg)
+        
+        # In development, return code for testing
+        if current_app.config.get('DEBUG'):
+            return jsonify({'success': True, 'code': otp})
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@student_bp.route('/send-verification-code', methods=['POST'])
+@login_required
+def send_verification_code():
+    data = request.get_json()
+    email = data.get('email')
+    verification_type = data.get('type', 'new')  # 'old' or 'new'
+    
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+    
+    # Generate 6-digit code
+    code = ''.join(random.choices(string.digits, k=6))
+    
+    # Store code with expiry (10 minutes)
+    verification_codes[f"{email}_{verification_type}"] = {
+        'code': code,
+        'expiry': datetime.now() + timedelta(minutes=10),
+        'user_id': current_user.id,
+        'type': verification_type
+    }
+    
+    try:
+        # Customize email based on verification type
+        if verification_type == 'old':
+            subject = "Verify Your Identity - Email Change Request"
+            email_body = f"""
+            <div style="font-family: Arial, sans-serif; text-align: center;">
+                <h2>Cebu Technological University Moalboal Campus</h2>
+                <p>Hello <strong>{current_user.first_name}</strong>,</p>
+                <p>We received a request to change your email address.</p>
+                <p>Your <strong>verification code</strong> is:</p>
+                <h1 style="font-size: 32px; letter-spacing: 5px;">{code}</h1>
+                <p>This code will expire in 10 minutes.</p>
+                <p>If you did not request this change, please ignore this email or contact support.</p>
+            </div>
+            """
+        else:
+            subject = "Verify Your New Email Address"
+            email_body = f"""
+            <div style="font-family: Arial, sans-serif; text-align: center;">
+                <h2>Cebu Technological University Moalboal Campus</h2>
+                <p>Hello <strong>{current_user.first_name}</strong>,</p>
+                <p>Please verify your new email address.</p>
+                <p>Your <strong>verification code</strong> is:</p>
+                <h1 style="font-size: 32px; letter-spacing: 5px;">{code}</h1>
+                <p>This code will expire in 10 minutes.</p>
+            </div>
+            """
+        
+        msg = Message(
+            subject=subject,
+            recipients=[email]
+        )
+        msg.html = email_body
+        
+        mail.send(msg)
+        
+        # In development, return code for testing
+        if current_app.config.get('DEBUG'):
+            return jsonify({'success': True, 'code': code})
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def send_email_change_notification(student, old_email, new_email):
+    """Send notification to old email about email change"""
+    try:
+        msg = Message(
+            'Your Email Has Been Changed',
+            recipients=[old_email]
+        )
+        msg.body = f"""
+        Your email address for your voting account has been changed.
+        
+        Old email: {old_email}
+        New email: {new_email}
+        
+        If you did not make this change, please contact support immediately.
+        """
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <p>Hello <strong>{student.first_name}</strong>,</p>
+            <p>Your email address for your voting account has been changed.</p>
+            <p><strong>Old email:</strong> {old_email}<br>
+            <strong>New email:</strong> {new_email}</p>
+            <p>If you did not make this change, please contact support immediately.</p>
+        </div>
+        """
+        
+        mail.send(msg)
+        print(f"Email change notification sent to {old_email}")
+    except Exception as e:
+        print(f"Failed to send email change notification: {e}")
+
+def mask_email(email):
+    if not email or '@' not in email:
+        return email
+    name, domain = email.split('@')
+    if len(name) > 2:
+        return name[0] + '*' * (len(name) - 2) + name[-1] + '@' + domain
+    elif len(name) == 2:
+        return name[0] + '*@' + domain
+    return email
+
+
+def send_deletion_request_notification(student, reason):
+    """Send notification to admin about deletion request"""
+    try:
+        # Get admin emails
+        from admin.models import Admin
+        admins = Admin.query.filter_by(is_active=True).all()
+        admin_emails = [admin.email for admin in admins]
+        
+        if admin_emails:
+            msg = Message(
+                'New Account Deletion Request',
+                recipients=admin_emails
+            )
+            msg.html = f"""
+            <div style="font-family: Arial, sans-serif;">
+                <h2>New Deletion Request</h2>
+                <p><strong>Student:</strong> {student.first_name} {student.last_name}</p>
+                <p><strong>ID Number:</strong> {student.id_number}</p>
+                <p><strong>Email:</strong> {student.email}</p>
+                <p><strong>Reason:</strong> {reason}</p>
+                <p><strong>Request Date:</strong> {datetime.now().strftime('%B %d, %Y %I:%M %p')}</p>
+                <p>Please review this request in the admin panel.</p>
+            </div>
+            """
+            mail.send(msg)
+    except Exception as e:
+        print(f"Failed to send admin notification: {e}")
+
+
+
+def send_deletion_confirmation_email(student, reason):
+    """Send confirmation email to student about deletion request"""
+    try:
+        msg = Message(
+            'Account Deletion Request Received',
+            recipients=[student.email]
+        )
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1f2937;">Account Deletion Request</h2>
+            <p>Hello <strong>{student.first_name}</strong>,</p>
+            <p>We have received your request to delete your account. Here are the details:</p>
+            
+            <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Reason provided:</strong></p>
+                <p style="font-style: italic;">{reason[:200]}{'...' if len(reason) > 200 else ''}</p>
+                <p><small>Total characters: {len(reason)}</small></p>
+            </div>
+            
+            <p><strong>What happens next?</strong></p>
+            <ul>
+                <li>Your request has been submitted to our administrators for review.</li>
+                <li>You will receive another email once your request has been processed.</li>
+                <li>If approved, your account will be deactivated and data will be scheduled for deletion.</li>
+            </ul>
+            
+            <p style="color: #6b7280; font-size: 0.9rem; margin-top: 30px;">
+                If you did not request this deletion, please contact support immediately.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+            
+            <p style="color: #9ca3af; font-size: 0.8rem; text-align: center;">
+                Cebu Technological University Moalboal Campus<br>
+                This is an automated message, please do not reply.
+            </p>
+        </div>
+        """
+        
+        mail.send(msg)
+        print(f"Deletion confirmation email sent to {student.email}")
+        
+    except Exception as e:
+        print(f"Failed to send deletion confirmation email: {e}")
+        # Don't raise the exception - we don't want to block the request if email fails
+
+
+@student_bp.route('/request-deletion', methods=['POST'])
+@login_required
+def request_deletion():
+    try:
+        data = request.get_json()
+        reason = data.get('reason', '').strip()
+        
+        if not reason:
+            return jsonify({'error': 'Please provide a reason for deletion'}), 400
+        
+        if len(reason) > 5000:
+            return jsonify({'error': f'Maximum 5000 characters allowed (you provided {len(reason)})'}), 400
+        
+        if len(reason) < 10:
+            return jsonify({'error': 'Please provide at least 10 characters'}), 400
+        
+        # Check if there's already a pending request
+        existing_request = DeletionRequest.query.filter_by(
+            student_id=current_user.id,
+            status='pending'
+        ).first()
+        
+        if existing_request:
+            return jsonify({'error': 'You already have a pending deletion request'}), 400
+        
+        # Create new deletion request
+        deletion_request = DeletionRequest(
+            student_id=current_user.id,
+            reason=reason,
+            status='pending'
+        )
+        
+        db.session.add(deletion_request)
+        db.session.commit()
+        
+        # Send confirmation email to student
+        send_deletion_confirmation_email(current_user, reason)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Deletion request submitted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in request_deletion: {str(e)}")
+        return jsonify({'error': 'An internal error occurred'}), 500
 
 
 

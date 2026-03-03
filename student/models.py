@@ -194,6 +194,24 @@ class Vote(db.Model):
             'recorded_full': self.recorded_timestamp_manila.strftime("%Y-%m-%d %I:%M:%S %p") if self.recorded_timestamp_manila else None,
             'created_full': self.created_at_manila.strftime("%Y-%m-%d %I:%M:%S %p") if self.created_at_manila else None
         }
+    
+
+    def get_secret_nonce(self):
+        """Extract the secret nonce from finder_hash"""
+        if not self.finder_hash:
+            return 'N/A'
+        
+        try:
+            # Try to parse as JSON first
+            finder_data = json.loads(self.finder_hash)
+            # Check if it's the new format with 'nonce' field
+            if isinstance(finder_data, dict) and 'nonce' in finder_data:
+                return finder_data['nonce']
+            # If it's a list or something else, return as is
+            return str(finder_data)
+        except:
+            # If it's not JSON, return the raw string (might be the old format)
+            return self.finder_hash
 
 
 class TrustedDevice(db.Model):
@@ -210,3 +228,24 @@ class TrustedDevice(db.Model):
     verification_sent_at = db.Column(db.DateTime, nullable=True)
     
     student = db.relationship('Student', backref='trusted_devices')
+
+
+
+
+class DeletionRequest(db.Model):
+    __tablename__ = 'deletion_requests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    request_date = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.Enum('pending', 'approved', 'rejected', 'cancelled'), default='pending')
+    admin_notes = db.Column(db.Text)
+    processed_date = db.Column(db.DateTime)
+    processed_by = db.Column(db.Integer, db.ForeignKey('admins.id', ondelete='SET NULL'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref=db.backref('deletion_requests', lazy=True))
+    admin = db.relationship('Admin', foreign_keys=[processed_by])

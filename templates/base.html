@@ -44,7 +44,7 @@
                     <h1 class="logo-text">CTU - Moalboal</h1>
                 </div>
                 
-                <!-- Hamburger Menu Button (moved from dashboard) -->
+                <!-- Hamburger Menu Button -->
                 <div class="mobile-fab">
                     <button class="fab-btn" onclick="toggleFabMenu()">
                         <i class="fa fa-bars"></i>
@@ -52,15 +52,16 @@
                 </div>
             </div>
             
-            <!-- Floating Menu (initially hidden) - EXACTLY as in dashboard -->
+            <!-- Floating Menu - History replaced with Receipt -->
             <div class="fab-menu" id="fabMenu">
                 <button type="button" class="fab-item">
                     <i class="fa fa-list"></i> Activity Log
                 </button>
 
-                <button type="button" class="fab-item">
-                    <i class="fa fa-history"></i> History
-                </button>
+                <!-- REPLACED: History button with Receipt button -->
+                <a href="{{ url_for('student.receipt') }}" class="fab-item">
+                    <i class="fa fa-receipt"></i> Receipt
+                </a>
 
                 <button type="button" class="fab-item">
                     <i class="fa fa-cog"></i> Settings
@@ -85,18 +86,10 @@
             {% block content %}{% endblock %}
         </main>
 
-        <!-- Footer Navigation -->
+        <!-- Footer Navigation - REORDERED: PROFILE, CANDIDATES, HOME, VOTE, RESULTS -->
         <footer class="footer-nav">
             <nav class="nav-menu">
-                <!-- HOME -->
-                <a href="{{ url_for('student.dashboard') }}" 
-                   class="nav-item footer-menu-item {% if request.endpoint == 'student.dashboard' %}active{% endif %}" 
-                   data-item="home">
-                    <span class="nav-icon">🏠</span>
-                    <span class="nav-label">Home</span>
-                </a>
-                
-                <!-- PROFILE -->
+                <!-- PROFILE (1st) -->
                 <a href="{{ url_for('student.profile') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.profile' %}active{% endif %}" 
                    data-item="profile">
@@ -104,15 +97,7 @@
                     <span class="nav-label">Profile</span>
                 </a>
                 
-                <!-- VOTE -->
-                <a href="{{ url_for('student.available_elections') }}" 
-                   class="nav-item footer-menu-item {% if request.endpoint == 'student.available_elections' %}active{% endif %}" 
-                   data-item="vote">
-                    <span class="nav-icon">🗳️</span>
-                    <span class="nav-label">Vote</span>
-                </a>
-                
-                <!-- CANDIDATES -->
+                <!-- CANDIDATES (2nd) -->
                 <a href="{{ url_for('student.candidates') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.candidates' %}active{% endif %}" 
                    data-item="candidates">
@@ -120,20 +105,28 @@
                     <span class="nav-label">Candidates</span>
                 </a>
                 
-                <!-- RESULTS -->
+                <!-- HOME (3rd - Center) -->
+                <a href="{{ url_for('student.dashboard') }}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.dashboard' %}active{% endif %}" 
+                   data-item="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </a>
+                
+                <!-- VOTE (4th) -->
+                <a href="{{ url_for('student.available_elections') }}" 
+                   class="nav-item footer-menu-item {% if request.endpoint == 'student.available_elections' %}active{% endif %}" 
+                   data-item="vote">
+                    <span class="nav-icon">🗳️</span>
+                    <span class="nav-label">Vote</span>
+                </a>
+                
+                <!-- RESULTS (5th) -->
                 <a href="{{ url_for('student.results') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.results' %}active{% endif %}" 
                    data-item="results">
                     <span class="nav-icon">📊</span>
                     <span class="nav-label">Results</span>
-                </a>
-                
-                <!-- RECEIPT -->
-                <a href="{{ url_for('student.receipt') }}" 
-                   class="nav-item footer-menu-item {% if request.endpoint == 'student.receipt' %}active{% endif %}" 
-                   data-item="receipt">
-                    <span class="nav-icon">🧾</span>
-                    <span class="nav-label">Receipt</span>
                 </a>
             </nav>
         </footer>
@@ -212,7 +205,7 @@
     });
     </script>
 
-    <!-- JavaScript for Hamburger Menu (EXACTLY as in dashboard) -->
+    <!-- JavaScript for Hamburger Menu -->
     <script>
         // Toggle floating menu
         function toggleFabMenu() {

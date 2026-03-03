@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+{% set active_page = 'receipt' %}
+
+{% block title %}Voting Receipt{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/receipt.css') }}">
+<!-- Add jsPDF library HERE - this was missing! -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Link to external JavaScript -->
+<script src="{{ url_for('student.static', filename='js/receipt.js') }}" defer></script>
+<style>
+    /* Mobile-First Approach */
+    .receipt-container {
+        max-width: 600px;
+        margin: 10px auto;
+        padding: 12px;
+    }
+    
+    /* No Receipt State */
+    .no-receipt-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+    }
+    
+    .no-receipt-icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+    
+    .no-receipt-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 8px;
+    }
+    
+    .no-receipt-text {
+        color: #64748b;
+        margin-bottom: 25px;
+        font-size: 0.95rem;
+        padding: 0 10px;
+    }
+    
+    /* Receipt Card */
+    .receipt-card {
+        background: white;
+        border-radius: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .receipt-card.expanded {
+        margin-bottom: 15px;
+    }
+    
+    .receipt-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, #4f46e5, #818cf8);
+    }
+    
+    /* Receipt Header (Clickable) */
+    .receipt-header {
+        padding: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: white;
+        transition: background 0.2s ease;
+    }
+    
+    .receipt-header:active {
+        background: #f8fafc;
+    }
+    
+    .receipt-header-icon {
+        width: 44px;
+        height: 44px;
+        background: #eef2ff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #4f46e5;
+        flex-shrink: 0;
+    }
+    
+    .receipt-header-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .receipt-header-title {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 4px;
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .receipt-header-date {
+        font-size: 0.75rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .receipt-header-date i {
+        font-size: 0.7rem;
+    }
+    
+    .receipt-header-expand {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        transition: transform 0.3s ease;
+        flex-shrink: 0;
+    }
+    
+    .receipt-header-expand i {
+        font-size: 0.9rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .receipt-card.expanded .receipt-header-expand i {
+        transform: rotate(180deg);
+    }
+    
+    /* Receipt Content (Expandable) */
+    .receipt-content {
+        display: none;
+        background: white;
+    }
+    
+    .receipt-card.expanded .receipt-content {
+        display: block;
+    }
+    
+    .receipt-content-inner {
+        padding: 0 16px 20px 16px;
+    }
+    
+    .secret-code-container {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 20px;
+        border: 2px dashed #4f46e5;
+        text-align: center;
+    }
+    
+    .secret-code-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+    
+    .secret-code {
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #4f46e5;
+        background: white;
+        padding: 8px 12px;
+        border-radius: 10px;
+        display: inline-block;
+        border: 1px solid #e2e8f0;
+        letter-spacing: 1px;
+        word-break: break-all;
+    }
+    
+    .warning-box {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-size: 0.85rem;
+    }
+    
+    .receipt-details {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 0.9rem;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        color: #64748b;
+        font-weight: 500;
+    }
+    
+    .detail-value {
+        font-weight: 600;
+        color: #0f172a;
+        text-align: right;
+        max-width: 60%;
+        word-break: break-word;
+    }
+    
+    /* Instructions Box */
+    .instructions-box {
+        background: #eef2ff;
+        border-radius: 16px;
+        padding: 16px;
+        margin: 20px 0;
+    }
+    
+    .instructions-title {
+        font-size: 1rem;
+        margin-bottom: 10px;
+        color: #4f46e5;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .instructions-list {
+        margin-left: 20px;
+        color: #334155;
+        font-size: 0.85rem;
+    }
+    
+    .instructions-list li {
+        margin-bottom: 6px;
+    }
+    
+    /* Action Buttons - Stack on mobile */
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .btn {
+        padding: 14px;
+        border-radius: 40px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .btn i {
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        background: #4f46e5;
+        color: white;
+    }
+    
+    .btn-primary:active {
+        background: #4338ca;
+        transform: scale(0.98);
+    }
+    
+    .btn-download {
+        background: #0f172a;
+        color: white;
+        border: none;
+    }
+    
+    .btn-download:active {
+        background: #1e293b;
+        transform: scale(0.98);
+    }
+    
+    /* Receipts Counter */
+    .receipts-counter {
+        text-align: center;
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-bottom: 12px;
+        padding: 8px;
+        background: #f8fafc;
+        border-radius: 40px;
+    }
+    
+    /* Disclaimer */
+    .disclaimer {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.65rem;
+        margin-top: 15px;
+        padding: 0 10px;
+    }
+    
+    /* Desktop Adjustments */
+    @media (min-width: 768px) {
+        .receipt-container {
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .receipt-card {
+            border-radius: 24px;
+        }
+        
+        .action-buttons {
+            flex-direction: row;
+        }
+        
+        .btn {
+            width: auto;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .btn-download:hover {
+            background: #1e293b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .receipt-header:hover {
+            background: #f8fafc;
+        }
+        
+        .secret-code {
+            font-size: 1.5rem;
+            padding: 10px 15px;
+        }
+    }
+    
+    /* Print styles */
+    @media print {
+        .header, .footer-nav, .fab-menu, .mobile-fab, .action-buttons,
+        .receipt-header, .receipts-counter, .disclaimer {
+            display: none !important;
+        }
+        
+        .receipt-card {
+            box-shadow: none;
+            border: 1px solid #000;
+            page-break-inside: avoid;
+            margin: 0;
+            border-radius: 0;
+        }
+        
+        .receipt-content {
+            display: block !important;
+        }
+        
+        .secret-code {
+            border: 2px solid #000;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receipt-container">
+    {% if votes and votes|length > 0 %}
+        <!-- Receipts Counter -->
+        <div class="receipts-counter">
+            <i class="fa fa-receipt"></i> 
+            You have {{ votes|length }} receipt{% if votes|length > 1 %}s{% endif %}
+        </div>
+        
+        <!-- Multiple Receipts -->
+        {% for vote_item in votes %}
+        <div class="receipt-card" id="receipt-{{ vote_item.vote.id }}">
+            <!-- Clickable Header -->
+            <div class="receipt-header" onclick="toggleReceipt({{ vote_item.vote.id }})">
+                <div class="receipt-header-icon">
+                    🧾
+                </div>
+                <div class="receipt-header-info">
+                    <div class="receipt-header-title">{{ vote_item.election.title }}</div>
+                    <div class="receipt-header-date">
+                        <i class="fa fa-calendar"></i> 
+                        {{ vote_item.vote.created_at_manila.strftime('%B %d, %Y') if vote_item.vote.created_at_manila else 'Date not available' }}
+                    </div>
+                </div>
+                <div class="receipt-header-expand">
+                    <i class="fa fa-chevron-down"></i>
+                </div>
+            </div>
+            
+            <!-- Expandable Content -->
+            <div class="receipt-content">
+                <div class="receipt-content-inner">
+                    <!-- SECRET CODE -->
+                    <div class="secret-code-container">
+                        <div class="secret-code-label">Your Secret Verification Code</div>
+                        <div class="secret-code">{{ vote_item.secret_nonce }}</div>
+                        <p style="color: #475569; font-size: 0.75rem; margin-top: 8px;">
+                            <i class="fa fa-shield-alt"></i> Keep this code private
+                        </p>
+                    </div>
+                    
+                    <div class="warning-box">
+                        <strong>⚠️ IMPORTANT:</strong> This code is your proof of voting. Save it now! 
+                        It cannot be recovered if lost.
+                    </div>
+                    
+                    <div class="receipt-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Election:</span>
+                            <span class="detail-value">{{ vote_item.election.title }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Date:</span>
+                            <span class="detail-value">
+                                {{ vote_item.vote.created_at_manila.strftime('%B %d, %Y') if vote_item.vote.created_at_manila else 'N/A' }}
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Time:</span>
+                            <span class="detail-value">
+                                {{ vote_item.vote.created_at_manila.strftime('%I:%M %p') if vote_item.vote.created_at_manila else 'N/A' }}
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Transaction ID:</span>
+                            <span class="detail-value">#{{ vote_item.vote.id }}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value" style="color: #059669;">✓ Recorded</span>
+                        </div>
+                    </div>
+                    
+                    <!-- How to Verify Instructions (THIS STAYS IN WEB PAGE) -->
+                    <div class="instructions-box">
+                        <h3 class="instructions-title">
+                            <i class="fa fa-search"></i> How to Verify Your Vote
+                        </h3>
+                        <ol class="instructions-list">
+                            <li>Go to the <strong>Results</strong> page</li>
+                            <li>Find the <strong>"Verify Your Vote"</strong> section</li>
+                            <li>Enter your secret code: <strong>{{ vote_item.secret_nonce }}</strong></li>
+                            <li>Click Verify and see your vote confirmed!</li>
+                        </ol>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button onclick="downloadReceiptAsPDF({{ vote_item.vote.id }})" class="btn btn-download">
+                            <i class="fa fa-receipt"></i> Download Receipt
+                        </button>
+                        <a href="{{ url_for('student.results_detail', election_id=vote_item.vote.election_id) }}" class="btn btn-primary">
+                            <i class="fa fa-check-circle"></i> Verify Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+    {% else %}
+        <!-- No Receipts State -->
+        <div class="no-receipt-card">
+            <div class="no-receipt-icon">🧾</div>
+            <h1 class="no-receipt-title">No Receipts Available</h1>
+            <p class="no-receipt-text">You haven't cast any votes yet. Vote in an election to see your receipt here.</p>
+            <a href="{{ url_for('student.available_elections') }}" class="btn btn-primary" style="display: inline-block; padding: 12px 30px; text-decoration: none; width: auto;">
+                <i class="fa fa-vote-yea"></i> View Elections
+            </a>
+        </div>
+    {% endif %}
+    
+    <!-- Disclaimer -->
+    <p class="disclaimer">
+        Receipts are your proof of voting. Secret codes are encrypted and cannot be retrieved if lost.
+    </p>
+</div>
+{% endblock %}

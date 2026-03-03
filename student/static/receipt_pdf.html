@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voting Receipt</title>
+    <style>
+        /* Thermal Receipt Style */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+        }
+        
+        /* Receipt Container - Thermal Paper Style */
+        .receipt-paper {
+            max-width: 300px;
+            width: 100%;
+            background: white;
+            padding: 20px 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            font-family: 'Courier New', monospace;
+            color: #000;
+        }
+        
+        /* Thermal Paper Perforation Effect */
+        .receipt-paper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: repeating-linear-gradient(
+                90deg,
+                #ccc,
+                #ccc 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        
+        .receipt-paper::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: repeating-linear-gradient(
+                90deg,
+                #ccc,
+                #ccc 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        
+        /* Header */
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 10px;
+        }
+        
+        .school-name {
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .receipt-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 5px 0;
+            letter-spacing: 2px;
+        }
+        
+        .receipt-subtitle {
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        /* Election Info */
+        .election-info {
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 10px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+        }
+        
+        .info-value {
+            font-weight: normal;
+        }
+        
+        /* Secret Code Box - Like Store Receipt Barcode Area */
+        .secret-box {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f8f8;
+            border: 2px solid #000;
+            text-align: center;
+            border-radius: 0;
+        }
+        
+        .secret-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .secret-code {
+            font-size: 24px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+            margin: 5px 0;
+            word-break: break-all;
+        }
+        
+        .secret-hint {
+            font-size: 7px;
+            color: #666;
+        }
+        
+        /* Items List - Like Receipt Items */
+        .items-section {
+            margin: 15px 0;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 10px 0;
+        }
+        
+        .items-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 4px;
+        }
+        
+        .item-name {
+            max-width: 180px;
+        }
+        
+        .item-value {
+            font-weight: bold;
+        }
+        
+        /* Divider */
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+        }
+        
+        /* Total Line */
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        /* Verification Instructions */
+        .verify-section {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f8f8;
+            font-size: 9px;
+            border: 1px solid #000;
+        }
+        
+        .verify-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .verify-step {
+            margin-bottom: 3px;
+        }
+        
+        /* Footer */
+        .receipt-footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 8px;
+            border-top: 1px dashed #000;
+            padding-top: 10px;
+        }
+        
+        .transaction-id {
+            font-size: 9px;
+            margin-bottom: 5px;
+        }
+        
+        .timestamp {
+            font-size: 8px;
+            color: #666;
+        }
+        
+        .thank-you {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 8px 0;
+            text-transform: uppercase;
+        }
+        
+        /* Warning */
+        .warning {
+            font-size: 7px;
+            color: #ff0000;
+            text-align: center;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-paper" id="receipt-content">
+        <!-- Header -->
+        <div class="receipt-header">
+            <div class="school-name">CTU - MOALBOAL</div>
+            <div class="receipt-title">VOTING RECEIPT</div>
+            <div class="receipt-subtitle">STUDENT GOVERNMENT ELECTIONS</div>
+        </div>
+        
+        <!-- Election Info -->
+        <div class="election-info">
+            <div class="info-row">
+                <span class="info-label">ELECTION:</span>
+                <span class="info-value" id="election-title"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">DATE:</span>
+                <span class="info-value" id="election-date"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">TIME:</span>
+                <span class="info-value" id="election-time"></span>
+            </div>
+        </div>
+        
+        <!-- Secret Code - Like Barcode Area -->
+        <div class="secret-box">
+            <div class="secret-label">VERIFICATION CODE</div>
+            <div class="secret-code" id="secret-code"></div>
+            <div class="secret-hint">* KEEP THIS CODE PRIVATE *</div>
+        </div>
+        
+        <!-- Items (Vote Details) -->
+        <div class="items-section">
+            <div class="items-title">VOTE DETAILS</div>
+            <div id="vote-details"></div>
+        </div>
+        
+        <!-- Status -->
+        <div class="total-row">
+            <span>STATUS:</span>
+            <span style="color: #059669;">✓ RECORDED</span>
+        </div>
+        
+        <!-- Verification Instructions -->
+        <div class="verify-section">
+            <div class="verify-title">🔍 HOW TO VERIFY YOUR VOTE</div>
+            <div class="verify-step">1. Go to RESULTS page</div>
+            <div class="verify-step">2. Enter your secret code</div>
+            <div class="verify-step">3. Click VERIFY</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="receipt-footer">
+            <div class="transaction-id" id="transaction-id"></div>
+            <div class="timestamp" id="generated-timestamp"></div>
+            <div class="thank-you">THANK YOU FOR VOTING!</div>
+        </div>
+        
+        <!-- Warning -->
+        <div class="warning">
+            ⚠️ This code cannot be recovered if lost
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Populate receipt data
+        document.getElementById('election-title').textContent = urlParams.get('title') || 'N/A';
+        document.getElementById('secret-code').textContent = urlParams.get('code') || 'N/A';
+        document.getElementById('transaction-id').textContent = 'TXN: #' + (urlParams.get('id') || 'N/A');
+        
+        // Format date and time
+        const dateStr = urlParams.get('date') || new Date().toLocaleDateString();
+        const timeStr = urlParams.get('time') || new Date().toLocaleTimeString();
+        document.getElementById('election-date').textContent = dateStr;
+        document.getElementById('election-time').textContent = timeStr;
+        
+        // Generated timestamp
+        document.getElementById('generated-timestamp').textContent = 
+            'Generated: ' + new Date().toLocaleString();
+        
+        // Parse and display vote details
+        const detailsStr = urlParams.get('details') || '';
+        const details = detailsStr.split('|');
+        const detailsContainer = document.getElementById('vote-details');
+        
+        details.forEach(detail => {
+            if (detail) {
+                const [label, value] = detail.split(':');
+                if (label && value) {
+                    const row = document.createElement('div');
+                    row.className = 'item-row';
+                    row.innerHTML = `
+                        <span class="item-name">${label.trim()}:</span>
+                        <span class="item-value">${value.trim()}</span>
+                    `;
+                    detailsContainer.appendChild(row);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
