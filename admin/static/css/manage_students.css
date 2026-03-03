@@ -432,3 +432,166 @@ body:not(.dark-mode) {
     from { opacity: 1; transform: translateY(0); }
     to { opacity: 0; transform: translateY(-10px); }
 }
+
+
+
+/* Page header with button */
+.page-header-with-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.header-left {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.header-right {
+    flex: 1;
+}
+
+.page-header-with-button .page-title {
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.request-deletion-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3);
+}
+
+.request-deletion-btn:hover {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(230, 126, 34, 0.4);
+    color: white;
+}
+
+.request-deletion-btn i {
+    font-size: 1.1rem;
+}
+
+/* Dark mode support */
+body.dark-mode .request-deletion-btn {
+    background: linear-gradient(135deg, #d35400, #a04000);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .request-deletion-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+}
+
+
+/* Page header with button - UPDATED for right alignment */
+.page-header-with-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.header-left {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.header-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end; /* This pushes the button to the right */
+}
+
+.page-header-with-button .page-title {
+    margin-bottom: 0;
+    text-align: left;
+}
+
+/* Request Deletion Button - Right side */
+.request-deletion-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3);
+    white-space: nowrap; /* Prevents button text from wrapping */
+}
+
+.request-deletion-btn:hover {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(230, 126, 34, 0.4);
+    color: white;
+}
+
+.request-deletion-btn i {
+    font-size: 1.1rem;
+}
+
+/* Dark mode support */
+body.dark-mode .request-deletion-btn {
+    background: linear-gradient(135deg, #d35400, #a04000);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .request-deletion-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .page-header-with-button {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .header-left,
+    .header-center,
+    .header-right {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .request-deletion-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

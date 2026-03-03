@@ -1364,6 +1364,132 @@ def delete_student(id):
     return jsonify({"success": True})
 
 
+from student.models import DeletionRequest
+# Add these routes to your admin routes file
+
+@admin_bp.route('/deletion-requests')
+def account_deletion_requests():
+    """Render the account deletion requests page"""
+    return render_template('account_deletion_requests.html')
+
+@admin_bp.route('/deletion-requests/data')
+def get_deletion_requests_data():
+    """Get paginated deletion requests data for AJAX"""
+    page = request.args.get('page', 1, type=int)
+    status = request.args.get('status', 'all')
+    search = request.args.get('search', '')
+    date = request.args.get('date', '')
+    
+    per_page = 10
+    query = DeletionRequest.query
+    
+    # Apply filters
+    if status != 'all':
+        query = query.filter(DeletionRequest.status == status)
+    
+    if search:
+        query = query.join(Student).filter(
+            db.or_(
+                Student.first_name.ilike(f'%{search}%'),
+                Student.last_name.ilike(f'%{search}%'),
+                Student.id_number.ilike(f'%{search}%')
+            )
+        )
+    
+    if date:
+        date_obj = datetime.strptime(date, '%Y-%m-%d')
+        query = query.filter(
+            db.func.date(DeletionRequest.request_date) == date_obj.date()
+        )
+    
+    # Order by most recent first
+    query = query.order_by(DeletionRequest.request_date.desc())
+    
+    # Paginate
+    paginated = query.paginate(page=page, per_page=per_page)
+    
+    # Format data for response
+    requests_data = []
+    for req in paginated.items:
+        requests_data.append({
+            'id': req.id,
+            'student_name': f"{req.student.first_name} {req.student.last_name}",
+            'student_id_number': req.student.id_number,
+            'reason': req.reason,
+            'request_date': req.request_date.isoformat(),
+            'status': req.status,
+            'processed_by_name': req.admin.username if req.admin else None
+        })
+    
+    return jsonify({
+        'requests': requests_data,
+        'total_pages': paginated.pages,
+        'current_page': page
+    })
+
+@admin_bp.route('/deletion-requests/stats')
+def get_deletion_requests_stats():
+    """Get statistics for deletion requests"""
+    total = DeletionRequest.query.count()
+    pending = DeletionRequest.query.filter_by(status='pending').count()
+    approved = DeletionRequest.query.filter_by(status='approved').count()
+    rejected = DeletionRequest.query.filter_by(status='rejected').count()
+    
+    return jsonify({
+        'total': total,
+        'pending': pending,
+        'approved': approved,
+        'rejected': rejected
+    })
+
+@admin_bp.route('/deletion-requests/<int:request_id>')
+def get_deletion_request(request_id):
+    """Get details of a specific deletion request"""
+    req = DeletionRequest.query.get_or_404(request_id)
+    
+    return jsonify({
+        'id': req.id,
+        'student_name': f"{req.student.first_name} {req.student.last_name}",
+        'student_id_number': req.student.id_number,
+        'reason': req.reason,
+        'request_date': req.request_date.isoformat(),
+        'status': req.status,
+        'admin_notes': req.admin_notes,
+        'processed_by_name': req.admin.username if req.admin else None,
+        'processed_date': req.processed_date.isoformat() if req.processed_date else None
+    })
+
+@admin_bp.route('/deletion-requests/<int:request_id>/process', methods=['POST'])
+def process_deletion_request(request_id):
+    """Approve or reject a deletion request"""
+    req = DeletionRequest.query.get_or_404(request_id)
+    data = request.get_json()
+    
+    action = data.get('action')
+    admin_notes = data.get('admin_notes', '')
+    
+    if action not in ['approve', 'reject']:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+    
+    # Update request
+    req.status = 'approved' if action == 'approve' else 'rejected'
+    req.admin_notes = admin_notes
+    req.processed_date = datetime.utcnow()
+    req.processed_by = current_admin.id  # Assuming you have current_admin
+    
+    # If approved, you might want to delete the student account
+    if action == 'approve':
+        # Option 1: Actually delete the student
+        # db.session.delete(req.student)
+        
+        # Option 2: Just mark as approved and handle separately
+        pass
+    
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+
 
 # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
@@ -2928,16 +3054,17 @@ def get_tally_results(election_id):
     })
 
 
-from xhtml2pdf import pisa
+# Add this import at the top of your admin/routes.py
+from weasyprint import HTML
 from io import BytesIO
 from flask import make_response
 
 @admin_bp.route('/results/<int:election_id>/export-pdf')
 @admin_required
 def export_results_pdf(election_id):
-    """Export election results as PDF using pure Python library"""
+    """Export election results as PDF using WeasyPrint"""
     
-    # ========== YOUR EXISTING DATA FETCHING CODE (KEEP EVERYTHING) ==========
+    # ========== YOUR EXISTING DATA FETCHING CODE (EXACTLY THE SAME) ==========
     election = Election.query.get_or_404(election_id)
     
     tz = pytz.timezone('Asia/Manila')
@@ -3028,7 +3155,7 @@ def export_results_pdf(election_id):
     
     # ========== RENDER THE HTML TEMPLATE ==========
     html = render_template(
-        'election_results_pdf.html',  # Use the template I gave you
+        'election_results_pdf.html',
         election=election,
         candidate_results=candidate_results,
         winners_by_position=winners_by_position,
@@ -3042,20 +3169,15 @@ def export_results_pdf(election_id):
         tally_timestamp=tally_timestamp
     )
     
-    # ========== GENERATE PDF USING XHTML2PDF ==========
+    # ========== GENERATE PDF USING WEASYPRINT ==========
     # Create a buffer for the PDF
     pdf_buffer = BytesIO()
     
-    # Convert HTML to PDF
-    pisa_status = pisa.CreatePDF(
-        html,                # The HTML to convert
-        dest=pdf_buffer,     # Buffer to write PDF to
-        encoding='UTF-8'
-    )
-    
-    # Check for errors
-    if pisa_status.err:
-        return jsonify({'error': 'PDF generation failed'}), 500
+    try:
+        # Convert HTML to PDF using WeasyPrint
+        HTML(string=html).write_pdf(pdf_buffer)
+    except Exception as e:
+        return jsonify({'error': f'PDF generation failed: {str(e)}'}), 500
     
     # Get the PDF from the buffer
     pdf_buffer.seek(0)

@@ -1076,3 +1076,187 @@ body {
 .logo-container {
     flex: 1;
 }
+
+
+
+/* Add to student/static/css/base.css */
+
+/* Fab Menu Section */
+.fab-menu-section {
+    padding: 12px 16px;
+}
+
+.fab-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 8px 0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.fab-menu-header:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.fab-menu-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #667eea;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fab-menu-header .header-left i {
+    font-size: 16px;
+}
+
+.fab-menu-header .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.current-sy-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.toggle-icon {
+    color: #667eea;
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+
+/* School Year Dropdown - Initially Hidden */
+.school-year-dropdown {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+    margin-top: 0;
+}
+
+.school-year-dropdown.show {
+    max-height: 300px; /* Adjust based on number of items */
+    opacity: 1;
+    margin-top: 12px;
+}
+
+/* School Year Options */
+.school-year-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    margin-bottom: 6px;
+}
+
+.school-year-option:last-child {
+    margin-bottom: 0;
+}
+
+.school-year-option i {
+    color: #667eea;
+    font-size: 14px;
+    width: 18px;
+}
+
+.school-year-option span {
+    flex: 1;
+}
+
+.school-year-option .current-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: none;
+}
+
+.school-year-option:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.school-year-option:hover i {
+    color: white;
+}
+
+.school-year-option:hover .current-badge {
+    background: white;
+    color: #667eea;
+}
+
+.school-year-option.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+.school-year-option.active i {
+    color: white;
+}
+
+.school-year-option.active .current-badge {
+    background: white;
+    color: #667eea;
+}
+
+/* Fab Menu Divider */
+.fab-menu-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+    margin: 8px 0;
+}
+
+/* Adjust fab menu width */
+.fab-menu {
+    min-width: 280px;
+    max-width: 320px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .fab-menu {
+        min-width: 260px;
+    }
+    
+    .school-year-option {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+    
+    .school-year-option .current-badge {
+        padding: 3px 6px;
+        font-size: 9px;
+    }
+    
+    .current-sy-badge {
+        padding: 3px 6px;
+        font-size: 10px;
+    }
+}

@@ -302,7 +302,17 @@ body.dark-mode .suggestion-item.highlight {
 {% block content %}
 <div class="manage-students-page">
 
-    <h1 class="page-title">Manage Students</h1>
+    <div class="page-header-with-button">
+        <div class="header-left">
+            <h1 class="page-title">Manage Students</h1>
+        </div>
+        <div class="header-center"></div>
+        <div class="header-right">
+            <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
+                <i class="fa-solid fa-clock"></i> Request Deletion
+            </a>
+        </div>
+    </div>
     <p class="page-description">View and manage registered students efficiently.</p>
 
     <!-- ================= FILTER BAR ================= -->

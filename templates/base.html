@@ -52,13 +52,41 @@
                 </div>
             </div>
             
-            <!-- Floating Menu - History replaced with Receipt -->
+            <!-- Floating Menu - WITH COLLAPSIBLE SCHOOL YEAR -->
             <div class="fab-menu" id="fabMenu">
-                <button type="button" class="fab-item">
-                    <i class="fa fa-list"></i> Activity Log
-                </button>
+                <!-- School Year Filter Section - Collapsible -->
+                {% if school_years %}
+                <div class="fab-menu-section school-year-section">
+                    <div class="fab-menu-header" onclick="toggleSchoolYearDropdown()">
+                        <div class="header-left">
+                            <i class="fa fa-calendar-alt"></i>
+                            <span>School Year</span>
+                        </div>
+                        <div class="header-right">
+                            {% if current_sy %}
+                            <span class="current-sy-badge">{{ current_sy }}</span>
+                            {% endif %}
+                            <i class="fa fa-chevron-down toggle-icon" id="schoolYearToggleIcon"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="school-year-dropdown" id="schoolYearDropdown">
+                        {% for sy in school_years %}
+                        <a href="{{ url_for(request.endpoint, school_year=sy) }}" 
+                           class="school-year-option {% if sy == current_sy %}active{% endif %}"
+                           onclick="event.preventDefault(); changeSchoolYear('{{ sy }}');">
+                            <i class="fa {% if sy == current_sy %}fa-check-circle{% else %}fa-circle{% endif %}"></i>
+                            <span>{{ sy }}</span>
+                            {% if sy == current_sy %}
+                            <span class="current-badge">Current</span>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="fab-menu-divider"></div>
+                {% endif %}
 
-                <!-- REPLACED: History button with Receipt button -->
                 <a href="{{ url_for('student.receipt') }}" class="fab-item">
                     <i class="fa fa-receipt"></i> Receipt
                 </a>
@@ -86,10 +114,9 @@
             {% block content %}{% endblock %}
         </main>
 
-        <!-- Footer Navigation - REORDERED: PROFILE, CANDIDATES, HOME, VOTE, RESULTS -->
+        <!-- Footer Navigation -->
         <footer class="footer-nav">
             <nav class="nav-menu">
-                <!-- PROFILE (1st) -->
                 <a href="{{ url_for('student.profile') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.profile' %}active{% endif %}" 
                    data-item="profile">
@@ -97,7 +124,6 @@
                     <span class="nav-label">Profile</span>
                 </a>
                 
-                <!-- CANDIDATES (2nd) -->
                 <a href="{{ url_for('student.candidates') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.candidates' %}active{% endif %}" 
                    data-item="candidates">
@@ -105,7 +131,6 @@
                     <span class="nav-label">Candidates</span>
                 </a>
                 
-                <!-- HOME (3rd - Center) -->
                 <a href="{{ url_for('student.dashboard') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.dashboard' %}active{% endif %}" 
                    data-item="home">
@@ -113,7 +138,6 @@
                     <span class="nav-label">Home</span>
                 </a>
                 
-                <!-- VOTE (4th) -->
                 <a href="{{ url_for('student.available_elections') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.available_elections' %}active{% endif %}" 
                    data-item="vote">
@@ -121,7 +145,6 @@
                     <span class="nav-label">Vote</span>
                 </a>
                 
-                <!-- RESULTS (5th) -->
                 <a href="{{ url_for('student.results') }}" 
                    class="nav-item footer-menu-item {% if request.endpoint == 'student.results' %}active{% endif %}" 
                    data-item="results">
@@ -132,7 +155,7 @@
         </footer>
     </div>
 
-    <!-- JavaScript for Floating Notification -->
+    <!-- JavaScript -->
     <script>
         // Floating Notification System
         function showNotification(message, type = 'success', duration = 5000) {
@@ -140,23 +163,16 @@
             const messageEl = document.getElementById('notificationMessage');
             const iconEl = notification.querySelector('.floating-notification-icon');
             
-            // Set message
             messageEl.textContent = message;
-            
-            // Set type class
             notification.className = 'floating-notification';
             notification.classList.add(type);
             
-            // Set icon based on type
             if (type === 'success') iconEl.innerHTML = '✓';
             else if (type === 'error') iconEl.innerHTML = '✗';
             else if (type === 'warning') iconEl.innerHTML = '⚠';
             else if (type === 'info') iconEl.innerHTML = 'ℹ';
             
-            // Show notification
             notification.classList.add('show');
-            
-            // Auto hide after duration
             setTimeout(hideNotification, duration);
         }
 
@@ -165,68 +181,74 @@
             notification.classList.remove('show');
         }
 
-        // Check for flash messages on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        // Map flash categories to notification types
-                        let type = '{{ category }}';
-                        if (type === 'danger') type = 'error';
-                        if (type === 'success') {
-                            showNotification('{{ message }}', type);
-                        }
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        });
-    </script>
-
-    <!-- JavaScript for Footer Menu Highlight -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const footerMenuItems = document.querySelectorAll('.footer-menu-item');
-        
-        // Add touch feedback for mobile
-        footerMenuItems.forEach(item => {
-            item.addEventListener('touchstart', function() {
-                this.style.transform = 'scale(0.97)';
-                this.style.transition = 'transform 0.1s ease';
-            });
-            
-            item.addEventListener('touchend', function() {
-                this.style.transform = 'scale(1)';
-            });
-            
-            item.addEventListener('touchcancel', function() {
-                this.style.transform = 'scale(1)';
-            });
-        });
-    });
-    </script>
-
-    <!-- JavaScript for Hamburger Menu -->
-    <script>
         // Toggle floating menu
         function toggleFabMenu() {
             const menu = document.getElementById("fabMenu");
             menu.classList.toggle("show");
+            
+            // Reset school year dropdown when menu closes
+            if (!menu.classList.contains('show')) {
+                const schoolYearDropdown = document.getElementById("schoolYearDropdown");
+                const toggleIcon = document.getElementById("schoolYearToggleIcon");
+                if (schoolYearDropdown && toggleIcon) {
+                    schoolYearDropdown.classList.remove('show');
+                    toggleIcon.classList.remove('fa-chevron-up');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
+            }
+        }
+
+        // Toggle school year dropdown
+        function toggleSchoolYearDropdown() {
+            const dropdown = document.getElementById("schoolYearDropdown");
+            const toggleIcon = document.getElementById("schoolYearToggleIcon");
+            
+            dropdown.classList.toggle("show");
+            
+            if (dropdown.classList.contains('show')) {
+                toggleIcon.classList.remove('fa-chevron-down');
+                toggleIcon.classList.add('fa-chevron-up');
+            } else {
+                toggleIcon.classList.remove('fa-chevron-up');
+                toggleIcon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // Change school year
+        function changeSchoolYear(schoolYear) {
+            // Get current URL
+            const url = new URL(window.location.href);
+            
+            // Update or add school_year parameter
+            url.searchParams.set('school_year', schoolYear);
+            
+            // Redirect to the new URL
+            window.location.href = url.toString();
         }
 
         // Close menu when tapping outside
         document.addEventListener("click", function(e) {
             const fab = document.querySelector(".mobile-fab");
             const menu = document.getElementById("fabMenu");
-            if (fab && !fab.contains(e.target) && menu) {
+            if (fab && !fab.contains(e.target) && menu && !menu.contains(e.target)) {
                 menu.classList.remove("show");
+                
+                // Reset school year dropdown
+                const schoolYearDropdown = document.getElementById("schoolYearDropdown");
+                const toggleIcon = document.getElementById("schoolYearToggleIcon");
+                if (schoolYearDropdown && toggleIcon) {
+                    schoolYearDropdown.classList.remove('show');
+                    toggleIcon.classList.remove('fa-chevron-up');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
             }
         });
 
         // Staggered animation for menu items
         document.addEventListener('DOMContentLoaded', function() {
-            const fabMenuItems = document.querySelectorAll(".fab-menu .fab-item");
+            const fabMenuItems = document.querySelectorAll(".fab-menu .fab-item, .school-year-option");
             fabMenuItems.forEach((item, index) => {
-                item.style.transition = `transform 0.35s ease ${index * 0.05}s, opacity 0.35s ease ${index * 0.05}s`;
+                item.style.transition = `all 0.3s ease ${index * 0.03}s`;
             });
         });
     </script>

@@ -237,6 +237,23 @@ def send_email_change_notification(student, old_email, new_email):
         print(f"Failed to send email change notification: {e}")
 
 
+def get_all_school_years():
+    """Helper function to get all school years from elections"""
+    elections = Election.query.all()
+    school_years = []
+    
+    for election in elections:
+        if election.start_date and election.candidates:  # Only include if has candidates
+            year = election.start_date.year
+            next_year = year + 1
+            school_year_str = f"{year}-{next_year}"
+            if school_year_str not in school_years:
+                school_years.append(school_year_str)
+    
+    school_years.sort(reverse=True)
+    return school_years
+
+
 # ============= END OF NEW HELPER FUNCTIONS =============
 
 
@@ -953,44 +970,126 @@ from student.utils import generate_device_fingerprint
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # ---------------- Existing logic ----------------
-    total_students = Student.query.count()
-    total_votes = Vote.query.count()
-
-    has_voted = Vote.query.filter_by(student_id=current_user.id).first() is not None
-
-    announcements = Announcement.query.filter(
-        (Announcement.department_id == current_user.department_id) | 
-        (Announcement.department_id == None)  # None means "All"
-    ).order_by(Announcement.date.desc()).all()
-
-    # ---------------- Updated leading_candidates logic with encrypted votes ----------------
-    # Get all elections
+    # ---------------- School Year Filter ----------------
+    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    school_year = request.args.get('school_year')
+    
+    # SECOND: If no URL parameter, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Get all elections to extract school years
     elections = Election.query.all()
+    
+    # Extract unique school years
+    school_years = []
+    for election in elections:
+        if election.start_date:
+            year = election.start_date.year
+            # Only include if there are candidates for this election
+            if election.candidates:
+                next_year = year + 1
+                school_year_str = f"{year}-{next_year}"
+                if school_year_str not in school_years:
+                    school_years.append(school_year_str)
+    
+    # Sort school years (latest first)
+    school_years.sort(reverse=True)
+    
+    # If no school year selected, use the latest
+    if not school_year and school_years:
+        school_year = school_years[0]
+    
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
+    # ---------------- Filter data by school year ----------------
+    from datetime import datetime
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year and school_years:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            
+            # Create datetime range
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # ---------------- Existing logic with filters ----------------
+    total_students = Student.query.count()
+    
+    # Filter votes by school year if selected
+    if start_date and end_date:
+        # Get votes from elections within the school year
+        votes_query = Vote.query.join(Election).filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+        total_votes = votes_query.count()
+        
+        # Check if current user has voted in any election within this school year
+        has_voted = votes_query.filter(Vote.student_id == current_user.id).first() is not None
+        
+        # Filter elections for leading candidates
+        elections = Election.query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        ).all()
+    else:
+        total_votes = Vote.query.count()
+        has_voted = Vote.query.filter_by(student_id=current_user.id).first() is not None
+        elections = Election.query.all()
+
+    # ---------------- FIXED: Filter announcements by school year ----------------
+    announcements_query = Announcement.query.filter(
+        (Announcement.department_id == current_user.department_id) | 
+        (Announcement.department_id == None)
+    )
+    
+    # Apply school year filter to announcements
+    if start_date and end_date:
+        announcements_query = announcements_query.filter(
+            Announcement.date >= start_date,
+            Announcement.date <= end_date
+        )
+    
+    announcements = announcements_query.order_by(Announcement.date.desc()).all()
+
+    # ---------------- Updated leading_candidates logic with school year filter ----------------
     leading_candidates = []
     
     if elections:
-        # For simplicity, use the most recent election
-        recent_election = elections[0]
-        
-        # Get all candidates for this election
-        candidates = Candidate.query.filter_by(election_id=recent_election.id).all()
-        candidate_ids = [c.id for c in candidates]
-        
-        # Count votes using homomorphic encryption
-        vote_counts = count_votes_for_candidates(recent_election.id, candidate_ids)
-        
-        # Create list of (candidate, vote_count)
-        candidate_votes = []
-        for candidate in candidates:
-            vote_count = vote_counts.get(candidate.id, 0)
-            candidate_votes.append((candidate, vote_count))
-        
-        # Sort by vote count and get top 5
-        candidate_votes.sort(key=lambda x: x[1], reverse=True)
-        leading_candidates = candidate_votes[:5]
+        # Use the most recent election from filtered elections
+        if elections:
+            # Sort elections by start_date to get the most recent
+            elections.sort(key=lambda x: x.start_date, reverse=True)
+            recent_election = elections[0]
+            
+            # Get all candidates for this election
+            candidates = Candidate.query.filter_by(election_id=recent_election.id).all()
+            candidate_ids = [c.id for c in candidates]
+            
+            # Count votes using homomorphic encryption
+            vote_counts = count_votes_for_candidates(recent_election.id, candidate_ids)
+            
+            # Create list of (candidate, vote_count)
+            candidate_votes = []
+            for candidate in candidates:
+                vote_count = vote_counts.get(candidate.id, 0)
+                candidate_votes.append((candidate, vote_count))
+            
+            # Sort by vote count and get top 5
+            candidate_votes.sort(key=lambda x: x[1], reverse=True)
+            leading_candidates = candidate_votes[:5]
 
-    # ---------------- New: trust-device prompt ----------------
+    # ---------------- Trust-device prompt ----------------
     fingerprint = generate_device_fingerprint()
     device = TrustedDevice.query.filter_by(
         student_id=current_user.id,
@@ -999,21 +1098,34 @@ def dashboard():
 
     trust_prompt = False
     if device is None:
-        # No device recorded yet → show prompt in dashboard
         trust_prompt = True
 
-    # ---------------- New: active election ----------------
+    # ---------------- Active election (filtered by school year) ----------------
     local_tz = pytz.timezone("Asia/Manila")
     now = datetime.now(local_tz).replace(tzinfo=None)
-    active_election = Election.query.filter(
-        Election.start_date <= now,
-        Election.end_date >= now
-    ).first()
+    
+    if start_date and end_date:
+        active_election = Election.query.filter(
+            Election.start_date <= now,
+            Election.end_date >= now,
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        ).first()
+    else:
+        active_election = Election.query.filter(
+            Election.start_date <= now,
+            Election.end_date >= now
+        ).first()
 
-    # ---------------- NEW: Add missing variables ----------------
-    current_time = datetime.now()
-    days_remaining = 12  # Default value, adjust as needed
-    total_voters = total_students  # Use total_students as total_voters
+    # ---------------- Calculate days remaining for active election ----------------
+    days_remaining = 0
+    if active_election:
+        days_remaining = (active_election.end_date - now).days
+        if days_remaining < 0:
+            days_remaining = 0
+
+    # ---------------- Total voters ----------------
+    total_voters = total_students
 
     # ---------------- Render template ----------------
     return render_template(
@@ -1024,13 +1136,13 @@ def dashboard():
         announcements=announcements,
         leading_candidates=leading_candidates,
         trust_prompt=trust_prompt,
-        current_time=current_time,
+        current_time=now,
         days_remaining=days_remaining,
         total_voters=total_voters,
-        active_election=active_election  # <-- added for Vote URL
+        active_election=active_election,
+        school_years=school_years,  # Pass to template for header
+        current_sy=school_year  # Pass current selection
     )
-
-
 
 @student_bp.route('/trust-current-device', methods=['POST'])
 @login_required
@@ -1068,15 +1180,51 @@ def trust_current_device():
 @student_bp.route('/announcements')
 @login_required
 def student_announcements():
-    # Fetch all announcements relevant to the student
-    announcements = Announcement.query.filter(
+    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    school_year = request.args.get('school_year')
+    
+    # SECOND: If no URL parameter, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
+    # Parse school year to date range (if you want to filter announcements by date)
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Base query for announcements
+    query = Announcement.query.filter(
         (Announcement.department_id == current_user.department_id) | 
         (Announcement.department_id == None)
-    ).order_by(Announcement.date.desc()).all()
+    )
+    
+    # OPTIONAL: Filter announcements by school year (if announcements have dates)
+    # Uncomment this if you want announcements to be filtered by school year too
+    if start_date and end_date:
+        query = query.filter(
+            Announcement.date >= start_date,
+            Announcement.date <= end_date
+        )
+    
+    announcements = query.order_by(Announcement.date.desc()).all()
 
     return render_template(
         'student_announcements.html',
-        announcements=announcements
+        announcements=announcements,
+        school_years=get_all_school_years(),
+        current_sy=school_year
     )
 
 # ------------------- HELP -------------------
@@ -1343,13 +1491,49 @@ def submit_vote(election_id):
 def receipt():
     """Show all voting receipts for the student"""
     
-    # Get all votes for this student, ordered by most recent first
-    votes = Vote.query.filter_by(
-        student_id=current_user.id
-    ).order_by(Vote.created_at.desc()).all()
+    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    school_year = request.args.get('school_year')
+    
+    # SECOND: If no URL parameter, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
+    # Get all votes for this student
+    votes_query = Vote.query.filter_by(student_id=current_user.id)
+    
+    # Filter votes by school year if selected
+    if start_date and end_date:
+        # Join with Election to filter by election date
+        votes_query = votes_query.join(Election).filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    # Order by most recent first
+    votes = votes_query.order_by(Vote.created_at.desc()).all()
     
     if not votes:
-        return render_template('receipt.html', votes=[])
+        return render_template('receipt.html', 
+                             votes=[],
+                             school_years=get_all_school_years(),
+                             current_sy=school_year)
     
     # Prepare data for each vote
     votes_data = []
@@ -1379,7 +1563,9 @@ def receipt():
     
     return render_template('receipt.html',
                          votes=votes_data,
-                         now=datetime.now(pytz.timezone("Asia/Manila")))
+                         now=datetime.now(pytz.timezone("Asia/Manila")),
+                         school_years=get_all_school_years(),
+                         current_sy=school_year)
 
 
 from sqlalchemy import or_
@@ -1392,6 +1578,30 @@ from sqlalchemy import or_
 @student_bp.route('/available_elections')
 @login_required
 def available_elections():
+    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    school_year = request.args.get('school_year')
+    
+    # SECOND: If no URL parameter, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
     # Philippines timezone
     local_tz = pytz.timezone("Asia/Manila")
     utc_tz = pytz.UTC
@@ -1402,7 +1612,7 @@ def available_elections():
 
     student_department_id = current_user.department_id
     
-    # FIX: Get the actual year level value from the relationship
+    # Get student year level
     student_year = None
     if current_user.year_level:
         # Extract the numeric part from year_name (e.g., "1st Year" -> "1")
@@ -1422,9 +1632,18 @@ def available_elections():
     
     student_id = current_user.id
 
+    # Base query with school year filter
+    query = Election.query
+    
+    if start_date and end_date:
+        query = query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
     # ROBUST FILTERING - Works with both old and new data
     # Uses multiple conditions for maximum compatibility
-    elections = Election.query.filter(
+    elections = query.filter(
         Election.start_date <= now_naive,
         Election.end_date >= now_naive,
         # Campus-wide: either scope='campus' OR election_type='SSG' OR department_id IS NULL
@@ -1475,7 +1694,7 @@ def available_elections():
         
         student_has_voted = student_vote is not None
         
-        # Get vote timestamps if student has voted - FIXED TIMEZONE HANDLING
+        # Get vote timestamps if student has voted
         vote_timestamps = None
         if student_has_voted and student_vote:
             # Handle cast_timestamp (stored as Manila time)
@@ -1512,23 +1731,15 @@ def available_elections():
             
             # Format for display
             vote_timestamps = {
-                'cast_time': cast_time,  # Raw database value
-                'cast_time_manila': cast_time_manila,  # Manila timezone-aware
+                'cast_time': cast_time,
+                'cast_time_manila': cast_time_manila,
                 'cast_time_formatted': cast_time_manila.strftime('%I:%M:%S %p') if cast_time_manila else None,
                 'cast_date_formatted': cast_time_manila.strftime('%Y-%m-%d %I:%M:%S %p') if cast_time_manila else None,
-                
-                'recorded_time': recorded_time,  # Raw database value
-                'recorded_time_manila': recorded_time_manila,  # Manila timezone-aware
+                'recorded_time': recorded_time,
+                'recorded_time_manila': recorded_time_manila,
                 'recorded_time_formatted': recorded_time_manila.strftime('%I:%M:%S %p') if recorded_time_manila else None,
                 'recorded_date_formatted': recorded_time_manila.strftime('%Y-%m-%d %I:%M:%S %p') if recorded_time_manila else None,
             }
-            
-            # Debug print
-            print(f"DEBUG - Vote timestamps for election {election.id}:")
-            print(f"  Raw cast: {cast_time}")
-            print(f"  Manila cast: {cast_time_manila}")
-            print(f"  Raw recorded: {recorded_time}")
-            print(f"  Manila recorded: {recorded_time_manila}")
         
         # Determine eligible voters count
         if election.department_id is None:
@@ -1624,7 +1835,7 @@ def available_elections():
             'vote_percentage': round(vote_percentage, 1),
             'vote_percentage_int': int(vote_percentage),
             'student_has_voted': student_has_voted,
-            'vote_timestamps': vote_timestamps,  # Now contains Manila time versions
+            'vote_timestamps': vote_timestamps,
             'is_eligible_by_year': is_eligible_by_year,
             'target_years': target_years_display,
             'target_years_raw': election.year_levels if election.year_levels and election.year_levels != 'all' else 'all'
@@ -1634,33 +1845,115 @@ def available_elections():
                          election_data=election_data,
                          current_time=now_ph,
                          student_year=student_year_str,
-                         student_year_display=current_user.year_level.year_name if current_user.year_level else 'Not Set')
+                         student_year_display=current_user.year_level.year_name if current_user.year_level else 'Not Set',
+                         school_years=get_all_school_years(),
+                         current_sy=school_year)
 
+# In your student/routes.py
 
-# ------------------- CANDIDATES -------------------
+# In student/routes.py - Full updated route
+
+from datetime import datetime
+from flask import session
+
 @student_bp.route('/candidates')
 @login_required
 def candidates():
-    candidates = Candidate.query.order_by(Candidate.last_name).all()
-    return render_template('candidates.html', candidates=candidates)
-
-# Optional: Add individual candidate profile route
-@student_bp.route('/candidate/<int:candidate_id>')
-@login_required
-def candidate_profile(candidate_id):
-    candidate = Candidate.query.get_or_404(candidate_id)
-    return render_template('candidate_profile.html', candidate=candidate)
+    # Get school year from request, session, or default
+    school_year = request.args.get('school_year')
+    
+    # If no school year in URL, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Get all elections to extract school years
+    elections = Election.query.all()
+    
+    # Extract unique school years
+    school_years = []
+    for election in elections:
+        if election.start_date:
+            year = election.start_date.year
+            # Only include if there are candidates for this election
+            if election.candidates:
+                next_year = year + 1
+                school_year_str = f"{year}-{next_year}"
+                if school_year_str not in school_years:
+                    school_years.append(school_year_str)
+    
+    # Sort school years (latest first)
+    school_years.sort(reverse=True)
+    
+    # If no school year selected, use the latest
+    if not school_year and school_years:
+        school_year = school_years[0]
+    
+    # Save to session
+    if school_year:
+        session['current_school_year'] = school_year
+    
+    # Get all candidates
+    all_candidates = Candidate.query.order_by(Candidate.last_name).all()
+    
+    # Filter candidates by school year if selected
+    filtered_candidates = []
+    if school_year and school_years:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            
+            # Create datetime range
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+            
+            for candidate in all_candidates:
+                if candidate.election and candidate.election.start_date:
+                    if start_date <= candidate.election.start_date <= end_date:
+                        filtered_candidates.append(candidate)
+        except (ValueError, IndexError):
+            # If school year format is invalid, show all
+            filtered_candidates = all_candidates
+    else:
+        filtered_candidates = all_candidates
+    
+    return render_template('candidates.html', 
+                         candidates=filtered_candidates,
+                         school_years=school_years,
+                         current_sy=school_year)
 
 
 from datetime import datetime
 from sqlalchemy import func
 
 
-
 @student_bp.route('/results')
 @login_required
 def results():
     """Show elections that the current student has voted in"""
+    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    school_year = request.args.get('school_year')
+    
+    # SECOND: If no URL parameter, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
     student_id = current_user.id
     now = datetime.now()
     
@@ -1669,14 +1962,26 @@ def results():
         student_id=student_id
     ).distinct().subquery()
     
-    voted_elections = Election.query.filter(
+    # Base query
+    query = Election.query.filter(
         Election.id.in_(voted_elections_ids),
         Election.start_date <= now  # Only show elections that have started
-    ).order_by(Election.end_date.desc()).all()
+    )
+    
+    # Apply school year filter if selected
+    if start_date and end_date:
+        query = query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    voted_elections = query.order_by(Election.end_date.desc()).all()
     
     return render_template('results.html',
                          voted_elections=voted_elections,
-                         now=now)
+                         now=now,
+                         school_years=get_all_school_years(),
+                         current_sy=school_year)
 
 
 
@@ -2224,6 +2529,17 @@ email_change_requests = {}
 @student_bp.route('/profile')
 @login_required
 def profile():
+    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    school_year = request.args.get('school_year')
+    
+    # SECOND: If no URL parameter, try to get from session
+    if not school_year:
+        school_year = session.get('current_school_year')
+    
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
     device = is_device_trusted(current_user.id)
     
     # Fetch courses and year levels from database
@@ -2244,7 +2560,9 @@ def profile():
         has_voted_current=False,
         courses=courses,
         year_levels=year_levels,
-        has_pending_deletion=has_pending_deletion
+        has_pending_deletion=has_pending_deletion,
+        school_years=get_all_school_years(),
+        current_sy=school_year
     )
 
 @student_bp.route('/profile/edit', methods=['POST'])

@@ -1,0 +1,561 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Account Deletion Requests{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/account_deletion_requests.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.deletion-requests-container {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Light mode main content background */
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides for buttons */
+body.dark-mode .btn-secondary {
+    background: var(--light);
+    color: var(--text-color);
+}
+
+body.dark-mode .modal-content {
+    color: var(--modal-text);
+}
+
+body.dark-mode .modal-header h3,
+body.dark-mode .modal-body,
+body.dark-mode .modal-footer {
+    color: var(--modal-text);
+}
+
+body.dark-mode .info-group,
+body.dark-mode .detail-group {
+    background: var(--light);
+}
+
+/* Fix for filter form selects in dark mode */
+body.dark-mode .filter-select,
+body.dark-mode .filter-input {
+    color: var(--text-color);
+    background-color: var(--input-bg);
+}
+
+/* Fix for table cell colors in dark mode */
+body.dark-mode .data-table td {
+    color: var(--text-color);
+}
+
+body.dark-mode .student-name {
+    color: var(--text-color);
+}
+
+body.dark-mode .reason-cell {
+    color: var(--text-secondary);
+}
+
+/* Empty state dark mode */
+body.dark-mode .empty-state {
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+body.dark-mode .empty-state h3 {
+    color: var(--text-color);
+}
+
+body.dark-mode .empty-state p {
+    color: var(--text-secondary);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="deletion-requests-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <h1>
+                <i class="fa-solid fa-clock"></i> 
+                Account Deletion Requests
+            </h1>
+            <p class="page-description">Manage student account deletion requests. Review, approve, or reject requests as needed.</p>
+        </div>
+        <div class="header-right">
+            <a href="{{ url_for('admin.manage_students') }}" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Back to Students
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid" id="statsContainer">
+        <!-- Will be populated by JavaScript -->
+        <div class="stat-card loading">
+            <div class="stat-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+            <div class="stat-number">...</div>
+            <div class="stat-label">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-card">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="statusFilter">Status</label>
+                <select id="statusFilter" class="filter-select">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="searchInput">Search</label>
+                <input type="text" id="searchInput" class="filter-input" placeholder="Name...">
+            </div>
+            
+            <div class="filter-group">
+                <label for="dateFilter">Request Date</label>
+                <input type="date" id="dateFilter" class="filter-input">
+            </div>
+            
+            <div class="filter-actions">
+                <button onclick="loadRequests(1)" class="btn btn-primary">
+                    <i class="fa-solid fa-filter"></i> Apply Filters
+                </button>
+                <button onclick="resetFilters()" class="btn btn-secondary">
+                    <i class="fa-solid fa-undo"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="data-table" id="requestsTable">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Reason</th>
+                        <th>Request Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsBody">
+                    <!-- AJAX CONTENT -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">
+                <i class="fa-solid fa-inbox"></i>
+            </div>
+            <h3>No Deletion Requests Found</h3>
+            <p>There are no account deletion requests matching your criteria.</p>
+            <button onclick="resetFilters()" class="btn btn-primary">
+                <i class="fa-solid fa-undo"></i> Clear Filters
+            </button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading requests...</p>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+</div>
+
+<!-- View Details Modal -->
+<div id="viewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-info-circle"></i> Request Details</h3>
+            <button class="modal-close" onclick="closeModal('viewModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="modalDetails">
+            <!-- Dynamic content -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Process Request Modal -->
+<div id="processModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="processModalTitle">Process Request</h3>
+            <button class="modal-close" onclick="closeModal('processModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="info-group">
+                <label>Student:</label>
+                <p id="processStudentName" class="info-value"></p>
+            </div>
+            
+            <div class="info-group">
+                <label>Reason for Deletion:</label>
+                <p id="processReason" class="info-value reason-box"></p>
+            </div>
+            
+            <div class="form-group">
+                <label for="adminNotes">Admin Notes:</label>
+                <textarea id="adminNotes" rows="4" placeholder="Add any notes about this decision..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('processModal')">Cancel</button>
+            <button class="btn btn-primary" id="processConfirmBtn" onclick="processRequest()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<script>
+// This ensures the theme applies immediately without refresh
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+    
+    mainContent.classList.add('theme-applied');
+}
+
+// Apply theme immediately
+(function() {
+    applyThemeToMainContent();
+    
+    // Apply multiple times to ensure it catches
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    // Listen for theme toggle clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            setTimeout(applyThemeToMainContent, 50);
+        }
+    });
+    
+    // Listen for storage events (when theme changes in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            applyThemeToMainContent();
+        }
+    });
+    
+    // Observe changes to body class
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+                applyThemeToMainContent();
+            }
+        });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+})();
+
+let currentPage = 1;
+let currentRequestId = null;
+let currentAction = null;
+
+// Load requests on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadRequests(1);
+    loadStats();
+    applyThemeToMainContent(); // Apply theme again when DOM is loaded
+});
+
+// Load requests with filters
+function loadRequests(page = 1) {
+    currentPage = page;
+    
+    const status = document.getElementById('statusFilter').value;
+    const search = document.getElementById('searchInput').value;
+    const date = document.getElementById('dateFilter').value;
+    
+    // Show loading
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('requestsTable').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    
+    let url = `/admin/deletion-requests/data?page=${page}`;
+    if (status !== 'all') url += `&status=${status}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (date) url += `&date=${date}`;
+    
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            
+            const tbody = document.getElementById('requestsBody');
+            const pagination = document.getElementById('pagination');
+            
+            tbody.innerHTML = '';
+            pagination.innerHTML = '';
+            
+            if (data.requests.length === 0) {
+                document.getElementById('requestsTable').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('requestsTable').style.display = 'table';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            // Populate table
+            data.requests.forEach(req => {
+                const requestDate = new Date(req.request_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const reasonPreview = req.reason.length > 50 ? req.reason.substring(0, 50) + '...' : req.reason;
+                
+                tbody.innerHTML += `
+                <tr>
+                    <td class="student-name">${req.student_name}</td>
+                    <td class="reason-cell" title="${req.reason}">${reasonPreview}</td>
+                    <td>${requestDate}</td>
+                    <td><span class="status-badge ${req.status}">${req.status}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            ${req.status === 'pending' ? `
+                                <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                                <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>`;
+            });
+            
+            // Pagination
+            if (data.total_pages > 1) {
+                for (let i = 1; i <= data.total_pages; i++) {
+                    pagination.innerHTML += `<button class="page-btn ${i === data.current_page ? 'active' : ''}" onclick="loadRequests(${i})">${i}</button>`;
+                }
+            }
+            
+            // Apply theme after content load
+            setTimeout(applyThemeToMainContent, 50);
+        })
+        .catch(error => {
+            console.error('Error loading requests:', error);
+            document.getElementById('loadingSpinner').style.display = 'none';
+            alert('Error loading requests. Please try again.');
+        });
+}
+
+// Load statistics
+function loadStats() {
+    fetch('/admin/deletion-requests/stats')
+        .then(res => res.json())
+        .then(data => {
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = `
+                <div class="stat-card total">
+                    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                    <div class="stat-number">${data.total}</div>
+                    <div class="stat-label">Total Requests</div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <div class="stat-number">${data.pending}</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-card approved">
+                    <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
+                    <div class="stat-number">${data.approved}</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <div class="stat-card rejected">
+                    <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
+                    <div class="stat-number">${data.rejected}</div>
+                    <div class="stat-label">Rejected</div>
+                </div>
+            `;
+        })
+        .catch(error => console.error('Error loading stats:', error));
+}
+
+// View details
+function viewDetails(id) {
+    fetch(`/admin/deletion-requests/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            const modalDetails = document.getElementById('modalDetails');
+            const requestDate = new Date(data.request_date).toLocaleString();
+            const processedDate = data.processed_date ? new Date(data.processed_date).toLocaleString() : '-';
+            
+            modalDetails.innerHTML = `
+                <div class="detail-group">
+                    <label>Student:</label>
+                    <p>${data.student_name}</p>
+                </div>
+                <div class="detail-group">
+                    <label>Reason for Deletion:</label>
+                    <p class="reason-full">${data.reason}</p>
+                </div>
+                <div class="detail-group">
+                    <label>Request Date:</label>
+                    <p>${requestDate}</p>
+                </div>
+                <div class="detail-group">
+                    <label>Status:</label>
+                    <p><span class="status-badge ${data.status}">${data.status}</span></p>
+                </div>
+                ${data.admin_notes ? `
+                <div class="detail-group">
+                    <label>Admin Notes:</label>
+                    <p>${data.admin_notes}</p>
+                </div>
+                ` : ''}
+                ${data.processed_by_name ? `
+                <div class="detail-group">
+                    <label>Processed By:</label>
+                    <p>${data.processed_by_name}</p>
+                </div>
+                ` : ''}
+                ${data.processed_date ? `
+                <div class="detail-group">
+                    <label>Processed Date:</label>
+                    <p>${processedDate}</p>
+                </div>
+                ` : ''}
+            `;
+            
+            openModal('viewModal');
+        })
+        .catch(error => console.error('Error loading details:', error));
+}
+
+// Open process modal
+function openProcessModal(id, action) {
+    currentRequestId = id;
+    currentAction = action;
+    
+    fetch(`/admin/deletion-requests/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('processModalTitle').innerHTML = action === 'approve' ? 
+                '<i class="fa-solid fa-check-circle"></i> Approve Deletion Request' : 
+                '<i class="fa-solid fa-times-circle"></i> Reject Deletion Request';
+            
+            document.getElementById('processStudentName').textContent = data.student_name;
+            document.getElementById('processReason').textContent = data.reason;
+            document.getElementById('adminNotes').value = '';
+            
+            openModal('processModal');
+        })
+        .catch(error => console.error('Error loading request:', error));
+}
+
+// Process request (approve/reject)
+function processRequest() {
+    if (!currentRequestId || !currentAction) return;
+    
+    const notes = document.getElementById('adminNotes').value;
+    
+    fetch(`/admin/deletion-requests/${currentRequestId}/process`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: currentAction,
+            admin_notes: notes
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            closeModal('processModal');
+            loadRequests(currentPage);
+            loadStats();
+            alert(`Request ${currentAction}ed successfully!`);
+        } else {
+            alert('Error processing request: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error processing request. Please try again.');
+    });
+}
+
+// Reset filters
+function resetFilters() {
+    document.getElementById('statusFilter').value = 'all';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('dateFilter').value = '';
+    loadRequests(1);
+}
+
+// Modal functions
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+</script>
+{% endblock %}
