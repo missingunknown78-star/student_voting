@@ -249,3 +249,6 @@ class DeletionRequest(db.Model):
     # Relationships
     student = db.relationship('Student', backref=db.backref('deletion_requests', lazy=True))
     admin = db.relationship('Admin', foreign_keys=[processed_by])
+
+
+    
