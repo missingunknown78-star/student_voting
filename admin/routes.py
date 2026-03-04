@@ -29,7 +29,7 @@ from sqlalchemy import or_, desc
 from datetime import datetime
 import io
 import csv
-from admin.models import AuditLog
+from admin.models import AuditLog, Setting
 from admin.utils import log_audit
 import pandas as pd
 
@@ -266,7 +266,9 @@ def login():
 # ------------------- Admin 2FA Verification ------------------- #
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
 def verify_2fa():
+    # Check if user is in pre-2fa session
     if 'pre_2fa_admin_id' not in session:
+        flash('Please login first.', 'warning')
         return redirect(url_for('admin.login'))
 
     admin_id = session['pre_2fa_admin_id']
@@ -283,80 +285,53 @@ def verify_2fa():
     if time.time() < cooldown:
         remaining = int(cooldown - time.time())
         error = f"Too many 2FA attempts. Try again in {remaining} seconds."
-        
-        # ---------- AUDIT LOG: 2FA in cooldown ----------
-        log_audit(
-            action='2FA_COOLDOWN',
-            description=f"Admin user '{admin.username}' 2FA verification in cooldown. Remaining: {remaining}s from IP: {ip}"
-        )
-        
         return render_template('admin_2fa_verify.html', error=error)
 
     error = None
-    success_message = session.pop('2fa_success', None)  # Check for existing success message
     
     if request.method == 'POST':
-        # ✅ Ensure totp_secret is generated
-        totp_secret = generate_2fa_secret(admin)
-        totp = pyotp.TOTP(totp_secret)
+        # Check if user has TOTP secret
+        if not admin.totp_secret:
+            error = "2FA not properly set up. Please setup 2FA first."
+            return render_template('admin_2fa_verify.html', error=error)
 
+        totp = pyotp.TOTP(admin.totp_secret)
         code = request.form.get('code')
+        
         if totp.verify(code):
             # Success: log in the user
             login_user(admin)
             session.permanent = True
 
-            # ---------- AUDIT LOG: 2FA verification successful ----------
-            log_audit(
-                action='2FA_SUCCESS',
-                description=f"Admin user '{admin.username}' successfully verified 2FA code from IP: {ip}"
-            )
-
-            # Cleanup session keys
+            # Cleanup session
             session.pop('pre_2fa_admin_id', None)
+            session.pop('2fa_setup_complete', None)
             session.pop(f'2fa_attempts_{ip}', None)
             session.pop(f'2fa_cooldown_{ip}', None)
 
-            # Set success message in session for this page only
-            session['2fa_success'] = "2FA verified. Welcome, Admin."
-            
-            return redirect(url_for('admin.verify_2fa'))  # Redirect to same page to show success
-
+            flash("2FA verified successfully! Welcome, Admin.", "success")
+            return redirect(url_for('admin.dashboard'))
         else:
-            # Increment failed 2FA attempts
+            # Increment failed attempts
             attempts += 1
             session[f'2fa_attempts_{ip}'] = attempts
-
-            # ---------- AUDIT LOG: Failed 2FA attempt ----------
-            log_audit(
-                action='2FA_FAILED',
-                description=f"Admin user '{admin.username}' failed 2FA verification. Attempt {attempts} of {MAX_2FA_ATTEMPTS} from IP: {ip}"
-            )
 
             if attempts >= MAX_2FA_ATTEMPTS:
                 session[f'2fa_cooldown_{ip}'] = time.time() + TWO_FA_COOLDOWN
                 session[f'2fa_attempts_{ip}'] = 0
                 error = "Too many invalid codes. 2FA temporarily locked."
-                
-                # ---------- AUDIT LOG: 2FA locked ----------
-                log_audit(
-                    action='2FA_LOCKED',
-                    description=f"Admin user '{admin.username}' 2FA temporarily locked for IP: {ip} due to {MAX_2FA_ATTEMPTS} failed attempts. Cooldown: {TWO_FA_COOLDOWN}s"
-                )
             else:
                 error = f"Invalid code. Attempt {attempts} of {MAX_2FA_ATTEMPTS}."
 
-    return render_template('admin_2fa_verify.html', error=error, success=success_message)
-
+    return render_template('admin_2fa_verify.html', error=error)
 
 
 # ------------------- 2FA Secret Generation ------------------- #
 def generate_2fa_secret(admin):
-    if not getattr(admin, 'totp_secret', None):
+    if not admin.totp_secret:  # Simpler condition
         admin.totp_secret = pyotp.random_base32()
         db.session.commit()
         
-        # ---------- AUDIT LOG: 2FA secret generated ----------
         log_audit(
             action='2FA_SECRET_GENERATED',
             description=f"2FA secret generated for admin user '{admin.username}'"
@@ -365,41 +340,42 @@ def generate_2fa_secret(admin):
     return admin.totp_secret
 
 
+
 # ------------------- Admin 2FA Setup ------------------- #
 @admin_bp.route('/2fa/setup', methods=['GET', 'POST'])
-@admin_required
 def setup_2fa():
-    admin = current_user
-    secret = generate_2fa_secret(admin)
+    # Check if user is in pre-2fa session
+    if 'pre_2fa_admin_id' not in session:
+        flash('Please login first.', 'warning')
+        return redirect(url_for('admin.login'))
+    
+    admin_id = session['pre_2fa_admin_id']
+    admin = Admin.query.get(admin_id)
+    
+    if not admin:
+        session.pop('pre_2fa_admin_id', None)
+        return redirect(url_for('admin.login'))
+    
+    # Generate secret if not exists
+    if not admin.totp_secret:
+        admin.totp_secret = pyotp.random_base32()
+        db.session.commit()
+    
+    secret = admin.totp_secret
     totp = pyotp.TOTP(secret)
-
-    # ---------- AUDIT LOG: 2FA setup page viewed ----------
-    log_audit(
-        action='2FA_SETUP_VIEW',
-        description=f"Admin user '{admin.username}' viewed 2FA setup page"
-    )
 
     if request.method == 'POST':
         code = request.form.get('code')
         if totp.verify(code):
-            admin.is_2fa_enabled = True
-            db.session.commit()
+            # REMOVED: admin.is_2fa_enabled = True
+            db.session.commit()  # Secret already saved
             
-            # ---------- AUDIT LOG: 2FA successfully enabled ----------
-            log_audit(
-                action='2FA_ENABLED',
-                description=f"Admin user '{admin.username}' successfully enabled 2FA"
-            )
+            # Set flag in session to show success message in verify page
+            session['2fa_setup_complete'] = True
             
-            flash("Two-factor authentication enabled!", "success")
-            return redirect(url_for('admin.dashboard'))
+            flash("2FA setup successful! Please verify with your authenticator app.", "success")
+            return redirect(url_for('admin.verify_2fa'))
         else:
-            # ---------- AUDIT LOG: 2FA setup failed ----------
-            log_audit(
-                action='2FA_SETUP_FAILED',
-                description=f"Admin user '{admin.username}' failed to verify 2FA code during setup"
-            )
-            
             flash("Invalid code. Try again.", "error")
 
     totp_uri = totp.provisioning_uri(
@@ -407,8 +383,6 @@ def setup_2fa():
         issuer_name="CTU-COMELEC Admin"
     )
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
-
-
 
 # ---------------------- DASHBOARD ---------------------- #
 @admin_bp.route('/dashboard')
@@ -703,6 +677,123 @@ def get_election_stats(election_id):
             'total_eligible': 0,
             'turnout': '0%'
         })
+
+
+
+# Add this to your admin routes file (where your dashboard route is)
+
+@admin_bp.route('/settings')
+@admin_required
+def settings():
+    """
+    System Settings page
+    """
+    try:
+        tz = pytz.timezone('Asia/Manila')
+        now = datetime.now(tz)
+        
+        # Get audit logs for the logs section
+        page = request.args.get("page", 1, type=int)
+        search = request.args.get("search", "")
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        
+        query = AuditLog.query
+        
+        # Search filter
+        if search:
+            query = query.filter(
+                or_(
+                    AuditLog.action.ilike(f"%{search}%"),
+                    AuditLog.role.ilike(f"%{search}%"),
+                    AuditLog.description.ilike(f"%{search}%")
+                )
+            )
+        
+        # Date filters
+        if start_date:
+            try:
+                start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+                query = query.filter(AuditLog.timestamp >= start_date_obj)
+            except ValueError:
+                pass
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+                end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59)
+                query = query.filter(AuditLog.timestamp <= end_date_obj)
+            except ValueError:
+                pass
+        
+        # Order by latest first
+        query = query.order_by(desc(AuditLog.timestamp))
+        
+        # Pagination
+        logs = query.paginate(page=page, per_page=20)
+        
+        # Get last backup info (you can implement this later)
+        last_backup = None
+        
+        # Log the settings page view
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='SETTINGS_VIEW',
+            description=f"Admin user '{username}' viewed system settings from IP: {ip}"
+        )
+        
+        return render_template(
+            'admin_settings.html',
+            admin=current_user,
+            now=now,
+            logs=logs,
+            search=search,
+            start_date=start_date,
+            end_date=end_date,
+            pytz=pytz,
+            last_backup=last_backup
+        )
+        
+    except Exception as e:
+        flash(f'Error loading settings: {str(e)}', 'error')
+        return redirect(url_for('admin.dashboard'))
+
+    
+
+@admin_bp.route('/settings/save', methods=['POST'])
+@admin_required
+def save_settings():
+    """
+    Save system settings
+    """
+    try:
+        data = request.get_json()
+        section = data.get('section')
+        settings = data.get('settings', {})
+        
+        # Log the settings change
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='SETTINGS_UPDATE',
+            description=f"Admin user '{username}' updated {section} settings from IP: {ip}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Settings saved successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
 
 from student.models import TrustedDevice 
 # ---------------------- IMPORT STUDENTS ---------------------- #
@@ -3054,149 +3145,6 @@ def get_tally_results(election_id):
     })
 
 
-# Add this import at the top of your admin/routes.py
-from weasyprint import HTML
-from io import BytesIO
-from flask import make_response
-
-@admin_bp.route('/results/<int:election_id>/export-pdf')
-@admin_required
-def export_results_pdf(election_id):
-    """Export election results as PDF using WeasyPrint"""
-    
-    # ========== YOUR EXISTING DATA FETCHING CODE (EXACTLY THE SAME) ==========
-    election = Election.query.get_or_404(election_id)
-    
-    tz = pytz.timezone('Asia/Manila')
-    now = datetime.now(tz)
-    
-    if election.start_date.tzinfo is None:
-        election.start_date = tz.localize(election.start_date)
-    if election.end_date.tzinfo is None:
-        election.end_date = tz.localize(election.end_date)
-    
-    is_tallied = False
-    tally_timestamp = None
-    
-    if TALLY_VOTE_AVAILABLE:
-        tally_record = TallyVote.query.filter_by(election_id=election_id).first()
-        is_tallied = tally_record is not None
-        if is_tallied:
-            latest_tally = TallyVote.query.filter_by(
-                election_id=election_id
-            ).order_by(TallyVote.tally_timestamp.desc()).first()
-            tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
-    
-    candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidate_results = []
-    total_votes_cast = 0
-    
-    unique_voters = db.session.query(Vote.student_id).filter_by(
-        election_id=election_id
-    ).distinct().count()
-    
-    if is_tallied and TALLY_VOTE_AVAILABLE:
-        tally_records = TallyVote.query.filter_by(election_id=election_id).all()
-        tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
-        
-        for candidate in candidates:
-            vote_count = tally_dict.get(candidate.id, 0)
-            
-            candidate_results.append({
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'photo': candidate.photo,
-                'position': candidate.position.name if candidate.position else "N/A",
-                'department': candidate.department.name if candidate.department else "All Departments",
-                'vote_count': vote_count,
-                'vote_percentage': 0,
-                'is_tallied': True
-            })
-            total_votes_cast += vote_count
-    else:
-        for candidate in candidates:
-            vote_count = count_votes_for_candidate(candidate.id, election_id)
-            
-            candidate_results.append({
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'photo': candidate.photo,
-                'position': candidate.position.name if candidate.position else "N/A",
-                'department': candidate.department.name if candidate.department else "All Departments",
-                'vote_count': vote_count,
-                'vote_percentage': 0,
-                'is_tallied': is_tallied
-            })
-            total_votes_cast += vote_count
-    
-    if total_votes_cast > 0:
-        for candidate in candidate_results:
-            candidate['vote_percentage'] = round((candidate['vote_count'] / total_votes_cast) * 100, 2)
-    
-    candidate_results.sort(key=lambda x: x['vote_count'], reverse=True)
-    
-    winners_by_position = {}
-    for candidate in candidate_results:
-        position = candidate['position']
-        if position not in winners_by_position:
-            winners_by_position[position] = candidate
-        elif candidate['vote_count'] > winners_by_position[position]['vote_count']:
-            winners_by_position[position] = candidate
-    
-    if election.department_id:
-        total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
-    else:
-        total_eligible_voters = Student.query.count()
-    
-    voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
-    students_not_voted = total_eligible_voters - unique_voters
-    
-    # ========== RENDER THE HTML TEMPLATE ==========
-    html = render_template(
-        'election_results_pdf.html',
-        election=election,
-        candidate_results=candidate_results,
-        winners_by_position=winners_by_position,
-        total_votes_cast=unique_voters,
-        total_votes_for_positions=total_votes_cast,
-        total_eligible_voters=total_eligible_voters,
-        voter_turnout=voter_turnout,
-        students_not_voted=students_not_voted,
-        now=now,
-        is_tallied=is_tallied,
-        tally_timestamp=tally_timestamp
-    )
-    
-    # ========== GENERATE PDF USING WEASYPRINT ==========
-    # Create a buffer for the PDF
-    pdf_buffer = BytesIO()
-    
-    try:
-        # Convert HTML to PDF using WeasyPrint
-        HTML(string=html).write_pdf(pdf_buffer)
-    except Exception as e:
-        return jsonify({'error': f'PDF generation failed: {str(e)}'}), 500
-    
-    # Get the PDF from the buffer
-    pdf_buffer.seek(0)
-    
-    # Create response
-    response = make_response(pdf_buffer.read())
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename={election.title.replace(" ", "_")}_results.pdf'
-    
-    # ========== AUDIT LOG ==========
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='EXPORT_RESULTS_PDF',
-        description=f"Admin user '{username}' exported PDF results for election: '{election.title}' (ID: {election_id}) from IP: {ip}"
-    )
-    
-    return response
 
 
 @admin_bp.route('/results/<int:election_id>/test-tally')

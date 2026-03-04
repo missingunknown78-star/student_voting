@@ -300,3 +300,19 @@ class ElectionPosition(db.Model):
 
     def __repr__(self):
         return f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}>'
+
+
+        # Add this to your models.py
+
+class Setting(db.Model):
+    __tablename__ = 'settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=True)
+    section = db.Column(db.String(50), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Setting {self.key}>'

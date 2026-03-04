@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings - COMELEC Admin</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Settings CSS -->
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_settings.css') }}">
+    
+    <!-- Audit Logs CSS -->
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/audit_logs.css') }}">
+    
+    <style>
+        .audit-timezone {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
+        
+        .audit-card {
+            background: var(--bg-secondary);
+            border-radius: var(--card-radius);
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        
+        .audit-input {
+            padding: 10px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .audit-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .audit-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary-gradient);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .audit-btn.export-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .audit-btn.export-btn:hover {
+            background: var(--border-color);
+        }
+        
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .audit-table th {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .audit-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        
+        .audit-table tbody tr:hover {
+            background: var(--hover-bg);
+        }
+        
+        .audit-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .pagination a {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+        
+        .pagination a:hover {
+            background: var(--primary-gradient);
+            color: white;
+        }
+        
+        .pagination span {
+            color: var(--text-secondary);
+        }
+        
+        /* Filter form layout */
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        /* Make settings sidebar static (non-sticky) */
+        .settings-sidebar {
+            position: static !important;
+            align-self: flex-start;
+        }
+        
+        /* 2FA Setup Styles */
+        .twofa-setup-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .twofa-setup-container img {
+            margin: 20px auto;
+            width: 200px;
+            height: 200px;
+            display: block;
+            border-radius: 10px;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .twofa-setup-container input {
+            width: 100%;
+            max-width: 200px;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            margin: 15px auto;
+            text-align: center;
+            font-size: 16px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            display: block;
+        }
+        
+        .twofa-setup-container input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .twofa-setup-container button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary-gradient);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        
+        .twofa-setup-container button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);
+        }
+        
+        .dark-mode .twofa-setup-container button:hover {
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
+        }
+        
+        .instructions {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+        
+        .error-msg {
+            color: #ef4444;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 6px;
+        }
+        
+        .success-msg {
+            color: #10b981;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 6px;
+        }
+        
+        .twofa-note {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 15px;
+        }
+        
+        /* Manual entry link */
+        .manual-entry-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        
+        .manual-entry-link:hover {
+            text-decoration: underline;
+        }
+        
+        .secret-key {
+            background: var(--bg-tertiary);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            word-break: break-all;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Backup codes styles */
+        .backup-codes-container {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .backup-codes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .backup-code {
+            font-family: monospace;
+            font-size: 14px;
+            padding: 8px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Back button styles */
+        .back-button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            text-decoration: none;
+            border: 1px solid var(--border-color);
+        }
+        
+        .back-button:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+            .filter-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .audit-btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="settings-container">
+    <div class="settings-header">
+        <h1><i class="fa-solid fa-gear"></i> System Settings</h1>
+        <div>
+            <!-- Back button that redirects to admin dashboard -->
+            <a href="{{ url_for('admin.dashboard') }}" class="back-button">
+                <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="settings-sections">
+        <!-- Settings Navigation Sidebar - Now static (non-sticky) -->
+        <div class="settings-sidebar">
+            <button class="settings-nav-item active" data-section="general">
+                <i class="fa-solid fa-sliders"></i>
+                General Settings
+            </button>
+            <button class="settings-nav-item" data-section="appearance">
+                <i class="fa-solid fa-palette"></i>
+                Appearance
+            </button>
+            <button class="settings-nav-item" data-section="twofactor">
+                <i class="fa-solid fa-shield-halved"></i>
+                2FA Settings
+            </button>
+            <button class="settings-nav-item" data-section="logs">
+                <i class="fa-solid fa-clock"></i>
+                System Logs
+            </button>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="settings-content">
+            <!-- General Settings -->
+            <div class="settings-section active" id="general">
+                <h2><i class="fa-solid fa-sliders"></i> General Settings</h2>
+                
+                <div class="info-box">
+                    <i class="fa-solid fa-info-circle"></i>
+                    Configure basic system information and preferences.
+                </div>
+
+                <div class="settings-card">
+                    <h3>System Information</h3>
+                    <div class="form-group">
+                        <label for="systemName">System Name</label>
+                        <input type="text" id="systemName" value="{{ system_name or 'CTU Moalboal COMELEC System' }}" placeholder="Enter system name">
+                    </div>
+                    <div class="form-group">
+                        <label for="institutionName">Institution Name</label>
+                        <input type="text" id="institutionName" value="{{ institution_name or 'Cebu Technological University - Moalboal Campus' }}" placeholder="Enter institution name">
+                    </div>
+                    <div class="form-group">
+                        <label for="systemEmail">System Email</label>
+                        <input type="email" id="systemEmail" value="{{ system_email or 'comelec@ctu-moalboal.edu.ph' }}" placeholder="Enter system email">
+                    </div>
+                    <div class="form-group">
+                        <label for="systemContact">Contact Number</label>
+                        <input type="text" id="systemContact" value="{{ system_contact or '+63 XXX XXX XXXX' }}" placeholder="Enter contact number">
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Academic Year Settings</h3>
+                    <div class="two-col-grid">
+                        <div class="form-group">
+                            <label for="currentSY">Current School Year</label>
+                            <input type="text" id="currentSY" value="{{ current_sy or '2024-2025' }}" placeholder="e.g., 2024-2025">
+                        </div>
+                        <div class="form-group">
+                            <label for="currentSemester">Current Semester</label>
+                            <select id="currentSemester">
+                                <option value="1" {% if current_semester == '1' %}selected{% endif %}>1st Semester</option>
+                                <option value="2" {% if current_semester == '2' or not current_semester %}selected{% endif %}>2nd Semester</option>
+                                <option value="summer" {% if current_semester == 'summer' %}selected{% endif %}>Summer</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="saveSettings('general')">
+                        <i class="fa-solid fa-save"></i> Save Changes
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetSettings('general')">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Appearance -->
+            <div class="settings-section" id="appearance">
+                <h2><i class="fa-solid fa-palette"></i> Appearance</h2>
+
+                <div class="settings-card">
+                    <h3>Theme Settings</h3>
+                    <div class="form-group">
+                        <label>Default Theme</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" name="theme" id="themeLight" value="light" {% if theme == 'light' or not theme %}checked{% endif %}>
+                                <label for="themeLight">Light</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" name="theme" id="themeDark" value="dark" {% if theme == 'dark' %}checked{% endif %}>
+                                <label for="themeDark">Dark</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" name="theme" id="themeSystem" value="system" {% if theme == 'system' %}checked{% endif %}>
+                                <label for="themeSystem">System Default</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Color Scheme</h3>
+                    <div class="form-group">
+                        <label for="primaryColor">Primary Color</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="color" id="primaryColor" value="{{ primary_color or '#ff9900' }}">
+                            <span>{{ primary_color or '#ff9900' }}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="secondaryColor">Secondary Color</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="color" id="secondaryColor" value="{{ secondary_color or '#ff5500' }}">
+                            <span>{{ secondary_color or '#ff5500' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Layout Options</h3>
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span>Compact sidebar</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="compactSidebar" {% if compact_sidebar %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span>Show animations</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="showAnimations" {% if show_animations or not show_animations %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="saveSettings('appearance')">Save Changes</button>
+                    <button class="btn btn-secondary" onclick="resetSettings('appearance')">Reset</button>
+                </div>
+            </div>
+
+            <!-- 2FA Settings - With proper status checking from database -->
+            <div class="settings-section" id="twofactor">
+                <h2><i class="fa-solid fa-shield-halved"></i> Two-Factor Authentication (2FA)</h2>
+
+                <div class="info-box">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Enhance your account security with Two-Factor Authentication.
+                </div>
+
+                <!-- 2FA Status Card - Checks totp_secret from database -->
+                <div class="settings-card">
+                    <h3>2FA Status</h3>
+                    <div class="form-group">
+                        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="flex: 1;">
+                                <p style="margin: 0 0 10px 0; color: var(--text-primary);">Current Status:</p>
+                                {% if admin.totp_secret %}
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: #10b981; font-size: 1rem; padding: 8px 16px;">
+                                    <i class="fa-solid fa-circle-check"></i> Enabled
+                                </span>
+                                {% else %}
+                                <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: #ef4444; font-size: 1rem; padding: 8px 16px;">
+                                    <i class="fa-solid fa-circle-xmark"></i> Disabled
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if not admin.totp_secret %}
+                            <button class="btn btn-primary" onclick="show2FASetup()">
+                                <i class="fa-solid fa-shield-halved"></i> Enable 2FA
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2FA Setup Container (Initially Hidden - only shown when enabling) -->
+                <div class="settings-card" id="twofaSetupCard" style="display: none;">
+                    <div class="twofa-setup-container">
+                        <h3>Setup Two-Factor Authentication</h3>
+                        <p class="instructions">
+                            Scan the QR code below with your Google Authenticator app or any TOTP app.
+                            Then enter the 6-digit code to complete setup.
+                        </p>
+
+                        <!-- QR Code - Using a generated secret -->
+                        {% if new_totp_secret %}
+                        {% set account = admin.email %}
+                        {% set issuer = 'CTU Moalboal COMELEC' %}
+                        {% set totp_uri = 'otpauth://totp/' + issuer + ':' + account + '?secret=' + new_totp_secret + '&issuer=' + issuer %}
+                        
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ totp_uri|urlencode }}" alt="QR Code" id="qrCodeImage">
+
+                        <!-- Manual entry option -->
+                        <div style="margin: 15px 0;">
+                            <a href="#" class="manual-entry-link" onclick="toggleManualEntry()">
+                                <i class="fa-solid fa-key"></i> Can't scan? Enter secret manually
+                            </a>
+                        </div>
+
+                        <!-- Manual secret entry (hidden by default) -->
+                        <div id="manualEntry" style="display: none;">
+                            <p style="color: var(--text-secondary); margin-bottom: 10px;">Enter this secret key in your authenticator app:</p>
+                            <div class="secret-key">{{ new_totp_secret }}</div>
+                        </div>
+
+                        <form id="twofaVerifyForm" onsubmit="return verify2FA()">
+                            <input type="hidden" id="totpSecret" value="{{ new_totp_secret }}">
+                            <input type="text" id="twofaCode" name="code" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}" required>
+                            
+                            <div id="twofaMessage"></div>
+                            
+                            <button type="submit">Verify & Complete Setup</button>
+                        </form>
+                        {% endif %}
+
+                        <p class="twofa-note">If you lose access to your authenticator, contact the system admin.</p>
+                    </div>
+                </div>
+
+                <!-- Backup Codes Section (shown only if 2FA is enabled) -->
+                {% if admin.totp_secret and backup_codes %}
+                <div class="settings-card">
+                    <h3>Backup Codes</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Store these backup codes in a safe place. You can use them to access your account if you lose your authenticator device.
+                    </p>
+                    <div class="backup-codes-container">
+                        <div class="backup-codes-grid">
+                            {% for code in backup_codes %}
+                            <div class="backup-code">{{ code }}</div>
+                            {% endfor %}
+                        </div>
+                        <button class="btn btn-secondary" onclick="generateNewBackupCodes()" style="margin-top: 15px;">
+                            <i class="fa-solid fa-rotate"></i> Generate New Codes
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="settings-card">
+                    <h3>Setup Instructions</h3>
+                    <ol style="color: var(--text-secondary); line-height: 1.8; padding-left: 20px;">
+                        <li>Download an authenticator app (Google Authenticator, Microsoft Authenticator, or Authy)</li>
+                        <li>Click "Enable 2FA" button above</li>
+                        <li>Scan the QR code with your authenticator app</li>
+                        <li>Enter the 6-digit code from your app to verify</li>
+                        <li>Save backup codes in a secure location</li>
+                    </ol>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Recovery Options</h3>
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span>Enable SMS backup</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="smsBackup" {% if sms_backup %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                        <small>Receive backup codes via SMS if you lose access to authenticator app</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="backupPhone">Backup Phone Number</label>
+                        <input type="text" id="backupPhone" value="{{ backup_phone or '' }}" placeholder="+63 XXX XXX XXXX">
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span>Enable email backup</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="emailBackup" {% if email_backup or not email_backup %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                        <small>Receive backup codes via email</small>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Trusted Devices</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">Devices you've marked as trusted for 30 days</p>
+                    <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow: hidden;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color);">
+                            <div>
+                                <i class="fa-solid fa-laptop" style="margin-right: 10px; color: var(--primary-color);"></i>
+                                <span style="color: var(--text-primary);">Chrome on Windows • Current device</span>
+                            </div>
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Active now</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-secondary);">
+                            <div>
+                                <i class="fa-solid fa-mobile" style="margin-right: 10px; color: var(--text-muted);"></i>
+                                <span style="color: var(--text-primary);">Safari on iPhone</span>
+                            </div>
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">Revoke</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    {% if admin.totp_secret %}
+                    <button class="btn btn-primary" onclick="save2FASettings()">
+                        <i class="fa-solid fa-save"></i> Save Recovery Options
+                    </button>
+                    <button class="btn btn-danger" onclick="disable2FA()">
+                        <i class="fa-solid fa-ban"></i> Disable 2FA
+                    </button>
+                    {% else %}
+                    <button class="btn btn-primary" onclick="save2FASettings()">
+                        <i class="fa-solid fa-save"></i> Save Recovery Options
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- System Logs -->
+            <div class="settings-section" id="logs">
+                <div class="audit-header" style="margin-bottom: 20px;">
+                    <h2 style="border-bottom: none; padding-bottom: 0;"><i class="fa-solid fa-clock"></i> System Audit Logs</h2>
+                    <p class="audit-timezone"><i class="fa-solid fa-clock"></i> All times are displayed in Asia/Manila (PHT)</p>
+                </div>
+
+                <!-- 🔎 FILTER + SEARCH FORM -->
+                <div class="audit-card">
+                    <form method="GET" class="filter-form" id="auditFilterForm">
+                        <input type="text" name="search" placeholder="Search action, role, description..."
+                               value="{{ search or '' }}" class="audit-input">
+
+                        <input type="date" name="start_date" value="{{ start_date or '' }}" class="audit-input">
+                        <input type="date" name="end_date" value="{{ end_date or '' }}" class="audit-input">
+
+                        <button type="submit" class="audit-btn" onclick="return applyAuditFilters()">
+                            <i class="fa-solid fa-magnifying-glass"></i> Filter
+                        </button>
+
+                        <a href="#" onclick="exportAuditLogs()" class="audit-btn export-btn">
+                           <i class="fa-solid fa-download"></i> Export CSV
+                        </a>
+                        
+                        <button type="button" class="audit-btn export-btn" onclick="clearAuditFilters()" style="background: var(--bg-tertiary);">
+                            <i class="fa-solid fa-rotate-left"></i> Clear
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 📄 TABLE -->
+                <div class="audit-card">
+                    <div style="overflow-x: auto;">
+                        <table class="audit-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Role</th>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>IP</th>
+                                    <th>Date (Manila)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogsTableBody">
+                                {% for log in logs.items %}
+                                <tr>
+                                    <td>{{ log.id }}</td>
+                                    <td>{{ log.role }}</td>
+                                    <td>{{ log.action }}</td>
+                                    <td>{{ log.description }}</td>
+                                    <td>{{ log.ip_address }}</td>
+                                    <td>
+                                        {% if log.timestamp %}
+                                            {% set tz = pytz.timezone('Asia/Manila') %}
+                                            {% set utc_dt = log.timestamp.replace(tzinfo=pytz.UTC) %}
+                                            {% set manila_dt = utc_dt.astimezone(tz) %}
+                                            {{ manila_dt.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="audit-empty">
+                                        No audit logs found.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 📄 PAGINATION -->
+                    <div class="pagination">
+                        {% if logs.has_prev %}
+                            <a href="#" onclick="loadAuditPage({{ logs.prev_num }})">Previous</a>
+                        {% endif %}
+
+                        <span>Page {{ logs.page }} of {{ logs.pages }}</span>
+
+                        {% if logs.has_next %}
+                            <a href="#" onclick="loadAuditPage({{ logs.next_num }})">Next</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Settings navigation
+document.querySelectorAll('.settings-nav-item').forEach(item => {
+    item.addEventListener('click', function() {
+        document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
+        document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
+        
+        this.classList.add('active');
+        const sectionId = this.getAttribute('data-section');
+        document.getElementById(sectionId).classList.add('active');
+        localStorage.setItem('lastSettingsSection', sectionId);
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const lastSection = localStorage.getItem('lastSettingsSection');
+    if (lastSection) {
+        document.querySelectorAll('.settings-nav-item').forEach(nav => {
+            if (nav.getAttribute('data-section') === lastSection) {
+                nav.click();
+            }
+        });
+    }
+});
+
+// General Settings Functions
+function saveSettings(section) {
+    const settings = {};
+    const sectionElement = document.getElementById(section);
+    const inputs = sectionElement.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+        if (input.type === 'checkbox') {
+            settings[input.id] = input.checked;
+        } else if (input.type === 'radio') {
+            if (input.checked) {
+                settings[input.name] = input.value;
+            }
+        } else {
+            settings[input.id] = input.value;
+        }
+    });
+    
+    console.log('Saving settings for', section, settings);
+    
+    fetch('/admin/settings/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            section: section,
+            settings: settings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Settings saved successfully!');
+        } else {
+            alert('Error saving settings: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving settings. Please try again.');
+    });
+}
+
+function resetSettings(section) {
+    if (confirm('Reset all settings in this section to default values?')) {
+        console.log('Resetting section:', section);
+    }
+}
+
+// 2FA Functions
+function show2FASetup() {
+    document.getElementById('twofaSetupCard').style.display = 'block';
+    // Scroll to the setup card
+    document.getElementById('twofaSetupCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleManualEntry() {
+    const manualEntry = document.getElementById('manualEntry');
+    if (manualEntry.style.display === 'none') {
+        manualEntry.style.display = 'block';
+    } else {
+        manualEntry.style.display = 'none';
+    }
+}
+
+function verify2FA() {
+    const code = document.getElementById('twofaCode').value;
+    const secret = document.getElementById('totpSecret').value;
+    const messageDiv = document.getElementById('twofaMessage');
+    
+    if (code.length !== 6 || !/^\d+$/.test(code)) {
+        messageDiv.innerHTML = '<p class="error-msg">Please enter a valid 6-digit code</p>';
+        return false;
+    }
+    
+    // Send verification to backend
+    fetch('/admin/2fa/verify', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            secret: secret,
+            code: code
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = '<p class="success-msg">2FA enabled successfully!</p>';
+            
+            // Update status badge
+            const statusBadge = document.querySelector('#twofactor .badge');
+            statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Enabled';
+            statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+            statusBadge.style.color = '#10b981';
+            statusBadge.style.borderColor = '#10b981';
+            
+            // Hide enable button
+            document.querySelector('#twofactor .btn-primary').style.display = 'none';
+            
+            // Reload page to show backup codes
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            messageDiv.innerHTML = '<p class="error-msg">' + (data.message || 'Invalid code. Please try again.') + '</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        messageDiv.innerHTML = '<p class="error-msg">Error verifying code. Please try again.</p>';
+    });
+    
+    return false;
+}
+
+function disable2FA() {
+    if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
+        fetch('/admin/2fa/disable', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update status badge
+                const statusBadge = document.querySelector('#twofactor .badge');
+                statusBadge.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Disabled';
+                statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusBadge.style.color = '#ef4444';
+                statusBadge.style.borderColor = '#ef4444';
+                
+                alert('2FA has been disabled.');
+                location.reload();
+            } else {
+                alert('Error disabling 2FA: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error disabling 2FA. Please try again.');
+        });
+    }
+}
+
+function save2FASettings() {
+    const smsBackup = document.getElementById('smsBackup').checked;
+    const emailBackup = document.getElementById('emailBackup').checked;
+    const backupPhone = document.getElementById('backupPhone').value;
+    
+    fetch('/admin/2fa/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            sms_backup: smsBackup,
+            email_backup: emailBackup,
+            backup_phone: backupPhone
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('2FA settings saved successfully!');
+        } else {
+            alert('Error saving settings: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving settings. Please try again.');
+    });
+}
+
+function generateNewBackupCodes() {
+    if (confirm('Generating new backup codes will invalidate your old ones. Continue?')) {
+        fetch('/admin/2fa/backup-codes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('New backup codes generated!');
+                location.reload();
+            } else {
+                alert('Error generating backup codes: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error generating backup codes. Please try again.');
+        });
+    }
+}
+
+// Audit Log Functions
+function applyAuditFilters() {
+    const form = document.getElementById('auditFilterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData).toString();
+    
+    window.location.href = window.location.pathname + '?' + params + '#logs';
+    return false;
+}
+
+function exportAuditLogs() {
+    const form = document.getElementById('auditFilterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData).toString();
+    
+    window.location.href = '/admin/audit-logs?' + params + '&export=csv';
+}
+
+function clearAuditFilters() {
+    const form = document.getElementById('auditFilterForm');
+    form.querySelectorAll('input').forEach(input => {
+        if (input.type !== 'button') {
+            input.value = '';
+        }
+    });
+    
+    window.location.href = '/admin/audit-logs#logs';
+}
+
+function loadAuditPage(page) {
+    const form = document.getElementById('auditFilterForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData).toString();
+    
+    window.location.href = '/admin/audit-logs?page=' + page + '&' + params + '#logs';
+    return false;
+}
+
+// Ensure we stay on logs section when page loads with hash
+if (window.location.hash === '#logs') {
+    setTimeout(() => {
+        document.querySelector('[data-section="logs"]').click();
+    }, 100);
+}
+</script>
+</body>
+</html>

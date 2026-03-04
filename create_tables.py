@@ -19,6 +19,7 @@ from admin.models import (
 )
 
 # ===== IMPORT MODELS ONE BY ONE FROM STUDENT =====
+# ⚠️ IMPORTANT: Import these AFTER admin models to avoid circular imports
 from student.models import (
     Student,            # students table
     Vote,               # votes table
@@ -34,7 +35,7 @@ pymysql.install_as_MySQLdb()
 MYSQL_USER = 'root'           # Your MySQL username
 MYSQL_PASSWORD = ''           # Your MySQL password (empty for XAMPP)
 MYSQL_HOST = 'localhost'      # Your MySQL host
-MYSQL_DB = 'student_voting'  # ⚠️ CHANGE THIS to your database name!
+MYSQL_DB = 'student_voting'   # ⚠️ CHANGE THIS to your database name!
 
 # ===== CREATE FLASK APP =====
 app = Flask(__name__)
@@ -154,6 +155,48 @@ with app.app_context():
         else:
             print("🎉 ALL TABLES CREATED PERFECTLY!")
         print("=" * 60)
+        
+        # ===== CREATE DEFAULT DATA =====
+        print("\n📦 Creating default data...")
+        
+        # Create default admin if none exists
+        from werkzeug.security import generate_password_hash
+        from admin.models import Admin
+        
+        admin_count = Admin.query.count()
+        if admin_count == 0:
+            default_admin = Admin(
+                first_name="System",
+                last_name="Administrator",
+                username="admin",
+                password=generate_password_hash("admin123"),
+                email="admin@ctu.edu.ph",
+                role="Admin",
+                status="Active",
+                totp_secret=None  # Explicitly set to None
+            )
+            db.session.add(default_admin)
+            db.session.commit()
+            print("   ✅ Default admin created (username: admin, password: admin123)")
+        else:
+            print("   ⏩ Admin already exists, skipping...")
+        
+        # Create default year levels
+        year_level_count = YearLevel.query.count()
+        if year_level_count == 0:
+            year_levels = [
+                YearLevel(year_name="1st Year"),
+                YearLevel(year_name="2nd Year"),
+                YearLevel(year_name="3rd Year"),
+                YearLevel(year_name="4th Year")
+            ]
+            db.session.add_all(year_levels)
+            db.session.commit()
+            print("   ✅ Default year levels created (1st-4th Year)")
+        else:
+            print("   ⏩ Year levels already exist, skipping...")
+        
+        print("✅ Default data created successfully!")
         
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
