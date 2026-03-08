@@ -255,3 +255,383 @@ def sync_registered_students_with_ctu():
         'deleted': deleted_count,
         'kept_with_votes': kept_with_votes
     }
+
+
+
+
+
+from flask import url_for
+from flask_mail import Message
+from extensions import mail
+
+def send_admin_device_verification_email(admin, device, token):
+    """Send device verification email to admin"""
+    verify_url = url_for('admin.verify_admin_device', token=token, _external=True)
+    
+    msg = Message(
+        subject="🔐 Verify New Device Login - COMELEC Admin",
+        recipients=[admin.email],
+        html=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
+            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #ff9900, #ff5500); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 New Device Login</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                        We detected a login to your COMELEC Admin account from a new device:
+                    </p>
+                    
+                    <!-- Device Info Card -->
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <div style="background: #eef2ff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">💻</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <p style="margin: 0 0 5px 0; color: #1f2937; font-weight: 600;">{device.device_name}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">IP: {device.ip_address}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Browser: {device.browser}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If this was you, click the button below to verify this device. This will add it to your trusted devices for 30 days.
+                    </p>
+                    
+                    <!-- Verify Button -->
+                    <div style="text-align: center; margin: 35px 0;">
+                        <a href="{verify_url}" style="display: inline-block; background: linear-gradient(135deg, #ff9900, #ff5500); color: white; text-decoration: none; padding: 15px 40px; border-radius: 40px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 10px rgba(255, 85, 0, 0.3);">✅ Yes, It's Me</a>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If you didn't attempt to log in, please secure your account immediately.
+                    </p>
+                    
+                    <!-- Security Notice -->
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">
+                            <strong>⚠️ Security Notice:</strong> This link will expire in 15 minutes. 
+                            If you didn't request this, please change your password immediately.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
+                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    mail.send(msg)
+
+
+
+from flask import url_for
+from flask_mail import Message
+from extensions import mail
+
+def send_device_removal_confirmation(admin, device, token):
+    """Send email confirmation for device removal"""
+    confirm_url = url_for('admin.confirm_remove_device', token=token, _external=True)
+    cancel_url = url_for('admin.cancel_remove_device', token=token, _external=True)
+    
+    msg = Message(
+        subject="🔐 Confirm Device Removal - COMELEC Admin",
+        recipients=[admin.email],
+        html=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
+            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Confirm Device Removal</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                        We received a request to remove this trusted device from your account:
+                    </p>
+                    
+                    <!-- Device Info Card -->
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <div style="background: #fee2e2; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">💻</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <p style="margin: 0 0 5px 0; color: #1f2937; font-weight: 600;">{device.device_name or 'Unknown Device'}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">IP: {device.ip_address}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Browser: {device.browser}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Trusted until: {device.expires_at.strftime('%Y-%m-%d %H:%M') if device.expires_at else 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If you want to remove this device from your trusted devices list, click the button below:
+                    </p>
+                    
+                    <!-- Confirm Button -->
+                    <div style="text-align: center; margin: 35px 0;">
+                        <a href="{confirm_url}" style="display: inline-block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; text-decoration: none; padding: 15px 40px; border-radius: 40px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">✅ Yes, Remove Device</a>
+                    </div>
+                    
+                    <!-- Cancel Link -->
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="{cancel_url}" style="color: #6b7280; text-decoration: none; font-size: 14px;">❌ No, keep this device</a>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If you didn't request this, please secure your account immediately.
+                    </p>
+                    
+                    <!-- Security Notice -->
+                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                        <p style="margin: 0; color: #991b1b; font-size: 14px;">
+                            <strong>⚠️ Security Notice:</strong> This link will expire in 15 minutes. 
+                            If you didn't request this, someone may be trying to access your account.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
+                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    mail.send(msg)
+
+
+
+    from flask import url_for
+from flask_mail import Message
+from extensions import mail
+from datetime import datetime
+
+def send_device_removal_confirmation(admin, device, token):
+    """Send email confirmation for device removal"""
+    confirm_url = url_for('admin.confirm_remove_device', token=token, _external=True)
+    cancel_url = url_for('admin.cancel_remove_device', token=token, _external=True)
+    
+    msg = Message(
+        subject="🔐 Confirm Device Removal - COMELEC Admin",
+        recipients=[admin.email],
+        html=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
+            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Confirm Device Removal</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                        We received a request to remove this trusted device from your account:
+                    </p>
+                    
+                    <!-- Device Info Card -->
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <div style="background: #fee2e2; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">💻</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <p style="margin: 0 0 5px 0; color: #1f2937; font-weight: 600;">{device.device_name or 'Unknown Device'}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">IP: {device.ip_address}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Browser: {device.browser}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Trusted until: {device.expires_at.strftime('%Y-%m-%d %H:%M') if device.expires_at else 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If you want to remove this device from your trusted devices list, click the button below:
+                    </p>
+                    
+                    <!-- Confirm Button -->
+                    <div style="text-align: center; margin: 35px 0;">
+                        <a href="{confirm_url}" style="display: inline-block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; text-decoration: none; padding: 15px 40px; border-radius: 40px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">✅ Yes, Remove Device</a>
+                    </div>
+                    
+                    <!-- Cancel Link -->
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="{cancel_url}" style="color: #6b7280; text-decoration: none; font-size: 14px;">❌ No, keep this device</a>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If you didn't request this, please secure your account immediately.
+                    </p>
+                    
+                    <!-- Security Notice -->
+                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                        <p style="margin: 0; color: #991b1b; font-size: 14px;">
+                            <strong>⚠️ Security Notice:</strong> This link will expire in 15 minutes. 
+                            If you didn't request this, someone may be trying to access your account.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
+                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    mail.send(msg)
+
+
+
+
+
+def send_admin_new_device_email(admin, device):
+    """Send email when new device is detected"""
+    token = device.generate_verification_token()
+    db.session.commit()
+    
+    confirm_url = url_for('admin.confirm_admin_device', token=token, _external=True)
+    deny_url = url_for('admin.reject_admin_device', token=token, _external=True)
+    
+    msg = Message(
+        subject="🔐 New Device Login Verification - COMELEC Admin",
+        recipients=[admin.email],
+        html=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
+            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #ff9900, #ff5500); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 New Device Login</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                        We detected a login to your COMELEC Admin account from a new device:
+                    </p>
+                    
+                    <!-- Device Info Card -->
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <div style="background: #eef2ff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">💻</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <p style="margin: 0 0 5px 0; color: #1f2937; font-weight: 600;">{device.device_name}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">IP: {device.ip_address}</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Browser: {device.browser}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        If this was you, click the button below to verify this device. This will add it to your trusted devices for 30 days.
+                    </p>
+                    
+                    <!-- Two Buttons -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 25px auto;">
+                        <tr>
+                            <td style="padding: 5px;">
+                                <a href="{confirm_url}" style="
+                                    display: inline-block;
+                                    padding: 12px 25px;
+                                    background: linear-gradient(135deg, #10b981, #059669);
+                                    color: #ffffff;
+                                    text-decoration: none;
+                                    border-radius: 40px;
+                                    font-weight: 600;
+                                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                                ">✅ Yes, it's me</a>
+                            </td>
+                            <td style="padding: 5px;">
+                                <a href="{deny_url}" style="
+                                    display: inline-block;
+                                    padding: 12px 25px;
+                                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                                    color: #ffffff;
+                                    text-decoration: none;
+                                    border-radius: 40px;
+                                    font-weight: 600;
+                                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                                ">❌ No, it's not me</a>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <!-- Security Notice -->
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">
+                            <strong>⚠️ Security Notice:</strong> This link will expire in 15 minutes. 
+                            If you didn't request this, click "No, it's not me" immediately.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
+                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    try:
+        mail.send(msg)
+        print(f"✅ New device verification email sent to {admin.email}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")

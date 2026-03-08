@@ -1,16 +1,31 @@
-// Voting Trends Chart - Fixed Version
+// Voting Trends Chart - Fixed Version with School Year Support
 
 class VotingTrends {
     constructor() {
         this.chart = null;
         this.currentElectionId = 'all';
+        this.currentSchoolYear = this.getCurrentSchoolYear();
         this.init();
     }
 
+    getCurrentSchoolYear() {
+        const schoolYearSelect = document.getElementById('schoolYearSelect');
+        return schoolYearSelect ? schoolYearSelect.value : '';
+    }
+
     async init() {
-        console.log("VotingTrends initialized");
+        console.log("VotingTrends initialized with school year:", this.currentSchoolYear);
         this.showLoading();
         await this.loadElections();
+        
+        // Listen for school year changes
+        const schoolYearSelect = document.getElementById('schoolYearSelect');
+        if (schoolYearSelect) {
+            schoolYearSelect.addEventListener('change', (e) => {
+                this.currentSchoolYear = e.target.value;
+                this.refreshData();
+            });
+        }
     }
 
     showLoading() {
@@ -25,10 +40,39 @@ class VotingTrends {
         }
     }
 
+    async refreshData() {
+        console.log("Refreshing data with school year:", this.currentSchoolYear);
+        this.showLoading();
+        await this.loadElections();
+    }
+
+    buildApiUrl(endpoint, electionId = null) {
+        let url = endpoint;
+        const params = new URLSearchParams();
+        
+        if (electionId !== null) {
+            params.append('election_id', electionId);
+        }
+        
+        if (this.currentSchoolYear) {
+            params.append('school_year', this.currentSchoolYear);
+        }
+        
+        const queryString = params.toString();
+        if (queryString) {
+            url += '?' + queryString;
+        }
+        
+        return url;
+    }
+
     async loadElections() {
         try {
             console.log("Fetching voting trends...");
-            const response = await fetch('/admin/api/voting-trends');
+            const url = this.buildApiUrl('/admin/api/voting-trends', this.currentElectionId);
+            console.log("Fetching from:", url);
+            
+            const response = await fetch(url);
             console.log("Response status:", response.status);
             
             const data = await response.json();
@@ -65,11 +109,15 @@ class VotingTrends {
             // Add emoji based on scope
             let emoji = '📊';
             if (election.scope === 'campus') emoji = '🏛️';
+            if (election.scope === 'department') emoji = '📚';
+            
+            // Add status indicator
+            const statusIndicator = election.status_emoji || '';
             
             html += `
                 <button class="election-filter-btn ${this.currentElectionId == election.id ? 'active' : ''}" 
                         data-election-id="${election.id}">
-                    ${emoji} ${election.name}
+                    ${statusIndicator} ${emoji} ${election.name}
                     <span class="vote-count-badge">${election.total_votes} votes</span>
                 </button>
             `;
@@ -98,7 +146,8 @@ class VotingTrends {
         this.showLoading();
         
         try {
-            const response = await fetch(`/admin/api/voting-trends?election_id=${electionId}`);
+            const url = this.buildApiUrl('/admin/api/voting-trends', electionId);
+            const response = await fetch(url);
             const data = await response.json();
             
             this.renderChart(data.labels, data.data);
@@ -112,7 +161,8 @@ class VotingTrends {
 
     async loadElectionStats(electionId) {
         try {
-            const response = await fetch(`/admin/api/election-stats/${electionId}`);
+            const url = this.buildApiUrl(`/admin/api/election-stats/${electionId}`, electionId);
+            const response = await fetch(url);
             const stats = await response.json();
             console.log("Stats received:", stats);
             
@@ -130,6 +180,12 @@ class VotingTrends {
                                        stats.election_status === 'Upcoming' ? '🟡' : '🔴';
                     titleText += ` ${statusEmoji} ${stats.election_status}`;
                 }
+                
+                // Add school year to title if filtered
+                if (this.currentSchoolYear) {
+                    titleText += ` | School Year: ${this.currentSchoolYear}`;
+                }
+                
                 document.getElementById('currentElectionTitle').textContent = titleText;
             }
         } catch (error) {
@@ -147,11 +203,15 @@ class VotingTrends {
         const hasVotes = data.some(v => v > 0);
         
         if (!hasVotes) {
+            const totalVotes = data.reduce((a, b) => a + b, 0);
             container.innerHTML = `
                 <div class="no-data-message">
                     <i class="fa-solid fa-chart-line fa-2x" style="margin-bottom: 10px; opacity: 0.5;"></i>
                     <p>No votes cast in the last 24 hours</p>
-                    <p style="font-size: 0.8rem; margin-top: 5px;">Total votes in system: ${data.reduce((a, b) => a + b, 0)}</p>
+                    <p style="font-size: 0.8rem; margin-top: 5px;">
+                        Total votes in selected period: ${totalVotes}
+                        ${this.currentSchoolYear ? `<br>School Year: ${this.currentSchoolYear}` : ''}
+                    </p>
                 </div>
             `;
             return;
@@ -282,6 +342,7 @@ class VotingTrends {
                     <i class="fa-solid fa-exclamation-triangle fa-2x" style="color: #ef4444; margin-bottom: 10px;"></i>
                     <p>Error loading voting trends</p>
                     <p style="font-size: 0.8rem;">${message || 'Please try refreshing the page'}</p>
+                    ${this.currentSchoolYear ? `<p style="font-size: 0.8rem; margin-top: 5px;">School Year: ${this.currentSchoolYear}</p>` : ''}
                 </div>
             `;
         }
@@ -290,7 +351,21 @@ class VotingTrends {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('votingTrendsChart') || document.querySelector('.chart-container')) {
+    // Check if we're on a page with voting trends
+    const chartContainer = document.querySelector('.chart-container');
+    const chartCanvas = document.getElementById('votingTrendsChart');
+    
+    if (chartContainer || chartCanvas) {
+        console.log("Initializing VotingTrends");
         window.votingTrends = new VotingTrends();
+    }
+});
+
+// Also re-initialize if the page loads via TurboLinks or similar
+document.addEventListener('turbolinks:load', () => {
+    if (document.querySelector('.chart-container') || document.getElementById('votingTrendsChart')) {
+        if (!window.votingTrends) {
+            window.votingTrends = new VotingTrends();
+        }
     }
 });

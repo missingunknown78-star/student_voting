@@ -316,3 +316,122 @@ class Setting(db.Model):
     
     def __repr__(self):
         return f'<Setting {self.key}>'
+    
+
+
+from extensions import db
+from datetime import datetime
+import hashlib
+import secrets
+from datetime import datetime, timedelta
+
+
+
+class AdminTrustedDevice(db.Model):
+    __tablename__ = 'admin_trusted_devices'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=False)
+    device_fingerprint = db.Column(db.String(255), nullable=False)
+    device_name = db.Column(db.String(255))
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.Text)
+    browser = db.Column(db.String(255))
+    os = db.Column(db.String(100))
+    device_type = db.Column(db.String(50))
+    trusted = db.Column(db.Boolean, default=True)
+    is_current = db.Column(db.Boolean, default=False)
+    last_used = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # For verification
+    verification_token = db.Column(db.String(100), nullable=True)
+    verification_sent_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    admin = db.relationship('Admin', backref=db.backref('trusted_devices', lazy='dynamic'))
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.device_fingerprint:
+            self.generate_fingerprint()
+    
+    def generate_fingerprint(self):
+        """Generate a unique fingerprint for this device based on consistent device characteristics"""
+        import hashlib
+        
+        # FIXED: Removed secrets.token_hex(8) to make it consistent!
+        # Using ONLY stable device characteristics that don't change between logins
+        fingerprint_data = f"{self.admin_id}{self.ip_address}{self.user_agent}{self.browser}{self.os}"
+        self.device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
+        return self.device_fingerprint
+    
+    def generate_verification_token(self):
+        """Generate a verification token for email verification"""
+        self.verification_token = secrets.token_urlsafe(32)
+        self.verification_sent_at = datetime.utcnow()
+        return self.verification_token
+    
+    def verify(self):
+        """Mark device as trusted"""
+        self.trusted = True
+        self.verification_token = None
+        self.verification_sent_at = None
+        self.last_used = datetime.utcnow()
+        self.expires_at = datetime.utcnow() + timedelta(days=30)
+    
+    def is_expired(self):
+        """Check if device trust has expired"""
+        if not self.expires_at:
+            return True
+        return datetime.utcnow() > self.expires_at
+    
+    def update_last_used(self):
+        """Update last used timestamp"""
+        self.last_used = datetime.utcnow()
+    
+    @staticmethod
+    def get_device_info(request):
+        """Extract device info from request"""
+        user_agent = request.headers.get('User-Agent', '')
+        
+        # Simple device type detection
+        device_type = 'desktop'
+        if 'mobile' in user_agent.lower() or 'iphone' in user_agent.lower() or 'android' in user_agent.lower():
+            device_type = 'mobile'
+        elif 'tablet' in user_agent.lower() or 'ipad' in user_agent.lower():
+            device_type = 'tablet'
+        
+        # Browser detection
+        browser = 'Unknown'
+        if 'chrome' in user_agent.lower() and 'edg' not in user_agent.lower():
+            browser = 'Chrome'
+        elif 'firefox' in user_agent.lower():
+            browser = 'Firefox'
+        elif 'safari' in user_agent.lower() and 'chrome' not in user_agent.lower():
+            browser = 'Safari'
+        elif 'edge' in user_agent.lower() or 'edg' in user_agent.lower():
+            browser = 'Edge'
+        
+        # OS detection
+        os = 'Unknown'
+        if 'windows' in user_agent.lower():
+            os = 'Windows'
+        elif 'mac' in user_agent.lower() and 'ios' not in user_agent.lower():
+            os = 'macOS'
+        elif 'linux' in user_agent.lower():
+            os = 'Linux'
+        elif 'android' in user_agent.lower():
+            os = 'Android'
+        elif 'iphone' in user_agent.lower() or 'ipad' in user_agent.lower():
+            os = 'iOS'
+        
+        return {
+            'user_agent': user_agent,
+            'ip_address': request.remote_addr,
+            'device_type': device_type,
+            'browser': browser,
+            'os': os
+        }

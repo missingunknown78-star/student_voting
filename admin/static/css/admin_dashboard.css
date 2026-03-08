@@ -536,3 +536,163 @@ body.modal-open { overflow: hidden; }
     .modal-content table td { padding: 10px 12px; font-size: 0.8rem; }
 }
 
+
+
+
+/* ==================== SETTINGS ICON ==================== */
+.settings-icon {
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 12px;
+    font-size: 1.3rem;
+    transition: var(--transition);
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.2);
+    text-decoration: none;
+}
+
+.settings-icon:hover {
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 6px 18px rgba(26, 86, 219, 0.3);
+    color: white;
+}
+
+/* Remove old profile styles */
+.profile-container,
+.profile-pic,
+.profile-menu {
+    display: none;
+}
+
+
+/* ==================== HEADER ACTIONS ==================== */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* ==================== SCHOOL YEAR FILTER ==================== */
+.school-year-filter {
+    position: relative;
+}
+
+.school-year-select {
+    padding: 10px 35px 10px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--dark-gray);
+    background: white;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-width: 180px;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231a56db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+/* Dark mode styles - applied when body has dark-mode class */
+.dark-mode .school-year-select {
+    background-color: #1e293b;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    border-color: #475569;
+    color: #e2e8f0;
+}
+
+/* Alternative colored version that works well in both modes */
+.school-year-select.colored {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    border-color: var(--primary-blue);
+    color: white;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Dark mode for colored version */
+.dark-mode .school-year-select.colored {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-color: #3b82f6;
+    color: white;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Hover effects */
+.school-year-select:hover {
+    border-color: var(--primary-blue);
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.15);
+    transform: translateY(-1px);
+}
+
+.dark-mode .school-year-select:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    background-color: #2d3748;
+}
+
+.school-year-select.colored:hover {
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+}
+
+/* Focus styles */
+.school-year-select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.2);
+}
+
+.dark-mode .school-year-select:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Option dropdown styling - this removes the duplicate arrow */
+.school-year-select option {
+    background: white;
+    color: var(--dark-gray);
+}
+
+.dark-mode .school-year-select option {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header-actions {
+        gap: 10px;
+    }
+    
+    .school-year-select {
+        min-width: 140px;
+        padding: 8px 30px 8px 12px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-header {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 15px;
+        gap: 10px;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .school-year-select {
+        flex: 1;
+        min-width: 0;
+    }
+}

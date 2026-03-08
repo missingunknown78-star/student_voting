@@ -40,6 +40,7 @@
     --header-height: 80px;
     --border-radius: 12px;
     --card-radius: 16px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Dark Mode Variables */
@@ -65,6 +66,7 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 /* ==================== MAIN LAYOUT ==================== */
@@ -569,3 +571,702 @@ input:checked + .toggle-slider:before {
         flex-direction: column;
     }
 }
+
+
+/* ==================== AUDIT LOGS STYLES ==================== */
+.audit-timezone {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+
+.audit-card {
+    background: var(--bg-secondary);
+    border-radius: var(--card-radius);
+    padding: 25px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.audit-input {
+    padding: 10px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.audit-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.audit-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-gradient);
+    color: white;
+    text-decoration: none;
+}
+
+.audit-btn.export-btn {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.audit-btn.export-btn:hover {
+    background: var(--border-color);
+}
+
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.audit-table th {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.audit-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.audit-table tbody tr:hover {
+    background: var(--hover-bg);
+}
+
+.audit-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.pagination a {
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.pagination a:hover {
+    background: var(--primary-gradient);
+    color: white;
+}
+
+.pagination span {
+    color: var(--text-secondary);
+}
+
+/* Filter form layout */
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+/* Loading spinner for AJAX */
+.loading-spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.table-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+/* Audit table column widths for better spacing */
+.audit-table th:nth-child(1) { width: 5%; }  /* ID */
+.audit-table th:nth-child(2) { width: 10%; } /* Role */
+.audit-table th:nth-child(3) { width: 15%; } /* Action */
+.audit-table th:nth-child(4) { width: 40%; } /* Description */
+.audit-table th:nth-child(5) { width: 10%; } /* IP */
+.audit-table th:nth-child(6) { width: 20%; } /* Date */
+
+@media (max-width: 768px) {
+    .filter-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .audit-btn {
+        justify-content: center;
+    }
+    
+    .audit-table {
+        font-size: 0.85rem;
+    }
+    
+    .audit-table th,
+    .audit-table td {
+        padding: 8px 5px;
+    }
+}
+
+
+/* ==================== STICKY SIDEBAR ==================== */
+.settings-sections {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    position: relative;
+}
+
+.settings-sidebar {
+    width: 280px;
+    background: var(--bg-secondary);
+    border-radius: var(--card-radius);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    
+    /* Sticky positioning */
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    align-self: flex-start;
+    
+    /* Smooth scrolling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--bg-tertiary);
+}
+
+/* Custom scrollbar for webkit browsers */
+.settings-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.settings-sidebar::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* Settings content takes remaining width */
+.settings-content {
+    flex: 1;
+    background: var(--bg-secondary);
+    border-radius: var(--card-radius);
+    padding: 30px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    min-width: 0; /* Prevents overflow issues */
+}
+
+/* When sidebar hits bottom of container, it stops sticking */
+.settings-sections::after {
+    content: '';
+    display: table;
+    clear: both;
+}
+
+/* Responsive behavior */
+@media (max-width: 1024px) {
+    .settings-sections {
+        flex-direction: column;
+    }
+    
+    .settings-sidebar {
+        width: 100%;
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+        margin-bottom: 20px;
+    }
+}
+
+
+/* ==================== 2FA SETUP STYLES ==================== */
+.twofa-setup-container {
+    text-align: center;
+    padding: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.twofa-setup-container h3 {
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}
+
+.twofa-setup-container .instructions {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.twofa-setup-container img {
+    margin: 20px auto;
+    width: 200px;
+    height: 200px;
+    display: block;
+    border-radius: 12px;
+    background: white;
+    padding: 12px;
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.twofa-setup-container img:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-lg);
+}
+
+.twofa-setup-container .manual-entry-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 30px;
+    margin: 10px 0;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+.twofa-setup-container .manual-entry-link:hover {
+    background: var(--hover-bg);
+    transform: translateY(-2px);
+}
+
+.twofa-setup-container .manual-entry-link i {
+    font-size: 0.9rem;
+}
+
+.twofa-setup-container .secret-key {
+    background: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 15px 0;
+    word-break: break-all;
+    border: 2px dashed var(--primary-color);
+    color: var(--text-primary);
+    letter-spacing: 2px;
+}
+
+.twofa-setup-container input[type="text"] {
+    width: 100%;
+    max-width: 220px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    margin: 20px auto 15px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition);
+    display: block;
+}
+
+.twofa-setup-container input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(255, 153, 0, 0.15);
+    transform: scale(1.02);
+}
+
+.dark-mode .twofa-setup-container input[type="text"]:focus {
+    box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.2);
+}
+
+.twofa-setup-container button[type="submit"] {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    background: var(--primary-gradient);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 10px 0 15px;
+    width: 100%;
+    max-width: 220px;
+    transition: var(--transition);
+    box-shadow: 0 4px 12px rgba(255, 85, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.twofa-setup-container button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(255, 85, 0, 0.3);
+}
+
+.twofa-setup-container button[type="submit"]:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.twofa-setup-container button[type="submit"]:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.dark-mode .twofa-setup-container button[type="submit"] {
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+}
+
+/* Loading state for verify button */
+.twofa-setup-container button[type="submit"] i {
+    margin-right: 8px;
+}
+
+/* 2FA Status Badge Styles */
+#twofactor .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+#twofactor .badge i {
+    font-size: 1.1rem;
+}
+
+/* Backup Codes Section */
+.backup-codes-container {
+    background: var(--bg-tertiary);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    margin: 20px 0;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.backup-codes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.backup-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.95rem;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: var(--transition);
+}
+
+.backup-code:hover {
+    background: var(--hover-bg);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--primary-color);
+}
+
+/* Error and Success Messages */
+#twofaMessage {
+    margin: 15px 0;
+}
+
+.error-msg {
+    color: var(--danger-color);
+    margin: 10px 0;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 10px;
+    border-left: 4px solid var(--danger-color);
+    text-align: left;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.success-msg {
+    color: var(--success-color);
+    margin: 10px 0;
+    padding: 12px 16px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 10px;
+    border-left: 4px solid var(--success-color);
+    text-align: left;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-msg i, .success-msg i {
+    font-size: 1.2rem;
+}
+
+/* QR Code Container Animation */
+@keyframes qrPulse {
+    0% {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    50% {
+        box-shadow: 0 8px 25px rgba(255, 85, 0, 0.2);
+    }
+    100% {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+}
+
+.twofa-setup-container img {
+    animation: qrPulse 3s infinite ease-in-out;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .twofa-setup-container {
+        padding: 15px;
+    }
+    
+    .twofa-setup-container img {
+        width: 180px;
+        height: 180px;
+    }
+    
+    .backup-codes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .backup-code {
+        font-size: 0.9rem;
+        padding: 8px;
+    }
+    
+    .twofa-setup-container input[type="text"] {
+        max-width: 100%;
+        font-size: 1rem;
+        letter-spacing: 2px;
+    }
+}
+
+/* Dark mode specific adjustments */
+.dark-mode .twofa-setup-container img {
+    background: #1e293b;
+    border-color: #475569;
+}
+
+.dark-mode .backup-code {
+    background: #1e293b;
+    border-color: #475569;
+}
+
+.dark-mode .backup-code:hover {
+    border-color: var(--primary-color);
+}
+
+/* Copy button for secret key (optional) */
+.secret-key-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.copy-secret-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.copy-secret-btn:hover {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+}
+
+/* Enable 2FA Button */
+#twofactor .btn-primary {
+    min-width: 140px;
+    justify-content: center;
+}
+
+/* Disable 2FA Button */
+#twofactor .btn-danger {
+    min-width: 140px;
+    justify-content: center;
+}
+
+/* Loading spinner for 2FA setup */
+.loading-spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* ==================== BACK TO DASHBOARD BUTTON ==================== */
+.back-button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.back-button i {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.back-button:hover {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    transform: translateX(-5px);
+    box-shadow: 0 4px 15px rgba(255, 85, 0, 0.3);
+}
+
+.back-button:hover i {
+    transform: translateX(-3px);
+}
+
+.dark-mode .back-button:hover {
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+}
+
+/* Alternative style - more prominent */
+.back-button.prominent {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(255, 85, 0, 0.2);
+}
+
+.back-button.prominent:hover {
+    transform: translateX(-5px) translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 85, 0, 0.3);
+}
+
+/* Small version for mobile or tight spaces */
+.back-button.small {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    gap: 6px;
+}
+
+.back-button.small i {
+    font-size: 0.85rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .back-button {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+    
+    .settings-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .back-button:hover {
+        transform: translateY(-2px);
+    }
+}
+
+

@@ -32,6 +32,7 @@ import csv
 from admin.models import AuditLog, Setting
 from admin.utils import log_audit
 import pandas as pd
+from admin.models import AdminTrustedDevice
 
 
 
@@ -175,6 +176,26 @@ def count_unique_voters(election_id):
         election_id=election_id
     ).distinct().count()
 
+
+
+def get_all_school_years():
+    """Get all unique school years from elections"""
+    try:
+        elections = Election.query.order_by(Election.start_date.asc()).all()
+        school_years = set()
+        
+        for election in elections:
+            if election.start_date:
+                year = election.start_date.year
+                school_years.add(f"{year}-{year+1}")
+        
+        # Sort in descending order (newest first)
+        return sorted(list(school_years), reverse=True)
+    except:
+        return []
+
+
+
 # ------------------- Configuration ------------------- #
 MAX_ATTEMPTS = 3          # max allowed failed username/password attempts
 COOLDOWN_TIME = 300       # cooldown in seconds (5 minutes)
@@ -263,6 +284,8 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
+
+
 # ------------------- Admin 2FA Verification ------------------- #
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
 def verify_2fa():
@@ -302,15 +325,130 @@ def verify_2fa():
             # Success: log in the user
             login_user(admin)
             session.permanent = True
+            print(f"✅ User {admin.username} logged in after 2FA")
 
-            # Cleanup session
-            session.pop('pre_2fa_admin_id', None)
-            session.pop('2fa_setup_complete', None)
-            session.pop(f'2fa_attempts_{ip}', None)
-            session.pop(f'2fa_cooldown_{ip}', None)
+            # ===== DEVICE FINGERPRINT AND TRUST CHECK =====
+            device_info = AdminTrustedDevice.get_device_info(request)
+            
+            # IMPORTANT: Use the EXACT same method as the model's generate_fingerprint()
+            # Format: admin_id + ip_address + user_agent + browser + os
+            fingerprint_data = f"{admin.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+            device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
 
-            flash("2FA verified successfully! Welcome, Admin.", "success")
-            return redirect(url_for('admin.dashboard'))
+            print(f"🔑 Generated fingerprint: {device_fingerprint[:20]}...")
+            print(f"📊 Data used: admin_id={admin.id}, ip={device_info['ip_address']}, browser={device_info['browser']}, os={device_info['os']}")
+            
+            # Store in session
+            session['admin_device_fingerprint'] = device_fingerprint
+            
+            # 🔐 CHECK IF THIS IS A NEW DEVICE
+            trusted_device = AdminTrustedDevice.query.filter_by(
+                admin_id=admin.id,
+                device_fingerprint=device_fingerprint,
+                trusted=True
+            ).first()
+            
+            print(f"🔍 Trusted device found: {trusted_device is not None}")
+            
+            # Check if ANY trusted device exists for this admin
+            any_trusted_device = AdminTrustedDevice.query.filter_by(
+                admin_id=admin.id,
+                trusted=True
+            ).first()
+            
+            print(f"🔍 Any trusted device exists: {any_trusted_device is not None}")
+            
+            if not trusted_device:
+                print("📱 This is a NEW device")
+                # This is a new/untrusted device
+                if any_trusted_device:
+                    print("📧 Existing trusted devices found → Sending verification email")
+                    # There are existing trusted devices → need verification
+                    
+                    # Save device as untrusted
+                    new_device = AdminTrustedDevice(
+                        admin_id=admin.id,
+                        device_name=f"{device_info['browser']} on {device_info['os']}",
+                        ip_address=device_info['ip_address'],
+                        user_agent=device_info['user_agent'],
+                        browser=device_info['browser'],
+                        os=device_info['os'],
+                        device_type=device_info['device_type'],
+                        trusted=False
+                    )
+                    # Set fingerprint using the same method
+                    new_device.device_fingerprint = device_fingerprint
+                    db.session.add(new_device)
+                    db.session.commit()
+                    
+                    # Send verification email
+                    from admin.utils import send_admin_new_device_email
+                    send_admin_new_device_email(admin, new_device)
+                    
+                    # Store in session for verification page
+                    session['pending_admin_login'] = admin.id
+                    session['pending_device_fp'] = device_fingerprint
+                    
+                    # Logout temporarily (they'll log in after verification)
+                    from flask_login import logout_user
+                    logout_user()
+                    
+                    # Cleanup 2FA session
+                    session.pop('pre_2fa_admin_id', None)
+                    session.pop(f'2fa_attempts_{ip}', None)
+                    session.pop(f'2fa_cooldown_{ip}', None)
+                    
+                    print("↩️ Redirecting to verification page")
+                    flash("New device detected. Please check your email to verify this device.", "warning")
+                    return redirect(url_for('admin.verify_device_page'))
+                else:
+                    print("🎉 FIRST device ever - auto trusting it")
+                    # FIRST device ever - auto trust it
+                    new_device = AdminTrustedDevice(
+                        admin_id=admin.id,
+                        device_name=f"{device_info['browser']} on {device_info['os']}",
+                        ip_address=device_info['ip_address'],
+                        user_agent=device_info['user_agent'],
+                        browser=device_info['browser'],
+                        os=device_info['os'],
+                        device_type=device_info['device_type'],
+                        trusted=True,
+                        expires_at=datetime.utcnow() + timedelta(days=30)
+                    )
+                    # Set fingerprint using the same method
+                    new_device.device_fingerprint = device_fingerprint
+                    db.session.add(new_device)
+                    db.session.commit()
+                    
+                    # Cleanup session
+                    session.pop('pre_2fa_admin_id', None)
+                    session.pop(f'2fa_attempts_{ip}', None)
+                    session.pop(f'2fa_cooldown_{ip}', None)
+                    
+                    print("🏠 Redirecting to dashboard (first device)")
+                    flash("2FA verified successfully! This device has been added to trusted devices.", "success")
+                    return redirect(url_for('admin.dashboard'))
+            else:
+                print("✅ Device ALREADY TRUSTED - direct to dashboard")
+                # Device already trusted - just update last used
+                trusted_device.update_last_used()
+                # Update device info to keep it current
+                trusted_device.ip_address = device_info['ip_address']
+                trusted_device.user_agent = device_info['user_agent']
+                trusted_device.browser = device_info['browser']
+                trusted_device.os = device_info['os']
+                trusted_device.device_type = device_info['device_type']
+                trusted_device.device_name = f"{device_info['browser']} on {device_info['os']}"
+                db.session.commit()
+                
+                # Cleanup session
+                session.pop('pre_2fa_admin_id', None)
+                session.pop(f'2fa_attempts_{ip}', None)
+                session.pop(f'2fa_cooldown_{ip}', None)
+                
+                print("🏠 Redirecting to dashboard (trusted device)")
+                flash("2FA verified successfully! Welcome, Admin.", "success")
+                return redirect(url_for('admin.dashboard'))
         else:
             # Increment failed attempts
             attempts += 1
@@ -324,7 +462,6 @@ def verify_2fa():
                 error = f"Invalid code. Attempt {attempts} of {MAX_2FA_ATTEMPTS}."
 
     return render_template('admin_2fa_verify.html', error=error)
-
 
 # ------------------- 2FA Secret Generation ------------------- #
 def generate_2fa_secret(admin):
@@ -367,14 +504,70 @@ def setup_2fa():
     if request.method == 'POST':
         code = request.form.get('code')
         if totp.verify(code):
-            # REMOVED: admin.is_2fa_enabled = True
             db.session.commit()  # Secret already saved
             
-            # Set flag in session to show success message in verify page
-            session['2fa_setup_complete'] = True
+            # Log the user in
+            login_user(admin)
+            session.permanent = True
             
-            flash("2FA setup successful! Please verify with your authenticator app.", "success")
-            return redirect(url_for('admin.verify_2fa'))
+            # ===== CONSISTENT FINGERPRINT GENERATION =====
+            device_info = AdminTrustedDevice.get_device_info(request)
+            
+            # Use the EXACT same method as the model's generate_fingerprint()
+            # Format: admin_id + ip_address + user_agent + browser + os
+            fingerprint_data = f"{admin.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+            device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
+            
+            print(f"🔑 Setup generated fingerprint: {device_fingerprint[:20]}...")
+            
+            # Store in session
+            session['admin_device_fingerprint'] = device_fingerprint
+            
+            # CHECK IF THIS DEVICE ALREADY EXISTS
+            existing_device = AdminTrustedDevice.query.filter_by(
+                admin_id=admin.id,
+                device_fingerprint=device_fingerprint
+            ).first()
+            
+            if existing_device:
+                # Update existing device
+                existing_device.trusted = True
+                existing_device.last_used = datetime.utcnow()
+                existing_device.expires_at = datetime.utcnow() + timedelta(days=30)
+                # Update device info
+                existing_device.ip_address = device_info['ip_address']
+                existing_device.user_agent = device_info['user_agent']
+                existing_device.browser = device_info['browser']
+                existing_device.os = device_info['os']
+                existing_device.device_type = device_info['device_type']
+                existing_device.device_name = f"{device_info['browser']} on {device_info['os']}"
+                db.session.commit()
+                print(f"✅ Updated existing device: {existing_device.id}")
+            else:
+                # Create new trusted device
+                new_device = AdminTrustedDevice(
+                    admin_id=admin.id,
+                    device_name=f"{device_info['browser']} on {device_info['os']}",
+                    ip_address=device_info['ip_address'],
+                    user_agent=device_info['user_agent'],
+                    browser=device_info['browser'],
+                    os=device_info['os'],
+                    device_type=device_info['device_type'],
+                    trusted=True,
+                    expires_at=datetime.utcnow() + timedelta(days=30)
+                )
+                # Set fingerprint using the same method
+                new_device.device_fingerprint = device_fingerprint
+                db.session.add(new_device)
+                db.session.commit()
+                print(f"✅ Created new device: {new_device.id}")
+            
+            # Clean up session
+            session.pop('pre_2fa_admin_id', None)
+            session.pop('2fa_setup_complete', None)
+            
+            flash("2FA setup successful! Welcome, Admin.", "success")
+            return redirect(url_for('admin.dashboard'))
         else:
             flash("Invalid code. Try again.", "error")
 
@@ -384,25 +577,284 @@ def setup_2fa():
     )
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
 
+
+@admin_bp.route('/2fa/disable', methods=['POST'])
+@login_required
+def disable_2fa():
+    """Disable 2FA for the current admin"""
+    try:
+        admin = current_user
+        # Remove the TOTP secret from database
+        admin.totp_secret = None
+        db.session.commit()
+        
+        # Log the action
+        log_audit(
+            action='2FA_DISABLE',
+            description=f"Admin user '{admin.username}' disabled two-factor authentication"
+        )
+        
+        return jsonify({'success': True, 'message': '2FA disabled successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+        
+@admin_bp.route('/verify-device')
+def verify_device_page():
+    """Page shown when new device needs verification"""
+    admin_id = session.get('pending_admin_login')
+    fingerprint = session.get('pending_device_fp')
+    
+    if not admin_id or not fingerprint:
+        flash("No pending device verification.", "danger")
+        return redirect(url_for('admin.login'))
+    
+    admin = Admin.query.get(admin_id)
+    if not admin:
+        session.pop('pending_admin_login', None)
+        session.pop('pending_device_fp', None)
+        return redirect(url_for('admin.login'))
+    
+    device = AdminTrustedDevice.query.filter_by(
+        admin_id=admin.id,
+        device_fingerprint=fingerprint,
+        trusted=False
+    ).first()
+    
+    if not device:
+        # Maybe already verified? Check session
+        return render_template('admin_verify_device.html', admin=admin, message="Device already verified?", redirect_after=3)
+    
+    return render_template('admin_verify_device.html', admin=admin, device=device)
+
+
+@admin_bp.route('/verify-device/resend', methods=['POST'])
+def resend_admin_verification():
+    """Resend verification email"""
+    admin_id = session.get('pending_admin_login')
+    fingerprint = session.get('pending_device_fp')
+    
+    if not admin_id or not fingerprint:
+        return jsonify({"success": False, "message": "No pending verification"}), 400
+    
+    admin = Admin.query.get(admin_id)
+    device = AdminTrustedDevice.query.filter_by(
+        admin_id=admin_id,
+        device_fingerprint=fingerprint,
+        trusted=False
+    ).first()
+    
+    if not device:
+        return jsonify({"success": False, "message": "Device not found"}), 404
+    
+    from admin.utils import send_admin_new_device_email
+    send_admin_new_device_email(admin, device)
+    
+    return jsonify({"success": True, "message": "Verification email resent"})
+
+
+@admin_bp.route('/verify-device/confirm/<token>')
+def confirm_admin_device(token):
+    """Confirm new device via email link (Yes, it's me)"""
+    device = AdminTrustedDevice.query.filter_by(verification_token=token).first()
+    
+    if not device:
+        return render_template('admin_device_result.html', 
+                             success=False, 
+                             message='Invalid or expired verification link.')
+    
+    # Check if token expired (15 minutes)
+    if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=15):
+        db.session.delete(device)
+        db.session.commit()
+        return render_template('admin_device_result.html',
+                             success=False,
+                             message='Verification link has expired. Please try logging in again.')
+    
+    # Mark device as trusted
+    device.trusted = True
+    device.verification_token = None
+    device.expires_at = datetime.utcnow() + timedelta(days=30)
+    device.last_used = datetime.utcnow()
+    db.session.commit()
+    
+    # If this is the device that was pending, we can auto-login
+    # Check if this matches pending session
+    pending_fp = session.get('pending_device_fp')
+    if pending_fp and pending_fp == device.device_fingerprint:
+        admin = device.admin
+        login_user(admin)
+        session.permanent = True
+        session.pop('pending_admin_login', None)
+        session.pop('pending_device_fp', None)
+        
+        return render_template('admin_device_result.html',
+                             success=True,
+                             message='Device verified successfully! You are now being logged in...',
+                             auto_redirect=True,
+                             redirect_url=url_for('admin.dashboard'))
+    
+    return render_template('admin_device_result.html',
+                         success=True,
+                         message='Device verified successfully! You can now close this window and return to login.')
+
+
+@admin_bp.route('/verify-device/reject/<token>')
+def reject_admin_device(token):
+    """Reject new device via email link (No, it's not me)"""
+    device = AdminTrustedDevice.query.filter_by(verification_token=token).first()
+    
+    if device:
+        db.session.delete(device)
+        db.session.commit()
+    
+    return render_template('admin_device_result.html',
+                         success=False,
+                         message='Device rejected. No action needed.')
+
+
+@admin_bp.route('/verify-device/status')
+def verify_device_status():
+    """Check if device has been verified (polling endpoint)"""
+    admin_id = session.get('pending_admin_login')
+    fingerprint = session.get('pending_device_fp')
+    
+    if not admin_id or not fingerprint:
+        return jsonify({"status": "no_session"})
+    
+    # Check if device is now trusted
+    device = AdminTrustedDevice.query.filter_by(
+        admin_id=admin_id,
+        device_fingerprint=fingerprint,
+        trusted=True
+    ).first()
+    
+    if device:
+        # 🚀 AUTO-LOGIN THE ADMIN HERE
+        admin = Admin.query.get(admin_id)
+        if admin:
+            login_user(admin)
+            session.permanent = True
+            
+            # Update last used
+            device.update_last_used()
+            db.session.commit()
+            
+            # Clean up session
+            session.pop('pending_admin_login', None)
+            session.pop('pending_device_fp', None)
+            
+            return jsonify({"status": "verified"})
+    
+    # Check if device was rejected/deleted
+    device_any = AdminTrustedDevice.query.filter_by(
+        admin_id=admin_id,
+        device_fingerprint=fingerprint
+    ).first()
+    
+    if device_any is None:
+        # Clean up session on rejection
+        session.pop('pending_admin_login', None)
+        session.pop('pending_device_fp', None)
+        return jsonify({"status": "rejected"})
+    
+    return jsonify({"status": "pending"})
+
+
+
+
+
+@admin_bp.route('/2fa/setup-data', methods=['GET'])
+def get_2fa_setup_data():
+    """AJAX endpoint to get 2FA setup data for inline setup"""
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    
+    admin = current_user
+    
+    # Generate secret if not exists
+    if not admin.totp_secret:
+        admin.totp_secret = pyotp.random_base32()
+        db.session.commit()
+    
+    secret = admin.totp_secret
+    totp = pyotp.TOTP(secret)
+    
+    totp_uri = totp.provisioning_uri(
+        name=admin.email,
+        issuer_name="CTU-COMELEC Admin"
+    )
+    
+    return jsonify({
+        'success': True,
+        'totp_uri': totp_uri,
+        'secret': secret,
+        'email': admin.email
+    })
+
 # ---------------------- DASHBOARD ---------------------- #
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
+    # Get school year filter from URL parameters or session
+    school_year = request.args.get('school_year')
+    
+    # If no school_year parameter, try to get from session
+    if not school_year:
+        school_year = session.get('admin_current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Save to session
+    if school_year:
+        session['admin_current_school_year'] = school_year
+    
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
 
     # ================================
-    # KPI counts
+    # Build base queries with school year filter
     # ================================
-    total_students = Student.query.count()
-    total_candidates = Candidate.query.count()
-    total_elections = Election.query.count()
-    total_votes = Vote.query.count()
+    student_query = Student.query
+    election_query = Election.query
+    vote_query = Vote.query
+    
+    if start_date and end_date:
+        # For elections, filter by start date in range
+        election_query = election_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+        
+        # For votes, filter by cast_timestamp in range
+        vote_query = vote_query.filter(
+            Vote.cast_timestamp >= start_date,
+            Vote.cast_timestamp <= end_date
+        )
+    
+    # ================================
+    # KPI counts with school year filter
+    # ================================
+    total_students = Student.query.count()  # Total students always same
+    total_candidates = Candidate.query.count()  # Total candidates always same
+    total_elections = election_query.count()
+    total_votes = vote_query.count()
 
     # ================================
-    # Recent elections table
+    # Recent elections table with school year filter
     # ================================
-    elections = Election.query.order_by(Election.start_date.desc()).all()
+    elections = election_query.order_by(Election.start_date.desc()).all()
     recent_elections_all = elections
 
     # Localize timezone if naive
@@ -413,9 +865,11 @@ def dashboard():
             election.end_date = tz.localize(election.end_date)
 
     recent_elections = recent_elections_all[:5]
-    ongoing_elections = sum(1 for e in recent_elections_all if e.status == 'Open')
+    
+    # Calculate ongoing elections (based on current date, not filtered by school year)
+    ongoing_elections = sum(1 for e in Election.query.all() if e.status == 'Open')
 
-    # Calculate voter turnout
+    # Calculate voter turnout (using filtered votes)
     voter_turnout = "0%"
     if total_students > 0:
         turnout_percentage = (total_votes / total_students) * 100
@@ -441,13 +895,24 @@ def dashboard():
             'year_levels_list': election.year_levels_list,
         })
 
+    # Get all available school years from elections
+    all_elections = Election.query.order_by(Election.start_date.asc()).all()
+    school_years = set()
+    for election in all_elections:
+        if election.start_date:
+            year = election.start_date.year
+            school_years.add(f"{year}-{year+1}")
+    
+    # Sort school years in descending order (newest first)
+    school_years = sorted(list(school_years), reverse=True)
+
     # ---------- AUDIT LOG: Dashboard viewed ----------
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
     log_audit(
         action='DASHBOARD_VIEW',
-        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | Stats: {total_students} students, {total_candidates} candidates, {total_elections} elections, {total_votes} votes"
+        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | School Year: {school_year or 'All'} | Stats: {total_students} students, {total_candidates} candidates, {total_elections} elections, {total_votes} votes"
     )
 
     return render_template(
@@ -461,9 +926,13 @@ def dashboard():
         voter_turnout=voter_turnout,
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
-        elections_for_calendar=elections_for_calendar,  # This is the serializable version
+        elections_for_calendar=elections_for_calendar,
+        school_years=school_years,
+        current_sy=school_year,
         now=now
     )
+
+
 
 
 # Add these imports at the top of your admin/routes.py if not already present
@@ -472,7 +941,6 @@ from sqlalchemy import func
 from flask import jsonify
 import pytz
 
-# ===================== VOTING TRENDS API =====================
 @admin_bp.route('/api/voting-trends')
 @admin_required
 def get_voting_trends():
@@ -480,35 +948,56 @@ def get_voting_trends():
     try:
         # Get parameters
         election_id = request.args.get('election_id', 'all')
+        school_year = request.args.get('school_year')
+        
+        # Parse school year to date range
+        start_date = None
+        end_date = None
+        if school_year:
+            try:
+                start_year = int(school_year.split('-')[0])
+                end_year = int(school_year.split('-')[1])
+                start_date = datetime(start_year, 1, 1)
+                end_date = datetime(end_year, 12, 31)
+            except (ValueError, IndexError):
+                start_date = None
+                end_date = None
         
         # Get timezone
         tz = pytz.timezone('Asia/Manila')
         
         # Get last 24 hours
-        end_date = datetime.now(tz)
-        start_date = end_date - timedelta(hours=24)
+        end_date_chart = datetime.now(tz)
+        start_date_chart = end_date_chart - timedelta(hours=24)
         
         # Create a list of all hours in the last 24 hours
         hours = []
-        current = start_date
-        while current <= end_date:
+        current = start_date_chart
+        while current <= end_date_chart:
             hours.append(current.strftime('%Y-%m-%d %H:00'))
             current += timedelta(hours=1)
         
         # Base query for votes
+        vote_query = Vote.query
+        
+        # Apply school year filter if specified
+        if start_date and end_date:
+            vote_query = vote_query.filter(
+                Vote.cast_timestamp >= start_date,
+                Vote.cast_timestamp <= end_date
+            )
+        
         if election_id != 'all':
             # Filter by specific election
-            votes = Vote.query.filter(
-                Vote.election_id == election_id,
-                Vote.cast_timestamp >= start_date,
-                Vote.cast_timestamp <= end_date
-            ).all()
-        else:
-            # All elections
-            votes = Vote.query.filter(
-                Vote.cast_timestamp >= start_date,
-                Vote.cast_timestamp <= end_date
-            ).all()
+            vote_query = vote_query.filter(Vote.election_id == election_id)
+        
+        # Apply time range filter
+        vote_query = vote_query.filter(
+            Vote.cast_timestamp >= start_date_chart,
+            Vote.cast_timestamp <= end_date_chart
+        )
+        
+        votes = vote_query.all()
         
         # Group votes by hour
         votes_by_hour = {}
@@ -524,12 +1013,27 @@ def get_voting_trends():
             labels.append(hour)
             data.append(votes_by_hour.get(hour, 0))
         
-        # Get all elections for the filter buttons
-        elections = Election.query.order_by(Election.start_date.desc()).all()
+        # Get all elections for the filter buttons (with school year filter)
+        election_query = Election.query.order_by(Election.start_date.desc())
+        
+        if start_date and end_date:
+            election_query = election_query.filter(
+                Election.start_date >= start_date,
+                Election.start_date <= end_date
+            )
+        
+        elections = election_query.all()
         election_list = []
         
         # Add "All Elections" option
-        all_votes_count = Vote.query.count()
+        all_votes_query = Vote.query
+        if start_date and end_date:
+            all_votes_query = all_votes_query.filter(
+                Vote.cast_timestamp >= start_date,
+                Vote.cast_timestamp <= end_date
+            )
+        all_votes_count = all_votes_query.count()
+        
         election_list.append({
             'id': 'all',
             'name': 'All Elections',
@@ -550,8 +1054,14 @@ def get_voting_trends():
                     dept_name = e.department or 'Department'
                 display_name = f"📚 {dept_name}: {e.title}"
             
-            # Count votes for this election
-            vote_count = Vote.query.filter_by(election_id=e.id).count()
+            # Count votes for this election (with school year filter)
+            vote_count_query = Vote.query.filter_by(election_id=e.id)
+            if start_date and end_date:
+                vote_count_query = vote_count_query.filter(
+                    Vote.cast_timestamp >= start_date,
+                    Vote.cast_timestamp <= end_date
+                )
+            vote_count = vote_count_query.count()
             
             # Get status emoji
             status_emoji = '🟢' if e.status == 'Open' else '🟡' if e.status == 'Upcoming' else '🔴'
@@ -589,7 +1099,8 @@ def get_voting_trends():
             'labels': display_labels,
             'data': data,
             'elections': election_list,
-            'current_election': election_id
+            'current_election': election_id,
+            'current_school_year': school_year
         })
         
     except Exception as e:
@@ -603,19 +1114,47 @@ def get_voting_trends():
         })
 
 
+
 @admin_bp.route('/api/election-stats/<election_id>')
 @admin_required
 def get_election_stats(election_id):
     """Get detailed stats for a specific election"""
     try:
+        # Get school year parameter
+        school_year = request.args.get('school_year')
+        
+        # Parse school year to date range
+        start_date = None
+        end_date = None
+        if school_year:
+            try:
+                start_year = int(school_year.split('-')[0])
+                end_year = int(school_year.split('-')[1])
+                start_date = datetime(start_year, 1, 1)
+                end_date = datetime(end_year, 12, 31)
+            except (ValueError, IndexError):
+                start_date = None
+                end_date = None
+        
+        tz = pytz.timezone('Asia/Manila')
+        
         if election_id == 'all':
             # All elections combined
-            total_votes = Vote.query.count()
+            vote_query = Vote.query
+            if start_date and end_date:
+                vote_query = vote_query.filter(
+                    Vote.cast_timestamp >= start_date,
+                    Vote.cast_timestamp <= end_date
+                )
+            total_votes = vote_query.count()
+            
             total_eligible = Student.query.count()
             
-            # Get ongoing elections count
-            ongoing = Election.query.filter(Election.start_date <= datetime.now(pytz.timezone('Asia/Manila')),
-                                          Election.end_date >= datetime.now(pytz.timezone('Asia/Manila'))).count()
+            # Get ongoing elections count (not filtered by school year)
+            ongoing = Election.query.filter(
+                Election.start_date <= datetime.now(tz),
+                Election.end_date >= datetime.now(tz)
+            ).count()
             
             # Calculate turnout
             if total_eligible > 0:
@@ -623,14 +1162,19 @@ def get_election_stats(election_id):
             else:
                 turnout = "0%"
             
+            title = 'All Elections'
+            if school_year:
+                title += f' (SY {school_year})'
+            
             return jsonify({
                 'success': True,
                 'total_votes': total_votes,
                 'total_eligible': total_eligible,
                 'turnout': turnout,
-                'election_title': 'All Elections',
+                'election_title': title,
                 'election_scope': 'Combined',
-                'ongoing_elections': ongoing
+                'ongoing_elections': ongoing,
+                'school_year': school_year
             })
         
         else:
@@ -647,8 +1191,14 @@ def get_election_stats(election_id):
                     # Fallback to department name
                     eligible_students = Student.query.filter_by(department=election.department).count()
             
-            # Get votes for this election
-            total_votes = Vote.query.filter_by(election_id=election.id).count()
+            # Get votes for this election (with school year filter)
+            vote_query = Vote.query.filter_by(election_id=election.id)
+            if start_date and end_date:
+                vote_query = vote_query.filter(
+                    Vote.cast_timestamp >= start_date,
+                    Vote.cast_timestamp <= end_date
+                )
+            total_votes = vote_query.count()
             
             # Calculate turnout
             if eligible_students > 0:
@@ -656,16 +1206,21 @@ def get_election_stats(election_id):
             else:
                 turnout = "0%"
             
+            title = election.title
+            if school_year:
+                title += f' (SY {school_year})'
+            
             return jsonify({
                 'success': True,
                 'total_votes': total_votes,
                 'total_eligible': eligible_students,
                 'turnout': turnout,
-                'election_title': election.title,
+                'election_title': title,
                 'election_scope': 'Campus-wide' if election.scope == 'campus' else 'Departmental',
                 'election_status': election.status,
                 'start_date': election.start_date.strftime('%Y-%m-%d %H:%M') if election.start_date else 'N/A',
-                'end_date': election.end_date.strftime('%Y-%m-%d %H:%M') if election.end_date else 'N/A'
+                'end_date': election.end_date.strftime('%Y-%m-%d %H:%M') if election.end_date else 'N/A',
+                'school_year': school_year
             })
             
     except Exception as e:
@@ -677,7 +1232,6 @@ def get_election_stats(election_id):
             'total_eligible': 0,
             'turnout': '0%'
         })
-
 
 
 # Add this to your admin routes file (where your dashboard route is)
@@ -732,6 +1286,16 @@ def settings():
         # Pagination
         logs = query.paginate(page=page, per_page=20)
         
+        # Get trusted devices for current admin
+        trusted_devices = AdminTrustedDevice.query.filter_by(
+            admin_id=current_user.id
+        ).order_by(AdminTrustedDevice.last_used.desc()).all()
+        
+        # Mark current device
+        current_fingerprint = session.get('admin_device_fingerprint')
+        for device in trusted_devices:
+            device.is_current = (device.device_fingerprint == current_fingerprint)
+        
         # Get last backup info (you can implement this later)
         last_backup = None
         
@@ -753,7 +1317,8 @@ def settings():
             start_date=start_date,
             end_date=end_date,
             pytz=pytz,
-            last_backup=last_backup
+            last_backup=last_backup,
+            trusted_devices=trusted_devices  # ADD THIS LINE
         )
         
     except Exception as e:
@@ -792,6 +1357,415 @@ def save_settings():
             'success': False,
             'message': str(e)
         }), 500
+
+
+
+
+
+from datetime import datetime, timedelta
+from flask import jsonify, request, render_template, flash, redirect, url_for, session
+from flask_login import login_required, current_user
+import secrets
+import hashlib
+
+@admin_bp.route('/trusted-devices')
+@login_required
+def trusted_devices():
+    """View all trusted devices for current admin"""
+    devices = AdminTrustedDevice.query.filter_by(
+        admin_id=current_user.id
+    ).order_by(AdminTrustedDevice.last_used.desc()).all()
+    
+    # Mark current device
+    current_fingerprint = session.get('admin_device_fingerprint')
+    for device in devices:
+        device.is_current = (device.device_fingerprint == current_fingerprint)
+    
+    return render_template('trusted_devices.html', devices=devices)
+
+
+
+@admin_bp.route('/trusted-devices/add', methods=['POST'])
+@login_required
+def add_trusted_device():
+    """Add current device as trusted"""
+    device_info = AdminTrustedDevice.get_device_info(request)
+    
+    # Use the EXACT same fingerprint generation method
+    # Format: admin_id + ip_address + user_agent + browser + os
+    fingerprint_data = f"{current_user.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+    device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
+    
+    print(f"🔑 Add trusted device fingerprint: {device_fingerprint[:20]}...")
+    
+    # Check if this specific device (by fingerprint) already exists
+    existing_device = AdminTrustedDevice.query.filter_by(
+        admin_id=current_user.id,
+        device_fingerprint=device_fingerprint
+    ).first()
+    
+    if existing_device:
+        # Update existing device
+        existing_device.trusted = True
+        existing_device.expires_at = datetime.utcnow() + timedelta(days=30)
+        existing_device.last_used = datetime.utcnow()
+        existing_device.device_name = f"{device_info['browser']} on {device_info['os']}"
+        existing_device.ip_address = device_info['ip_address']
+        existing_device.user_agent = device_info['user_agent']
+        existing_device.browser = device_info['browser']
+        existing_device.os = device_info['os']
+        existing_device.device_type = device_info['device_type']
+        
+        db.session.commit()
+        
+        # Set the fingerprint in session
+        session['admin_device_fingerprint'] = existing_device.device_fingerprint
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Device already trusted and updated!',
+            'device_added': True
+        })
+    else:
+        # Create NEW trusted device
+        device = AdminTrustedDevice(
+            admin_id=current_user.id,
+            device_name=f"{device_info['browser']} on {device_info['os']}",
+            ip_address=device_info['ip_address'],
+            user_agent=device_info['user_agent'],
+            browser=device_info['browser'],
+            os=device_info['os'],
+            device_type=device_info['device_type'],
+            trusted=True,
+            expires_at=datetime.utcnow() + timedelta(days=30),
+            last_used=datetime.utcnow()
+        )
+        
+        # Set the consistent fingerprint
+        device.device_fingerprint = device_fingerprint
+        
+        db.session.add(device)
+        db.session.commit()
+        
+        # Store fingerprint in session
+        session['admin_device_fingerprint'] = device.device_fingerprint
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Device added to trusted devices!',
+            'device_added': True
+        })
+
+
+
+@admin_bp.route('/trusted-devices/remove/<int:device_id>', methods=['POST'])
+@login_required
+def request_remove_device(device_id):
+    """Request to remove a trusted device (sends confirmation email)"""
+    print(f"=== DEBUG: Device removal requested for device ID: {device_id} ===")
+    print(f"Current user ID: {current_user.id}")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    try:
+        # Get JSON data if sent
+        data = request.get_json(silent=True) or {}
+        print(f"Request data: {data}")
+        
+        device = AdminTrustedDevice.query.filter_by(
+            id=device_id,
+            admin_id=current_user.id
+        ).first()
+        
+        if not device:
+            print(f"DEBUG: Device not found - ID: {device_id}, admin_id: {current_user.id}")
+            return jsonify({
+                'success': False,
+                'message': 'Device not found or already removed'
+            }), 404
+        
+        print(f"DEBUG: Device found - ID: {device.id}, Name: {device.device_name}, Trusted: {device.trusted}")
+        print(f"DEBUG: Device fingerprint: {device.device_fingerprint}")
+        
+        # Check if device is trusted
+        if not device.trusted:
+            return jsonify({
+                'success': False,
+                'message': 'Device is not trusted'
+            }), 400
+        
+        # Don't allow removing current device
+        current_fingerprint = session.get('admin_device_fingerprint')
+        print(f"DEBUG: Current session fingerprint: {current_fingerprint}")
+        
+        if device.device_fingerprint and current_fingerprint and device.device_fingerprint == current_fingerprint:
+            print(f"DEBUG: Cannot remove current device")
+            return jsonify({
+                'success': False,
+                'message': 'Cannot remove your current device'
+            }), 400
+        
+        # Generate removal token
+        removal_token = secrets.token_urlsafe(32)
+        print(f"DEBUG: Generated token: {removal_token}")
+        
+        device.verification_token = removal_token
+        device.verification_sent_at = datetime.utcnow()
+        db.session.commit()
+        print(f"DEBUG: Token saved to database for device {device.id}")
+        
+        # Send confirmation email
+        try:
+            from admin.utils import send_device_removal_confirmation
+            
+            # Check if email function exists
+            if 'send_device_removal_confirmation' not in dir():
+                print(f"DEBUG: Email function not found, creating mock response")
+                # For testing, return success without email
+                return jsonify({
+                    'success': True,
+                    'message': 'Device removal initiated (email simulation)',
+                    'dev_mode': True
+                })
+            
+            print(f"DEBUG: Attempting to send email to: {current_user.email}")
+            send_device_removal_confirmation(current_user, device, removal_token)
+            print(f"DEBUG: Email sent successfully")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Removal confirmation email sent. Please check your inbox.'
+            })
+            
+        except ImportError as e:
+            print(f"DEBUG: Email function import error: {str(e)}")
+            # For development, return success anyway
+            return jsonify({
+                'success': True,
+                'message': 'Device removal initiated (email disabled in development)',
+                'dev_mode': True
+            })
+            
+        except Exception as e:
+            print(f"DEBUG: Email sending failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # Rollback token if email fails
+            device.verification_token = None
+            device.verification_sent_at = None
+            db.session.commit()
+            
+            return jsonify({
+                'success': False,
+                'message': f'Failed to send email: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"DEBUG: Unexpected error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': 'Server error occurred'
+        }), 500
+
+    
+    
+
+
+@admin_bp.route('/trusted-devices/confirm-remove/<token>')
+def confirm_remove_device(token):
+    """Confirm device removal via email link"""
+    device = AdminTrustedDevice.query.filter_by(verification_token=token).first()
+    
+    if not device:
+        return render_template('device_removal_result.html',
+                             success=False,
+                             message='Invalid or expired confirmation link.')
+    
+    # Check if token expired (15 minutes)
+    if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=15):
+        device.verification_token = None
+        device.verification_sent_at = None
+        db.session.commit()
+        
+        return render_template('device_removal_result.html',
+                             success=False,
+                             message='Confirmation link has expired. Please try again.')
+    
+    # Don't allow removing current device
+    current_fingerprint = session.get('admin_device_fingerprint')
+    if device.device_fingerprint == current_fingerprint:
+        return render_template('device_removal_result.html',
+                             success=False,
+                             message='Cannot remove your current device.')
+    
+    # Remove the device
+    device_name = device.device_name
+    db.session.delete(device)
+    db.session.commit()
+    
+    # Log the action
+    username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
+    ip = request.remote_addr
+    
+    log_audit(
+        action='DEVICE_REMOVED',
+        description=f"Admin user removed trusted device '{device_name}' from IP: {ip}"
+    )
+    
+    return render_template('device_removal_result.html',
+                         success=True,
+                         message='Device has been successfully removed from your trusted devices.')
+
+@admin_bp.route('/trusted-devices/cancel-remove/<token>')
+def cancel_remove_device(token):
+    """Cancel device removal request"""
+    device = AdminTrustedDevice.query.filter_by(verification_token=token).first()
+    
+    if device:
+        # Clear the verification token
+        device.verification_token = None
+        device.verification_sent_at = None
+        db.session.commit()
+    
+    return render_template('device_removal_result.html',
+                         success=True,
+                         message='Device removal request has been cancelled. Your device remains trusted.')
+
+@admin_bp.route('/trusted-devices/verify/send', methods=['POST'])
+@login_required
+def send_device_verification():
+    """Send verification email for new device"""
+    device_info = AdminTrustedDevice.get_device_info(request)
+    
+    # Check if device already exists and is trusted
+    existing = AdminTrustedDevice.query.filter_by(
+        admin_id=current_user.id,
+        ip_address=device_info['ip_address'],
+        browser=device_info['browser'],
+        trusted=True
+    ).first()
+    
+    if existing:
+        # Device already trusted, update last used
+        existing.last_used = datetime.utcnow()
+        existing.expires_at = datetime.utcnow() + timedelta(days=30)
+        db.session.commit()
+        
+        # Store fingerprint in session
+        session['admin_device_fingerprint'] = existing.device_fingerprint
+        
+        return jsonify({
+            'success': True,
+            'trusted': True,
+            'message': 'Device already trusted'
+        })
+    
+    # Create or get unverified device
+    device = AdminTrustedDevice.query.filter_by(
+        admin_id=current_user.id,
+        ip_address=device_info['ip_address'],
+        browser=device_info['browser'],
+        trusted=False
+    ).first()
+    
+    if not device:
+        device = AdminTrustedDevice(
+            admin_id=current_user.id,
+            device_name=f"{device_info['browser']} on {device_info['os']}",
+            trusted=False,
+            **device_info
+        )
+        device.generate_fingerprint()
+        db.session.add(device)
+    
+    # Generate verification token
+    token = device.generate_verification_token()
+    db.session.commit()
+    
+    # Send verification email
+    from admin.utils import send_admin_device_verification_email
+    send_admin_device_verification_email(current_user, device, token)
+    
+    return jsonify({
+        'success': True,
+        'trusted': False,
+        'message': 'Verification email sent'
+    })
+
+@admin_bp.route('/trusted-devices/verify/<token>')
+def verify_admin_device(token):
+    """Verify device via email link"""
+    device = AdminTrustedDevice.query.filter_by(verification_token=token).first()
+    
+    if not device:
+        return render_template('device_verification_result.html', 
+                             success=False, 
+                             message='Invalid or expired verification link.')
+    
+    # Check if token expired (15 minutes)
+    if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=15):
+        db.session.delete(device)
+        db.session.commit()
+        return render_template('device_verification_result.html',
+                             success=False,
+                             message='Verification link has expired. Please try again.')
+    
+    # Mark device as trusted
+    device.trusted = True
+    device.verification_token = None
+    device.expires_at = datetime.utcnow() + timedelta(days=30)
+    device.last_used = datetime.utcnow()
+    db.session.commit()
+    
+    # Store fingerprint in session if this is the current device
+    if device.ip_address == request.remote_addr:
+        session['admin_device_fingerprint'] = device.device_fingerprint
+    
+    return render_template('device_verification_result.html',
+                         success=True,
+                         message='Device verified successfully! You can now use this device without 2FA.')
+
+@admin_bp.route('/trusted-devices/check', methods=['POST'])
+def check_device_trust():
+    """Check if current device is trusted (used during login)"""
+    if not current_user.is_authenticated:
+        return jsonify({'trusted': False})
+    
+    device_info = AdminTrustedDevice.get_device_info(request)
+    current_fingerprint = session.get('admin_device_fingerprint')
+    
+    # Check by fingerprint first
+    if current_fingerprint:
+        device = AdminTrustedDevice.query.filter_by(
+            admin_id=current_user.id,
+            device_fingerprint=current_fingerprint,
+            trusted=True
+        ).first()
+        
+        if device and not device.is_expired():
+            device.last_used = datetime.utcnow()
+            db.session.commit()
+            return jsonify({'trusted': True})
+    
+    # Fallback to IP and browser check
+    device = AdminTrustedDevice.query.filter_by(
+        admin_id=current_user.id,
+        ip_address=device_info['ip_address'],
+        browser=device_info['browser'],
+        trusted=True
+    ).first()
+    
+    if device and not device.is_expired():
+        device.last_used = datetime.utcnow()
+        db.session.commit()
+        # Update session fingerprint
+        session['admin_device_fingerprint'] = device.device_fingerprint
+        return jsonify({'trusted': True})
+    
+    return jsonify({'trusted': False})
 
 
 
@@ -1105,6 +2079,22 @@ def import_students_table():
 @admin_bp.route('/students')
 @admin_required
 def manage_students():
+    # Get school year filter from session (set by dashboard) - ONLY FOR ELECTIONS DROPDOWN
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse school year to date range for elections filtering
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
     # -------------------- Fetch Departments & Courses -------------------- #
     departments = Department.query.order_by(Department.name).all()
     courses = Course.query.order_by(Course.course_name).all()
@@ -1112,21 +2102,33 @@ def manage_students():
     departments_data = [{"id": d.id, "name": d.name} for d in departments]
     courses_data = [{"id": c.id, "name": c.course_name} for c in courses]
 
-    # -------------------- Fetch Elections with scope -------------------- #
-    elections = Election.query.order_by(Election.start_date.desc()).all()
+    # -------------------- Fetch Elections with scope - FILTERED BY SCHOOL YEAR -------------------- #
+    election_query = Election.query.order_by(Election.start_date.desc())
+    
+    # Apply school year filter to elections ONLY
+    if start_date and end_date:
+        election_query = election_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    elections = election_query.all()
     elections_data = [{
         "id": e.id, 
         "title": e.title,
-        "scope": e.scope  # Make sure to include scope!
+        "scope": e.scope,
+        "year_levels": e.year_levels  # Include year_levels for display
     } for e in elections]
 
     # ---------- AUDIT LOG: Manage Students page viewed ----------
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
+    school_year_info = f" | School Year: {school_year}" if school_year else ""
+    
     log_audit(
         action='MANAGE_STUDENTS_VIEW',
-        description=f"Admin user '{username}' viewed the manage students page from IP: {ip}"
+        description=f"Admin user '{username}' viewed the manage students page from IP: {ip}{school_year_info} | Elections available: {len(elections)}"
     )
 
     # -------------------- Render Template -------------------- #
@@ -1134,7 +2136,8 @@ def manage_students():
         'manage_students.html',
         departments=departments_data,
         courses=courses_data,
-        elections=elections_data
+        elections=elections_data,
+        current_sy=school_year  # Pass current school year to template
     )
 
 
@@ -1176,7 +2179,7 @@ def students_data():
     if election_id and election_id != "all":
         election = Election.query.get(int(election_id))
         
-        # 🎯 NEW: Filter students based on election's year levels
+        # 🎯 Filter students based on election's year levels (but not by school year)
         if election and election.scope == 'campus' and election.year_levels:
             # Join with year_level to filter by year
             if election.year_levels != 'all':
@@ -1184,13 +2187,9 @@ def students_data():
                 allowed_years = election.year_levels.split(',')
                 
                 # Filter students whose year_level_id matches allowed years
-                # Assuming year_level_id corresponds to year (1,2,3,4)
                 query = query.filter(Student.year_level_id.in_(allowed_years))
             
-            # For department elections, we might also want to filter by department
-            # But that's usually handled by the election.department_id field
-            
-        # 🎯 NEW: For department elections, filter by department
+        # 🎯 For department elections, filter by department
         elif election and election.scope == 'department' and election.department_id:
             query = query.filter(Student.department_id == election.department_id)
 
@@ -1221,7 +2220,7 @@ def students_data():
             "last_name": s.last_name,
             "course": s.course,
             "year_level": year_level_name,
-            "year_level_id": s.year_level_id,  # Add this for debugging if needed
+            "year_level_id": s.year_level_id,
             "has_voted": has_voted
         })
 
@@ -1793,12 +2792,38 @@ def delete_multiple_courses():
 
 
 
+# ---------------------- MANAGE CANDIDATES ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
+    # Get school year filter from session (set by dashboard)
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Get positions, departments (these are not filtered by school year)
     positions = Position.query.all()
     departments = Department.query.order_by(Department.name).all()
-    elections = Election.query.order_by(Election.start_date.desc()).all()
+    
+    # Filter elections by school year if set
+    election_query = Election.query.order_by(Election.start_date.desc())
+    if start_date and end_date:
+        election_query = election_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    elections = election_query.all()
 
     # ================= FILTER =================
     selected_scope = request.args.get('scope', default=None)
@@ -1808,6 +2833,16 @@ def manage_candidates():
     selected_department = None
 
     query = Candidate.query
+
+    # Filter by school year through elections
+    if start_date and end_date:
+        # Get election IDs within the school year
+        election_ids = [e.id for e in elections]
+        if election_ids:
+            query = query.filter(Candidate.election_id.in_(election_ids))
+        else:
+            # No elections in this school year, return empty result
+            query = query.filter(False)  # This will return no candidates
 
     # Filter by scope
     if selected_scope:
@@ -1902,9 +2937,11 @@ def manage_candidates():
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
         party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
         
+        school_year_info = f" | School Year: {school_year}" if school_year else ""
+        
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Added candidate: {first_name} {last_name} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title} ({scope})"
+            description=f"Added candidate: {first_name} {last_name} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title} ({scope}){school_year_info}"
         )
 
         # Return JSON for AJAX requests
@@ -1942,14 +2979,32 @@ def manage_candidates():
         campus_elections=campus_elections,
         department_elections=department_elections,
         selected_department=selected_department,
-        selected_scope=selected_scope
+        selected_scope=selected_scope,
+        current_sy=school_year  # Pass current school year to template
     )
+
 
 
 @admin_bp.route('/candidates/filter', methods=['GET'])
 @admin_required
 def filter_candidates():
     """AJAX endpoint for filtering candidates"""
+    # Get school year filter from session
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
     selected_scope = request.args.get('scope', default=None)
     department_id = request.args.get('department_id', type=int)
     search = request.args.get('search', default='')
@@ -1957,6 +3012,33 @@ def filter_candidates():
     per_page = 10
 
     query = Candidate.query
+
+    # Filter by school year through elections
+    if start_date and end_date:
+        # Get elections within the school year
+        election_query = Election.query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+        election_ids = [e.id for e in election_query.all()]
+        if election_ids:
+            query = query.filter(Candidate.election_id.in_(election_ids))
+        else:
+            # No elections in this school year, return empty result
+            candidates_data = []
+            return jsonify({
+                'candidates': candidates_data,
+                'pagination': {
+                    'current_page': 1,
+                    'total_pages': 1,
+                    'total_items': 0,
+                    'has_prev': False,
+                    'has_next': False,
+                    'prev_page': None,
+                    'next_page': None
+                },
+                'current_sy': school_year
+            })
 
     # Filter by scope
     if selected_scope:
@@ -2011,8 +3093,10 @@ def filter_candidates():
             'has_next': pagination.has_next,
             'prev_page': pagination.prev_num if pagination.has_prev else None,
             'next_page': pagination.next_num if pagination.has_next else None
-        }
+        },
+        'current_sy': school_year
     })
+
 
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
@@ -2385,8 +3469,7 @@ def configure_election_positions(election_id):
         configured_position_ids=configured_position_ids,
         configured_positions=configured_positions_dict
     )
-
-# admin/routes.py - REPLACE your existing create_department_election route
+# admin/routes.py - UPDATE your create_election route
 @admin_bp.route('/create-election', methods=['GET', 'POST'])
 @admin_required
 def create_election():
@@ -2396,6 +3479,10 @@ def create_election():
     - Adds year level filtering for campus elections
     - Redirects to position configuration after creation
     """
+    # Clear any existing flash messages from other pages
+    # This ensures only messages from this page will be shown
+    session.pop('_flashes', None)
+    
     # Get all departments
     departments = Department.query.order_by(Department.name).all()
 
@@ -2415,11 +3502,11 @@ def create_election():
         
         # ========== VALIDATION ==========
         if not all([title, scope, start_date_str, end_date_str]):
-            flash('All required fields must be filled.', 'election')
+            flash('All required fields must be filled.', 'election-error')
             return redirect(url_for('admin.create_election'))
 
         if scope not in ['campus', 'department']:
-            flash('Invalid election scope. Must be campus or department.', 'election')
+            flash('Invalid election scope. Must be campus or department.', 'election-error')
             return redirect(url_for('admin.create_election'))
 
         # Parse dates
@@ -2427,11 +3514,11 @@ def create_election():
             start_date = tz.localize(datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M'))
             end_date = tz.localize(datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M'))
         except ValueError:
-            flash('Invalid date format.', 'election')
+            flash('Invalid date format.', 'election-error')
             return redirect(url_for('admin.create_election'))
 
         if end_date <= start_date:
-            flash('End date must be later than start date.', 'election')
+            flash('End date must be later than start date.', 'election-error')
             return redirect(url_for('admin.create_election'))
 
         # Handle department based on scope
@@ -2440,13 +3527,13 @@ def create_election():
         
         if scope == 'department':
             if not department_id_str:
-                flash('Department is required for Department Elections.', 'election')
+                flash('Department is required for Department Elections.', 'election-error')
                 return redirect(url_for('admin.create_election'))
             
             department_id = int(department_id_str)
             dept_obj = Department.query.get(department_id)
             if not dept_obj:
-                flash('Selected department does not exist.', 'election')
+                flash('Selected department does not exist.', 'election-error')
                 return redirect(url_for('admin.create_election'))
             department_name = dept_obj.name
         
@@ -2488,7 +3575,7 @@ def create_election():
         )
         
         # MODIFIED: Redirect to position configuration instead of back to create page
-        flash('Election created successfully! Now configure positions and vote limits.', 'success')
+        flash('Election created successfully! Now configure positions and vote limits.', 'election-success')
         return redirect(url_for('admin.configure_election_positions', election_id=new_election.id))
 
     # GET request: fetch elections
@@ -2672,43 +3759,77 @@ def delete_announcement(announcement_id):
 @admin_bp.route('/results')
 @admin_required
 def results_page():
+    # Get school year filter from session (set by dashboard)
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
     
-    elections = Election.query.order_by(Election.end_date.desc()).all()
+    # Filter elections by school year if set
+    election_query = Election.query.order_by(Election.end_date.desc())
+    
+    if start_date and end_date:
+        # Convert to timezone-aware for comparison
+        start_date_aware = tz.localize(start_date) if start_date.tzinfo is None else start_date
+        end_date_aware = tz.localize(end_date) if end_date.tzinfo is None else end_date
+        
+        election_query = election_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    elections = election_query.all()
     
     upcoming, active, completed = [], [], []
     
     for election in elections:
         # Create timezone-aware copies for comparison
-        start_date = election.start_date
-        end_date = election.end_date
+        start_date_e = election.start_date
+        end_date_e = election.end_date
         
         # Convert to timezone-aware if naive
-        if start_date.tzinfo is None:
-            start_date = tz.localize(start_date)
-        if end_date.tzinfo is None:
-            end_date = tz.localize(end_date)
+        if start_date_e.tzinfo is None:
+            start_date_e = tz.localize(start_date_e)
+        if end_date_e.tzinfo is None:
+            end_date_e = tz.localize(end_date_e)
         
         # Add timezone-aware attributes to election object for template use
-        election.tz_start = start_date
-        election.tz_end = end_date
+        election.tz_start = start_date_e
+        election.tz_end = end_date_e
         
         # Categorize based on the dates
-        if end_date < now:
+        if end_date_e < now:
             completed.append(election)
-        elif start_date <= now <= end_date:
+        elif start_date_e <= now <= end_date_e:
             active.append(election)
         else:
             upcoming.append(election)
+    
+    # Get total elections count (unfiltered) for context
+    total_elections = Election.query.count()
     
     # ---------- AUDIT LOG: Results page viewed ----------
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
+    school_year_info = f" | School Year: {school_year}" if school_year else ""
+    
     log_audit(
         action='RESULTS_PAGE_VIEW',
-        description=f"Admin user '{username}' viewed the results page from IP: {ip} | Total elections: {len(elections)}, Active: {len(active)}, Completed: {len(completed)}, Upcoming: {len(upcoming)}"
+        description=f"Admin user '{username}' viewed the results page from IP: {ip}{school_year_info} | Displayed elections: {len(elections)} (filtered), Total: {total_elections}, Active: {len(active)}, Completed: {len(completed)}, Upcoming: {len(upcoming)}"
     )
     
     return render_template(
@@ -2716,8 +3837,23 @@ def results_page():
         upcoming_elections=upcoming,
         active_elections=active,
         completed_elections=completed,
-        now=now
+        now=now,
+        current_sy=school_year,  # Pass current school year to template
+        total_filtered=len(elections),
+        total_elections=total_elections
     )
+
+
+@admin_bp.route('/vote-distribution')
+def vote_distribution():
+    """Vote Distribution Analysis Page"""
+    # Sample data - will be replaced with database queries later
+    current_sy = session.get('current_sy')
+    
+    return render_template('vote_distribution.html', 
+                         current_sy=current_sy,
+                         title='Vote Distribution')
+
 
 
 @admin_bp.route('/results/<int:election_id>')
@@ -3457,6 +4593,64 @@ def audit_logs():
         pytz=pytz  # Add this
     )
 
+
+@admin_bp.route("/audit-logs-ajax", methods=["GET"])
+def audit_logs_ajax():
+    """AJAX endpoint for audit logs pagination"""
+    import pytz
+    
+    page = request.args.get("page", 1, type=int)
+    search = request.args.get("search", "")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    query = AuditLog.query
+
+    # 🔎 SEARCH FILTER
+    if search:
+        query = query.filter(
+            or_(
+                AuditLog.action.ilike(f"%{search}%"),
+                AuditLog.role.ilike(f"%{search}%"),
+                AuditLog.description.ilike(f"%{search}%")
+            )
+        )
+
+    # 📅 DATE FILTER
+    if start_date:
+        try:
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(AuditLog.timestamp >= start_date_obj)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59)
+            query = query.filter(AuditLog.timestamp <= end_date_obj)
+        except ValueError:
+            pass
+
+    # ORDER BY LATEST FIRST
+    query = query.order_by(desc(AuditLog.timestamp))
+
+    # 📄 PAGINATION
+    logs = query.paginate(page=page, per_page=20)
+    
+    # Return just the table partial
+    return render_template(
+        "partials/audit_logs_table.html",
+        logs=logs,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        pytz=pytz
+    )
+
+
+
+    
 # ---------------------- Logout ---------------------- #
 @admin_bp.route('/logout')
 @admin_required

@@ -1,0 +1,54 @@
+<div style="overflow-x: auto;">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Role</th>
+                <th>Action</th>
+                <th>Description</th>
+                <th>IP</th>
+                <th>Date (Manila)</th>
+            </tr>
+        </thead>
+        <tbody id="auditLogsTableBody">
+            {% for log in logs.items %}
+            <tr>
+                <td>{{ log.id }}</td>
+                <td>{{ log.role }}</td>
+                <td>{{ log.action }}</td>
+                <td>{{ log.description }}</td>
+                <td>{{ log.ip_address }}</td>
+                <td>
+                    {% if log.timestamp %}
+                        {% set tz = pytz.timezone('Asia/Manila') %}
+                        {% set utc_dt = log.timestamp.replace(tzinfo=pytz.UTC) %}
+                        {% set manila_dt = utc_dt.astimezone(tz) %}
+                        {{ manila_dt.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="audit-empty">
+                    No audit logs found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- PAGINATION -->
+<div class="pagination" id="auditPagination">
+    {% if logs.has_prev %}
+        <a onclick="loadAuditPage({{ logs.prev_num }})">Previous</a>
+    {% endif %}
+
+    <span>Page {{ logs.page }} of {{ logs.pages }}</span>
+
+    {% if logs.has_next %}
+        <a onclick="loadAuditPage({{ logs.next_num }})">Next</a>
+    {% endif %}
+</div>

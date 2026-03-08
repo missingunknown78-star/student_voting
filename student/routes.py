@@ -1485,7 +1485,6 @@ def submit_vote(election_id):
         flash(f"Error saving your vote: {str(e)}", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
 
-
 @student_bp.route('/receipt')
 @login_required
 def receipt():
@@ -1540,33 +1539,72 @@ def receipt():
     for vote in votes:
         # Extract the secret nonce from the finder_hash
         secret_nonce = 'N/A'
+        candidate_details = []
+        
         if vote.finder_hash:
             try:
                 # Try to parse as JSON first
                 finder_data = json.loads(vote.finder_hash)
+                print(f"DEBUG - Finder data for vote {vote.id}: {finder_data}")  # Debug print
+                
                 # Check if it's the new format with 'nonce' field
-                if isinstance(finder_data, dict) and 'nonce' in finder_data:
-                    secret_nonce = finder_data['nonce']
+                if isinstance(finder_data, dict):
+                    # Extract the nonce
+                    if 'nonce' in finder_data:
+                        secret_nonce = finder_data['nonce']
+                        print(f"DEBUG - Found nonce: {secret_nonce}")  # Debug print
+                    
+                    # Get candidate hashes and details
+                    if 'hashes' in finder_data:
+                        for hash_item in finder_data['hashes']:
+                            candidate_id = hash_item.get('candidate_id')
+                            if candidate_id:
+                                candidate = Candidate.query.get(candidate_id)
+                                if candidate:
+                                    position_name = candidate.position.name if candidate.position else "Unknown Position"
+                                    # Store full hash for verification, but display truncated
+                                    full_hash = hash_item.get('hash', '')
+                                    truncated_hash = full_hash[:16] + '...' if full_hash else 'N/A'
+                                    
+                                    candidate_details.append({
+                                        'id': candidate_id,
+                                        'name': f"{candidate.first_name} {candidate.last_name}",
+                                        'position': position_name,
+                                        'hash': truncated_hash,
+                                        'full_hash': full_hash  # Store full hash for PDF/download
+                                    })
                 else:
-                    # If it's a string or something else
+                    # If it's not a dict, use as is
                     secret_nonce = str(finder_data)
-            except json.JSONDecodeError:
-                # If it's not JSON, use the raw string (might be old format)
+                    
+            except json.JSONDecodeError as e:
+                print(f"DEBUG - JSON decode error for vote {vote.id}: {e}")
+                # If it's not JSON, use the raw string
                 secret_nonce = vote.finder_hash
+        else:
+            print(f"DEBUG - No finder_hash for vote {vote.id}")
         
+        # Get election details
         election = Election.query.get(vote.election_id)
-        votes_data.append({
+        
+        # Create the vote item data
+        vote_item = {
             'vote': vote,
             'election': election,
-            'secret_nonce': secret_nonce
-        })
+            'secret_nonce': secret_nonce,
+            'candidate_details': candidate_details
+        }
+        
+        votes_data.append(vote_item)
+        print(f"DEBUG - Vote {vote.id} processed: nonce={secret_nonce}, candidates={len(candidate_details)}")  # Debug print
+    
+    print(f"DEBUG - Total votes processed: {len(votes_data)}")  # Debug print
     
     return render_template('receipt.html',
                          votes=votes_data,
                          now=datetime.now(pytz.timezone("Asia/Manila")),
                          school_years=get_all_school_years(),
                          current_sy=school_year)
-
 
 from sqlalchemy import or_
 

@@ -1,0 +1,1056 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Vote Distribution Analysis{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+/* ==================== PAGE SPECIFIC STYLES ==================== */
+.distribution-container {
+    padding: 30px 40px;
+    margin-left: var(--sidebar-width);
+    min-height: 100vh;
+    background: transparent;
+    transition: var(--transition);
+    max-width: 1400px;
+}
+
+/* Header Styles */
+.distribution-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.header-title h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-title h1 i {
+    color: #20c997;
+    background: rgba(32, 201, 151, 0.1);
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.header-title p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-left: 52px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.back-btn {
+    background: var(--light-gray);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.back-btn:hover {
+    background: var(--primary-blue);
+    color: white;
+    border-color: var(--primary-blue);
+    transform: translateX(-3px);
+}
+
+/* Election Selector */
+.election-selector {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+
+.election-selector:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.selector-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.selector-label i {
+    color: var(--primary-blue);
+}
+
+.selector-dropdown {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.selector-dropdown select {
+    flex: 1;
+    min-width: 300px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.selector-dropdown select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.view-btn {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 0 30px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.view-btn:hover {
+    background: var(--secondary-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+}
+
+/* Stats Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-blue);
+}
+
+.stat-icon {
+    width: 55px;
+    height: 55px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+}
+
+.stat-icon.blue {
+    background: rgba(67, 97, 238, 0.1);
+    color: var(--primary-blue);
+}
+
+.stat-icon.green {
+    background: rgba(32, 201, 151, 0.1);
+    color: #20c997;
+}
+
+.stat-icon.purple {
+    background: rgba(156, 39, 176, 0.1);
+    color: #9c27b0;
+}
+
+.stat-icon.orange {
+    background: rgba(255, 159, 67, 0.1);
+    color: #ff9f43;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Section Title */
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 30px 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: var(--primary-blue);
+    background: rgba(67, 97, 238, 0.1);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+/* Candidate Cards */
+.candidate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.candidate-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.candidate-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-blue);
+}
+
+.candidate-header {
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(32, 201, 151, 0.05));
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.candidate-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.candidate-info {
+    flex: 1;
+}
+
+.candidate-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 5px;
+}
+
+.candidate-position {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.candidate-position i {
+    font-size: 0.8rem;
+    color: var(--primary-blue);
+}
+
+.candidate-total {
+    padding: 15px 20px;
+    background: rgba(32, 201, 151, 0.08);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.total-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.total-label i {
+    color: #20c997;
+}
+
+.total-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #20c997;
+}
+
+/* Department Breakdown */
+.department-breakdown {
+    padding: 20px;
+}
+
+.breakdown-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.breakdown-title i {
+    color: var(--primary-blue);
+    font-size: 0.9rem;
+}
+
+.department-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.department-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.dept-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.dept-name {
+    color: var(--text-color);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.dept-name i {
+    color: var(--primary-blue);
+    font-size: 0.8rem;
+}
+
+.dept-votes {
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-blue), #20c997);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Empty State */
+.empty-state {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 60px 40px;
+    text-align: center;
+    margin: 40px 0;
+    border: 2px dashed var(--border-color);
+}
+
+.empty-icon {
+    font-size: 5rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+}
+
+.empty-suggestion {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: rgba(67, 97, 238, 0.1);
+    border-radius: 30px;
+    color: var(--primary-blue);
+    font-size: 0.95rem;
+}
+
+/* School Year Indicator */
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+}
+
+/* Dark mode adjustments */
+body.dark-mode .candidate-card {
+    background: var(--card-bg);
+}
+
+body.dark-mode .candidate-header {
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.15), rgba(32, 201, 151, 0.15));
+}
+
+body.dark-mode .candidate-total {
+    background: rgba(32, 201, 151, 0.15);
+}
+
+body.dark-mode .progress-bar {
+    background: var(--border-color);
+}
+
+body.dark-mode .empty-suggestion {
+    background: rgba(67, 97, 238, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .distribution-container {
+        margin-left: 250px;
+        padding: 25px 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .distribution-container {
+        margin-left: 0;
+        padding: 20px;
+    }
+    
+    .candidate-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .selector-dropdown {
+        flex-direction: column;
+    }
+    
+    .selector-dropdown select,
+    .view-btn {
+        width: 100%;
+    }
+    
+    .view-btn {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .distribution-container {
+        padding: 15px;
+    }
+    
+    .header-title h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Theme transition fixes */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+body.dark-mode .main-content,
+.main-content.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+body:not(.dark-mode) .main-content,
+.main-content:not(.dark-mode) {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="distribution-container">
+    <!-- Header -->
+    <div class="distribution-header">
+        <div class="header-title">
+            <h1>
+                <i class="fa-solid fa-chart-pie"></i>
+                Vote Distribution Analysis
+            </h1>
+            <p>Analyze how votes are distributed across different departments for each candidate</p>
+            
+            <!-- School Year Indicator (if filtered) -->
+            {% if current_sy %}
+            <div class="school-year-indicator">
+                <i class="fa-solid fa-calendar"></i>
+                <span>School Year: <strong>{{ current_sy }}</strong></span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('admin.results_page') }}" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i>
+                Back to Results
+            </a>
+        </div>
+    </div>
+
+    <!-- Election Selector (Sample Data) -->
+    <div class="election-selector">
+        <div class="selector-label">
+            <i class="fa-solid fa-square-poll-vertical"></i>
+            <span>Select Election to Analyze</span>
+        </div>
+        <div class="selector-dropdown">
+            <select id="electionSelect">
+                <option value="" disabled selected>-- Choose an election --</option>
+                <option value="1">SSG Elections 2025 (Campus-Wide)</option>
+                <option value="2">College of Computer Studies - CSG Elections 2025</option>
+                <option value="3">College of Engineering - Student Council 2025</option>
+                <option value="4">College of Business - Student Government 2025</option>
+                <option value="5">College of Education - Student Council 2025</option>
+            </select>
+            <button class="view-btn" onclick="alert('Sample Data: This would load the selected election data')">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                View Distribution
+            </button>
+        </div>
+    </div>
+
+    <!-- Sample Data for SSG Elections (Default View) -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">12</div>
+                <div class="stat-label">Total Candidates</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fa-solid fa-building"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">5</div>
+                <div class="stat-label">Departments</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="fa-solid fa-vote-yea"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">2,847</div>
+                <div class="stat-label">Total Votes Cast</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">SSG 2025</div>
+                <div class="stat-label">Selected Election</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- President Candidates Section -->
+    <h2 class="section-title">
+        <i class="fa-solid fa-crown"></i>
+        President Candidates
+    </h2>
+
+    <div class="candidate-grid">
+        <!-- Candidate 1: Maria Santos -->
+        <div class="candidate-card">
+            <div class="candidate-header">
+                <div class="candidate-avatar">MS</div>
+                <div class="candidate-info">
+                    <div class="candidate-name">Maria Santos</div>
+                    <div class="candidate-position">
+                        <i class="fa-solid fa-crown"></i>
+                        President
+                    </div>
+                </div>
+            </div>
+            <div class="candidate-total">
+                <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
+                <span class="total-value">1,245</span>
+            </div>
+            <div class="department-breakdown">
+                <div class="breakdown-title">
+                    <i class="fa-solid fa-building"></i>
+                    Department Breakdown
+                </div>
+                <div class="department-list">
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-laptop-code"></i> CCS (Computer Studies)</span>
+                            <span class="dept-votes">450 votes (36.1%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 36%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-gears"></i> Engineering</span>
+                            <span class="dept-votes">320 votes (25.7%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 26%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-briefcase"></i> Business</span>
+                            <span class="dept-votes">280 votes (22.5%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 23%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-book"></i> Education</span>
+                            <span class="dept-votes">125 votes (10.0%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 10%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-flask"></i> Arts & Sciences</span>
+                            <span class="dept-votes">70 votes (5.6%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 6%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate 2: Juan Dela Cruz -->
+        <div class="candidate-card">
+            <div class="candidate-header">
+                <div class="candidate-avatar">JD</div>
+                <div class="candidate-info">
+                    <div class="candidate-name">Juan Dela Cruz</div>
+                    <div class="candidate-position">
+                        <i class="fa-solid fa-crown"></i>
+                        President
+                    </div>
+                </div>
+            </div>
+            <div class="candidate-total">
+                <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
+                <span class="total-value">985</span>
+            </div>
+            <div class="department-breakdown">
+                <div class="breakdown-title">
+                    <i class="fa-solid fa-building"></i>
+                    Department Breakdown
+                </div>
+                <div class="department-list">
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-gears"></i> Engineering</span>
+                            <span class="dept-votes">380 votes (38.6%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 39%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-flask"></i> Arts & Sciences</span>
+                            <span class="dept-votes">245 votes (24.9%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 25%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-briefcase"></i> Business</span>
+                            <span class="dept-votes">180 votes (18.3%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 18%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-book"></i> Education</span>
+                            <span class="dept-votes">110 votes (11.2%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 11%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-laptop-code"></i> CCS (Computer Studies)</span>
+                            <span class="dept-votes">70 votes (7.1%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 7%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate 3: Ana Garcia -->
+        <div class="candidate-card">
+            <div class="candidate-header">
+                <div class="candidate-avatar">AG</div>
+                <div class="candidate-info">
+                    <div class="candidate-name">Ana Garcia</div>
+                    <div class="candidate-position">
+                        <i class="fa-solid fa-crown"></i>
+                        President
+                    </div>
+                </div>
+            </div>
+            <div class="candidate-total">
+                <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
+                <span class="total-value">617</span>
+            </div>
+            <div class="department-breakdown">
+                <div class="breakdown-title">
+                    <i class="fa-solid fa-building"></i>
+                    Department Breakdown
+                </div>
+                <div class="department-list">
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-book"></i> Education</span>
+                            <span class="dept-votes">210 votes (34.0%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 34%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-briefcase"></i> Business</span>
+                            <span class="dept-votes">165 votes (26.7%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 27%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-flask"></i> Arts & Sciences</span>
+                            <span class="dept-votes">125 votes (20.3%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 20%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-gears"></i> Engineering</span>
+                            <span class="dept-votes">67 votes (10.9%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 11%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-laptop-code"></i> CCS (Computer Studies)</span>
+                            <span class="dept-votes">50 votes (8.1%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 8%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vice President Candidates Section -->
+    <h2 class="section-title">
+        <i class="fa-solid fa-user-tie"></i>
+        Vice President Candidates
+    </h2>
+
+    <div class="candidate-grid">
+        <!-- Candidate 4: Jose Rizal -->
+        <div class="candidate-card">
+            <div class="candidate-header">
+                <div class="candidate-avatar">JR</div>
+                <div class="candidate-info">
+                    <div class="candidate-name">Jose Rizal</div>
+                    <div class="candidate-position">
+                        <i class="fa-solid fa-user-tie"></i>
+                        Vice President
+                    </div>
+                </div>
+            </div>
+            <div class="candidate-total">
+                <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
+                <span class="total-value">1,102</span>
+            </div>
+            <div class="department-breakdown">
+                <div class="breakdown-title">
+                    <i class="fa-solid fa-building"></i>
+                    Department Breakdown
+                </div>
+                <div class="department-list">
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-gears"></i> Engineering</span>
+                            <span class="dept-votes">410 votes (37.2%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 37%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-laptop-code"></i> CCS (Computer Studies)</span>
+                            <span class="dept-votes">320 votes (29.0%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 29%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-briefcase"></i> Business</span>
+                            <span class="dept-votes">185 votes (16.8%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 17%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-flask"></i> Arts & Sciences</span>
+                            <span class="dept-votes">110 votes (10.0%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 10%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-book"></i> Education</span>
+                            <span class="dept-votes">77 votes (7.0%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 7%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate 5: Clara Lim -->
+        <div class="candidate-card">
+            <div class="candidate-header">
+                <div class="candidate-avatar">CL</div>
+                <div class="candidate-info">
+                    <div class="candidate-name">Clara Lim</div>
+                    <div class="candidate-position">
+                        <i class="fa-solid fa-user-tie"></i>
+                        Vice President
+                    </div>
+                </div>
+            </div>
+            <div class="candidate-total">
+                <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
+                <span class="total-value">876</span>
+            </div>
+            <div class="department-breakdown">
+                <div class="breakdown-title">
+                    <i class="fa-solid fa-building"></i>
+                    Department Breakdown
+                </div>
+                <div class="department-list">
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-book"></i> Education</span>
+                            <span class="dept-votes">280 votes (32.0%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 32%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-briefcase"></i> Business</span>
+                            <span class="dept-votes">235 votes (26.8%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 27%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-flask"></i> Arts & Sciences</span>
+                            <span class="dept-votes">190 votes (21.7%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 22%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-laptop-code"></i> CCS (Computer Studies)</span>
+                            <span class="dept-votes">98 votes (11.2%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 11%"></div>
+                        </div>
+                    </div>
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid fa-gears"></i> Engineering</span>
+                            <span class="dept-votes">73 votes (8.3%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 8%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State Example (commented out - for reference) -->
+    <!--
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <h3>No Data Available</h3>
+        <p>Select an election to view vote distribution across departments</p>
+        <div class="empty-suggestion">
+            <i class="fa-solid fa-arrow-up"></i>
+            Choose an election from the dropdown above
+        </div>
+    </div>
+    -->
+</div>
+
+<!-- Theme Synchronization -->
+<script>
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+}
+
+// Apply immediately
+(function() {
+    applyThemeToMainContent();
+    
+    // Listen for theme toggle
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            setTimeout(applyThemeToMainContent, 50);
+        }
+    });
+})();
+</script>
+{% endblock %}

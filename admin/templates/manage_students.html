@@ -91,28 +91,6 @@ body.dark-mode #filterElection:disabled {
 .status-badge.voted { background-color: #27ae60; color: #fff; }
 .status-badge.not-voted { background-color: #c0392b; color: #fff; }
 
-/* ---------------- ACTION BUTTONS ---------------- */
-.action-buttons { display: flex; gap: 8px; justify-content: center; }
-.delete-btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 32px;
-    transition: all 0.2s ease;
-    background-color: #c0392b;
-    color: #fff;
-}
-.delete-btn:hover {
-    background-color: #e74c3c;
-    transform: translateY(-1px);
-}
-
 /* ==================== EMPTY STATE STYLES ==================== */
 .empty-state-container {
     padding: 40px 20px;
@@ -279,10 +257,6 @@ body.dark-mode .status-badge.not-voted {
     background-color: #c0392b;
 }
 
-body.dark-mode .delete-btn {
-    background-color: #e74c3c;
-}
-
 body.dark-mode .empty-state-container {
     background: var(--card-bg);
     border-color: var(--border-color);
@@ -296,6 +270,69 @@ body.dark-mode .suggestion-item {
 body.dark-mode .suggestion-item.highlight {
     background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
 }
+
+/* School Year Indicator - Moved to header-right */
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+    margin-right: 15px;
+    transition: all 0.3s ease;
+}
+
+.school-year-indicator i {
+    font-size: 0.9rem;
+}
+
+/* Dark mode support */
+body.dark-mode .school-year-indicator {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+/* Header right container - now flex row to accommodate both elements */
+.header-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header-right {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .school-year-indicator {
+        margin-right: 0;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .request-deletion-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .school-year-indicator {
+        flex-direction: column;
+        text-align: center;
+        padding: 8px;
+    }
+}
 </style>
 {% endblock %}
 
@@ -308,6 +345,13 @@ body.dark-mode .suggestion-item.highlight {
         </div>
         <div class="header-center"></div>
         <div class="header-right">
+            <!-- School Year Indicator moved here beside Request Deletion button -->
+            {% if current_sy %}
+            <div class="school-year-indicator">
+                <i class="fa-solid fa-calendar"></i>
+                <span>School Year: <strong>{{ current_sy }}</strong></span>
+            </div>
+            {% endif %}
             <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
                 <i class="fa-solid fa-clock"></i> Request Deletion
             </a>
@@ -352,7 +396,7 @@ body.dark-mode .suggestion-item.highlight {
 
     <!-- ================= TABLE CONTAINER ================= -->
     <div class="table-container">
-        <!-- Students Table -->
+        <!-- Students Table - Actions column removed -->
         <table class="students-table" id="studentsTable" style="display: none;">
             <thead>
                 <tr>
@@ -362,7 +406,6 @@ body.dark-mode .suggestion-item.highlight {
                     <th>Course</th>
                     <th>Year Level</th>
                     <th>Status</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="studentsBody">
@@ -501,7 +544,10 @@ function filterElectionsByScope(scope) {
             if (election.year_levels === 'all') {
                 displayText += ' (All Years)';
             } else {
-                displayText += ` (Year ${election.year_levels})`;
+                // Format year levels nicely
+                const years = election.year_levels.split(',');
+                const yearText = years.map(y => y + (y === '1' ? 'st' : y === '2' ? 'nd' : y === '3' ? 'rd' : 'th') + ' Year').join(', ');
+                displayText += ` (${yearText})`;
             }
         }
         
@@ -516,7 +562,7 @@ function filterElectionsByScope(scope) {
         
         // Show no elections state
         let scopeText = scope === 'campus' ? 'Campus-Wide' : 'Department';
-        noElectionsMessage.textContent = `There are no ${scopeText} elections available. Create one to get started.`;
+        noElectionsMessage.textContent = `There are no ${scopeText} elections available for the selected school year. Create one to get started.`;
         showEmptyState('noElections');
     } else {
         // Elections found - enable dropdown and load data
@@ -636,7 +682,7 @@ function loadStudents(page = 1) {
             // Show table
             studentsTable.style.display = 'table';
             
-            // Populate table
+            // Populate table - Actions column removed
             data.students.forEach(s => {
                 const statusClass = s.has_voted ? "voted" : "not-voted";
                 const statusText = s.has_voted ? "Voted" : "Not Voted";
@@ -649,11 +695,6 @@ function loadStudents(page = 1) {
                     <td>${s.course || ""}</td>
                     <td>${s.year_level || ""}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="delete-btn" onclick="deleteStudent(${s.id})"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </td>
                 </tr>`;
             });
 
@@ -721,21 +762,6 @@ function exportExcel() {
     if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
 
     window.location.href = url;
-}
-
-// === DELETE STUDENT ===
-function deleteStudent(id) {
-    if (confirm('Are you sure you want to delete this student?')) {
-        fetch(`/admin/students/delete/${id}`, { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    loadStudents(currentPage);
-                } else {
-                    alert('Error deleting student');
-                }
-            });
-    }
 }
 
 // =============== THEME SYNCHRONIZATION FIX ===============
@@ -809,6 +835,14 @@ if (typeof $ !== 'undefined') {
 
 // === INIT ===
 document.addEventListener("DOMContentLoaded", () => {
+    // Check if there's a school year filter active
+    const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
+    const currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
+    
+    if (currentSchoolYear) {
+        console.log('School Year Filter Active (Elections only):', currentSchoolYear);
+    }
+    
     // Initially, show no scope selected state
     showEmptyState('noScope');
     applyThemeToMainContent();

@@ -58,8 +58,8 @@ class Vote(db.Model):
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
     encrypted_vote = db.Column(db.Text, nullable=False)  # Or db.LONGTEXT
     
-    # NEW: Add finder_hash for vote verification
-    finder_hash = db.Column(db.String(256), unique=True, nullable=True)
+    # FIXED: Change from String(256) to Text to store full JSON
+    finder_hash = db.Column(db.Text, nullable=True)  # Changed to Text
     
     cast_timestamp = db.Column(db.DateTime, nullable=True)
     recorded_timestamp = db.Column(db.DateTime, nullable=True)
@@ -195,7 +195,6 @@ class Vote(db.Model):
             'created_full': self.created_at_manila.strftime("%Y-%m-%d %I:%M:%S %p") if self.created_at_manila else None
         }
     
-
     def get_secret_nonce(self):
         """Extract the secret nonce from finder_hash"""
         if not self.finder_hash:

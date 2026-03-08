@@ -1,4 +1,89 @@
 /* PHOTO LIGHTBOX */
+// manage_candidates.js - Updated with school year support
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Manage Candidates JS loaded");
+    
+    // Display school year info if filtered
+    displaySchoolYearInfo();
+    
+    // Initialize modals
+    initModals();
+    
+    // Initialize filters
+    initFilters();
+    
+    // Initialize search
+    initSearch();
+    
+    // Initialize delete buttons
+    initDeleteButtons();
+    
+    // Initialize edit buttons
+    initEditButtons();
+    
+    // Initialize photo click handlers
+    initPhotoClick();
+    
+    // Initialize add candidate button
+    initAddCandidate();
+    
+    // Initialize scope toggle in add modal
+    const addScope = document.getElementById('add_scope');
+    if (addScope) {
+        addScope.addEventListener('change', function() {
+            toggleDepartmentField('add');
+            filterElectionsByScope('add');
+        });
+    }
+    
+    // Initialize scope toggle in edit modal
+    const editScope = document.getElementById('edit_scope');
+    if (editScope) {
+        editScope.addEventListener('change', function() {
+            toggleDepartmentField('edit');
+            filterElectionsByScope('edit');
+        });
+    }
+    
+    // Initialize election filter in add modal
+    const addElection = document.getElementById('add_election');
+    if (addElection) {
+        addElection.addEventListener('change', function() {
+            filterPositionsByElection('add');
+        });
+    }
+    
+    // Initialize election filter in edit modal
+    const editElection = document.getElementById('edit_election');
+    if (editElection) {
+        editElection.addEventListener('change', function() {
+            filterPositionsByElection('edit');
+        });
+    }
+    
+    // Initialize reset button
+    const resetBtn = document.getElementById('reset_filter');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            resetFilters();
+        });
+    }
+});
+
+// Display school year info if filtered
+function displaySchoolYearInfo() {
+    // Check if there's a school year badge already in the DOM
+    const existingBadge = document.querySelector('.school-year-badge');
+    if (existingBadge) {
+        console.log("School year filter active:", existingBadge.textContent);
+    }
+}
+
+// [Rest of your existing functions remain the same]
+// ... (keep all your existing functions like initModals, initFilters, etc.)
+
+
 document.querySelectorAll('.clickable-photo').forEach(img => {
     img.onclick = () => {
         document.getElementById('lightbox').style.display = 'flex';

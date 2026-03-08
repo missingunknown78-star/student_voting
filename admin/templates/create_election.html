@@ -12,20 +12,23 @@
     <h1 class="page-title">Create Election</h1>
     <p class="page-description">Create a new campus-wide or departmental election</p>
     
-    <!-- Flash messages - IMPROVED VERSION -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-container" id="flash-container">
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}" id="flash-{{ loop.index }}">
-                        {{ message }}
-                        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
-                        <div class="progress-bar"></div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
+    <!-- Flash messages - IMPROVED VERSION WITH CATEGORY FILTERING -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    <div class="flash-container" id="flash-container">
+        {% for category, message in messages %}
+            <!-- Only show messages with categories relevant to this page -->
+            {% if category in ['election', 'success', 'error', 'danger', 'warning', 'info'] %}
+                <div class="flash-message {{ category }}" id="flash-{{ loop.index }}">
+                    {{ message }}
+                    <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+                    <div class="progress-bar"></div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
+{% endwith %}
     
     <!-- Add dark-mode class here based on parent's dark mode -->
     <div class="election-form-container">

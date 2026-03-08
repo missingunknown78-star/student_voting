@@ -595,3 +595,82 @@ body.dark-mode .request-deletion-btn:hover {
         justify-content: center;
     }
 }
+/* School Year Indicator - Now positioned in header-right beside Request Deletion button */
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+    margin-right: 15px;  /* Changed from margin-left to margin-right */
+    transition: all 0.3s ease;
+    white-space: nowrap;  /* Prevents text wrapping */
+}
+
+.school-year-indicator i {
+    font-size: 0.9rem;
+}
+
+/* Dark mode support */
+body.dark-mode .school-year-indicator {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+/* Header right container - now flex row to accommodate both elements */
+.header-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Remove school year indicator styles from header-left */
+.header-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header-right {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .school-year-indicator {
+        margin-right: 0;  /* Remove right margin on mobile */
+        width: 100%;
+        justify-content: center;
+        white-space: normal;  /* Allow wrapping on mobile */
+    }
+    
+    .request-deletion-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .header-left {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .school-year-indicator {
+        flex-direction: column;
+        text-align: center;
+        padding: 8px;
+        gap: 4px;  /* Smaller gap on mobile */
+    }
+}

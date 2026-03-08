@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Admin Panel{% endblock %}</title>
+    
+    <!-- School Year Meta Tag - Used across all admin pages -->
+    <meta name="current-school-year" content="{{ session.get('admin_current_school_year', '') }}">
 
     <!-- Base Admin CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -98,8 +101,26 @@
         /* Ensure sidebar has no extra lines */
         .sidebar {
             border-right: none !important;
-
-            
+        }
+        
+        /* School Year Indicator Base Styles (will be enhanced in individual pages) */
+        .school-year-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, var(--primary-blue, #1a56db), var(--secondary-blue, #3b82f6));
+            color: white;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .dark-mode .school-year-indicator {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
         }
     </style>
     
@@ -133,6 +154,12 @@
                         if (mainContent) {
                             mainContent.classList.add('dark-mode', 'theme-applied');
                         }
+                        
+                        // Update theme button icon
+                        const themeBtn = document.getElementById('floatingThemeBtn');
+                        if (themeBtn) {
+                            themeBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+                        }
                     });
                 } else if (savedTheme === 'light') {
                     document.addEventListener('DOMContentLoaded', function() {
@@ -141,6 +168,12 @@
                             mainContent.classList.remove('dark-mode');
                             mainContent.classList.add('theme-applied');
                         }
+                        
+                        // Update theme button icon
+                        const themeBtn = document.getElementById('floatingThemeBtn');
+                        if (themeBtn) {
+                            themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+                        }
                     });
                 } else {
                     // No preference, just show content
@@ -148,6 +181,16 @@
                         const mainContent = document.querySelector('.main-content');
                         if (mainContent) {
                             mainContent.classList.add('theme-applied');
+                        }
+                        
+                        // Set default icon based on system preference
+                        const themeBtn = document.getElementById('floatingThemeBtn');
+                        if (themeBtn) {
+                            if (prefersDark) {
+                                themeBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+                            } else {
+                                themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+                            }
                         }
                     });
                 }
@@ -213,13 +256,11 @@
                <i class="fa-solid fa-building-columns"></i> Create Elections
             </a>
 
-
             <!-- COLLEGES / DEPARTMENTS -->
             <a href="{{ url_for('admin.manage_departments') }}"
                class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
                <i class="fa-solid fa-building"></i> Colleges
             </a>
-
 
             <!-- ANNOUNCEMENTS -->
             <a href="{{ url_for('admin.announcements') }}"
@@ -232,12 +273,6 @@
                class="{% if request.endpoint in ['admin.results_page', 'admin.election_results'] %}active{% endif %}">
                <i class="fa-solid fa-trophy"></i> Results
             </a>
-
-            <!-- AUDIT LOGS -->
-            <a href="{{ url_for('admin.audit_logs') }}"
-            class="{% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
-            <i class="fa-solid fa-file-lines"></i> Activity Logs
-         </a>
          
             <!-- LOGOUT -->
             <a href="{{ url_for('admin.logout') }}">
@@ -257,6 +292,40 @@
 
 <!-- Admin Base JavaScript -->
 <script src="{{ url_for('admin.static', filename='js/admin_base.js') }}"></script>
+
+<!-- School Year Sync Script - Ensures all pages have access to the school year filter -->
+<script>
+    // This script runs on every page to ensure school year filter is available
+    (function() {
+        // Get school year from meta tag
+        const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
+        const currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
+        
+        // Store in window object for easy access by page-specific JS
+        window.currentSchoolYear = currentSchoolYear;
+        
+        // Log for debugging (can be removed in production)
+        if (currentSchoolYear) {
+            console.log('School Year Filter Active:', currentSchoolYear);
+        }
+        
+        // Re-apply theme when school year changes (if needed)
+        const themeBtn = document.getElementById('floatingThemeBtn');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', function() {
+                // Small delay to let theme change
+                setTimeout(function() {
+                    // Force any school year indicators to update their colors
+                    const indicators = document.querySelectorAll('.school-year-indicator');
+                    indicators.forEach(function(indicator) {
+                        // Just trigger a reflow
+                        indicator.style.transform = 'scale(1)';
+                    });
+                }, 50);
+            });
+        }
+    })();
+</script>
 
 </body>
 </html>

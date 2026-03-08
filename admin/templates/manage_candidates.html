@@ -552,17 +552,26 @@ body.dark-mode .color-preset.selected {
 {% block content %}
 <div class="container">
     <!-- Title and Action Buttons Container -->
-    <div class="title-bar">
-        <h1>Manage Candidates</h1>
-        <div class="title-buttons">
-            <button class="position-btn position-list-btn" id="openPositionListModal">
-                <i class="fa-solid fa-list"></i> Position List
-            </button>
-            <button class="position-btn add-position-btn" id="openAddPositionModal">
-                <i class="fa-solid fa-plus"></i> Add Position
-            </button>
-        </div>
+    <!-- Title and Action Buttons Container -->
+<div class="title-bar">
+    <h1>Manage Candidates</h1>
+    
+    <!-- School Year Indicator (if filtered) -->
+    {% if current_sy %}
+    <div class="school-year-badge">
+        <i class="fa-solid fa-calendar"></i> School Year: {{ current_sy }}
     </div>
+    {% endif %}
+    
+    <div class="title-buttons">
+        <button class="position-btn position-list-btn" id="openPositionListModal">
+            <i class="fa-solid fa-list"></i> Position List
+        </button>
+        <button class="position-btn add-position-btn" id="openAddPositionModal">
+            <i class="fa-solid fa-plus"></i> Add Position
+        </button>
+    </div>
+</div>
     
     <!-- ACTION BAR: Add Button, Filter, and Search -->
     <div class="action-bar" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">

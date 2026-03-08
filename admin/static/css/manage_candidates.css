@@ -930,3 +930,43 @@ body.dark-mode .scope-badge.campus {
 body.dark-mode .scope-badge.department {
     background: linear-gradient(135deg, #3498db, #2980b9);
 }
+
+
+/* School Year Badge */
+.school-year-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+    margin-left: 15px;
+}
+
+.school-year-badge i {
+    font-size: 1rem;
+}
+
+/* Dark mode support */
+body.dark-mode .school-year-badge {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .title-bar {
+        flex-wrap: wrap;
+    }
+    
+    .school-year-badge {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+        justify-content: center;
+    }
+}

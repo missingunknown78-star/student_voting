@@ -138,14 +138,16 @@ body.dark-mode .card-footer {
     color: var(--text-secondary);
 }
 
-/* ==================== STATISTICS BUTTON STYLES ==================== */
+/* ==================== HEADER ACTIONS BUTTONS STYLES ==================== */
 .header-actions {
     display: flex;
-    align-items: center;
-    gap: 15px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
     margin-left: auto;
 }
 
+/* Statistics Button */
 .stats-nav-btn {
     background: linear-gradient(135deg, #845ef7, #6b3ef0);
     color: white;
@@ -161,6 +163,8 @@ body.dark-mode .card-footer {
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(132, 94, 247, 0.3);
     text-decoration: none;
+    min-width: 180px;
+    justify-content: center;
 }
 
 .stats-nav-btn:hover {
@@ -172,13 +176,47 @@ body.dark-mode .card-footer {
     font-size: 1.1rem;
 }
 
-/* Dark mode for stats button */
+/* Vote Distribution Button */
+.distribution-nav-btn {
+    background: linear-gradient(135deg, #20c997, #0ca678);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(32, 201, 151, 0.3);
+    text-decoration: none;
+    min-width: 180px;
+    justify-content: center;
+}
+
+.distribution-nav-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(32, 201, 151, 0.4);
+}
+
+.distribution-nav-btn i {
+    font-size: 1.1rem;
+}
+
+/* Dark mode for buttons */
 body.dark-mode .stats-nav-btn {
     background: linear-gradient(135deg, #9f7aea, #805ad5);
     box-shadow: 0 4px 12px rgba(159, 122, 234, 0.3);
 }
 
-/* Update results-header to accommodate the button */
+body.dark-mode .distribution-nav-btn {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+/* Update results-header to accommodate the buttons */
 .results-header {
     display: flex;
     align-items: center;
@@ -200,28 +238,68 @@ body.dark-mode .stats-nav-btn {
     
     .header-actions {
         width: 100%;
+        align-items: stretch;
     }
     
-    .stats-nav-btn {
+    .stats-nav-btn,
+    .distribution-nav-btn {
         width: 100%;
-        justify-content: center;
+        min-width: auto;
     }
+}
+
+/* School Year Indicator */
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+}
+
+.filter-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin-left: 5px;
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="results-container">
-    <!-- Header with Statistics Button -->
+    <!-- Header with Statistics and Distribution Buttons -->
     <div class="results-header">
         <div class="header-content">
             <h1><i class="fa-solid fa-trophy"></i> Election Results Dashboard</h1>
             <p>View and analyze election outcomes with real-time vote counts and statistics</p>
+            
+            <!-- School Year Indicator (if filtered) -->
+            {% if current_sy %}
+            <div class="school-year-indicator">
+                <i class="fa-solid fa-calendar"></i>
+                <span>School Year: <strong>{{ current_sy }}</strong></span>
+                {% if total_filtered < total_elections %}
+                <span class="filter-badge">Showing {{ total_filtered }} of {{ total_elections }} elections</span>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
         <div class="header-actions">
             <a href="{{ url_for('admin.statistics') }}" class="stats-nav-btn">
-                <i class="fa-solid fa-chart-pie"></i>
+                <i class="fa-solid fa-chart-line"></i>
                 <span>Election Statistics</span>
+            </a>
+            <a href="{{ url_for('admin.vote_distribution') }}" class="distribution-nav-btn">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Vote Distribution</span>
             </a>
         </div>
     </div>
@@ -525,7 +603,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
     
     // Add event listeners to all interactive elements to reapply theme on interaction
-    const interactiveElements = document.querySelectorAll('.btn, .election-card, .stat-card, .empty-state, .stats-nav-btn');
+    const interactiveElements = document.querySelectorAll('.btn, .election-card, .stat-card, .empty-state, .stats-nav-btn, .distribution-nav-btn');
     interactiveElements.forEach(element => {
         element.addEventListener('mouseenter', function() {
             setTimeout(applyThemeToMainContent, 10);

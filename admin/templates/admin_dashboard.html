@@ -13,17 +13,21 @@
 
 <div class="dashboard-header">
     <h1>COMELEC Dashboard</h1>
-
-    <div class="profile-container">
-        <img src="{{ url_for('admin.static', filename='images/admin_profile.jpg') }}"
-             alt="Admin Profile"
-             class="profile-pic"
-             id="profilePic">
-
-        <div class="profile-menu" id="profileMenu">
-            <a href="{{ url_for('admin.admin_profile') }}">Profile</a>
-            <a href="{{ url_for('admin.settings') }}">Settings</a>
+    
+    <div class="header-actions">
+        <!-- School Year Filter Dropdown -->
+        <div class="school-year-filter">
+            <select id="schoolYearSelect" class="school-year-select" onchange="changeSchoolYear(this.value)">
+                <option value="">All School Years</option>
+                {% for sy in school_years %}
+                <option value="{{ sy }}" {% if current_sy == sy %}selected{% endif %}>{{ sy }}</option>
+                {% endfor %}
+            </select>
         </div>
+        
+        <a href="{{ url_for('admin.settings') }}" class="settings-icon">
+            <i class="fa-solid fa-gear"></i>
+        </a>
     </div>
 </div>
 
@@ -175,6 +179,17 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Function to change school year
+    function changeSchoolYear(schoolYear) {
+        if (schoolYear) {
+            window.location.href = "{{ url_for('admin.dashboard') }}?school_year=" + encodeURIComponent(schoolYear);
+        } else {
+            window.location.href = "{{ url_for('admin.dashboard') }}";
+        }
+    }
+</script>
 
 <script src="{{ url_for('admin.static', filename='js/admin_dashboard.js') }}"></script>
 <!-- Voting Trends JavaScript -->

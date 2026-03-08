@@ -884,3 +884,64 @@ body.dark-mode .flash-message.election {
     outline: 2px solid var(--primary-blue);
     outline-offset: 1px;
 }
+
+
+
+/* Add these styles to your create_election.css */
+
+/* Election success message */
+.flash-message.election-success {
+    background: #d4edda;
+    color: #155724;
+    border-left-color: #28a745;
+}
+
+.flash-message.election-success::before {
+    content: '✓';
+    background: #28a745;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Election error message */
+.flash-message.election-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left-color: #dc3545;
+}
+
+.flash-message.election-error::before {
+    content: '⚠';
+    background: #dc3545;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Dark mode support */
+body.dark-mode .flash-message.election-success {
+    background: #1e3a2a;
+    color: #a3d8a3;
+    border-left-color: #28a745;
+}
+
+body.dark-mode .flash-message.election-error {
+    background: #3a1e1e;
+    color: #f8a5a5;
+    border-left-color: #dc3545;
+}

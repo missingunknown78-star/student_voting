@@ -1,0 +1,294 @@
+<!-- Trusted Devices Section Content -->
+<div class="settings-card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-laptop"></i> Trusted Devices</h3>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">{{ trusted_devices|length }} Active</span>
+    </div>
+    
+    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+        Devices you've marked as trusted for 30 days. You won't need to enter 2FA codes on these devices.
+    </p>
+    
+    <div class="devices-list">
+        {% if trusted_devices and trusted_devices|length > 0 %}
+            {% for device in trusted_devices %}
+            <div class="device-item {% if device.is_current %}current-device{% endif %}" data-device-id="{{ device.id }}">
+                <div class="device-info">
+                    <div class="device-icon">
+                        {% if device.device_type and ('mobile' in device.device_type|lower or 'iphone' in device.device_type|lower or 'android' in device.device_type|lower) %}
+                            <i class="fa-solid fa-mobile-screen"></i>
+                        {% elif device.device_type and ('tablet' in device.device_type|lower or 'ipad' in device.device_type|lower) %}
+                            <i class="fa-solid fa-tablet-screen"></i>
+                        {% else %}
+                            <i class="fa-solid fa-laptop"></i>
+                        {% endif %}
+                    </div>
+                    <div class="device-details">
+                        <div class="device-name">
+                            <strong>{{ device.device_name or 'Unknown Device' }}</strong>
+                            {% if device.is_current %}
+                                <span class="current-badge">Current</span>
+                            {% endif %}
+                        </div>
+                        <div class="device-meta">
+                            <span><i class="fa-solid fa-globe"></i> {{ device.ip_address or 'IP not recorded' }}</span>
+                            <span><i class="fa-solid fa-calendar-check"></i> Trusted from: 
+                                {% if device.created_at %}
+                                    {% set tz = pytz.timezone('Asia/Manila') %}
+                                    {% set utc_dt = device.created_at.replace(tzinfo=pytz.UTC) %}
+                                    {% set manila_dt = utc_dt.astimezone(tz) %}
+                                    {{ manila_dt.strftime('%Y-%m-%d %I:%M %p') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="device-meta">
+                            <span><i class="fa-solid fa-clock"></i> Trusted until: 
+                                {% if device.expires_at %}
+                                    {% set tz = pytz.timezone('Asia/Manila') %}
+                                    {% set utc_dt = device.expires_at.replace(tzinfo=pytz.UTC) %}
+                                    {% set manila_dt = utc_dt.astimezone(tz) %}
+                                    {{ manila_dt.strftime('%Y-%m-%d %I:%M %p') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="device-last-used" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">
+                            <i class="fa-solid fa-history"></i> Last used: 
+                            {% if device.last_used %}
+                                {% set tz = pytz.timezone('Asia/Manila') %}
+                                {% set utc_dt = device.last_used.replace(tzinfo=pytz.UTC) %}
+                                {% set manila_dt = utc_dt.astimezone(tz) %}
+                                {{ manila_dt.strftime('%Y-%m-%d %I:%M %p') }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="device-actions">
+                    {% if not device.is_current %}
+                    <button class="btn-icon" onclick="revokeTrustedDevice({{ device.id }}, event)" title="Revoke Trust">
+                        <i class="fa-solid fa-trash-can"></i> Remove
+                    </button>
+                    {% else %}
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Active now</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-devices">
+                <i class="fa-solid fa-laptop"></i>
+                <p>No trusted devices yet</p>
+                <small>Devices will be automatically added when you log in and verify them via email.</small>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="trust-info">
+        <i class="fa-solid fa-info-circle"></i>
+        <span>Trusted devices are remembered for 30 days. You can revoke access at any time.</span>
+    </div>
+</div>
+
+<!-- JavaScript - Updated functions -->
+<script>
+// ==================== REVOKE TRUSTED DEVICE FUNCTION ====================
+function revokeTrustedDevice(deviceId, event) {
+    console.log('Revoke function called for device:', deviceId);
+    
+    // Get the button that was clicked
+    const button = event ? event.target.closest('button') : document.querySelector(`button[onclick*="${deviceId}"]`);
+    
+    if (!button) {
+        console.error('Button not found');
+        showNotification('Error: Could not find the device button', 'error');
+        return;
+    }
+    
+    if (!confirm('⚠️ Are you sure you want to remove this trusted device? A confirmation email will be sent to your email address.')) {
+        return;
+    }
+    
+    // Show loading state
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+    button.disabled = true;
+    
+    // Send the request
+    fetch(`/admin/trusted-devices/remove/${deviceId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json().then(data => {
+            console.log('Response data:', data);
+            return { status: response.status, data: data };
+        });
+    })
+    .then(({ status, data }) => {
+        if (data.success) {
+            // Show success message
+            showNotification('📧 ' + (data.message || 'Device removal email sent successfully! Please check your email.'), 'success');
+            
+            // Update button to show pending state
+            button.innerHTML = '<i class="fa-solid fa-clock"></i> Pending Confirmation';
+            button.style.background = '#f59e0b';
+            button.style.borderColor = '#f59e0b';
+            button.disabled = true;
+            
+            // Add a small note that they need to check email
+            const deviceItem = button.closest('.device-item');
+            if (deviceItem) {
+                const pendingNote = document.createElement('div');
+                pendingNote.className = 'pending-note';
+                pendingNote.innerHTML = '<small style="color: #f59e0b; display: block; margin-top: 5px;"><i class="fa-solid fa-envelope"></i> Check email to confirm removal</small>';
+                deviceItem.querySelector('.device-actions').appendChild(pendingNote);
+            }
+        } else {
+            // Show error message
+            showNotification('❌ ' + (data.message || 'Failed to remove device'), 'error');
+            
+            // Restore button state
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        showNotification('❌ Network error occurred. Please try again.', 'error');
+        
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// ==================== NOTIFICATION SYSTEM ====================
+function showNotification(message, type = 'info') {
+    // Create notification container if it doesn't exist
+    let container = document.querySelector('.notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+        
+        // Add styles for notifications if not already present
+        if (!document.querySelector('#notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                .notification-container {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 9999;
+                }
+                
+                .notification {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 15px 20px;
+                    margin-bottom: 10px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    animation: slideIn 0.3s ease;
+                    border-left: 4px solid;
+                    min-width: 300px;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                
+                .notification.success {
+                    border-left-color: #10b981;
+                }
+                
+                .notification.error {
+                    border-left-color: #ef4444;
+                }
+                
+                .notification.info {
+                    border-left-color: #3b82f6;
+                }
+                
+                .notification.warning {
+                    border-left-color: #f59e0b;
+                }
+                
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                
+                @keyframes slideOut {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                }
+                
+                .dark-mode .notification {
+                    background: #1e293b;
+                    color: #f1f5f9;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    // Add icon based on type
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-exclamation-circle';
+    if (type === 'warning') icon = 'fa-exclamation-triangle';
+    
+    notification.innerHTML = `
+        <i class="fa-solid ${icon}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+// ==================== DEBUG: Log current device fingerprint ====================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Trusted Devices JS loaded');
+    
+    // Log current device fingerprint for debugging
+    fetch('/admin/debug/current-device')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Current device fingerprint:', data);
+        })
+        .catch(err => console.log('Debug endpoint not available'));
+});
+</script>

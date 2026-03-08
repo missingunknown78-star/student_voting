@@ -615,3 +615,68 @@ body:not(.dark-mode) {
         padding-top: 5rem;
     }
 }
+
+
+/* School Year Indicator */
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.school-year-indicator i {
+    font-size: 1rem;
+}
+
+.school-year-indicator .filter-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin-left: 5px;
+}
+
+/* Dark mode support */
+body.dark-mode .school-year-indicator {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+/* Update header-content to accommodate the indicator */
+.header-content {
+    flex: 1;
+}
+
+.header-content p {
+    margin-bottom: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .school-year-indicator {
+        width: 100%;
+        justify-content: center;
+        margin-top: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .school-year-indicator {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .school-year-indicator .filter-badge {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+}
