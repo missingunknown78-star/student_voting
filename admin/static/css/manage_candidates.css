@@ -4,7 +4,7 @@
 /* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
 body {
-    background-color: #0f172a; /* Dark background as default */
+    background-color: #1a1a1a; /* CHANGED: Dark background to true black */
     transition: background-color 0.3s ease;
 }
 
@@ -57,25 +57,35 @@ body:not(.dark-mode) {
     --input-border: #e9ecef;
     --modal-bg: #f9f9f9;
     --modal-text: #333;
+    --primary-blue: #4a9eff;
+    --secondary-blue: #3a7bc8;
+    --border-color: #e9ecef;
 }
 
-/* Dark mode variables */
+/* Dark mode variables - CHANGED to true black/dark gray like sample_testing.css */
 .dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --table-header-bg: #3a7bc8; /* Darker light blue for dark mode */
+    --bg-color: #1a1a1a; /* True black background */
+    --text-color: #f0f0f0; /* Off-white text */
+    --text-secondary: #b0b0b0; /* Light gray secondary text */
+    --card-bg: #2d2d2d; /* Dark gray cards */
+    --table-header-bg: #66b0ff; /* Lighter blue for dark mode header */
     --table-header-text: #ffffff; /* White text for header */
-    --table-row-hover: rgba(51, 65, 85, 0.3);
-    --input-bg: #1e293b;
-    --input-border: rgba(51, 65, 85, 0.8);
-    --modal-bg: #1e293b;
-    --modal-text: #f1f5f9;
-    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    --light: #334155;
-    --gray-light: rgba(51, 65, 85, 0.8);
-    --dark: #f1f5f9;
+    --table-row-hover: #3d3d3d; /* Darker hover state */
+    --input-bg: #2d2d2d; /* Dark gray inputs */
+    --input-border: #404040; /* Dark border */
+    --modal-bg: #2d2d2d; /* Dark modal background */
+    --modal-text: #f0f0f0; /* Light modal text */
+    --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --light: #404040; /* Darker light variant */
+    --gray-light: #404040;
+    --dark: #f0f0f0;
+    --primary: #66b0ff; /* Lighter primary for dark mode */
+    --primary-dark: #88c0ff;
+    --secondary: #88c0ff;
+    --secondary-dark: #66b0ff;
+    --border-color: #404040; /* Dark border */
+    --primary-blue: #66b0ff;
+    --secondary-blue: #88c0ff;
 }
 
 * { box-sizing: border-box; }
@@ -922,13 +932,15 @@ body:not(.dark-mode) {
     color: white;
 }
 
-/* Dark mode adjustments */
-body.dark-mode .scope-badge.campus {
+/* Dark mode adjustments - CHANGED to use theme variables */
+.dark-mode .scope-badge.campus {
     background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
 }
 
-body.dark-mode .scope-badge.department {
+.dark-mode .scope-badge.department {
     background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
 }
 
 
@@ -951,10 +963,10 @@ body.dark-mode .scope-badge.department {
     font-size: 1rem;
 }
 
-/* Dark mode support */
-body.dark-mode .school-year-badge {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+/* Dark mode support - CHANGED to use theme variables */
+.dark-mode .school-year-badge {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    box-shadow: 0 4px 12px rgba(102, 176, 255, 0.4);
 }
 
 /* Responsive */
@@ -969,4 +981,176 @@ body.dark-mode .school-year-badge {
         width: 100%;
         justify-content: center;
     }
+}
+
+
+/* ==================== PLATFORM / DESCRIPTION TEXTAREA STYLES ==================== */
+
+/* Textarea styling - matches input fields but with better height for multiline */
+.form-group textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--input-border);
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
+    transition: var(--transition);
+    background: var(--input-bg);
+    color: var(--dark);
+    font-family: inherit;
+    box-shadow: var(--box-shadow);
+    resize: vertical; /* Allow vertical resize only */
+    min-height: 100px;
+    max-height: 300px;
+    line-height: 1.5;
+}
+
+/* Hover effect for textarea */
+.form-group textarea:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary);
+}
+
+/* Focus effect for textarea */
+.form-group textarea:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Dark mode support for textarea - CHANGED to use theme variables */
+.dark-mode .form-group textarea {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border-color: var(--input-border);
+}
+
+.dark-mode .form-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 176, 255, 0.3);
+}
+
+/* Placeholder styling */
+.form-group textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+    font-style: italic;
+}
+
+/* Character counter - optional enhancement */
+.platform-counter {
+    display: block;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    transition: var(--transition);
+}
+
+.platform-counter.warning {
+    color: #f39c12;
+}
+
+.platform-counter.limit {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+/* Platform preview in table (if you want to show truncated platform) */
+.platform-preview {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.platform-preview:hover {
+    white-space: normal;
+    overflow: visible;
+    background: var(--card-bg);
+    position: relative;
+    z-index: 10;
+    padding: 5px;
+    border-radius: 4px;
+    box-shadow: var(--box-shadow);
+}
+
+/* Platform label with icon */
+.form-group label i.fa-file-text,
+.form-group label i.fa-quote-right {
+    margin-right: 5px;
+    color: var(--primary);
+    opacity: 0.8;
+}
+
+/* Two-column layout adjustment for textarea */
+.lightbox-content .form-group:has(textarea) {
+    grid-column: 1 / -1; /* Make textarea span full width in two-column layout */
+}
+
+/* For browsers that don't support :has() - fallback */
+/* Target textarea parent directly */
+.lightbox-content .form-group textarea {
+    grid-column: 1 / -1;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .form-group textarea {
+        min-height: 80px;
+        padding: 12px 14px;
+    }
+    
+    .platform-preview {
+        max-width: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-group textarea {
+        min-height: 70px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+}
+
+/* Optional: Rich text toolbar (if you want to add basic formatting later) */
+.platform-toolbar {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 5px;
+    padding: 5px;
+    background: var(--card-bg);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--input-border);
+}
+
+.platform-toolbar button {
+    padding: 5px 10px;
+    background: var(--light);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.platform-toolbar button:hover {
+    background: var(--primary);
+    color: white;
+}
+
+/* Platform character count animation */
+@keyframes pulseWarning {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.platform-counter.warning {
+    animation: pulseWarning 1s ease-in-out infinite;
 }

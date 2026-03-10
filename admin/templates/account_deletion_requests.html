@@ -18,70 +18,68 @@
     background: transparent !important;
 }
 
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+/* Dark mode main content background - using :root.dark-mode */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
 }
 
 /* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
+:root:not(.dark-mode) .main-content {
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
 /* Dark mode specific overrides for buttons */
-body.dark-mode .btn-secondary {
+:root.dark-mode .btn-secondary {
     background: var(--light);
     color: var(--text-color);
 }
 
-body.dark-mode .modal-content {
+:root.dark-mode .modal-content {
     color: var(--modal-text);
 }
 
-body.dark-mode .modal-header h3,
-body.dark-mode .modal-body,
-body.dark-mode .modal-footer {
+:root.dark-mode .modal-header h3,
+:root.dark-mode .modal-body,
+:root.dark-mode .modal-footer {
     color: var(--modal-text);
 }
 
-body.dark-mode .info-group,
-body.dark-mode .detail-group {
+:root.dark-mode .info-group,
+:root.dark-mode .detail-group {
     background: var(--light);
 }
 
 /* Fix for filter form selects in dark mode */
-body.dark-mode .filter-select,
-body.dark-mode .filter-input {
+:root.dark-mode .filter-select,
+:root.dark-mode .filter-input {
     color: var(--text-color);
     background-color: var(--input-bg);
 }
 
 /* Fix for table cell colors in dark mode */
-body.dark-mode .data-table td {
+:root.dark-mode .data-table td {
     color: var(--text-color);
 }
 
-body.dark-mode .student-name {
+:root.dark-mode .student-name {
     color: var(--text-color);
 }
 
-body.dark-mode .reason-cell {
+:root.dark-mode .reason-cell {
     color: var(--text-secondary);
 }
 
 /* Empty state dark mode */
-body.dark-mode .empty-state {
+:root.dark-mode .empty-state {
     background: var(--card-bg);
     color: var(--text-color);
 }
 
-body.dark-mode .empty-state h3 {
+:root.dark-mode .empty-state h3 {
     color: var(--text-color);
 }
 
-body.dark-mode .empty-state p {
+:root.dark-mode .empty-state p {
     color: var(--text-secondary);
 }
 </style>
@@ -283,7 +281,7 @@ function applyThemeToMainContent() {
         }
     });
     
-    // Observe changes to body class
+    // Observe changes to html class (where dark-mode is applied)
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.attributeName === 'class') {
@@ -292,7 +290,7 @@ function applyThemeToMainContent() {
         });
     });
     
-    observer.observe(document.body, { attributes: true });
+    observer.observe(document.documentElement, { attributes: true });
 })();
 
 let currentPage = 1;

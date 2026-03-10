@@ -1,15 +1,15 @@
 /* ================= ACCOUNT DELETION REQUESTS CSS ================= */
-/* FLOATING CARDS DESIGN - WITH PROPER BACKGROUND */
+/* FLOATING CARDS DESIGN - WITH TRUE BLACK DARK THEME */
 
 /* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
 body {
-    background-color: #0f172a; /* Dark background as default */
+    background-color: #1a1a1a; /* True black background */
     transition: background-color 0.3s ease;
 }
 
 /* Light mode override */
-body:not(.dark-mode) {
+:root:not(.dark-mode) body {
     background-color: #f5f7fb;
 }
 
@@ -61,26 +61,26 @@ body:not(.dark-mode) {
     --hover-bg: #f1f2f6;
 }
 
-/* Dark mode variables */
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --table-header-bg: #3a7bc8;
+/* Dark mode variables - TRUE BLACK theme */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --table-header-bg: #66b0ff;
     --table-header-text: #ffffff;
-    --table-row-hover: rgba(51, 65, 85, 0.5);
-    --input-bg: #1e293b;
-    --input-border: #334155;
-    --modal-bg: #1e293b;
-    --modal-text: #f1f5f9;
-    --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    --box-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.4);
-    --light: #334155;
-    --gray-light: #334155;
-    --dark: #f1f5f9;
-    --border-color: #334155;
-    --hover-bg: rgba(51, 65, 85, 0.5);
+    --table-row-hover: #3d3d3d;
+    --input-bg: #2d2d2d;
+    --input-border: #404040;
+    --modal-bg: #2d2d2d;
+    --modal-text: #f0f0f0;
+    --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    --box-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.7);
+    --light: #404040;
+    --gray-light: #404040;
+    --dark: #f0f0f0;
+    --border-color: #404040;
+    --hover-bg: #3d3d3d;
 }
 
 * { 
@@ -100,7 +100,7 @@ body:not(.dark-mode) {
     background: transparent;
 }
 
-/* ==================== MAIN CONTENT BACKGROUND FIXES ==================== */
+/* ==================== THEME TRANSITION FIXES ==================== */
 /* Force main-content to have transitions */
 .main-content {
     transition: background-color 0.3s ease, background-image 0.3s ease !important;
@@ -112,14 +112,12 @@ body:not(.dark-mode) {
 }
 
 /* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
 }
 
 /* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
+:root:not(.dark-mode) .main-content {
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
@@ -495,17 +493,17 @@ body:not(.dark-mode) .main-content,
 }
 
 /* Dark mode status badge adjustments */
-body.dark-mode .status-badge.pending {
+:root.dark-mode .status-badge.pending {
     background: rgba(243, 156, 18, 0.25);
     color: #f39c12;
 }
 
-body.dark-mode .status-badge.approved {
+:root.dark-mode .status-badge.approved {
     background: rgba(39, 174, 96, 0.25);
     color: #27ae60;
 }
 
-body.dark-mode .status-badge.rejected {
+:root.dark-mode .status-badge.rejected {
     background: rgba(192, 57, 43, 0.25);
     color: #e74c3c;
 }
@@ -753,9 +751,9 @@ body.dark-mode .status-badge.rejected {
 }
 
 /* Dark mode modal text fixes */
-body.dark-mode .modal-header h3,
-body.dark-mode .modal-body,
-body.dark-mode .modal-footer {
+:root.dark-mode .modal-header h3,
+:root.dark-mode .modal-body,
+:root.dark-mode .modal-footer {
     color: var(--modal-text);
 }
 

@@ -7,551 +7,548 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-/* ==================== THEME TRANSITION FIXES ==================== */
-/* Force main-content to have transitions */
-.main-content {
-    transition: background-color 0.3s ease, background-image 0.3s ease !important;
-}
-
-/* Ensure the background shows through */
-.container {
-    background: transparent !important;
-}
-
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-}
-
-/* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
-    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-}
-
-/* Dark mode specific overrides for buttons */
-body.dark-mode .edit-btn {
-    background: #2980b9;
-}
-
-body.dark-mode .delete-btn {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-body.dark-mode .cancel-btn {
-    background: var(--light);
-    color: var(--dark);
-}
-
-/* Ensure modal text colors work in dark mode */
-body.dark-mode .lightbox-content {
-    color: var(--modal-text);
-}
-
-body.dark-mode .lightbox-content h2,
-body.dark-mode .lightbox-content label {
-    color: var(--modal-text);
-}
-
-/* Fix for filter form selects in dark mode */
-body.dark-mode .filter-form select,
-body.dark-mode .search-input {
-    color: var(--text-color);
-    background-color: var(--card-bg);
-}
-
-/* Fix for table cell colors in dark mode */
-body.dark-mode .candidates-table td {
-    color: var(--text-color);
-}
-
-/* New styles for scope badges */
-.scope-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    margin-left: 5px;
-    text-transform: uppercase;
-}
-
-.scope-badge.campus {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-.scope-badge.department {
-    background: linear-gradient(135deg, #007bff, #0d6efd);
-    color: white;
-}
-
-/* Election option styling */
-.election-option {
-    padding: 5px;
-    border-radius: 4px;
-}
-
-.election-option.campus {
-    border-left: 3px solid #28a745;
-    background: rgba(40, 167, 69, 0.05);
-}
-
-.election-option.department {
-    border-left: 3px solid #007bff;
-    background: rgba(0, 123, 255, 0.05);
-}
-
-/* Department hint */
-.department-hint {
-    display: block;
-    font-size: 0.7rem;
-    color: #64748b;
-    margin-top: 4px;
-    font-style: italic;
-}
-
-.required {
-    color: #dc3545;
-    margin-left: 3px;
-}
-
-.form-hint {
-    display: block;
-    font-size: 0.7rem;
-    color: #64748b;
-    margin-top: 4px;
-}
-
-/* Notification styles inside modal - BRIGHT COLORS */
-.modal-notification {
-    padding: 15px 20px;
-    margin-bottom: 25px;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: slideDown 0.3s ease;
-    border-left: 5px solid transparent;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* Light mode success - Bright green */
-.modal-notification.success {
-    background: #00c851;
-    background: linear-gradient(135deg, #00c851, #00a844);
-    color: white;
-    border-left-color: #007e33;
-}
-
-/* Dark mode success - Even brighter green */
-body.dark-mode .modal-notification.success {
-    background: #00e676;
-    background: linear-gradient(135deg, #00e676, #00c853);
-    color: white;
-    border-left-color: #00a844;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
-
-/* Light mode error - Bright red */
-.modal-notification.error {
-    background: #ff4444;
-    background: linear-gradient(135deg, #ff4444, #cc0000);
-    color: white;
-    border-left-color: #a70000;
-}
-
-/* Dark mode error - Even brighter red */
-body.dark-mode .modal-notification.error {
-    background: #ff5e5e;
-    background: linear-gradient(135deg, #ff5e5e, #ff1a1a);
-    color: white;
-    border-left-color: #cc0000;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
-
-.modal-notification i {
-    font-size: 1.5rem;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
-
-@keyframes slideDown {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
+    /* ==================== THEME TRANSITION FIXES ==================== */
+    /* Force main-content to have transitions */
+    .main-content {
+        transition: background-color 0.3s ease, background-image 0.3s ease !important;
     }
-    to {
-        transform: translateY(0);
-        opacity: 1;
+    
+    /* Ensure the background shows through */
+    .container {
+        background: transparent !important;
     }
-}
-
-/* Loading spinner */
-.loading-spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 1s ease-in-out infinite;
-    margin-right: 8px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Disabled button state */
-.add-btn:disabled,
-.edit-btn:disabled,
-.search-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-/* Modal content positioning */
-.lightbox-modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    align-items: center;
-    justify-content: center;
-}
-
-.lightbox-content {
-    background: white;
-    padding: 30px;
-    border-radius: 16px;
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-    position: relative;
-}
-
-body.dark-mode .lightbox-content {
-    background: #1e293b;
-    color: #e2e8f0;
-}
-
-.close {
-    position: absolute;
-    right: 20px;
-    top: 15px;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #666;
-    z-index: 10;
-}
-
-.close:hover {
-    color: #000;
-}
-
-body.dark-mode .close {
-    color: #94a3b8;
-}
-
-body.dark-mode .close:hover {
-    color: #f1f5f9;
-}
-
-/* Search bar styles */
-.search-container {
-    display: flex;
-    align-items: center;
-    margin-left: auto;
-}
-
-.search-input {
-    padding: 8px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    font-size: 0.9rem;
-    width: 250px;
-    transition: all 0.3s ease;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-}
-
-.search-btn {
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 20px;
-    margin-left: 10px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 90px;
-}
-
-.search-btn:hover:not(:disabled) {
-    background: #0056b3;
-}
-
-/* Loading overlay for table */
-.table-loading {
-    position: relative;
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.table-loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #007bff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-/* ==================== NO CANDIDATES EMPTY STATE ==================== */
-.no-candidates-container {
-    padding: 60px 20px;
-    text-align: center;
-    background: var(--card-bg);
-    border-radius: 16px;
-    margin: 20px 0;
-    border: 1px dashed var(--border-color);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.no-candidates-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    opacity: 0.7;
-    color: #ffc107;
-}
-
-.no-candidates-icon i {
-    font-size: 4rem;
-}
-
-.no-candidates-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--text-color);
-}
-
-.no-candidates-message {
-    font-size: 1rem;
-    color: var(--text-secondary);
-    margin-bottom: 25px;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.6;
-}
-
-.no-candidates-suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.suggestion-item {
-    background: rgba(67, 97, 238, 0.1);
-    padding: 12px 20px;
-    border-radius: 30px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--primary);
-    font-size: 0.9rem;
-    border: 1px solid rgba(67, 97, 238, 0.2);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.suggestion-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
-}
-
-.suggestion-item i {
-    font-size: 1rem;
-}
-
-.suggestion-item.highlight {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.suggestion-item.highlight i {
-    color: white;
-}
-
-body.dark-mode .no-candidates-container {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .suggestion-item {
-    background: rgba(102, 126, 234, 0.2);
-    color: var(--text-color);
-}
-
-body.dark-mode .suggestion-item.highlight {
-    background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
-}
-
-/* No results message - fallback */
-.no-results {
-    text-align: center;
-    padding: 30px;
-    color: var(--text-secondary);
-    font-style: italic;
-}
-
-/* ==================== COLOR PICKER STYLES ==================== */
-.color-picker-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.color-input-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.color-input-group input[type="color"] {
-    width: 60px;
-    height: 40px;
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-    cursor: pointer;
-    padding: 2px;
-}
-
-.color-input-group input[type="text"] {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-family: monospace;
-}
-
-.color-preview {
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-}
-
-.color-presets {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-}
-
-.color-preset {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: transform 0.2s ease, border-color 0.2s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.color-preset:hover {
-    transform: scale(1.1);
-    border-color: var(--primary-blue);
-}
-
-.color-preset.selected {
-    border-color: #333;
-    transform: scale(1.1);
-}
-
-body.dark-mode .color-preset.selected {
-    border-color: white;
-}
-
-/* Position color badge in table */
-.position-color-badge {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    margin-right: 8px;
-    vertical-align: middle;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.position-name-with-color {
-    display: flex;
-    align-items: center;
-}
-
-/* ==================== HIDE SCROLLBAR IN POSITION LIST MODAL ==================== */
-/* Hide scrollbar for Chrome, Safari and Opera */
-#positionListModal .lightbox-content::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    background: transparent;
-}
-
-/* Hide scrollbar for Firefox */
-#positionListModal .lightbox-content {
-    scrollbar-width: none;  /* Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
-}
-
-/* Also hide scrollbar for the table container if it has its own scroll */
-#positionListModal .positions-table-container::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    background: transparent;
-}
-
-#positionListModal .positions-table-container {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-
-</style>
+    
+    /* Dark mode main content background - CHANGED to true black */
+    :root.dark-mode .main-content,
+    .main-content.dark-mode {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+    }
+    
+    /* Light mode main content background */
+    :root:not(.dark-mode) .main-content,
+    .main-content:not(.dark-mode) {
+        background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+    }
+    
+    /* Dark mode specific overrides for buttons */
+    :root.dark-mode .edit-btn {
+        background: #2980b9;
+    }
+    
+    :root.dark-mode .delete-btn {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+    
+    :root.dark-mode .cancel-btn {
+        background: var(--light);
+        color: var(--dark);
+    }
+    
+    /* Ensure modal text colors work in dark mode */
+    :root.dark-mode .lightbox-content {
+        color: #f0f0f0;
+    }
+    
+    :root.dark-mode .lightbox-content h2,
+    :root.dark-mode .lightbox-content label {
+        color: #f0f0f0;
+    }
+    
+    /* Fix for filter form selects in dark mode */
+    :root.dark-mode .filter-form select,
+    :root.dark-mode .search-input {
+        color: #f0f0f0;
+        background-color: #2d2d2d;
+    }
+    
+    /* Fix for table cell colors in dark mode */
+    :root.dark-mode .candidates-table td {
+        color: #f0f0f0;
+    }
+    
+    /* New styles for scope badges */
+    .scope-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 5px;
+        text-transform: uppercase;
+    }
+    
+    .scope-badge.campus {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+    }
+    
+    .scope-badge.department {
+        background: linear-gradient(135deg, #007bff, #0d6efd);
+        color: white;
+    }
+    
+    /* Election option styling */
+    .election-option {
+        padding: 5px;
+        border-radius: 4px;
+    }
+    
+    .election-option.campus {
+        border-left: 3px solid #28a745;
+        background: rgba(40, 167, 69, 0.05);
+    }
+    
+    .election-option.department {
+        border-left: 3px solid #007bff;
+        background: rgba(0, 123, 255, 0.05);
+    }
+    
+    /* Department hint */
+    .department-hint {
+        display: block;
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-top: 4px;
+        font-style: italic;
+    }
+    
+    .required {
+        color: #dc3545;
+        margin-left: 3px;
+    }
+    
+    .form-hint {
+        display: block;
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-top: 4px;
+    }
+    
+    /* Notification styles inside modal - BRIGHT COLORS */
+    .modal-notification {
+        padding: 15px 20px;
+        margin-bottom: 25px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideDown 0.3s ease;
+        border-left: 5px solid transparent;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Light mode success - Bright green */
+    .modal-notification.success {
+        background: #00c851;
+        background: linear-gradient(135deg, #00c851, #00a844);
+        color: white;
+        border-left-color: #007e33;
+    }
+    
+    /* Dark mode success - Even brighter green */
+    :root.dark-mode .modal-notification.success {
+        background: #00e676;
+        background: linear-gradient(135deg, #00e676, #00c853);
+        color: white;
+        border-left-color: #00a844;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    /* Light mode error - Bright red */
+    .modal-notification.error {
+        background: #ff4444;
+        background: linear-gradient(135deg, #ff4444, #cc0000);
+        color: white;
+        border-left-color: #a70000;
+    }
+    
+    /* Dark mode error - Even brighter red */
+    :root.dark-mode .modal-notification.error {
+        background: #ff5e5e;
+        background: linear-gradient(135deg, #ff5e5e, #ff1a1a);
+        color: white;
+        border-left-color: #cc0000;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .modal-notification i {
+        font-size: 1.5rem;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    
+    @keyframes slideDown {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    /* Loading spinner */
+    .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Disabled button state */
+    .add-btn:disabled,
+    .edit-btn:disabled,
+    .search-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    /* Modal content positioning */
+    .lightbox-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .lightbox-content {
+        background: white;
+        padding: 30px;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        position: relative;
+    }
+    
+    :root.dark-mode .lightbox-content {
+        background: #2d2d2d;
+        color: #f0f0f0;
+    }
+    
+    .close {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #666;
+        z-index: 10;
+    }
+    
+    .close:hover {
+        color: #000;
+    }
+    
+    :root.dark-mode .close {
+        color: #b0b0b0;
+    }
+    
+    :root.dark-mode .close:hover {
+        color: #f0f0f0;
+    }
+    
+    /* Search bar styles */
+    .search-container {
+        display: flex;
+        align-items: center;
+        margin-left: auto;
+    }
+    
+    .search-input {
+        padding: 8px 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        font-size: 0.9rem;
+        width: 250px;
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    }
+    
+    .search-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 20px;
+        margin-left: 10px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 90px;
+    }
+    
+    .search-btn:hover:not(:disabled) {
+        background: #0056b3;
+    }
+    
+    /* Loading overlay for table */
+    .table-loading {
+        position: relative;
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .table-loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    /* ==================== NO CANDIDATES EMPTY STATE ==================== */
+    .no-candidates-container {
+        padding: 60px 20px;
+        text-align: center;
+        background: var(--card-bg);
+        border-radius: 16px;
+        margin: 20px 0;
+        border: 1px dashed var(--border-color);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    
+    .no-candidates-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.7;
+        color: #ffc107;
+    }
+    
+    .no-candidates-icon i {
+        font-size: 4rem;
+    }
+    
+    .no-candidates-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: var(--text-color);
+    }
+    
+    .no-candidates-message {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-bottom: 25px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+    }
+    
+    .no-candidates-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    
+    .suggestion-item {
+        background: rgba(67, 97, 238, 0.1);
+        padding: 12px 20px;
+        border-radius: 30px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--primary);
+        font-size: 0.9rem;
+        border: 1px solid rgba(67, 97, 238, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .suggestion-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);
+    }
+    
+    .suggestion-item i {
+        font-size: 1rem;
+    }
+    
+    .suggestion-item.highlight {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .suggestion-item.highlight i {
+        color: white;
+    }
+    
+    :root.dark-mode .no-candidates-container {
+        background: #2d2d2d;
+        border-color: #404040;
+    }
+    
+    :root.dark-mode .suggestion-item {
+        background: rgba(102, 126, 234, 0.2);
+        color: #f0f0f0;
+    }
+    
+    :root.dark-mode .suggestion-item.highlight {
+        background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
+    }
+    
+    /* No results message - fallback */
+    .no-results {
+        text-align: center;
+        padding: 30px;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    
+    /* ==================== COLOR PICKER STYLES ==================== */
+    .color-picker-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .color-input-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .color-input-group input[type="color"] {
+        width: 60px;
+        height: 40px;
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        padding: 2px;
+    }
+    
+    .color-input-group input[type="text"] {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--input-bg);
+        color: var(--text-color);
+        font-family: monospace;
+    }
+    
+    .color-preview {
+        width: 30px;
+        height: 30px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .color-presets {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+    
+    .color-preset {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .color-preset:hover {
+        transform: scale(1.1);
+        border-color: var(--primary-blue);
+    }
+    
+    .color-preset.selected {
+        border-color: #333;
+        transform: scale(1.1);
+    }
+    
+    :root.dark-mode .color-preset.selected {
+        border-color: white;
+    }
+    
+    /* Position color badge in table */
+    .position-color-badge {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 8px;
+        vertical-align: middle;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .position-name-with-color {
+        display: flex;
+        align-items: center;
+    }
+    
+    /* ==================== HIDE SCROLLBAR IN POSITION LIST MODAL ==================== */
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    #positionListModal .lightbox-content::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        background: transparent;
+    }
+    
+    /* Hide scrollbar for Firefox */
+    #positionListModal .lightbox-content {
+        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+    }
+    
+    /* Also hide scrollbar for the table container if it has its own scroll */
+    #positionListModal .positions-table-container::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        background: transparent;
+    }
+    
+    #positionListModal .positions-table-container {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Title and Action Buttons Container -->
     <!-- Title and Action Buttons Container -->
 <div class="title-bar">
     <h1>Manage Candidates</h1>
@@ -814,7 +811,7 @@ body.dark-mode .color-preset.selected {
     <img id="lightbox-img">
 </div>
 
-<!-- ADD CANDIDATE MODAL -->
+<!-- ADD CANDIDATE MODAL - UPDATED with always visible department, course, and platform fields -->
 <div id="addCandidateModal" class="lightbox-modal">
     <div class="lightbox-content">
         <span class="close" onclick="closeAddCandidateModal()">&times;</span>
@@ -841,24 +838,43 @@ body.dark-mode .color-preset.selected {
                 <small class="form-hint">Optional: Leave blank if independent</small>
             </div>
 
+            <!-- Platform Field - NEW -->
+            <div class="form-group">
+                <label>Platform</label>
+                <textarea name="platform" id="add_platform" rows="3" placeholder="Enter candidate's platform, goals, or manifesto"></textarea>
+                <small class="form-hint">Optional: Describe the candidate's platform</small>
+            </div>
+
             <!-- ELECTION SCOPE -->
             <div class="form-group">
                 <label>Election Scope <span class="required">*</span></label>
-                <select name="scope" id="add_scope" required onchange="toggleDepartmentField('add')">
+                <select name="scope" id="add_scope" required onchange="filterElectionsByScope('add')">
                     <option value="" disabled selected>Select Election Scope</option>
                     <option value="campus">Campus-Wide Election</option>
                     <option value="department">Department Election</option>
                 </select>
             </div>
 
-            <div class="form-group" id="add_department_field" style="display: none;">
-                <label>Department <span class="required">*</span></label>
+            <!-- Department Field - ALWAYS VISIBLE (but optional based on logic) -->
+            <div class="form-group">
+                <label>Department</label>
                 <select name="department_id" id="add_department">
-                    <option value="">Select department</option>
+                    <option value="">Select department (optional)</option>
                     {% for dept in departments %}
                     <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
                 </select>
+                <small class="form-hint">Optional: Select department if applicable</small>
+            </div>
+
+            <!-- Course Field - NEW and ALWAYS VISIBLE -->
+            <div class="form-group">
+                <label>Course</label>
+                <select name="course_id" id="add_course">
+                    <option value="">Select course (optional)</option>
+                    <!-- Courses will be loaded dynamically based on department selection -->
+                </select>
+                <small class="form-hint">Optional: Select course if applicable</small>
             </div>
 
             <div class="form-group">
@@ -902,7 +918,7 @@ body.dark-mode .color-preset.selected {
     </div>
 </div>
 
-<!-- EDIT CANDIDATE MODAL -->
+<!-- EDIT CANDIDATE MODAL - UPDATED with always visible department, course, and platform fields -->
 <div id="editCandidateModal" class="lightbox-modal">
     <div class="lightbox-content">
         <span class="close" onclick="closeEditModal()">&times;</span>
@@ -931,23 +947,41 @@ body.dark-mode .color-preset.selected {
                 <small class="form-hint">Optional: Leave blank if independent</small>
             </div>
 
+            <!-- Platform Field - NEW -->
+            <div class="form-group">
+                <label>Platform</label>
+                <textarea name="platform" id="edit_platform" rows="3" placeholder="Enter candidate's platform, goals, or manifesto"></textarea>
+                <small class="form-hint">Optional: Describe the candidate's platform</small>
+            </div>
+
             <!-- ELECTION SCOPE -->
             <div class="form-group">
                 <label>Election Scope <span class="required">*</span></label>
-                <select name="scope" id="edit_scope" required onchange="toggleDepartmentField('edit')">
+                <select name="scope" id="edit_scope" required onchange="filterElectionsByScope('edit')">
                     <option value="campus">Campus-Wide Election</option>
                     <option value="department">Department Election</option>
                 </select>
             </div>
 
-            <div class="form-group" id="edit_department_field">
-                <label>Department <span class="required">*</span></label>
+            <!-- Department Field - ALWAYS VISIBLE -->
+            <div class="form-group">
+                <label>Department</label>
                 <select name="department_id" id="edit_department">
-                    <option value="">Select department</option>
+                    <option value="">Select department (optional)</option>
                     {% for dept in departments %}
                     <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <!-- Course Field - NEW and ALWAYS VISIBLE -->
+            <div class="form-group">
+                <label>Course</label>
+                <select name="course_id" id="edit_course">
+                    <option value="">Select course (optional)</option>
+                    <!-- Courses will be loaded dynamically based on department selection -->
+                </select>
+                <small class="form-hint">Optional: Select course if applicable</small>
             </div>
 
             <div class="form-group">

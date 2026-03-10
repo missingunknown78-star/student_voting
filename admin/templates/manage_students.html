@@ -42,7 +42,7 @@
 }
 
 /* Dark mode disabled state */
-body.dark-mode #filterElection:disabled {
+:root.dark-mode #filterElection:disabled {
     background-color: #2d3748;
     opacity: 0.5;
 }
@@ -62,19 +62,19 @@ body.dark-mode #filterElection:disabled {
     cursor: pointer;
     border-radius: 4px;
     font-size: 0.9rem;
-    color: var(--text-color);
+    color: var(--text-primary);
     transition: all 0.2s ease;
     min-width: 36px;
 }
 .pagination button:hover:not(:disabled) {
-    background-color: var(--primary-blue);
+    background-color: var(--accent-color);
     color: white;
-    border-color: var(--primary-blue);
+    border-color: var(--accent-color);
 }
 .pagination button:disabled {
-    background-color: var(--primary-blue);
+    background-color: var(--accent-color);
     color: white;
-    border-color: var(--primary-blue);
+    border-color: var(--accent-color);
     cursor: default;
 }
 
@@ -116,7 +116,7 @@ body.dark-mode #filterElection:disabled {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 10px;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 
 .empty-state-message {
@@ -144,7 +144,7 @@ body.dark-mode #filterElection:disabled {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--primary);
+    color: var(--text-primary);
     font-size: 0.9rem;
     border: 1px solid rgba(67, 97, 238, 0.2);
 }
@@ -154,10 +154,10 @@ body.dark-mode #filterElection:disabled {
 }
 
 .suggestion-item.highlight {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
     color: white;
     border: none;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 15px rgba(102, 176, 255, 0.4);
 }
 
 .suggestion-item.highlight i {
@@ -208,7 +208,7 @@ body.dark-mode #filterElection:disabled {
     height: 40px;
     border: 3px solid rgba(67, 97, 238, 0.3);
     border-radius: 50%;
-    border-top-color: var(--primary);
+    border-top-color: var(--accent-color);
     animation: spin 1s ease-in-out infinite;
     margin: 30px auto;
 }
@@ -239,36 +239,15 @@ body.dark-mode #filterElection:disabled {
     background: transparent !important;
 }
 
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+/* Make sure the floating toggle from base is visible */
+.floating-theme-toggle {
+    display: block !important;
+    z-index: 10000;
 }
 
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
-    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-}
-
-body.dark-mode .status-badge.voted {
-    background-color: #27ae60;
-}
-
-body.dark-mode .status-badge.not-voted {
-    background-color: #c0392b;
-}
-
-body.dark-mode .empty-state-container {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .suggestion-item {
-    background: rgba(102, 126, 234, 0.2);
-    color: var(--text-color);
-}
-
-body.dark-mode .suggestion-item.highlight {
-    background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
+/* Disable transitions during theme change */
+.no-transition * {
+    transition: none !important;
 }
 
 /* School Year Indicator - Moved to header-right */
@@ -277,12 +256,12 @@ body.dark-mode .suggestion-item.highlight {
     align-items: center;
     gap: 8px;
     padding: 6px 14px;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
     color: white;
     border-radius: 30px;
     font-size: 0.85rem;
     font-weight: 500;
-    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.3);
     margin-right: 15px;
     transition: all 0.3s ease;
 }
@@ -291,10 +270,10 @@ body.dark-mode .suggestion-item.highlight {
     font-size: 0.9rem;
 }
 
-/* Dark mode support */
-body.dark-mode .school-year-indicator {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+/* Dark mode support for school year indicator */
+:root.dark-mode .school-year-indicator {
+    background: linear-gradient(135deg, #66b0ff, #88c0ff);
+    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.4);
 }
 
 /* Header right container - now flex row to accommodate both elements */
@@ -764,7 +743,7 @@ function exportExcel() {
     window.location.href = url;
 }
 
-// =============== THEME SYNCHRONIZATION FIX ===============
+// =============== SIMPLE THEME FUNCTION ===============
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
@@ -790,6 +769,7 @@ function applyThemeToMainContent() {
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
+    // Listen for theme toggle clicks (floating button)
     document.addEventListener('click', function(e) {
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
             setTimeout(function() {
@@ -798,12 +778,14 @@ function applyThemeToMainContent() {
         }
     });
     
+    // Watch for storage changes (theme changed in another tab)
     window.addEventListener('storage', function(e) {
         if (e.key === 'theme') {
             applyThemeToMainContent();
         }
     });
     
+    // Watch for class changes on html
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.attributeName === 'class') {
@@ -812,21 +794,10 @@ function applyThemeToMainContent() {
         });
     });
     
-    observer.observe(document.body, { attributes: true });
-    
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
-            }
-        });
-        
-        mainContentObserver.observe(mainContent, { attributes: true });
-    }
+    observer.observe(document.documentElement, { attributes: true });
 })();
 
-// Handle any future AJAX loads
+// Handle AJAX-loaded content
 if (typeof $ !== 'undefined') {
     $(document).ajaxComplete(function() {
         setTimeout(applyThemeToMainContent, 50);

@@ -16,12 +16,100 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshBtn.addEventListener('click', refreshResults);
     }
 
-    // NOTE: Export button now uses direct link, no JavaScript needed
-    // The export button in HTML is now an <a> tag, not handled by JS
+    // Initialize PDF export button with direct download
+    const pdfBtn = document.getElementById('exportPdfBtn');
+    if (pdfBtn) {
+        pdfBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            exportToPDF();
+        });
+    }
 
     // Initialize notification styles
     initializeNotificationStyles();
 });
+
+// PDF Export Function - Direct download with proper .pdf extension
+function exportToPDF() {
+    const electionId = templateData.electionId;
+    const pdfBtn = document.getElementById('exportPdfBtn');
+    const originalText = pdfBtn.innerHTML;
+    
+    // Show loading state
+    pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...';
+    pdfBtn.disabled = true;
+    
+    // Show loading overlay
+    const overlay = document.getElementById('pdfLoadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+    
+    // Use fetch to get the PDF blob
+    fetch(`/admin/results/${electionId}/pdf`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Create a blob URL for the PDF
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a temporary link element
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Get filename from Content-Disposition header or use default
+        const filename = `${templateData.electionTitle.replace(/[^a-z0-9]/gi, '_')}_Results.pdf`;
+        
+        link.download = filename;
+        link.style.display = 'none';
+        
+        // Append to body, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the blob URL
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+        }, 100);
+        
+        // Reset button state
+        pdfBtn.innerHTML = originalText;
+        pdfBtn.disabled = false;
+        
+        // Hide overlay
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+        
+        // Show success notification
+        showNotification('success', `✅ PDF downloaded as "${filename}" (Letter size)`);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // Reset button state
+        pdfBtn.innerHTML = originalText;
+        pdfBtn.disabled = false;
+        
+        // Hide overlay
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+        
+        // Show error notification
+        showNotification('error', '❌ Failed to generate PDF. Please try again.');
+    });
+}
 
 // Tally Votes Function
 async function tallyVotes() {
@@ -31,8 +119,8 @@ async function tallyVotes() {
     const isTallied = templateData.isTallied;
     
     const message = isTallied 
-        ? '⚠️ RE-TALLY CONFIRMATION\n\nAre you sure you want to re-tally all votes?'
-        : '✅ OFFICIAL TALLY CONFIRMATION\n\nAre you ready to officially tally the votes?';
+        ? '⚠️ RE-TALLY CONFIRMATION\n\nAre you sure you want to re-tally all votes? This will update the official results.'
+        : '✅ OFFICIAL TALLY CONFIRMATION\n\nAre you ready to officially tally the votes? This action cannot be undone.';
     
     if (!confirm(message)) {
         return;
@@ -167,7 +255,58 @@ function initializeNotificationStyles() {
             }
             @keyframes slideIn {
                 from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(0%); opacity: 1; }
+            }
+            
+            /* PDF Loading Overlay */
+            .pdf-loading-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 9999;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .pdf-loading-content {
+                background: white;
+                padding: 30px 40px;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                animation: fadeIn 0.3s ease;
+            }
+            
+            .pdf-loading-spinner {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-right: 4px solid #3498db;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 20px;
+            }
+            
+            .pdf-loading-content p {
+                color: #2c3e50;
+                font-size: 16px;
+                margin: 0;
+                font-weight: 500;
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-20px); }
+                to { opacity: 1; transform: translateY(0); }
             }
         `;
         document.head.appendChild(style);

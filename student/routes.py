@@ -93,20 +93,42 @@ def encrypt_vote_for_candidates(candidate_ids, selected_candidate_id):
     return vote_json
 
 def deserialize_encrypted_vote(encrypted_data):
-    """Deserialize stored encrypted vote"""
+    """Deserialize stored encrypted vote with error handling"""
     if not encrypted_data:
         return []
     
-    data = json.loads(encrypted_data)
-    return [
-        paillier.EncryptedNumber(
-            public_key,
-            int(item["ciphertext"]),
-            int(item["exponent"])
-        )
-        for item in data
-    ]
+    try:
+        data = json.loads(encrypted_data)
+        
+        # Handle different formats
+        if isinstance(data, list):
+            # New format: list of encrypted numbers
+            encrypted_list = []
+            for item in data:
+                try:
+                    enc_num = paillier.EncryptedNumber(
+                        public_key,
+                        int(item["ciphertext"]),
+                        int(item["exponent"])
+                    )
+                    encrypted_list.append(enc_num)
+                except Exception as e:
+                    print(f"Error deserializing item: {e}")
+                    continue
+            return encrypted_list
+        else:
+            # Old format or unknown - return empty
+            print(f"WARNING: Unknown encrypted data format: {type(data)}")
+            return []
+            
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Failed to parse encrypted vote JSON: {e}")
+        return []
+    except Exception as e:
+        print(f"ERROR: Failed to deserialize encrypted vote: {e}")
+        return []
 
+        
 def count_votes_for_candidates(election_id, candidate_ids):
     """Count votes for candidates in an election using homomorphic addition"""
     votes = Vote.query.filter_by(election_id=election_id).all()
@@ -254,6 +276,85 @@ def get_all_school_years():
     return school_years
 
 
+
+
+def count_votes_for_election_robust(election_id):
+    """Count votes for an election, handling votes with different candidate list lengths"""
+    import time
+    start_time = time.time()
+    
+    votes = Vote.query.filter_by(election_id=election_id).all()
+    
+    # Get all candidates for this election
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    candidate_ids = [c.id for c in candidates]
+    
+    if not votes:
+        print(f"DEBUG: No votes found for election {election_id}")
+        return {candidate_id: 0 for candidate_id in candidate_ids}
+    
+    print(f"DEBUG: Found {len(votes)} votes to process")
+    print(f"DEBUG: Current election has {len(candidate_ids)} candidates")
+    
+    # Initialize vote counts
+    vote_counts = {candidate_id: 0 for candidate_id in candidate_ids}
+    
+    # Process each vote individually
+    processed_count = 0
+    skipped_count = 0
+    
+    for vote in votes:
+        try:
+            # Deserialize the encrypted vote
+            enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+            
+            # Skip if no encrypted votes
+            if not enc_votes:
+                print(f"WARNING: Vote {vote.id} has no encrypted data - skipping")
+                skipped_count += 1
+                continue
+            
+            # Check if we have the expected number of candidates
+            if len(enc_votes) != len(candidate_ids):
+                print(f"WARNING: Vote {vote.id} has {len(enc_votes)} candidates, expected {len(candidate_ids)} - skipping")
+                skipped_count += 1
+                continue
+            
+            # For each candidate position, decrypt and add to count
+            for i, enc_vote in enumerate(enc_votes):
+                try:
+                    # Decrypt the vote for this candidate
+                    decrypted_value = private_key.decrypt(enc_vote)
+                    
+                    # Add to the candidate's total
+                    if i < len(candidate_ids):
+                        candidate_id = candidate_ids[i]
+                        vote_counts[candidate_id] += decrypted_value
+                except Exception as e:
+                    print(f"ERROR decrypting position {i} in vote {vote.id}: {e}")
+                    continue
+            
+            processed_count += 1
+            
+        except Exception as e:
+            print(f"ERROR processing vote {vote.id}: {e}")
+            skipped_count += 1
+            continue
+    
+    print(f"DEBUG: Processed {processed_count} votes successfully, skipped {skipped_count} votes")
+    print(f"DEBUG: Vote counting took {time.time() - start_time:.2f} seconds")
+    
+    # Print results summary
+    total_votes_cast = sum(vote_counts.values())
+    print(f"DEBUG: Total votes cast: {total_votes_cast}")
+    
+    # Show top candidates (optional)
+    sorted_counts = sorted(vote_counts.items(), key=lambda x: x[1], reverse=True)
+    for candidate_id, count in sorted_counts[:5]:  # Show top 5
+        if count > 0:
+            print(f"   Candidate {candidate_id}: {count} votes")
+    
+    return vote_counts
 # ============= END OF NEW HELPER FUNCTIONS =============
 
 
@@ -1268,42 +1369,106 @@ def vote_page(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Fetch position limits for this election
+    # Fetch position limits and course restrictions for this election
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     position_limits = {ep.position_id: ep.max_votes for ep in election_positions}
     
-    # Fetch candidates and group by position with limits
-    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    # Get course restrictions for positions
+    position_course_restrictions = {}
+    for ep in election_positions:
+        if ep.course_id:
+            course = Course.query.get(ep.course_id)
+            if course:
+                position_course_restrictions[ep.position_id] = {
+                    'course_id': ep.course_id,
+                    'course_name': f"{course.course_name} ({course.course_code})" if course.course_code else course.course_name
+                }
+    
+    # Fetch all candidates for this election
+    all_candidates = Candidate.query.filter_by(election_id=election_id).all()
+    
+    # FIXED: Filter candidates based on student's course and position restrictions
+    filtered_candidates = []
+    
+    # Get student's course_id and department_id
+    student_course_id = current_user.course_id
+    student_department_id = current_user.department_id
+    
+    print(f"DEBUG: Student Course ID: {student_course_id}, Department ID: {student_department_id}")  # Debug
+    
+    for candidate in all_candidates:
+        include_candidate = True
+        candidate_position_id = candidate.position_id
+        
+        # Check if this candidate's position has a course restriction
+        if candidate_position_id in position_course_restrictions:
+            restricted_course_id = position_course_restrictions[candidate_position_id]['course_id']
+            
+            print(f"DEBUG: Position {candidate_position_id} restricted to course {restricted_course_id}")
+            print(f"DEBUG: Candidate {candidate.id} has course_id: {candidate.course_id}")
+            
+            # IMPORTANT FIX: Only show candidates whose course_id matches the restriction
+            # AND also matches the student's course
+            if candidate.course_id and candidate.course_id == restricted_course_id:
+                # This candidate is for a specific course
+                # Only include if student is in that same course
+                if student_course_id != restricted_course_id:
+                    include_candidate = False
+                    print(f"DEBUG: EXCLUDED - Student not in required course")
+            else:
+                # Candidate doesn't have the required course for this restricted position
+                include_candidate = False
+                print(f"DEBUG: EXCLUDED - Candidate not in required course")
+        
+        # If position has NO course restriction, it's a general position
+        # Show to all students regardless of course
+        
+        if include_candidate:
+            filtered_candidates.append(candidate)
+            print(f"DEBUG: INCLUDED candidate {candidate.id}")
+    
+    # Group filtered candidates by position
     candidates_by_position = {}
     all_candidate_ids = []
     
-    for c in candidates:
+    for c in filtered_candidates:
         if c.position:
             position_name = c.position.name
             if position_name not in candidates_by_position:
+                # Check if this position has a course restriction
+                restriction_info = position_course_restrictions.get(c.position_id)
                 candidates_by_position[position_name] = {
                     'candidates': [],
                     'position_id': c.position_id,
-                    'max_votes': position_limits.get(c.position_id, 1)  # Default to 1 if not set
+                    'max_votes': position_limits.get(c.position_id, 1),
+                    'restricted_to_course': restriction_info['course_name'] if restriction_info else None
                 }
             candidates_by_position[position_name]['candidates'].append(c)
         all_candidate_ids.append(c.id)
     
-    # ✅ SORT BY POSITION ID (lowest ID first = President, VP, etc.)
+    # Sort by position ID
     sorted_positions = sorted(
         candidates_by_position.items(),
-        key=lambda item: item[1]['position_id']  # Sort by position_id
+        key=lambda item: item[1]['position_id']
     )
     
-    # Convert back to dictionary (Python 3.7+ preserves insertion order)
     candidates_by_position = dict(sorted_positions)
+    
+    print(f"DEBUG: Final filtered positions: {list(candidates_by_position.keys())}")  # Debug
+    
+    # If no candidates available for this student after filtering
+    if not candidates_by_position:
+        flash("No eligible positions available for you in this election.", "warning")
+        return redirect(url_for('student.available_elections'))
 
     return render_template(
         'vote_page.html',
         election=election,
         candidates_by_position=candidates_by_position,
-        all_candidate_ids=all_candidate_ids
+        all_candidate_ids=all_candidate_ids,
+        current_user=current_user
     )
+
 
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
@@ -1314,6 +1479,8 @@ def submit_vote(election_id):
     import hashlib
     import secrets
     from datetime import datetime
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from functools import lru_cache
     
     start_time = time.time()
     
@@ -1423,8 +1590,47 @@ def submit_vote(election_id):
     
     print(f"DEBUG: Created vote vector with {selected_count} selected candidates out of {len(all_candidate_ids)} total")
     
-    # Encrypt the SINGLE vector
-    enc_vote = [public_key.encrypt(x) for x in vote_vector]
+    # ===== OPTIMIZATION 1: Cache encryption results =====
+    # Create a simple cache for encryptions
+    encryption_cache = {}
+    
+    def get_cached_encryption(value):
+        """Get encrypted value from cache or compute it"""
+        if value not in encryption_cache:
+            encryption_cache[value] = public_key.encrypt(value)
+        return encryption_cache[value]
+    
+    # ===== OPTIMIZATION 2: Use parallel processing for encryption =====
+    # Determine optimal number of workers (don't exceed CPU count * 2)
+    import multiprocessing
+    max_workers = min(8, multiprocessing.cpu_count() * 2)
+    
+    enc_vote = [None] * len(vote_vector)
+    
+    # Use ThreadPoolExecutor for parallel encryption
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all encryption tasks
+        future_to_index = {}
+        for i, value in enumerate(vote_vector):
+            # Submit encryption task
+            future = executor.submit(get_cached_encryption, value)
+            future_to_index[future] = i
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_index):
+            index = future_to_index[future]
+            try:
+                enc_vote[index] = future.result()
+            except Exception as e:
+                print(f"ERROR: Encryption failed for index {index}: {e}")
+                # Fallback to sequential encryption if parallel fails
+                enc_vote[index] = public_key.encrypt(vote_vector[index])
+    
+    # ===== OPTIMIZATION 3: Ensure no None values (fallback for any failures) =====
+    for i, enc in enumerate(enc_vote):
+        if enc is None:
+            print(f"WARNING: Re-encrypting index {i} due to parallel processing failure")
+            enc_vote[i] = public_key.encrypt(vote_vector[i])
     
     # Serialize for storage
     encrypted_vote_json = json.dumps([
@@ -1433,7 +1639,7 @@ def submit_vote(election_id):
     ])
     
     encrypt_time = time.time() - encrypt_start
-    print(f"🔥 DEBUG: Encrypted {len(vote_vector)} candidates in {encrypt_time:.2f} seconds")
+    print(f"🔥 DEBUG: Encrypted {len(vote_vector)} candidates in {encrypt_time:.2f} seconds using {max_workers} threads")
     
     # Validate it's proper JSON
     try:
@@ -2029,6 +2235,11 @@ def results():
 @login_required
 def results_detail(election_id):
     """Show detailed results for a specific election (only if student voted in it)"""
+    import time
+    from collections import defaultdict
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    start_time = time.time()
     student_id = current_user.id
     
     # Check if student voted in this election
@@ -2039,7 +2250,7 @@ def results_detail(election_id):
     
     if not has_voted:
         flash('You can only view results for elections you have participated in.', 'warning')
-        return redirect(url_for('student.results'))  # Fixed: changed from 'student.my_results' to 'student.results'
+        return redirect(url_for('student.results'))
     
     # Get the election
     election = Election.query.get_or_404(election_id)
@@ -2081,48 +2292,44 @@ def results_detail(election_id):
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
     
-    # Get all votes for this election
-    all_votes = Vote.query.filter_by(election_id=election.id).all()
+    # ===== CHECK CACHE FIRST =====
+    vote_counts = None
     
-    # Create candidate ID list
-    all_candidate_ids = [c.id for c in all_candidates]
-    
-    # Initialize vote counts
-    vote_counts = {candidate.id: 0 for candidate in all_candidates}
-    
-    # Decrypt votes
-    if all_votes and all_candidate_ids:
+    # For ended elections, try to use cache
+    if election.end_date < now_naive and election.cached_results:
         try:
-            private_key = get_private_key()
-            
-            if private_key:
-                total_vector = [0] * len(all_candidate_ids)
-                
-                for vote in all_votes:
-                    try:
-                        vote_list = json.loads(vote.encrypted_vote)
-                        
-                        for i, enc_dict in enumerate(vote_list):
-                            try:
-                                from phe import paillier
-                                enc_num = paillier.EncryptedNumber(
-                                    private_key.public_key,
-                                    int(enc_dict["ciphertext"]),
-                                    int(enc_dict["exponent"])
-                                )
-                                decrypted_value = private_key.decrypt(enc_num)
-                                total_vector[i] += decrypted_value
-                            except Exception:
-                                continue
-                    except Exception:
-                        continue
-                
-                for i, candidate_id in enumerate(all_candidate_ids):
-                    vote_counts[candidate_id] = total_vector[i]
-        except Exception:
-            pass
+            cached_data = json.loads(election.cached_results)
+            vote_counts = cached_data.get('vote_counts')
+            if vote_counts:
+                # Convert string keys back to int
+                vote_counts = {int(k): v for k, v in vote_counts.items()}
+                print(f"✅ Using cached results from {election.cached_at}")
+        except Exception as e:
+            print(f"Cache error: {e}")
+            vote_counts = None
     
-    # Group candidates by position
+    # If no cache or cache invalid, calculate
+    if vote_counts is None:
+        print("🔄 Calculating fresh results...")
+        
+        # Use the ROBUST vote counter
+        vote_counts = count_votes_for_election_robust(election_id)
+        
+        # Cache the results for ended elections
+        if election.end_date < now_naive:
+            cache_data = {
+                'vote_counts': vote_counts,
+                'calculated_at': now_naive.isoformat(),
+                'total_votes_processed': sum(vote_counts.values())
+            }
+            election.cached_results = json.dumps(cache_data)
+            election.cached_at = now_naive
+            election.cached_voter_turnout = voter_turnout
+            election.cached_total_votes = unique_voters
+            db.session.commit()
+            print(f"✅ Cached results for future requests")
+    
+    # ===== GROUP CANDIDATES BY POSITION =====
     candidates_by_position = {}
     for candidate in all_candidates:
         position_name = candidate.position.name if candidate.position else "Unknown Position"
@@ -2150,7 +2357,7 @@ def results_detail(election_id):
             'is_winner': False
         })
     
-    # Calculate percentages
+    # ===== CALCULATE PERCENTAGES =====
     positions_data = []
     
     for position_name, position_data in candidates_by_position.items():
@@ -2162,10 +2369,13 @@ def results_detail(election_id):
         if total_voters_count > 0:
             for candidate in candidates_list:
                 if max_votes_per_voter > 1:
+                    # For positions where you can vote for multiple candidates
+                    # Percentage is based on total voters
                     candidate['vote_percentage'] = round((candidate['vote_count'] / total_voters_count) * 100, 1)
                     if candidate['vote_percentage'] > 100:
                         candidate['vote_percentage'] = 100
                 else:
+                    # For single-select positions, percentage is based on total votes for position
                     if position_total > 0:
                         candidate['vote_percentage'] = round((candidate['vote_count'] / position_total) * 100, 1)
                     else:
@@ -2174,9 +2384,11 @@ def results_detail(election_id):
             for candidate in candidates_list:
                 candidate['vote_percentage'] = 0
         
+        # Sort candidates by vote count (highest first)
         candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
-        max_winners = position_limits.get(position_data['id'], 1)
         
+        # Determine winners (only for ended elections)
+        max_winners = position_limits.get(position_data['id'], 1)
         if election.end_date < now_naive and position_total > 0:
             for i, candidate in enumerate(candidates_list):
                 if i < max_winners and candidate['vote_count'] > 0:
@@ -2191,7 +2403,11 @@ def results_detail(election_id):
             'max_votes': max_winners
         })
     
+    # Sort positions by ID
     positions_data.sort(key=lambda x: x['id'])
+    
+    total_time = time.time() - start_time
+    print(f"✅ Results page loaded in {total_time:.2f} seconds")
     
     return render_template('student_results_detail.html',
                          election=election,
@@ -2205,30 +2421,27 @@ def results_detail(election_id):
                          results_published=election.results_published)
 
 
-                         
-def get_private_key():
-    """Get the Paillier private key for decryption"""
+# Helper function for parallel decryption
+def decrypt_single_vote(private_key, vote_list, all_candidate_ids):
+    """Decrypt a single vote (for parallel processing)"""
     try:
-        import pickle
-        import os
-        # Try to load private key from file
-        key_path = os.path.join(os.path.dirname(__file__), '..', 'paillier_private.key')
-        if os.path.exists(key_path):
-            with open(key_path, 'rb') as f:
-                return pickle.load(f)
-        else:
-            # Try alternative path
-            key_path = os.path.join(os.path.dirname(__file__), '..', 'keys', 'private_key.pkl')
-            if os.path.exists(key_path):
-                with open(key_path, 'rb') as f:
-                    return pickle.load(f)
-            else:
-                # Silently return None if key not found
-                return None
+        from phe import paillier
+        result = [0] * len(all_candidate_ids)
+        
+        for i, enc_dict in enumerate(vote_list):
+            if i < len(all_candidate_ids):
+                enc_num = paillier.EncryptedNumber(
+                    private_key.public_key,
+                    int(enc_dict["ciphertext"]),
+                    int(enc_dict["exponent"])
+                )
+                result[i] = private_key.decrypt(enc_num)
+        
+        return result
     except Exception:
-        # Silently return None on error
         return None
-    
+
+
 
 @student_bp.route('/verify-my-vote', methods=['POST'])
 @login_required

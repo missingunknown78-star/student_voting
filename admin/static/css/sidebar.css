@@ -435,19 +435,6 @@
     transform: scale(0.95);
 }
 
-/* Dark mode styles for floating button */
-.dark-mode .floating-theme-btn {
-    background: linear-gradient(135deg, #4361ee, #7209b7);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3),
-                0 0 0 2px rgba(114, 9, 183, 0.2);
-}
-
-.dark-mode .floating-theme-btn:hover {
-    background: linear-gradient(135deg, #7209b7, #4361ee);
-    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.5),
-                0 0 0 3px rgba(114, 9, 183, 0.3);
-}
 
 /* Pulse animation */
 @keyframes pulse-glow {

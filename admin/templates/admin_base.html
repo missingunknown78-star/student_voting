@@ -12,188 +12,37 @@
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/sidebar.css') }}">
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/theme.css') }}">
     
-    <!-- PREVENT FOUC - MORE AGGRESSIVE APPROACH -->
-    <style>
-        /* HIDE EVERYTHING until theme is applied */
-        .main-content {
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        /* Show after theme is applied */
-        .main-content.theme-applied {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        /* Floating Theme Toggle Styles */
-        .floating-theme-toggle {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 9999;
-        }
-        
-        .floating-theme-btn {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ff9900, #ff5500);
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4),
-                        0 0 0 2px rgba(255, 255, 0, 0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .floating-theme-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-            background: linear-gradient(135deg, #ff5500, #ff9900);
-            box-shadow: 0 6px 20px rgba(255, 85, 0, 0.6),
-                        0 0 0 3px rgba(255, 255, 0, 0.3);
-        }
-        
-        .floating-theme-btn:active {
-            transform: scale(0.95);
-        }
-        
-        /* Dark mode styles for floating button */
-        .dark-mode .floating-theme-btn {
-            background: linear-gradient(135deg, #4361ee, #7209b7);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3),
-                        0 0 0 2px rgba(114, 9, 183, 0.2);
-        }
-        
-        .dark-mode .floating-theme-btn:hover {
-            background: linear-gradient(135deg, #7209b7, #4361ee);
-            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.5),
-                        0 0 0 3px rgba(114, 9, 183, 0.3);
-        }
-        
-        /* Pulse animation */
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4), 0 0 0 2px rgba(255, 255, 0, 0.2); }
-            50% { box-shadow: 0 4px 20px rgba(255, 85, 0, 0.7), 0 0 0 3px rgba(255, 255, 0, 0.4); }
-        }
-        
-        .floating-theme-btn {
-            animation: pulse-glow 3s infinite;
-        }
-        
-        .dark-mode .floating-theme-btn {
-            animation: pulse-glow-dark 3s infinite;
-        }
-        
-        @keyframes pulse-glow-dark {
-            0%, 100% { box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3), 0 0 0 2px rgba(114, 9, 183, 0.2); }
-            50% { box-shadow: 0 4px 20px rgba(67, 97, 238, 0.5), 0 0 0 3px rgba(114, 9, 183, 0.3); }
-        }
-
-        /* Ensure sidebar has no extra lines */
-        .sidebar {
-            border-right: none !important;
-        }
-        
-        /* School Year Indicator Base Styles (will be enhanced in individual pages) */
-        .school-year-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
-            background: linear-gradient(135deg, var(--primary-blue, #1a56db), var(--secondary-blue, #3b82f6));
-            color: white;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .dark-mode .school-year-indicator {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
-        }
-    </style>
-    
+    <!-- PREVENT FOUC - CRITICAL: This runs before anything renders -->
     <script>
-        // Apply dark mode IMMEDIATELY - BEFORE ANYTHING RENDERS
         (function() {
+            // This runs IMMEDIATELY to prevent flash
             try {
                 const savedTheme = localStorage.getItem('theme');
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 
-                // Apply dark mode to main content BEFORE page renders
+                // Apply dark mode class immediately if needed
                 if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-                    // Create a style element and inject it
-                    const style = document.createElement('style');
-                    style.textContent = `
-                        .main-content {
-                            background-color: #0f172a !important;
-                            color: #f1f5f9 !important;
-                        }
-                        
-                        /* Hide content until fully loaded */
-                        .main-content * {
-                            color: #f1f5f9 !important;
-                        }
-                    `;
-                    document.head.appendChild(style);
-                    
-                    // Also add class immediately
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const mainContent = document.querySelector('.main-content');
-                        if (mainContent) {
-                            mainContent.classList.add('dark-mode', 'theme-applied');
-                        }
-                        
-                        // Update theme button icon
-                        const themeBtn = document.getElementById('floatingThemeBtn');
-                        if (themeBtn) {
-                            themeBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-                        }
-                    });
-                } else if (savedTheme === 'light') {
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const mainContent = document.querySelector('.main-content');
-                        if (mainContent) {
-                            mainContent.classList.remove('dark-mode');
-                            mainContent.classList.add('theme-applied');
-                        }
-                        
-                        // Update theme button icon
-                        const themeBtn = document.getElementById('floatingThemeBtn');
-                        if (themeBtn) {
-                            themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
-                        }
-                    });
+                    document.documentElement.classList.add('dark-mode');
+                    document.documentElement.style.colorScheme = 'dark';
                 } else {
-                    // No preference, just show content
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const mainContent = document.querySelector('.main-content');
-                        if (mainContent) {
-                            mainContent.classList.add('theme-applied');
-                        }
-                        
-                        // Set default icon based on system preference
-                        const themeBtn = document.getElementById('floatingThemeBtn');
-                        if (themeBtn) {
-                            if (prefersDark) {
-                                themeBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-                            } else {
-                                themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
-                            }
-                        }
-                    });
+                    document.documentElement.classList.remove('dark-mode');
+                    document.documentElement.style.colorScheme = 'light';
                 }
+                
+                // Create a small style to hide FOUC
+                const style = document.createElement('style');
+                style.textContent = `
+                    .main-content {
+                        visibility: hidden;
+                        opacity: 0;
+                        transition: opacity 0.2s ease;
+                    }
+                    .main-content.theme-ready {
+                        visibility: visible;
+                        opacity: 1;
+                    }
+                `;
+                document.head.appendChild(style);
             } catch (e) {
                 console.error('Theme initialization error:', e);
             }
@@ -212,7 +61,6 @@
 </div>
 
 <div class="dashboard-container">
-
     <!-- ====================== SIDEBAR ====================== -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -225,7 +73,6 @@
         </div>
 
         <nav class="sidebar-nav">
-
             <!-- DASHBOARD -->
             <a href="{{ url_for('admin.dashboard') }}"
                class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
@@ -278,7 +125,6 @@
             <a href="{{ url_for('admin.logout') }}">
                <i class="fa-solid fa-right-from-bracket"></i> Logout
             </a>
-
         </nav>
     </aside>
     <!-- ===================================================== -->
@@ -287,43 +133,24 @@
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
-
 </div>
 
-<!-- Admin Base JavaScript -->
-<script src="{{ url_for('admin.static', filename='js/admin_base.js') }}"></script>
+<!-- Single theme management script -->
+<script src="{{ url_for('admin.static', filename='js/theme-manager.js') }}"></script>
 
-<!-- School Year Sync Script - Ensures all pages have access to the school year filter -->
+<!-- School Year Sync Script -->
 <script>
-    // This script runs on every page to ensure school year filter is available
     (function() {
-        // Get school year from meta tag
         const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
-        const currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
+        window.currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
         
-        // Store in window object for easy access by page-specific JS
-        window.currentSchoolYear = currentSchoolYear;
-        
-        // Log for debugging (can be removed in production)
-        if (currentSchoolYear) {
-            console.log('School Year Filter Active:', currentSchoolYear);
-        }
-        
-        // Re-apply theme when school year changes (if needed)
-        const themeBtn = document.getElementById('floatingThemeBtn');
-        if (themeBtn) {
-            themeBtn.addEventListener('click', function() {
-                // Small delay to let theme change
-                setTimeout(function() {
-                    // Force any school year indicators to update their colors
-                    const indicators = document.querySelectorAll('.school-year-indicator');
-                    indicators.forEach(function(indicator) {
-                        // Just trigger a reflow
-                        indicator.style.transform = 'scale(1)';
-                    });
-                }, 50);
-            });
-        }
+        // Mark main content as ready after a tiny delay
+        setTimeout(function() {
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.classList.add('theme-ready');
+            }
+        }, 10);
     })();
 </script>
 

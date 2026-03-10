@@ -1,5 +1,5 @@
 /* ======================
-   RESET & BASE STYLES
+   RESET & BASE STYLES - PURE WHITE BOND PAPER
 ====================== */
 
 * {
@@ -9,7 +9,7 @@
 }
 
 body {
-    background: #f0f2f5;
+    background: #ffffff; /* Pure white bond paper color */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     line-height: 1.4;
     color: #1e293b;
@@ -23,36 +23,109 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 12px;
+    background: #ffffff; /* Pure white background */
 }
 
 /* ======================
-   HEADER - Clean & Compact
+   CTU HEADER STYLING
 ====================== */
 
-.vote-header {
+.ctu-header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+}
+
+.ctu-header img {
+    width: 100%;
+    max-width: min(1200px, 100%);
+    height: auto;
+    max-height: 1.37in;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 12px;
+}
+
+/* ======================
+   CTU FOOTER STYLING
+====================== */
+
+.ctu-footer {
+    width: 100%;
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ctu-footer img {
+    width: 100%;
+    max-width: min(1200px, 100%);
+    height: auto;
+    max-height: 0.8in;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 10px auto;
+    border-radius: 8px;
+}
+
+.footer-text {
+    font-size: 9pt;
+    color: #64748b;
+    margin-top: 5px;
+    text-align: center;
+    width: 100%;
+    max-width: min(1200px, 100%);
+}
+
+/* ======================
+   STUDENT INFO CARD
+====================== */
+
+.student-info-card {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    width: 100%;
+}
+
+.student-info {
     display: flex;
     align-items: center;
-    gap: 12px;
-    background: white;
-    padding: 12px 16px;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    margin-bottom: 16px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.vote-header .logo {
-    height: 36px;
-    width: auto;
-    object-fit: contain;
-}
-
-.vote-header h1 {
+.student-name {
     font-size: 1rem;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0;
-    line-height: 1.3;
-    flex: 1;
+    font-weight: 700;
+}
+
+.student-course {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    backdrop-filter: blur(5px);
+}
+
+.student-course i {
+    font-size: 0.8rem;
 }
 
 /* ======================
@@ -66,10 +139,12 @@ body {
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 16px;
-    background: white;
+    background: #ffffff;
     padding: 12px 16px;
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f0f0f0;
+    width: 100%;
 }
 
 .election-title h2 {
@@ -80,93 +155,141 @@ body {
 }
 
 .encryption-badge {
-    background: #059669;
+    background: #10b981;
     color: white;
-    padding: 4px 10px;
-    border-radius: 30px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 10px;
+    display: inline-block;
 }
 
 /* ======================
-   PHE INFO - Simple Card
+   PHE INFO
 ====================== */
 
 .phe-info {
-    background: #eef2ff;
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 16px;
-    border: 1px solid #c7d2fe;
+    background: #f0f7ff;
+    border-left: 4px solid #2563eb;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 8px;
+    width: 100%;
 }
 
 .phe-info h4 {
-    color: #4f46e5;
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    margin-top: 0;
+    color: #2563eb;
 }
 
 .phe-info p {
-    color: #334155;
-    font-size: 0.8rem;
-    margin: 6px 0;
-    line-height: 1.4;
+    margin: 8px 0;
+    font-size: 14px;
 }
 
-.phe-info p:last-child {
-    background: white;
-    padding: 10px 12px;
-    border-radius: 12px;
-    margin-top: 10px;
-    font-weight: 500;
+.phe-info ul {
+    margin-top: 5px;
+    padding-left: 20px;
+}
+
+.phe-info li {
+    font-size: 0.8rem;
+    margin-bottom: 3px;
 }
 
 /* ======================
-   INSTRUCTIONS
+   COURSE RESTRICTION BADGES
 ====================== */
 
-.instructions {
-    background: white;
-    padding: 14px 16px;
-    border-radius: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border-left: 4px solid #3b82f6;
-}
-
-.instructions p {
-    font-size: 0.85rem;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.instructions p::before {
-    content: '✓';
-    background: #3b82f6;
+.course-restriction-badge {
+    display: inline-block;
+    background: #f59e0b;
     color: white;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.course-restriction-badge i {
+    margin-right: 3px;
+    font-size: 0.6rem;
+}
+
+.course-restriction-badge-inline {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: bold;
-    flex-shrink: 0;
+    background: #f59e0b;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+
+.course-restriction-badge-inline i {
+    margin-right: 3px;
+    font-size: 0.6rem;
 }
 
 /* ======================
-   POSITION GROUPS
+   PARTY BADGE STYLES
+====================== */
+
+.party-badge {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #1e293b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-align: center;
+    min-width: 80px;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.party-badge.independent {
+    background: #f1f5f9;
+    color: #475569;
+    font-style: italic;
+    border: 1px dashed #94a3b8;
+}
+
+/* ======================
+   CANDIDATE COURSE
+====================== */
+
+.candidate-course {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    width: 100%;
+}
+
+.course-name {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* ======================
+   POSITION GROUPS - FIXED FOR LONG TITLES
 ====================== */
 
 .position-group {
@@ -175,37 +298,82 @@ body {
     margin-bottom: 20px;
     padding: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f0f0f0;
+    width: 100%;
+}
+
+/* Position header with flex for right alignment */
+.position-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Changed from center to flex-start for better wrapping */
+    margin-bottom: 15px;
+    width: 100%;
+    gap: 10px;
+}
+
+.position-title-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px; /* Give it a minimum width */
+    max-width: 100%;
 }
 
 .position-title {
-    font-size: 1rem;
+    margin: 0;
+    font-size: 1.1rem;
+    white-space: normal; /* Allow text to wrap */
+    word-break: break-word; /* Break long words if needed */
+    line-height: 1.3;
     font-weight: 700;
     color: #0f172a;
-    margin: 0 0 16px 0;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: inline-block; /* Changed from flex for better text wrapping */
+    max-width: 100%; /* Prevent overflow */
+    padding-right: 5px; /* Small padding for breathing room */
 }
 
-.position-title::before {
-    content: '📋';
-    font-size: 1.1rem;
+.vote-limit-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+    flex-shrink: 0; /* Prevent badge from shrinking */
+}
+
+.candidate-count-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #475569;
+    color: white;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0; /* Prevent badge from shrinking */
 }
 
 /* ======================
-   CANDIDATES GRID - 3 COLUMNS ON MOBILE!
+   CANDIDATES GRID
 ====================== */
 
 .position-candidates {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 columns on mobile */
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
+    width: 100%;
 }
 
 /* ======================
-   CANDIDATE CARD - Compact & Clean
+   CANDIDATE CARD
 ====================== */
 
 .candidate-row {
@@ -220,6 +388,7 @@ body {
     transition: all 0.15s ease;
     position: relative;
     height: 100%;
+    width: 100%;
 }
 
 .candidate-row:hover {
@@ -228,15 +397,62 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* Selected state */
-.candidate-row:has(input:checked) {
-    background: #f0fdf4;
-    border: 2px solid #22c55e;
-    padding: 11px 5px 9px 5px; /* Adjust for border */
+/* Candidate info */
+.candidate-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
-.candidate-row:has(input:checked) .candidate-photo {
-    border-color: #22c55e;
+.candidate-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.candidate-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 6px 0 2px 0;
+    text-align: center;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* Candidate photo - slightly rounded corners */
+.candidate-photo {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
+    background: white;
+}
+
+.candidate-platform {
+    font-size: 0.7rem;
+    color: #475569;
+    background: #f8fafc;
+    padding: 6px 10px;
+    border-radius: 12px;
+    margin-top: 8px;
+    width: 100%;
+    text-align: center;
+    word-break: break-word;
+    box-sizing: border-box;
+    display: none;
+}
+
+/* Show platform on hover for desktop */
+@media (min-width: 768px) {
+    .candidate-row:hover .candidate-platform {
+        display: block;
+    }
 }
 
 /* Hide the radio button */
@@ -247,78 +463,19 @@ body {
     height: 0;
 }
 
-/* Candidate photo */
-.candidate-photo {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 8px;
-    background: white;
+/* Selected state - single select */
+.candidate-row.selected {
+    border: 2px solid #22c55e;
+    background: #f0fdf4;
+    position: relative;
+    padding: 11px 5px 9px 5px;
 }
 
-/* Candidate info container */
-.candidate-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-}
-
-/* Candidate details */
-.candidate-details {
-    text-align: center;
-    width: 100%;
-}
-
-.candidate-name {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #0f172a;
-    display: block;
-    margin-bottom: 2px;
-    line-height: 1.2;
-    word-break: break-word;
-}
-
-.candidate-course {
-    font-size: 0.65rem;
-    color: #64748b;
-    display: block;
-    margin-bottom: 4px;
-    font-weight: 500;
-    line-height: 1.2;
-}
-
-.candidate-platform {
-    display: none; /* Hide platform text on cards for space */
-}
-
-/* Show platform on hover/touch for desktop */
-@media (min-width: 768px) {
-    .candidate-row:hover .candidate-platform {
-        display: block;
-        font-size: 0.6rem;
-        color: #475569;
-        background: #e2e8f0;
-        padding: 4px 6px;
-        border-radius: 12px;
-        margin-top: 6px;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-}
-
-/* Selected indicator dot */
-.candidate-row:has(input:checked)::after {
+.candidate-row.selected::after {
     content: '✓';
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 5px;
+    right: 5px;
     background: #22c55e;
     color: white;
     width: 18px;
@@ -332,8 +489,118 @@ body {
     box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
 }
 
+/* Selected state - multi select */
+.candidate-row.selected-multi {
+    border: 2px solid #3b82f6;
+    background: #eff6ff;
+    position: relative;
+    padding: 11px 5px 9px 5px;
+}
+
+.candidate-row.selected-multi::after {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #3b82f6;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Selection counter */
+.selection-counter {
+    margin-top: 10px;
+    padding: 6px;
+    font-size: 0.8rem;
+    color: #64748b;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 20px;
+    border: 1px dashed #cbd5e1;
+}
+
+.selection-counter .selected-count {
+    font-weight: bold;
+    color: #3b82f6;
+}
+
 /* ======================
-   COUNTDOWN TIMER
+   LOADING OVERLAY
+====================== */
+
+#loadingOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    backdrop-filter: blur(5px);
+}
+
+.loading-container {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 90%;
+    width: 350px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.spinner {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #2563eb;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 25px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-container h3 {
+    color: #1e293b;
+    margin-bottom: 15px;
+    font-size: 1.4rem;
+}
+
+.loading-container p {
+    color: #64748b;
+    margin: 8px 0;
+    font-size: 1rem;
+}
+
+.secure-badge {
+    background: #e8f0fe;
+    color: #2563eb;
+    padding: 8px 15px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    display: inline-block;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+/* ======================
+   VOTING DEADLINE
 ====================== */
 
 .voting-deadline-container {
@@ -343,7 +610,8 @@ body {
     margin: 20px 0;
     text-align: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    border: 1px solid #e2e8f0;
+    border: 1px solid #f0f0f0;
+    width: 100%;
 }
 
 .voting-deadline-container h3 {
@@ -374,6 +642,7 @@ body {
     text-align: center;
     margin-top: 24px;
     margin-bottom: 16px;
+    width: 100%;
 }
 
 .submit-vote button {
@@ -427,7 +696,7 @@ body {
    RESPONSIVE BREAKPOINTS
 ====================== */
 
-/* Small phones - keep 3 columns but smaller cards */
+/* Small phones */
 @media (max-width: 380px) {
     .position-candidates {
         grid-template-columns: repeat(3, 1fr);
@@ -437,18 +706,133 @@ body {
     .candidate-photo {
         width: 45px;
         height: 45px;
+        border-radius: 6px;
     }
     
     .candidate-name {
         font-size: 0.65rem;
     }
     
-    .candidate-course {
+    .course-name {
         font-size: 0.55rem;
+    }
+    
+    .vote-limit-badge,
+    .course-restriction-badge-inline {
+        font-size: 0.5rem;
+        padding: 1px 4px;
+    }
+    
+    .candidate-count-badge {
+        font-size: 0.5rem;
+        padding: 1px 5px;
+    }
+    
+    .position-title {
+        font-size: 0.8rem;
+    }
+    
+    .student-info {
+        flex-direction: column;
+        text-align: center;
     }
 }
 
-/* Tablets - 4 columns */
+/* Mobile */
+@media (max-width: 480px) {
+    .party-badge {
+        min-width: 60px;
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+    
+    .candidate-photo {
+        width: 60px;
+        height: 60px;
+        border-radius: 6px;
+    }
+    
+    .candidate-name {
+        font-size: 0.7rem;
+    }
+    
+    .course-name {
+        font-size: 0.6rem;
+    }
+    
+    .candidate-row {
+        padding: 8px 3px;
+    }
+    
+    .position-candidates {
+        gap: 4px;
+    }
+    
+    .loading-container {
+        padding: 25px;
+        width: 280px;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border-width: 4px;
+    }
+    
+    .position-header {
+        flex-wrap: wrap; /* Allow wrapping on mobile */
+        gap: 8px;
+    }
+    
+    .position-title-container {
+        flex-wrap: wrap;
+        gap: 4px;
+        min-width: 100%; /* Take full width on mobile */
+    }
+    
+    .position-title {
+        font-size: 0.9rem;
+        white-space: normal; /* Allow wrapping */
+        overflow: visible;
+        text-overflow: clip;
+        max-width: 100%;
+        width: auto; /* Let it take natural width */
+    }
+    
+    .candidate-count-badge {
+        font-size: 0.55rem;
+        padding: 2px 6px;
+        white-space: nowrap;
+        margin-left: auto; /* Push to the right */
+    }
+    
+    .vote-limit-badge {
+        font-size: 0.55rem;
+        padding: 2px 5px;
+        white-space: nowrap;
+    }
+    
+    .candidate-count-badge {
+        font-size: 0.55rem;
+        padding: 2px 6px;
+        white-space: nowrap;
+    }
+    
+    .ctu-header img {
+        max-height: 1in;
+    }
+    
+    .ctu-footer img {
+        max-height: 0.6in;
+    }
+    
+    .course-restriction-badge-inline {
+        font-size: 0.55rem;
+        padding: 1px 5px;
+    }
+}
+
+/* Tablets */
 @media (min-width: 640px) {
     .position-candidates {
         grid-template-columns: repeat(4, 1fr);
@@ -462,18 +846,19 @@ body {
     .candidate-photo {
         width: 70px;
         height: 70px;
+        border-radius: 8px;
     }
     
     .candidate-name {
         font-size: 0.85rem;
     }
     
-    .candidate-course {
+    .course-name {
         font-size: 0.7rem;
     }
 }
 
-/* Desktop - 5 columns */
+/* Desktop */
 @media (min-width: 1024px) {
     .position-candidates {
         grid-template-columns: repeat(5, 1fr);
@@ -483,21 +868,43 @@ body {
     .candidate-photo {
         width: 80px;
         height: 80px;
+        border-radius: 8px;
     }
     
     .candidate-name {
         font-size: 0.9rem;
     }
     
-    .candidate-course {
+    .course-name {
         font-size: 0.75rem;
+    }
+    
+    .ctu-header img {
+        max-width: min(1200px, 100%);
+    }
+    
+    .ctu-footer img {
+        max-width: min(1200px, 100%);
     }
 }
 
-/* Large desktop - 6 columns */
+/* Large desktop */
 @media (min-width: 1280px) {
     .position-candidates {
         grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .ctu-header img,
+    .ctu-footer img {
+        max-width: 1200px;
+    }
+}
+
+/* Extra large screens */
+@media (min-width: 1400px) {
+    .ctu-header img,
+    .ctu-footer img {
+        max-width: 1200px;
     }
 }
 
@@ -535,7 +942,9 @@ body {
     .instructions,
     .voting-deadline-container,
     .submit-vote,
-    .encryption-badge {
+    .encryption-badge,
+    .ctu-footer,
+    .student-info-card {
         display: none;
     }
     

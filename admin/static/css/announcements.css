@@ -1,15 +1,15 @@
 /* ================================
    ANNOUNCEMENTS PAGE CSS
-   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
+   FLOATING CARDS DESIGN - WITH TRUE BLACK DARK THEME
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
 body {
-    background-color: #0f172a;
+    background-color: #1a1a1a; /* True black background */
     transition: background-color 0.3s ease;
 }
 
-body:not(.dark-mode) {
+:root:not(.dark-mode) body {
     background-color: #f5f7fb;
 }
 
@@ -47,17 +47,18 @@ body:not(.dark-mode) {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --light-gray: #334155;
-    --dark-gray: #e2e8f0;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+/* Dark mode variables - TRUE BLACK theme */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --light-gray: #404040;
+    --dark-gray: #f0f0f0;
+    --border-color: #404040;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
 /* ==================== THEME TRANSITION FIXES ==================== */
@@ -69,13 +70,13 @@ body:not(.dark-mode) {
     background: transparent !important;
 }
 
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+/* Dark mode main content background */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
 }
 
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
+/* Light mode main content background */
+:root:not(.dark-mode) .main-content {
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
@@ -194,7 +195,7 @@ body:not(.dark-mode) .main-content,
     color: var(--primary-blue);
 }
 
-/* Badges - Light Mode */
+/* Badges */
 .announcements-page .announcement-badges {
     display: flex;
     gap: 10px;
@@ -216,18 +217,18 @@ body:not(.dark-mode) .main-content,
     transition: var(--transition);
 }
 
-/* Dark Mode Badges - SOLID GREEN with DARK TEXT (FIXED) */
-.dark-mode .announcements-page .dept-badge,
-.dark-mode .announcements-page .date-badge {
+/* Dark Mode Badges - FIXED: Solid green with dark text */
+:root.dark-mode .announcements-page .dept-badge,
+:root.dark-mode .announcements-page .date-badge {
     background: #10b981 !important;  /* Solid green */
-    color: #0f172a !important;  /* Dark text for maximum contrast */
+    color: #1a1a1a !important;  /* Dark text for maximum contrast */
     border-color: #10b981 !important;
     font-weight: 600;
 }
 
 /* Hover effect for dark mode badges */
-.dark-mode .announcements-page .dept-badge:hover,
-.dark-mode .announcements-page .date-badge:hover {
+:root.dark-mode .announcements-page .dept-badge:hover,
+:root.dark-mode .announcements-page .date-badge:hover {
     background: #0f9d6e !important;
     transform: translateY(-2px);
 }
@@ -239,7 +240,7 @@ body:not(.dark-mode) .main-content,
 }
 
 /* Dark mode all departments badge */
-.dark-mode .announcements-page .dept-badge.all-depts {
+:root.dark-mode .announcements-page .dept-badge.all-depts {
     background: linear-gradient(135deg, #667eea40, #764ba240) !important;
     color: #a5b4fc !important;
     border-color: #667eea !important;
@@ -466,7 +467,7 @@ body:not(.dark-mode) .main-content,
     transform: rotate(90deg) scale(1.1);
 }
 
-.dark-mode .announcements-page .close-btn:hover {
+:root.dark-mode .announcements-page .close-btn:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
@@ -527,8 +528,8 @@ body:not(.dark-mode) .main-content,
     cursor: pointer;
 }
 
-.dark-mode .announcements-page .modal-content select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23cbd5e1' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+:root.dark-mode .announcements-page .modal-content select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23b0b0b0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
 }
 
 /* Submit Buttons */
@@ -621,26 +622,27 @@ body:not(.dark-mode) .main-content,
 }
 
 /* ==================== DARK MODE SPECIFIC (OTHER ELEMENTS) ==================== */
-.dark-mode .announcements-page .announcement-card {
+:root.dark-mode .announcements-page .announcement-card {
     background: var(--card-bg);
     border-color: var(--border-color);
 }
 
-.dark-mode .announcements-page .modal-content {
+:root.dark-mode .announcements-page .modal-content {
     background: var(--card-bg);
     border-color: var(--border-color);
 }
 
-.dark-mode .announcements-page .modal-content input,
-.dark-mode .announcements-page .modal-content textarea,
-.dark-mode .announcements-page .modal-content select {
+:root.dark-mode .announcements-page .modal-content input,
+:root.dark-mode .announcements-page .modal-content textarea,
+:root.dark-mode .announcements-page .modal-content select {
     background: var(--light-gray);
     color: var(--text-color);
     border-color: var(--border-color);
 }
 
-.dark-mode .announcements-page .cancel-delete-btn {
-    background: var(--dark-gray);
+:root.dark-mode .announcements-page .cancel-delete-btn {
+    background: var(--light-gray);
+    color: var(--text-color);
 }
 
 /* ==================== ANIMATIONS ==================== */

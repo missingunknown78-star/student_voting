@@ -1,18 +1,13 @@
 /* Voting Trends Chart Styles */
 
 .voting-trends-container {
-    background: white;
+    background: var(--card-bg) !important;
     border-radius: 20px;
     padding: 20px;
     margin: 20px 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow) !important;
+    border: 1px solid var(--border-color) !important;
     transition: all 0.3s ease;
-}
-
-/* Dark mode support */
-body.dark-mode .voting-trends-container {
-    background: #1e293b;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .trends-header {
@@ -26,7 +21,7 @@ body.dark-mode .voting-trends-container {
 
 .trends-header h3 {
     font-size: 1.2rem;
-    color: #0f172a;
+    color: var(--text-primary) !important;
     margin: 0;
     display: flex;
     align-items: center;
@@ -34,12 +29,8 @@ body.dark-mode .voting-trends-container {
     flex-wrap: wrap;
 }
 
-body.dark-mode .trends-header h3 {
-    color: #e2e8f0;
-}
-
 .trends-header h3 i {
-    color: #3b82f6;
+    color: var(--accent-color) !important;
 }
 
 /* Election filter buttons */
@@ -52,12 +43,12 @@ body.dark-mode .trends-header h3 {
 
 .election-filter-btn {
     padding: 8px 16px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
     border-radius: 30px;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #475569;
+    color: var(--text-secondary) !important;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -66,22 +57,16 @@ body.dark-mode .trends-header h3 {
     gap: 6px;
 }
 
-body.dark-mode .election-filter-btn {
-    background: #0f172a;
-    border-color: #334155;
-    color: #94a3b8;
-}
-
 .election-filter-btn:hover {
-    background: #e2e8f0;
+    background: var(--bg-primary) !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow) !important;
 }
 
 .election-filter-btn.active {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
+    background: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+    color: white !important;
 }
 
 .election-filter-btn .vote-count-badge {
@@ -115,13 +100,10 @@ body.dark-mode .election-filter-btn {
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
     margin-bottom: 25px;
-    background: #f8fafc;
+    background: var(--bg-secondary) !important;
     padding: 20px;
     border-radius: 16px;
-}
-
-body.dark-mode .election-stats {
-    background: #0f172a;
+    border: 1px solid var(--border-color) !important;
 }
 
 .stat-item {
@@ -136,34 +118,22 @@ body.dark-mode .election-stats {
     top: 25%;
     height: 50%;
     width: 1px;
-    background: #e2e8f0;
-}
-
-body.dark-mode .stat-item:not(:last-child)::after {
-    background: #334155;
+    background: var(--border-color) !important;
 }
 
 .stat-label {
     font-size: 0.7rem;
-    color: #64748b;
+    color: var(--text-secondary) !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 8px;
 }
 
-body.dark-mode .stat-label {
-    color: #94a3b8;
-}
-
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary) !important;
     line-height: 1.2;
-}
-
-body.dark-mode .stat-value {
-    color: #e2e8f0;
 }
 
 /* Chart container */
@@ -172,26 +142,26 @@ body.dark-mode .stat-value {
     height: 300px;
     width: 100%;
     margin-bottom: 15px;
+    background: var(--bg-secondary) !important;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid var(--border-color) !important;
 }
 
 /* No data message */
 .no-data-message {
     text-align: center;
     padding: 60px 20px;
-    color: #94a3b8;
+    color: var(--text-secondary) !important;
     font-style: italic;
-    background: #f8fafc;
+    background: var(--bg-secondary) !important;
     border-radius: 16px;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-}
-
-body.dark-mode .no-data-message {
-    background: #0f172a;
-    color: #64748b;
+    border: 1px solid var(--border-color) !important;
 }
 
 /* Loading spinner */
@@ -201,19 +171,16 @@ body.dark-mode .no-data-message {
     justify-content: center;
     align-items: center;
     height: 300px;
-    background: #f8fafc;
+    background: var(--bg-secondary) !important;
     border-radius: 16px;
-}
-
-body.dark-mode .chart-loading {
-    background: #0f172a;
+    border: 1px solid var(--border-color) !important;
 }
 
 .spinner {
     width: 50px;
     height: 50px;
-    border: 4px solid #f1f5f9;
-    border-top: 4px solid #3b82f6;
+    border: 4px solid var(--border-color) !important;
+    border-top: 4px solid var(--accent-color) !important;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -244,7 +211,7 @@ body.dark-mode .chart-loading {
     }
     
     .election-filters::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: var(--border-color) !important;
         border-radius: 4px;
     }
     
@@ -290,7 +257,6 @@ body.dark-mode .chart-loading {
     }
 }
 
-
 /* Vote count badge */
 .vote-count-badge {
     background: rgba(255, 255, 255, 0.2);
@@ -304,5 +270,3 @@ body.dark-mode .chart-loading {
 .election-filter-btn.active .vote-count-badge {
     background: rgba(255, 255, 255, 0.3);
 }
-
-

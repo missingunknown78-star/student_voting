@@ -49,9 +49,13 @@ class Candidate(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     party_list = db.Column(db.String(200), nullable=True)
+    platform = db.Column(db.Text, nullable=True)  # NEW: Platform field
     
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     department = db.relationship('Department', backref='candidates', lazy=True)
+    
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)  # NEW: Course field
+    course = db.relationship('Course', backref='candidates', lazy=True)  # NEW: Course relationship
 
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
@@ -86,7 +90,7 @@ class Candidate(db.Model):
         return 1
 
 
-# admin/models.py - Replace ONLY the Election class with this
+# admin/models.py - Complete Election class with caching fields
 
 class Election(db.Model):
     __tablename__ = 'elections'
@@ -116,6 +120,12 @@ class Election(db.Model):
     end_date = db.Column(db.DateTime, nullable=False)
     results_published = db.Column(db.Boolean, default=False)
     results_published_at = db.Column(db.DateTime, nullable=True)
+
+    # ===== NEW: Caching fields for performance optimization =====
+    cached_results = db.Column(db.Text, nullable=True)  # JSON string of cached vote counts
+    cached_at = db.Column(db.DateTime, nullable=True)   # When results were last cached
+    cached_voter_turnout = db.Column(db.Float, nullable=True)  # Pre-calculated turnout
+    cached_total_votes = db.Column(db.Integer, nullable=True)  # Pre-calculated total votes
 
     # Optional link to Course table
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
@@ -164,6 +174,41 @@ class Election(db.Model):
         
         year_levels = self.year_levels.split(',')
         return str(student_year) in year_levels
+    
+    # ===== NEW: Helper methods for cache management =====
+    def is_cache_valid(self, max_age_hours=1):
+        """Check if cached results are still valid"""
+        if not self.cached_at:
+            return False
+        
+        tz = pytz.timezone('Asia/Manila')
+        now = datetime.now(tz)
+        
+        # Ensure cached_at is timezone-aware
+        cached_at = self.cached_at
+        if cached_at.tzinfo is None:
+            cached_at = tz.localize(cached_at)
+        
+        # Check if cache is older than max_age_hours
+        age = (now - cached_at).total_seconds()
+        return age < (max_age_hours * 3600)
+    
+    def invalidate_cache(self):
+        """Clear cached results (call when new votes are cast)"""
+        self.cached_results = None
+        self.cached_at = None
+        self.cached_voter_turnout = None
+        self.cached_total_votes = None
+    
+    def update_cache(self, results_data, voter_turnout, total_votes):
+        """Update cached results"""
+        import json
+        from datetime import datetime
+        
+        self.cached_results = json.dumps(results_data)
+        self.cached_voter_turnout = voter_turnout
+        self.cached_total_votes = total_votes
+        self.cached_at = datetime.now(pytz.timezone('Asia/Manila'))
     
     def __repr__(self):
         return f'<Election {self.id}: {self.title}>'
@@ -269,12 +314,13 @@ class AuditLog(db.Model):
     # Add this after your Position model (around line 40-50)
 
 class ElectionPosition(db.Model):
-    """Junction table linking elections to positions with vote limits"""
+    """Junction table linking elections to positions with vote limits and course restrictions"""
     __tablename__ = 'election_positions'
 
     id = db.Column(db.Integer, primary_key=True)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='SET NULL'), nullable=True)  # NEW: For course-specific positions
     
     # THIS IS THE KEY FIELD - how many votes allowed for this position in this election
     max_votes = db.Column(db.Integer, nullable=False, default=1)
@@ -292,6 +338,7 @@ class ElectionPosition(db.Model):
     # Relationships
     election = db.relationship('Election', backref=db.backref('election_positions', cascade='all, delete-orphan'))
     position = db.relationship('Position', backref=db.backref('election_positions', cascade='all, delete-orphan'))
+    course = db.relationship('Course', backref='election_positions')  # NEW: Course relationship
 
     # Ensure unique combination of election and position
     __table_args__ = (
@@ -299,7 +346,8 @@ class ElectionPosition(db.Model):
     )
 
     def __repr__(self):
-        return f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}>'
+        course_info = f" course={self.course_id}" if self.course_id else ""
+        return f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}{course_info}>'
 
 
         # Add this to your models.py

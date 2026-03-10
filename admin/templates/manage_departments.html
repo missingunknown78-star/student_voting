@@ -6,76 +6,74 @@
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_departments.css') }}">
 
 <style>
-/* -------------------- Buttons -------------------- */
-.edit-btn, .delete-btn, .select-all-btn {
-    padding: 6px 12px;
-    margin-bottom: 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.edit-btn { background-color: #2c7be5; color: #fff; }
-.edit-btn:hover { background-color: #1a5bb8; }
-.delete-btn { background-color: #e74c3c; color: #fff; }
-.delete-btn:hover { background-color: #c0392b; }
-.select-all-btn { background-color: #17a2b8; color: #fff; }
-.select-all-btn:hover { background-color: #117a8b; }
-
-.select-col { width: 40px; text-align: center; }
-
-/* ==================== THEME TRANSITION FIXES ==================== */
-/* Force main-content to have transitions */
-.main-content {
-    transition: background-color 0.3s ease, background-image 0.3s ease !important;
-}
-
-/* Ensure the background shows through */
-.container {
-    background: transparent !important;
-}
-
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-}
-
-/* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
-    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-}
-
-/* Dark mode specific overrides for buttons */
-body.dark-mode .edit-btn {
-    background-color: #3498db;
-}
-
-body.dark-mode .delete-btn {
-    background-color: #e74c3c;
-}
-
-body.dark-mode .select-all-btn {
-    background-color: #17a2b8;
-}
-
-/* Fix for form elements in dark mode */
-body.dark-mode .container .card form input[type="text"],
-body.dark-mode .container .card form select {
-    color: var(--text-color);
-    background-color: var(--input-bg);
-}
-
-/* Fix for table text in dark mode */
-body.dark-mode .container table td {
-    color: var(--text-color);
-}
-
-/* Fix for checkbox in dark mode */
-body.dark-mode .select-col input[type="checkbox"] {
-    accent-color: var(--button-primary);
-}
-</style>
+    /* -------------------- Buttons -------------------- */
+    .edit-btn, .delete-btn, .select-all-btn {
+        padding: 6px 12px;
+        margin-bottom: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .edit-btn { background-color: #2c7be5; color: #fff; }
+    .edit-btn:hover { background-color: #1a5bb8; }
+    .delete-btn { background-color: #e74c3c; color: #fff; }
+    .delete-btn:hover { background-color: #c0392b; }
+    .select-all-btn { background-color: #17a2b8; color: #fff; }
+    .select-all-btn:hover { background-color: #117a8b; }
+    
+    .select-col { width: 40px; text-align: center; }
+    
+    /* ==================== THEME TRANSITION FIXES ==================== */
+    /* Force main-content to have transitions */
+    .main-content {
+        transition: background-color 0.3s ease, background-image 0.3s ease !important;
+    }
+    
+    /* Ensure the background shows through */
+    .container {
+        background: transparent !important;
+    }
+    
+    /* Dark mode main content background - using :root.dark-mode */
+    :root.dark-mode .main-content {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+    }
+    
+    /* Light mode main content background */
+    :root:not(.dark-mode) .main-content {
+        background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+    }
+    
+    /* Dark mode specific overrides for buttons - using :root.dark-mode */
+    :root.dark-mode .edit-btn {
+        background-color: #3498db;
+    }
+    
+    :root.dark-mode .delete-btn {
+        background-color: #e74c3c;
+    }
+    
+    :root.dark-mode .select-all-btn {
+        background-color: #17a2b8;
+    }
+    
+    /* Fix for form elements in dark mode */
+    :root.dark-mode .container .card form input[type="text"],
+    :root.dark-mode .container .card form select {
+        color: var(--text-color);
+        background-color: var(--input-bg);
+    }
+    
+    /* Fix for table text in dark mode */
+    :root.dark-mode .container table td {
+        color: var(--text-color);
+    }
+    
+    /* Fix for checkbox in dark mode */
+    :root.dark-mode .select-col input[type="checkbox"] {
+        accent-color: var(--button-primary);
+    }
+    </style>
 {% endblock %}
 
 {% block content %}

@@ -1,277 +1,275 @@
-/* ==================== DARK MODE VARIABLES ==================== */
+/* ==================== THEME VARIABLES ==================== */
 :root {
-    /* Light mode colors (existing) */
-    --primary-blue: #1a56db;
-    --secondary-blue: #3b82f6;
-    --accent-teal: #06b6d4;
-    --success-green: #10b981;
-    --warning-amber: #f59e0b;
-    --danger-red: #ef4444;
-    --dark-gray: #1f2937;
-    --light-gray: #f8fafc;
-    --sidebar-width: 280px;
-    --header-height: 80px;
-    --card-radius: 16px;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --border-color: rgba(226, 232, 240, 0.8);
-    --bg-color: #f8fafc;
-    --text-color: #1f2937;
-    --card-bg: white;
-    --header-bg: rgba(255, 255, 255, 0.95);
+    /* Light theme (default) */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --accent-color: #0066cc;
+    --accent-hover: #0052a3;
+    --border-color: #dddddd;
+    --card-bg: #ffffff;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --toggle-bg: #e0e0e0;
+    --toggle-color: #333;
+    --header-bg: #ffffff;
+    --table-header-bg: #f5f5f5;
+    --table-hover: #f9f9f9;
+    --modal-overlay: rgba(0, 0, 0, 0.5);
 }
 
-/* Dark mode variables - ONLY for main-content */
-.main-content.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --card-bg: #1e293b;
-    --header-bg: rgba(30, 41, 59, 0.95);
-    --light-gray: #334155;
-    --dark-gray: #e2e8f0;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+/* Dark theme - exactly like sample_testing.css */
+:root.dark-mode {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --accent-color: #66b0ff;
+    --accent-hover: #88c0ff;
+    --border-color: #404040;
+    --card-bg: #2d2d2d;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --toggle-bg: #404040;
+    --toggle-color: #f0f0f0;
+    --header-bg: #1a1a1a;
+    --table-header-bg: #2d2d2d;
+    --table-hover: #3d3d3d;
+    --modal-overlay: rgba(0, 0, 0, 0.8);
 }
 
-/* ==================== THEME TOGGLE IN SIDEBAR ==================== */
-/* Keep sidebar theme toggle as is - always visible and consistent */
-.theme-toggle-sidebar {
-    margin: 20px 15px 10px;
-    padding: 10px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+/* System preference - only if no manual override */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light-mode):not(.dark-mode) {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --text-primary: #f0f0f0;
+        --text-secondary: #b0b0b0;
+        --accent-color: #66b0ff;
+        --accent-hover: #88c0ff;
+        --border-color: #404040;
+        --card-bg: #2d2d2d;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --toggle-bg: #404040;
+        --toggle-color: #f0f0f0;
+        --header-bg: #1a1a1a;
+        --table-header-bg: #2d2d2d;
+        --table-hover: #3d3d3d;
+        --modal-overlay: rgba(0, 0, 0, 0.8);
+    }
 }
 
-.theme-toggle-btn {
+/* Base styles using variables */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Main content area */
+.main-content {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* Cards */
+.card, .recent-elections-container, .voting-trends-container {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow) !important;
+    color: var(--text-primary) !important;
+}
+
+.card h2, .card p, .card .card-icon {
+    color: var(--text-primary) !important;
+}
+
+/* Headers */
+.dashboard-header {
+    background-color: var(--header-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.dashboard-header h1 {
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    background: none !important;
+}
+
+/* Tables */
+.recent-elections-table {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.recent-elections-table th {
+    background-color: var(--table-header-bg) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 2px solid var(--border-color) !important;
+}
+
+.recent-elections-table td {
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.recent-elections-table tbody tr:hover {
+    background-color: var(--table-hover) !important;
+}
+
+/* Badges - keep their colors but adjust text */
+.badge {
+    color: white !important;
+}
+
+.bg-success { background-color: #10b981 !important; }
+.bg-warning { background-color: #f59e0b !important; }
+.bg-danger { background-color: #ef4444 !important; }
+
+/* Buttons */
+.see-more-btn, .settings-icon, .theme-toggle-btn {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.see-more-btn:hover, .settings-icon:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px var(--shadow) !important;
+}
+
+/* School year select */
+.school-year-select {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.school-year-select option {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Modal */
+.modal-content {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.modal .close {
+    background-color: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.modal-content table {
+    background-color: var(--card-bg) !important;
+}
+
+.modal-content table td {
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.modal-content table tbody tr:nth-child(even) {
+    background-color: var(--bg-secondary) !important;
+}
+
+.modal-content table tbody tr:hover {
+    background-color: var(--table-hover) !important;
+}
+
+/* Voting trends specific */
+.voting-trends-container {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.trends-header h3 {
+    color: var(--text-primary) !important;
+}
+
+#currentElectionTitle {
+    color: var(--text-secondary) !important;
+}
+
+.election-stats .stat-item {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.stat-label {
+    color: var(--text-secondary) !important;
+}
+
+.stat-value {
+    color: var(--text-primary) !important;
+}
+
+/* Chart container */
+.chart-container {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 15px;
+}
+
+/* Floating theme button - exactly like sample_testing */
+.floating-theme-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff9900, #ff5500);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 12px 15px;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: var(--transition);
-    text-align: left;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);
+    transition: all 0.3s ease;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 9999;
 }
 
-.theme-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateX(5px);
+/* Dark mode button styling */
+:root.dark-mode .floating-theme-btn {
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
 }
 
-.theme-icon {
-    font-size: 1.1rem;
-    width: 20px;
-    text-align: center;
+/* Remove any leftover blue gradients */
+.main-content::before {
+    display: none !important;
 }
 
-.theme-text {
-    flex: 1;
-    font-weight: 500;
+
+/* Prevent transition glitches during theme change */
+.no-transition,
+.no-transition * {
+    transition: none !important;
 }
 
-/* ==================== DARK MODE STYLES ==================== */
-/* Apply ONLY to .main-content when dark-mode class is present */
-.main-content.dark-mode {
-    background: var(--bg-color);
-    color: var(--text-color);
+/* Smooth transitions for normal operation */
+:root * {
+    transition-property: background-color, border-color, color, box-shadow;
+    transition-duration: 0.2s;
+    transition-timing-function: ease;
 }
 
-.main-content.dark-mode::before {
-    opacity: 0.03;
-}
-
-/* Dashboard header dark mode */
-.main-content.dark-mode .dashboard-header {
-    background: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .dashboard-header h1 {
-    background: linear-gradient(135deg, #60a5fa, #38bdf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Cards dark mode */
-.main-content.dark-mode .card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-}
-
-.main-content.dark-mode .card h2,
-.main-content.dark-mode .card p {
-    color: var(--text-color);
-}
-
-.main-content.dark-mode .card-icon {
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-}
-
-/* Chart cards and tables dark mode */
-.main-content.dark-mode .chart-card,
-.main-content.dark-mode .recent-elections-container {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .chart-card h3,
-.main-content.dark-mode .recent-elections-container h3 {
-    color: var(--text-color);
-}
-
-.main-content.dark-mode .election-dropdown {
-    background: var(--light-gray);
-    border: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .election-dropdown label {
-    color: var(--text-color);
-}
-
-.main-content.dark-mode .election-dropdown select {
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .election-dropdown select:focus {
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-
-.main-content.dark-mode .color-legend {
-    border-top: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .legend-item {
-    background: var(--light-gray);
-    color: var(--text-color);
-}
-
-.main-content.dark-mode .recent-elections-table th {
-    background: var(--light-gray);
-    color: var(--text-color);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.main-content.dark-mode .recent-elections-table td {
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .recent-elections-table tbody tr:hover {
-    background: rgba(51, 65, 85, 0.3);
-}
-
-.main-content.dark-mode .badge {
-    color: white;
-}
-
-.main-content.dark-mode .bg-success {
-    background: rgba(16, 185, 129, 0.3);
-}
-
-.main-content.dark-mode .bg-warning {
-    background: rgba(245, 158, 11, 0.3);
-}
-
-.main-content.dark-mode .bg-danger {
-    background: rgba(239, 68, 68, 0.3);
-}
-
-.main-content.dark-mode .see-more-wrapper {
-    border-top: 1px solid var(--border-color);
-}
-
-/* Modal dark mode */
-.main-content.dark-mode .modal-content {
-    background: var(--card-bg);
-    color: var(--text-color);
-}
-
-.main-content.dark-mode .modal .close {
-    background: var(--card-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .modal-table-container {
-    background: var(--light-gray);
-    border: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .modal-content table thead {
-    background: linear-gradient(135deg, #1e40af, #3730a3);
-}
-
-.main-content.dark-mode .modal-content table tbody tr:nth-child(even) {
-    background: rgba(30, 41, 59, 0.5);
-}
-
-.main-content.dark-mode .modal-content table tbody tr:hover {
-    background: rgba(51, 65, 85, 0.8);
-}
-
-.main-content.dark-mode #noVotesOverlay {
-    background: rgba(30, 41, 59, 0.9);
-    color: #cbd5e1;
-}
-
-/* Profile menu dark mode */
-.main-content.dark-mode .profile-menu {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .profile-menu a {
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.main-content.dark-mode .profile-menu a:hover {
-    background: var(--light-gray);
-    color: var(--primary-blue);
-}
-
-/* Chart.js dark mode adjustments */
-.main-content.dark-mode canvas {
-    filter: brightness(0.9) contrast(1.1);
-}
-
-/* Scrollbar dark mode */
-.main-content.dark-mode ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
-}
-
-.main-content.dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
-}
-
-/* Profile container dark mode */
-.main-content.dark-mode .profile-pic {
-    border: 3px solid var(--card-bg);
-}
-
-/* ==================== TEXT COLOR MANAGEMENT ==================== */
-/* Ensure all text in main content uses variables */
-.main-content.dark-mode,
-.main-content.dark-mode *:not(.badge):not(.see-more-btn):not(#seeMoreBtn):not(.card-icon i) {
-    color: var(--text-color) !important;
-}
-
-/* Light mode text colors */
-.main-content:not(.dark-mode),
-.main-content:not(.dark-mode) *:not(.badge):not(.see-more-btn):not(#seeMoreBtn):not(.card-icon i) {
-    color: var(--text-color) !important;
+/* But disable transitions on page load */
+:root:not(.theme-ready) * {
+    transition: none !important;
 }

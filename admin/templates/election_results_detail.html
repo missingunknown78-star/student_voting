@@ -4,8 +4,6 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/election_results_detail.css') }}">
-<!-- Add html2pdf library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% endblock %}
 
 {% block content %}
@@ -111,10 +109,10 @@
         </div>
     </div>
     
-    <!-- Export Actions -->
+    <!-- Export Actions - Direct download PDF button -->
 <div class="export-actions">
-    <button class="export-btn" disabled style="opacity: 0.6; cursor: not-allowed;" title="PDF Export temporarily disabled">
-        <i class="fa-solid fa-file-pdf"></i> Export Results (PDF)
+    <button class="export-btn" id="exportPdfBtn">
+        <i class="fa-solid fa-file-pdf"></i> Export Results (PDF) - Letter Size
     </button>
 </div>
     
@@ -412,33 +410,6 @@
     
     {% endif %} <!-- End of is_tallied conditional -->
     
-</div>
-
-<!-- PDF Template (Hidden - used for export) -->
-<div class="pdf-template" id="pdfTemplate">
-    <div class="pdf-header">
-        <img src="{{ url_for('admin.static', filename='images/CTU HEADER.png') }}" alt="CTU Logo" id="pdfHeaderLogo">
-        <h1>{{ election.title }}</h1>
-        <div class="school-name">Cebu Technological University</div>
-        <div>{{ election.start_date.strftime('%B %d, %Y') }} - {{ election.end_date.strftime('%B %d, %Y') }}</div>
-    </div>
-    
-    <div class="pdf-content">
-        <!-- Content will be cloned from resultsContent -->
-    </div>
-    
-    <div class="pdf-footer">
-        <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png') }}" alt="CTU Logo" id="pdfFooterLogo" onerror="this.style.display='none'">
-        <div class="footer-text">
-            <div>Official Election Results - {{ election.title }}</div>
-            <div>Generated on {{ now.strftime('%B %d, %Y at %I:%M %p') }}</div>
-            <div>Cebu Technological University - Student Government</div>
-        </div>
-    </div>
-    
-    <div class="pdf-watermark">
-        <i class="fa-solid fa-check-circle"></i> VERIFIED
-    </div>
 </div>
 
 <!-- PDF Loading Overlay -->

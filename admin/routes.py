@@ -33,6 +33,10 @@ from admin.models import AuditLog, Setting
 from admin.utils import log_audit
 import pandas as pd
 from admin.models import AdminTrustedDevice
+from flask import make_response
+from datetime import datetime
+import pytz
+# Add this near your other imports
 
 
 
@@ -2793,6 +2797,7 @@ def delete_multiple_courses():
 
 
 # ---------------------- MANAGE CANDIDATES ---------------------- #
+# ---------------------- MANAGE CANDIDATES ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
@@ -2867,7 +2872,9 @@ def manage_candidates():
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         party_list = request.form.get('party_list')
+        platform = request.form.get('platform')  # NEW: Add platform field
         department_id_form = request.form.get('department_id', type=int)
+        course_id = request.form.get('course_id', type=int)  # NEW: Add course_id field
         position_id = request.form.get('position_id')
         election_id = request.form.get('election_id')
         scope = request.form.get('scope')  # Get scope from form
@@ -2887,21 +2894,10 @@ def manage_candidates():
             flash('Please fill in all required fields.', 'danger')
             return redirect(url_for('admin.manage_candidates'))
 
-        # Validate department based on scope
-        if scope == 'department':
-            if not department_id_form:
-                if is_ajax:
-                    return jsonify({'success': False, 'message': 'Department is required for Department Elections.'})
-                flash('Department is required for Department Elections.', 'danger')
-                return redirect(url_for('admin.manage_candidates'))
-            
-            # Verify department matches election
-            if election.department_id and election.department_id != department_id_form:
-                if is_ajax:
-                    return jsonify({'success': False, 'message': f'This candidate must belong to {election.department} department.'})
-                flash(f'This candidate must belong to {election.department} department.', 'danger')
-                return redirect(url_for('admin.manage_candidates'))
-        else:
+        # Validate department based on scope (but department is now optional)
+        if scope == 'department' and not department_id_form:
+            # Department is optional now, so we don't require it
+            # Just set department_id_form to None if not provided
             department_id_form = None
 
         # Save photo if uploaded
@@ -2916,12 +2912,14 @@ def manage_candidates():
             photo_filename = f"{name}_{int(time.time())}{ext}"
             photo_file.save(os.path.join(photo_folder, photo_filename))
 
-        # Create candidate with scope
+        # Create candidate with new fields
         new_candidate = Candidate(
             first_name=first_name,
             last_name=last_name,
             party_list=party_list if party_list else None,
+            platform=platform if platform else None,  # NEW: Add platform
             department_id=department_id_form,
+            course_id=course_id,  # NEW: Add course_id
             position_id=position_id,
             election_id=election_id,
             scope=scope,  # Save scope directly
@@ -2953,8 +2951,10 @@ def manage_candidates():
                 'first_name': new_candidate.first_name,
                 'last_name': new_candidate.last_name,
                 'party_list': new_candidate.party_list,
+                'platform': new_candidate.platform,
                 'department': new_candidate.department.name if new_candidate.department else '',
                 'department_id': new_candidate.department_id,
+                'course_id': new_candidate.course_id,
                 'position': new_candidate.position.name,
                 'position_id': new_candidate.position_id,
                 'election_id': new_candidate.election_id,
@@ -3056,6 +3056,7 @@ def filter_candidates():
                 Candidate.first_name.ilike(search_term),
                 Candidate.last_name.ilike(search_term),
                 Candidate.party_list.ilike(search_term),
+                Candidate.platform.ilike(search_term),  # NEW: Add platform to search
                 Position.name.ilike(search_term),
                 Election.title.ilike(search_term)
             )
@@ -3073,8 +3074,10 @@ def filter_candidates():
             'first_name': c.first_name,
             'last_name': c.last_name,
             'party_list': c.party_list,
+            'platform': c.platform,  # NEW: Add platform to response
             'department': c.department.name if c.department else '',
             'department_id': c.department_id,
+            'course_id': c.course_id,  # NEW: Add course_id to response
             'position': c.position.name if c.position else '',
             'position_id': c.position_id,
             'election_id': c.election_id,
@@ -3109,6 +3112,7 @@ def update_candidate(id):
     old_first_name = candidate.first_name
     old_last_name = candidate.last_name
     old_party_list = candidate.party_list
+    old_platform = candidate.platform  # NEW
     old_position = candidate.position.name if candidate.position else 'N/A'
     old_department = candidate.department.name if candidate.department else 'N/A'
     old_scope = candidate.scope
@@ -3120,6 +3124,9 @@ def update_candidate(id):
     party_list = request.form.get('party_list')
     candidate.party_list = party_list if party_list else None
     
+    platform = request.form.get('platform')  # NEW
+    candidate.platform = platform if platform else None  # NEW
+    
     candidate.position_id = request.form.get('position_id')
     candidate.election_id = request.form.get('election_id')
     
@@ -3127,28 +3134,14 @@ def update_candidate(id):
     candidate.scope = scope  # Update scope
     
     department_id = request.form.get('department_id', type=int)
+    course_id = request.form.get('course_id', type=int)  # NEW
+    
+    candidate.department_id = department_id if department_id else None
+    candidate.course_id = course_id if course_id else None  # NEW
     
     # Get election to verify
     election = Election.query.get(candidate.election_id)
     
-    # Handle department based on scope
-    if scope == 'department':
-        if not department_id:
-            if is_ajax:
-                return jsonify({'success': False, 'message': 'Department is required.'})
-            flash('Department is required.', 'danger')
-            return redirect(url_for('admin.manage_candidates'))
-        
-        if election and election.department_id and election.department_id != department_id:
-            if is_ajax:
-                return jsonify({'success': False, 'message': f'Must belong to {election.department}.'})
-            flash(f'Must belong to {election.department}.', 'danger')
-            return redirect(url_for('admin.manage_candidates'))
-        
-        candidate.department_id = department_id
-    else:
-        candidate.department_id = None
-
     # Handle photo upload
     photo_file = request.files.get('photo')
     if photo_file and photo_file.filename:
@@ -3181,8 +3174,10 @@ def update_candidate(id):
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
             'party_list': candidate.party_list,
+            'platform': candidate.platform,  # NEW
             'department': candidate.department.name if candidate.department else '',
             'department_id': candidate.department_id,
+            'course_id': candidate.course_id,  # NEW
             'position': candidate.position.name if candidate.position else '',
             'position_id': candidate.position_id,
             'election_id': candidate.election_id,
@@ -3236,6 +3231,27 @@ def delete_candidate(id):
             }), 500
         flash(f'Error deleting candidate: {str(e)}', 'error')
         return redirect(url_for('admin.manage_candidates'))
+
+
+# NEW: Add route to get courses by department
+# NEW: Add route to get courses by department
+@admin_bp.route('/courses/by_department/<int:department_id>', methods=['GET'])
+@admin_required
+def get_courses_by_department(department_id):
+    """AJAX endpoint to get courses for a department"""
+    from admin.models import Course
+    
+    courses = Course.query.filter_by(department_id=department_id).order_by(Course.course_name).all()
+    
+    courses_data = []
+    for course in courses:
+        courses_data.append({
+            'id': course.id,
+            'course_name': course.course_name,  # Changed from 'name' to match model
+            'course_code': course.course_code    # Changed from 'code' to match model
+        })
+    
+    return jsonify({'courses': courses_data})
 
         
 # ---------------------- Manage Positions ---------------------- #
@@ -3409,7 +3425,6 @@ def delete_position(position_id):
 
 
 
-
 @admin_bp.route('/configure-election-positions/<int:election_id>', methods=['GET', 'POST'])
 @admin_required
 def configure_election_positions(election_id):
@@ -3420,10 +3435,16 @@ def configure_election_positions(election_id):
     # Get all positions
     all_positions = Position.query.order_by(Position.name).all()
     
+    # Get all courses for dropdown (for campus-wide elections)
+    all_courses = Course.query.order_by(Course.course_name).all()
+    
     # Get currently configured positions for this election
     configured_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     configured_position_ids = [ep.position_id for ep in configured_positions]
     configured_positions_dict = {ep.position_id: ep.max_votes for ep in configured_positions}
+    
+    # NEW: Get course restrictions for configured positions
+    position_courses = {ep.position_id: ep.course_id for ep in configured_positions if ep.course_id}
     
     if request.method == 'POST':
         # Get form data
@@ -3438,11 +3459,15 @@ def configure_election_positions(election_id):
             position_id = int(position_id_str)
             max_votes = request.form.get(f'max_votes_{position_id}', type=int, default=1)
             
+            # NEW: Get course restriction if applicable
+            course_id = request.form.get(f'course_{position_id}', type=int)
+            
             ep = ElectionPosition(
                 election_id=election_id,
                 position_id=position_id,
                 max_votes=max_votes,
                 min_votes=1,  # Default minimum
+                course_id=course_id if course_id else None,  # NEW: Save course restriction
                 display_order=display_order
             )
             db.session.add(ep)
@@ -3464,11 +3489,16 @@ def configure_election_positions(election_id):
     # For GET request, pass ALL needed variables to template
     return render_template(
         'configure_election_positions.html',
-        election=election,  # This is the key line that was missing
+        election=election,
         all_positions=all_positions,
+        all_courses=all_courses,  # NEW: Pass courses to template
         configured_position_ids=configured_position_ids,
-        configured_positions=configured_positions_dict
+        configured_positions=configured_positions_dict,
+        position_courses=position_courses  # NEW: Pass course restrictions
     )
+
+
+    
 # admin/routes.py - UPDATE your create_election route
 @admin_bp.route('/create-election', methods=['GET', 'POST'])
 @admin_required
@@ -4280,6 +4310,259 @@ def get_tally_results(election_id):
         }
     })
 
+
+
+@admin_bp.route('/results/<int:election_id>/pdf')
+@admin_required
+def election_results_pdf(election_id):
+    """Generate PDF of election results using WeasyPrint - Letter size, direct download"""
+    election = Election.query.get_or_404(election_id)
+    
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    # Get election status
+    if election.start_date.tzinfo is None:
+        election.start_date = tz.localize(election.start_date)
+    if election.end_date.tzinfo is None:
+        election.end_date = tz.localize(election.end_date)
+    
+    if election.end_date < now:
+        status = "Completed"
+    elif election.start_date <= now <= election.end_date:
+        status = "Active"
+    else:
+        status = "Upcoming"
+    
+    # Check if tallied
+    is_tallied = False
+    tally_timestamp = None
+    
+    if TALLY_VOTE_AVAILABLE:
+        tally_record = TallyVote.query.filter_by(election_id=election_id).first()
+        is_tallied = tally_record is not None
+        if is_tallied:
+            latest_tally = TallyVote.query.filter_by(
+                election_id=election_id
+            ).order_by(TallyVote.tally_timestamp.desc()).first()
+            tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
+    else:
+        is_tallied = check_if_tallied(election_id)
+        if is_tallied:
+            tally_timestamp = get_tally_timestamp(election_id)
+    
+    # Get candidates
+    candidates = Candidate.query.filter_by(election_id=election_id).all()
+    candidate_results = []
+    total_votes_cast = 0
+    
+    # COUNT UNIQUE VOTERS
+    unique_voters = db.session.query(Vote.student_id).filter_by(
+        election_id=election_id
+    ).distinct().count()
+    
+    # GET POSITION LIMITS FROM ElectionPosition TABLE
+    position_limits = {}
+    election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+    for ep in election_positions:
+        position_limits[ep.position_id] = ep.max_votes
+    
+    # Get vote counts from TallyVote if tallied, otherwise from Vote table
+    if is_tallied and TALLY_VOTE_AVAILABLE:
+        tally_records = TallyVote.query.filter_by(election_id=election_id).all()
+        tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
+        
+        for candidate in candidates:
+            vote_count = tally_dict.get(candidate.id, 0)
+            
+            candidate_results.append({
+                'id': candidate.id,
+                'first_name': candidate.first_name,
+                'last_name': candidate.last_name,
+                'photo': candidate.photo,
+                'position': candidate.position.name if candidate.position else "N/A",
+                'position_id': candidate.position_id,
+                'department': candidate.department.name if candidate.department else "All Departments",
+                'vote_count': vote_count,
+                'voter_percentage': 0,
+                'is_tallied': True
+            })
+            total_votes_cast += vote_count
+    else:
+        for candidate in candidates:
+            vote_count = count_votes_for_candidate(candidate.id, election_id)
+            
+            candidate_results.append({
+                'id': candidate.id,
+                'first_name': candidate.first_name,
+                'last_name': candidate.last_name,
+                'photo': candidate.photo,
+                'position': candidate.position.name if candidate.position else "N/A",
+                'position_id': candidate.position_id,
+                'department': candidate.department.name if candidate.department else "All Departments",
+                'vote_count': vote_count,
+                'voter_percentage': 0,
+                'is_tallied': is_tallied
+            })
+            total_votes_cast += vote_count
+    
+    # Calculate percentages based on UNIQUE VOTERS
+    if unique_voters > 0:
+        for candidate in candidate_results:
+            candidate['voter_percentage'] = round((candidate['vote_count'] / unique_voters) * 100, 2)
+    
+    # ===== CRITICAL: WINNER DETERMINATION LOGIC =====
+    # Group candidates by position
+    candidates_by_position = {}
+    for candidate in candidate_results:
+        position = candidate['position']
+        if position not in candidates_by_position:
+            candidates_by_position[position] = []
+        candidates_by_position[position].append(candidate)
+    
+    # Sort candidates within each position by vote count (descending)
+    for position in candidates_by_position:
+        candidates_by_position[position].sort(key=lambda x: x['vote_count'], reverse=True)
+    
+    # Determine winners for each position based on max_votes
+    winners_by_position = {}
+    
+    for position_name, candidates_in_pos in candidates_by_position.items():
+        if candidates_in_pos:
+            position_id = candidates_in_pos[0]['position_id']
+            max_winners = position_limits.get(position_id, 1)
+            
+            # Take the top N candidates where N = max_winners (only those with votes > 0)
+            winners = []
+            for i, candidate in enumerate(candidates_in_pos):
+                if i < max_winners and candidate['vote_count'] > 0:
+                    winners.append(candidate)
+                else:
+                    break
+            
+            if winners:  # Only add if there are winners
+                winners_by_position[position_name] = winners
+    
+    # Sort winners_by_position by position_id
+    position_order = []
+    for position_name, candidates_in_pos in candidates_by_position.items():
+        if candidates_in_pos:
+            position_id = candidates_in_pos[0]['position_id']
+            position_order.append((position_id, position_name))
+    
+    position_order.sort(key=lambda x: x[0])
+    
+    sorted_winners_by_position = {}
+    for position_id, position_name in position_order:
+        if position_name in winners_by_position:
+            sorted_winners_by_position[position_name] = winners_by_position[position_name]
+    
+    # Sort candidate_results by position_id first, then by vote count
+    candidates_by_pos_id = {}
+    for candidate in candidate_results:
+        pos_id = candidate['position_id']
+        if pos_id not in candidates_by_pos_id:
+            candidates_by_pos_id[pos_id] = []
+        candidates_by_pos_id[pos_id].append(candidate)
+    
+    for pos_id in candidates_by_pos_id:
+        candidates_by_pos_id[pos_id].sort(key=lambda x: x['vote_count'], reverse=True)
+    
+    sorted_candidate_results = []
+    for pos_id in sorted(candidates_by_pos_id.keys()):
+        sorted_candidate_results.extend(candidates_by_pos_id[pos_id])
+    
+    # Get total eligible voters
+    if election.department_id:
+        total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
+    else:
+        total_eligible_voters = Student.query.count()
+    
+    voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
+    students_not_voted = total_eligible_voters - unique_voters
+    
+    # Render HTML template for PDF - WITH ALL VARIABLES
+    html = render_template(
+        'election_results_pdf.html',  # Make sure path is correct
+        election=election,
+        candidate_results=sorted_candidate_results,
+        winners_by_position=sorted_winners_by_position,  # THIS WAS MISSING!
+        total_voters=unique_voters,
+        total_votes_cast=total_votes_cast,
+        total_eligible_voters=total_eligible_voters,
+        voter_turnout=voter_turnout,
+        students_not_voted=students_not_voted,
+        status=status,
+        now=now,
+        is_tallied=is_tallied,
+        tally_timestamp=tally_timestamp,
+        position_limits=position_limits  # Also pass position limits
+    )
+    
+    try:
+        # Generate PDF using WeasyPrint with LETTER size
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+        
+        font_config = FontConfiguration()
+        
+        # Create PDF with LETTER size and proper margins
+        pdf = HTML(string=html, base_url=request.host_url).write_pdf(
+            stylesheets=[CSS(string='''
+                @page {
+                    size: letter;
+                    margin: 0.75in;
+                    @top-center {
+                        content: " ";
+                        font-family: Arial, sans-serif;
+                        font-size: 9pt;
+                        color: #666;
+                    }
+                    @bottom-center {
+                        content: "Page " counter(page) " of " counter(pages);
+                        font-family: Arial, sans-serif;
+                        font-size: 9pt;
+                        color: #666;
+                    }
+                }
+            ''')],
+            font_config=font_config
+        )
+        
+        # Generate filename with proper .pdf extension
+        filename = f"{election.title}_Results_{now.strftime('%Y%m%d_%H%M')}.pdf"
+        # Remove any invalid characters from filename
+        filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+        
+        # Create response with proper headers for direct download
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response.headers['Content-Length'] = len(pdf)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        # Log PDF generation
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='ELECTION_RESULTS_PDF_EXPORT',
+            description=f"Admin user '{username}' exported PDF results for election: '{election.title}' (ID: {election_id}) from IP: {ip}"
+        )
+        
+        return response
+        
+    except Exception as e:
+        # Log error
+        current_app.logger.error(f"PDF Generation Error: {str(e)}")
+        
+        # Return error message as JSON
+        return jsonify({
+            'success': False,
+            'error': 'PDF generation failed. Please try again or contact support.',
+            'details': str(e)
+        }), 500
 
 
 

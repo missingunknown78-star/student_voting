@@ -1,14 +1,15 @@
 /* ================================
    ELECTION RESULTS DETAIL PAGE CSS
+   WITH TRUE BLACK DARK THEME
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
 body {
-    background-color: #0f172a;
+    background-color: #1a1a1a; /* True black background */
     transition: background-color 0.3s ease;
 }
 
-body:not(.dark-mode) {
+:root:not(.dark-mode) body {
     background-color: #f5f7fb;
 }
 
@@ -46,18 +47,35 @@ body:not(.dark-mode) {
     --header-bg: rgba(30, 41, 59, 0.95);
 }
 
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --light-gray: #334155;
-    --dark-gray: #e2e8f0;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --header-bg: rgba(30, 41, 59, 0.95);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+/* Dark mode variables - TRUE BLACK theme */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --light-gray: #404040;
+    --dark-gray: #f0f0f0;
+    --border-color: #404040;
+    --header-bg: #2d2d2d;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Dark mode main content background */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
+/* Light mode main content background */
+:root:not(.dark-mode) .main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
 /* ==================== MAIN CONTAINER ==================== */
@@ -65,7 +83,7 @@ body:not(.dark-mode) {
     padding: 30px;
     margin-left: var(--sidebar-width);
     min-height: 100vh;
-    background: var(--bg-color);
+    background: transparent;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     transition: var(--transition);
     box-sizing: border-box;
@@ -124,6 +142,7 @@ body:not(.dark-mode) {
     margin: 0 0 10px 0;
     font-size: 24px;
     font-weight: 700;
+    color: white;
 }
 
 .election-meta {
@@ -143,6 +162,7 @@ body:not(.dark-mode) {
     display: flex;
     align-items: center;
     gap: 6px;
+    color: white;
 }
 
 .meta-item i {
@@ -919,12 +939,12 @@ body:not(.dark-mode) {
     margin: 0;
 }
 
-.dark-mode .pdf-loading-content {
-    background: #2c3e50;
+:root.dark-mode .pdf-loading-content {
+    background: #2d2d2d;
 }
 
-.dark-mode .pdf-loading-content p {
-    color: white;
+:root.dark-mode .pdf-loading-content p {
+    color: #f0f0f0;
 }
 
 /* ==================== NOTIFICATIONS ==================== */
@@ -1143,4 +1163,3 @@ body:not(.dark-mode) {
         transition-duration: 0.01ms !important;
     }
 }
-

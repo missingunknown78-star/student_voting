@@ -1,17 +1,17 @@
 /* ================================
    ADMIN RESULTS PAGE CSS
-   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
+   FLOATING CARDS DESIGN - WITH TRUE BLACK DARK THEME
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
 body {
-    background-color: #0f172a; /* Dark background as default */
+    background-color: #1a1a1a; /* True black background */
     transition: background-color 0.3s ease;
 }
 
 /* Light mode override */
-body:not(.dark-mode) {
+:root:not(.dark-mode) body {
     background-color: #f5f7fb;
 }
 
@@ -52,20 +52,86 @@ body:not(.dark-mode) {
     --table-hover: #f9f9f9;
 }
 
-/* Dark mode variables */
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --light-gray: #334155;
-    --dark-gray: #e2e8f0;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --table-hover: rgba(51, 65, 85, 0.3);
-    --header-bg: rgba(30, 41, 59, 0.95);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+/* Dark mode variables - TRUE BLACK theme */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --light-gray: #404040;
+    --dark-gray: #f0f0f0;
+    --border-color: #404040;
+    --table-hover: #3d3d3d;
+    --header-bg: #2d2d2d;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.results-container {
+    background: transparent !important;
+}
+
+/* Dark mode main content background */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
+/* Light mode main content background */
+:root:not(.dark-mode) .main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+}
+
+/* Dark mode specific overrides */
+:root.dark-mode .results-header {
+    background: var(--secondary-blue);
+}
+
+:root.dark-mode .stat-card,
+:root.dark-mode .election-card,
+:root.dark-mode .empty-state {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+:root.dark-mode .stat-card:hover,
+:root.dark-mode .election-card:hover,
+:root.dark-mode .empty-state:hover {
+    border-color: var(--primary-blue);
+}
+
+:root.dark-mode .section-title {
+    color: var(--text-color);
+}
+
+:root.dark-mode .badge-count {
+    background: var(--light-gray);
+    color: var(--text-secondary);
+}
+
+:root.dark-mode .detail-item i {
+    color: var(--text-secondary);
+}
+
+:root.dark-mode .btn-secondary {
+    background: var(--light-gray);
+    color: var(--text-color);
+}
+
+:root.dark-mode .btn.disabled {
+    background: var(--light-gray);
+    color: var(--text-secondary);
+}
+
+:root.dark-mode .card-footer {
+    border-top-color: var(--border-color);
 }
 
 /* ==================== PAGE LAYOUT ==================== */
@@ -73,7 +139,6 @@ body:not(.dark-mode) {
     padding: 2rem;
     margin-left: var(--sidebar-width);
     min-height: 100vh;
-    /* REMOVED solid background - now transparent to show gradient from main template */
     background: transparent;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     transition: var(--transition);
@@ -118,6 +183,7 @@ body:not(.dark-mode) {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    color: white;
 }
 
 .header-content p {
@@ -125,6 +191,7 @@ body:not(.dark-mode) {
     opacity: 0.85;
     font-size: 1rem;
     max-width: 600px;
+    color: white;
 }
 
 .header-actions {
@@ -545,6 +612,49 @@ body:not(.dark-mode) {
     -webkit-backface-visibility: hidden;
 }
 
+/* School Year Indicator */
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.school-year-indicator i {
+    font-size: 1rem;
+}
+
+.school-year-indicator .filter-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    margin-left: 5px;
+}
+
+/* Dark mode support - using :root.dark-mode */
+:root.dark-mode .school-year-indicator {
+    background: linear-gradient(135deg, #66b0ff, #88c0ff);
+    box-shadow: 0 4px 12px rgba(102, 176, 255, 0.4);
+}
+
+/* Update header-content to accommodate the indicator */
+.header-content {
+    flex: 1;
+}
+
+.header-content p {
+    margin-bottom: 5px;
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .results-container {
@@ -592,6 +702,12 @@ body:not(.dark-mode) {
     .btn {
         width: 100%;
     }
+    
+    .school-year-indicator {
+        width: 100%;
+        justify-content: center;
+        margin-top: 15px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -614,62 +730,7 @@ body:not(.dark-mode) {
         padding: 0.75rem;
         padding-top: 5rem;
     }
-}
-
-
-/* School Year Indicator */
-.school-year-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-    color: white;
-    border-radius: 30px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
-    margin-top: 10px;
-    flex-wrap: wrap;
-}
-
-.school-year-indicator i {
-    font-size: 1rem;
-}
-
-.school-year-indicator .filter-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    margin-left: 5px;
-}
-
-/* Dark mode support */
-body.dark-mode .school-year-indicator {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-}
-
-/* Update header-content to accommodate the indicator */
-.header-content {
-    flex: 1;
-}
-
-.header-content p {
-    margin-bottom: 5px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .school-year-indicator {
-        width: 100%;
-        justify-content: center;
-        margin-top: 15px;
-    }
-}
-
-@media (max-width: 480px) {
+    
     .school-year-indicator {
         flex-direction: column;
         text-align: center;
@@ -678,5 +739,141 @@ body.dark-mode .school-year-indicator {
     .school-year-indicator .filter-badge {
         margin-left: 0;
         margin-top: 5px;
+    }
+}
+
+/* ==================== ACTIVE ELECTION STYLES ==================== */
+.election-card.active .card-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.election-card.active .progress-badge {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.election-card.active .progress-badge i {
+    font-size: 12px;
+}
+
+/* Ensure buttons are properly styled */
+.election-card .btn-primary {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.election-card .btn-primary:hover {
+    background: var(--secondary-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+}
+
+.election-card .btn-primary i {
+    margin-right: 5px;
+}
+
+/* ==================== HEADER ACTIONS BUTTONS STYLES ==================== */
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    margin-left: auto;
+}
+
+/* Statistics Button */
+.stats-nav-btn {
+    background: linear-gradient(135deg, #845ef7, #6b3ef0);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(132, 94, 247, 0.3);
+    text-decoration: none;
+    min-width: 180px;
+    justify-content: center;
+}
+
+.stats-nav-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(132, 94, 247, 0.4);
+}
+
+.stats-nav-btn i {
+    font-size: 1.1rem;
+}
+
+/* Vote Distribution Button */
+.distribution-nav-btn {
+    background: linear-gradient(135deg, #20c997, #0ca678);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(32, 201, 151, 0.3);
+    text-decoration: none;
+    min-width: 180px;
+    justify-content: center;
+}
+
+.distribution-nav-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(32, 201, 151, 0.4);
+}
+
+.distribution-nav-btn i {
+    font-size: 1.1rem;
+}
+
+/* Dark mode for buttons */
+:root.dark-mode .stats-nav-btn {
+    background: linear-gradient(135deg, #9f7aea, #805ad5);
+    box-shadow: 0 4px 12px rgba(159, 122, 234, 0.3);
+}
+
+:root.dark-mode .distribution-nav-btn {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+        align-items: stretch;
+    }
+    
+    .stats-nav-btn,
+    .distribution-nav-btn {
+        width: 100%;
+        min-width: auto;
     }
 }

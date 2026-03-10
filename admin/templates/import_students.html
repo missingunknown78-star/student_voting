@@ -61,32 +61,6 @@
         max-width: 500px !important;
     }
     
-    /* Ensure no dark mode can override these colors */
-    body.dark-mode .flash-message.import-success,
-    .main-content.dark-mode .flash-message.import-success,
-    .dark-mode .flash-message.import-success {
-        background-color: #d4edda !important;
-        color: #155724 !important;
-        border-color: #c3e6cb !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-    }
-    
-    body.dark-mode .flash-message.import-danger,
-    .main-content.dark-mode .flash-message.import-danger,
-    .dark-mode .flash-message.import-danger {
-        background-color: #f8d7da !important;
-        color: #721c24 !important;
-        border-color: #f5c6cb !important;
-    }
-    
-    body.dark-mode .flash-message.import-warning,
-    .main-content.dark-mode .flash-message.import-warning,
-    .dark-mode .flash-message.import-warning {
-        background-color: #fff3cd !important;
-        color: #856404 !important;
-        border-color: #ffeeba !important;
-    }
-    
     /* Fade animation */
     @keyframes fadeOutFlash {
         from { opacity: 1; transform: translateY(0); }
@@ -103,67 +77,15 @@
         background: transparent !important;
     }
     
-    /* Dark mode main content background */
-    body.dark-mode .main-content,
-    .main-content.dark-mode {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    /* Adjust info button position to not conflict with floating toggle */
+    .info-float-btn {
+        top: 20px;
+        right: 80px; /* Moved left to make room for floating toggle */
     }
     
-    /* Light mode main content background */
-    body:not(.dark-mode) .main-content,
-    .main-content:not(.dark-mode) {
-        background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-    }
-    
-    /* Total students card enhancement */
-    .total-students-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-    
-    .total-students-card h4 {
-        margin: 0 0 10px 0;
-        font-size: 16px;
-        opacity: 0.9;
-    }
-    
-    .total-students-card .total-number {
-        font-size: 36px;
-        font-weight: bold;
-        display: block;
-    }
-    
-    /* Dark mode adjustments for total card */
-    body.dark-mode .total-students-card {
-        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-    }
-    
-    /* Info modal improvements */
-    .info-modal ul {
-        text-align: left;
-        margin: 10px 0;
-        padding-left: 20px;
-    }
-    
-    .info-modal li {
-        margin-bottom: 5px;
-        color: #555;
-    }
-    
-    .info-modal p {
-        margin: 10px 0;
-    }
-    
-    .info-modal .warning-text {
-        color: #856404;
-        background-color: #fff3cd;
-        padding: 10px;
-        border-radius: 5px;
-        border-left: 4px solid #ffc107;
+    /* Disable transitions during theme change */
+    .no-transition * {
+        transition: none !important;
     }
 </style>
 {% endblock %}
@@ -328,102 +250,6 @@ $(document).ready(function(){
             setTimeout(() => { $(this).remove(); }, 500);
         });
     }, 5000);
-});
-
-// =============== THEME SYNCHRONIZATION FIX ===============
-// This ensures the theme applies immediately without refresh
-(function() {
-    // Function to apply theme to main-content
-    function applyThemeToMainContent() {
-        const mainContent = document.querySelector('.main-content');
-        if (!mainContent) return;
-        
-        // Check current theme from localStorage
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-        
-        // Apply or remove dark-mode class
-        if (isDark) {
-            mainContent.classList.add('dark-mode');
-        } else {
-            mainContent.classList.remove('dark-mode');
-        }
-        
-        // Ensure content is visible
-        mainContent.classList.add('theme-applied');
-    }
-    
-    // Apply immediately
-    applyThemeToMainContent();
-    
-    // Also apply after a tiny delay to catch any late initialization
-    setTimeout(applyThemeToMainContent, 10);
-    setTimeout(applyThemeToMainContent, 50);
-    setTimeout(applyThemeToMainContent, 100);
-    
-    // Listen for theme toggle button clicks
-    document.addEventListener('click', function(e) {
-        // Check if the clicked element is the theme toggle button or inside it
-        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            // Small delay to let localStorage update
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
-        }
-    });
-    
-    // Listen for storage events (if theme changed in another tab)
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
-    });
-    
-    // Create a mutation observer to watch for class changes on body
-    // (in case the theme toggle uses body class instead)
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
-                applyThemeToMainContent();
-            }
-        });
-    });
-    
-    observer.observe(document.body, { attributes: true });
-    
-    // Also watch for changes to the main-content class
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            // Just ensure theme-applied is present
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
-            }
-        });
-        
-        mainContentObserver.observe(mainContent, { attributes: true });
-    }
-})();
-
-// Handle AJAX-loaded content theme synchronization
-$(document).ajaxComplete(function() {
-    // When AJAX loads new content, ensure theme is still applied
-    setTimeout(function() {
-        const mainContent = document.querySelector('.main-content');
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-        
-        if (mainContent) {
-            if (isDark) {
-                mainContent.classList.add('dark-mode');
-            } else {
-                mainContent.classList.remove('dark-mode');
-            }
-            mainContent.classList.add('theme-applied');
-        }
-    }, 50);
 });
 </script>
 {% endblock %}

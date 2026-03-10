@@ -13,6 +13,73 @@
     
     <!-- Trusted Devices CSS -->
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/trusted_devices.css') }}">
+    
+    <style>
+        /* Theme toggle button styling for inside content - positioned at far right */
+        .section-header-with-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        
+        .section-header-with-toggle h2 {
+            margin: 0;
+            padding: 0;
+            border-bottom: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .theme-toggle-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff9900, #ff5500);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(255, 85, 0, 0.4);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            background: linear-gradient(135deg, #ff5500, #ff9900);
+            box-shadow: 0 6px 20px rgba(255, 85, 0, 0.6);
+        }
+        
+        /* Dark mode styles for theme toggle */
+        :root.dark-mode .theme-toggle-btn {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        :root.dark-mode .theme-toggle-btn:hover {
+            background: linear-gradient(135deg, #7209b7, #4361ee);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.5);
+        }
+        
+        /* Override the default h2 border-bottom for the section header */
+        .settings-section .section-header-with-toggle h2 {
+            border-bottom: none;
+        }
+        
+        /* Disable transitions during theme change */
+        .no-transition * {
+            transition: none !important;
+        }
+    </style>
 </head>
 <body>
 <div class="settings-container">
@@ -51,7 +118,16 @@
         <div class="settings-content">
             <!-- General Settings -->
             <div class="settings-section active" id="general">
-                <h2><i class="fa-solid fa-sliders"></i> General Settings</h2>
+                <!-- Header with title on left and theme toggle on right -->
+                <div class="section-header-with-toggle">
+                    <h2>
+                        <i class="fa-solid fa-sliders"></i> General Settings
+                    </h2>
+                    <!-- Theme Toggle Button at far right -->
+                    <button class="theme-toggle-btn" id="contentThemeBtn" title="Toggle Theme">
+                        <i class="fa-solid fa-sun"></i>
+                    </button>
+                </div>
                 
                 <div class="info-box">
                     <i class="fa-solid fa-info-circle"></i>
@@ -224,6 +300,50 @@ let currentPage = {{ logs.page }};
 let currentSearch = '{{ search or '' }}';
 let currentStartDate = '{{ start_date or '' }}';
 let currentEndDate = '{{ end_date or '' }}';
+
+// Theme toggle functionality for the content button
+document.addEventListener('DOMContentLoaded', function() {
+    const themeBtn = document.getElementById('contentThemeBtn');
+    const html = document.documentElement;
+    
+    if (themeBtn) {
+        // Set initial icon
+        updateThemeIcon();
+        
+        // Add click handler
+        themeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Temporarily disable transitions
+            html.classList.add('no-transition');
+            
+            // Toggle theme
+            if (html.classList.contains('dark-mode')) {
+                html.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+            
+            // Update icon
+            updateThemeIcon();
+            
+            // Re-enable transitions
+            setTimeout(() => {
+                html.classList.remove('no-transition');
+            }, 50);
+        });
+    }
+    
+    function updateThemeIcon() {
+        if (themeBtn) {
+            const isDark = html.classList.contains('dark-mode');
+            themeBtn.innerHTML = `<i class="fa-solid ${isDark ? 'fa-moon' : 'fa-sun'}"></i>`;
+            themeBtn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        }
+    }
+});
 
 // 2FA Functions
 function show2FASetup() {
@@ -615,7 +735,6 @@ function showNotification(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, 5000);
 }
-
 
 function disable2FA() {
     if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {

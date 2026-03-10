@@ -6,271 +6,275 @@
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_results.css') }}">
 
 <style>
-/* ==================== THEME TRANSITION FIXES ==================== */
-/* Force main-content to have transitions */
-.main-content {
-    transition: background-color 0.3s ease, background-image 0.3s ease !important;
-}
-
-/* Ensure the background shows through */
-.results-container {
-    background: transparent !important;
-}
-
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-}
-
-/* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
-    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-}
-
-/* Dark mode specific overrides */
-body.dark-mode .results-header {
-    background: var(--secondary-blue);
-}
-
-body.dark-mode .stat-card,
-body.dark-mode .election-card,
-body.dark-mode .empty-state {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
-
-body.dark-mode .stat-card:hover,
-body.dark-mode .election-card:hover,
-body.dark-mode .empty-state:hover {
-    border-color: var(--primary-blue);
-}
-
-body.dark-mode .section-title {
-    color: var(--text-color);
-}
-
-body.dark-mode .badge-count {
-    background: var(--light-gray);
-    color: var(--text-secondary);
-}
-
-body.dark-mode .detail-item i {
-    color: var(--text-secondary);
-}
-
-body.dark-mode .btn-secondary {
-    background: var(--light-gray);
-    color: var(--text-color);
-}
-
-body.dark-mode .btn.disabled {
-    background: var(--light-gray);
-    color: var(--text-secondary);
-}
-
-body.dark-mode .card-footer {
-    border-top-color: var(--border-color);
-}
-
-/* ==================== ACTIVE ELECTION STYLES ==================== */
-.election-card.active .card-header {
-    border-bottom: 1px solid var(--border-color);
-}
-
-.election-card.active .progress-badge {
-    background: rgba(40, 167, 69, 0.1);
-    color: #28a745;
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.election-card.active .progress-badge i {
-    font-size: 12px;
-}
-
-/* Ensure buttons are properly styled */
-.election-card .btn-primary {
-    background: var(--primary-blue);
-    color: white;
-    border: none;
-    transition: all 0.3s ease;
-}
-
-.election-card .btn-primary:hover {
-    background: var(--secondary-blue);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
-}
-
-.election-card .btn-primary i {
-    margin-right: 5px;
-}
-
-/* Empty state improvements */
-.empty-state {
-    background: var(--card-bg);
-    border-radius: 10px;
-    padding: 40px;
-    text-align: center;
-    margin: 20px 0;
-    border: 1px solid var(--border-color);
-}
-
-.empty-state .empty-icon {
-    font-size: 48px;
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-}
-
-.empty-state h3 {
-    color: var(--text-color);
-    margin-bottom: 10px;
-}
-
-.empty-state p {
-    color: var(--text-secondary);
-}
-
-/* ==================== HEADER ACTIONS BUTTONS STYLES ==================== */
-.header-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-    margin-left: auto;
-}
-
-/* Statistics Button */
-.stats-nav-btn {
-    background: linear-gradient(135deg, #845ef7, #6b3ef0);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(132, 94, 247, 0.3);
-    text-decoration: none;
-    min-width: 180px;
-    justify-content: center;
-}
-
-.stats-nav-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(132, 94, 247, 0.4);
-}
-
-.stats-nav-btn i {
-    font-size: 1.1rem;
-}
-
-/* Vote Distribution Button */
-.distribution-nav-btn {
-    background: linear-gradient(135deg, #20c997, #0ca678);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(32, 201, 151, 0.3);
-    text-decoration: none;
-    min-width: 180px;
-    justify-content: center;
-}
-
-.distribution-nav-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(32, 201, 151, 0.4);
-}
-
-.distribution-nav-btn i {
-    font-size: 1.1rem;
-}
-
-/* Dark mode for buttons */
-body.dark-mode .stats-nav-btn {
-    background: linear-gradient(135deg, #9f7aea, #805ad5);
-    box-shadow: 0 4px 12px rgba(159, 122, 234, 0.3);
-}
-
-body.dark-mode .distribution-nav-btn {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
-}
-
-/* Update results-header to accommodate the buttons */
-.results-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.header-content {
-    flex: 1;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .results-header {
-        flex-direction: column;
-        align-items: flex-start;
+    /* ==================== THEME TRANSITION FIXES ==================== */
+    /* Force main-content to have transitions */
+    .main-content {
+        transition: background-color 0.3s ease, background-image 0.3s ease !important;
     }
     
+    /* Ensure the background shows through */
+    .results-container {
+        background: transparent !important;
+    }
+    
+    /* Dark mode main content background - using :root.dark-mode */
+    :root.dark-mode .main-content {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+    }
+    
+    /* Light mode main content background */
+    :root:not(.dark-mode) .main-content {
+        background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
+    }
+    
+    /* Dark mode specific overrides */
+    :root.dark-mode .results-header {
+        background: var(--secondary-blue);
+    }
+    
+    :root.dark-mode .stat-card,
+    :root.dark-mode .election-card,
+    :root.dark-mode .empty-state {
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+    
+    :root.dark-mode .stat-card:hover,
+    :root.dark-mode .election-card:hover,
+    :root.dark-mode .empty-state:hover {
+        border-color: var(--primary-blue);
+    }
+    
+    :root.dark-mode .section-title {
+        color: var(--text-color);
+    }
+    
+    :root.dark-mode .badge-count {
+        background: var(--light-gray);
+        color: var(--text-secondary);
+    }
+    
+    :root.dark-mode .detail-item i {
+        color: var(--text-secondary);
+    }
+    
+    :root.dark-mode .btn-secondary {
+        background: var(--light-gray);
+        color: var(--text-color);
+    }
+    
+    :root.dark-mode .btn.disabled {
+        background: var(--light-gray);
+        color: var(--text-secondary);
+    }
+    
+    :root.dark-mode .card-footer {
+        border-top-color: var(--border-color);
+    }
+    
+    /* ==================== ACTIVE ELECTION STYLES ==================== */
+    .election-card.active .card-header {
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .election-card.active .progress-badge {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .election-card.active .progress-badge i {
+        font-size: 12px;
+    }
+    
+    /* Ensure buttons are properly styled */
+    .election-card .btn-primary {
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .election-card .btn-primary:hover {
+        background: var(--secondary-blue);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+    }
+    
+    .election-card .btn-primary i {
+        margin-right: 5px;
+    }
+    
+    /* Empty state improvements */
+    .empty-state {
+        background: var(--card-bg);
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        margin: 20px 0;
+        border: 1px solid var(--border-color);
+    }
+    
+    .empty-state .empty-icon {
+        font-size: 48px;
+        color: var(--text-secondary);
+        margin-bottom: 15px;
+    }
+    
+    .empty-state h3 {
+        color: var(--text-color);
+        margin-bottom: 10px;
+    }
+    
+    .empty-state p {
+        color: var(--text-secondary);
+    }
+    
+    /* ==================== HEADER ACTIONS BUTTONS STYLES ==================== */
     .header-actions {
-        width: 100%;
-        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+        margin-left: auto;
     }
     
-    .stats-nav-btn,
-    .distribution-nav-btn {
-        width: 100%;
-        min-width: auto;
+    /* Statistics Button */
+    .stats-nav-btn {
+        background: linear-gradient(135deg, #845ef7, #6b3ef0);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(132, 94, 247, 0.3);
+        text-decoration: none;
+        min-width: 180px;
+        justify-content: center;
     }
-}
-
-/* School Year Indicator */
-.school-year-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-    color: white;
-    border-radius: 30px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    margin-top: 10px;
-    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
-}
-
-.filter-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    margin-left: 5px;
-}
-</style>
+    
+    .stats-nav-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(132, 94, 247, 0.4);
+    }
+    
+    .stats-nav-btn i {
+        font-size: 1.1rem;
+    }
+    
+    /* Vote Distribution Button */
+    .distribution-nav-btn {
+        background: linear-gradient(135deg, #20c997, #0ca678);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(32, 201, 151, 0.3);
+        text-decoration: none;
+        min-width: 180px;
+        justify-content: center;
+    }
+    
+    .distribution-nav-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(32, 201, 151, 0.4);
+    }
+    
+    .distribution-nav-btn i {
+        font-size: 1.1rem;
+    }
+    
+    /* Dark mode for buttons */
+    :root.dark-mode .stats-nav-btn {
+        background: linear-gradient(135deg, #9f7aea, #805ad5);
+        box-shadow: 0 4px 12px rgba(159, 122, 234, 0.3);
+    }
+    
+    :root.dark-mode .distribution-nav-btn {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+    }
+    
+    /* Update results-header to accommodate the buttons */
+    .results-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .header-content {
+        flex: 1;
+    }
+    
+    /* School Year Indicator */
+    .school-year-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+        color: white;
+        border-radius: 30px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-top: 10px;
+        box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
+    }
+    
+    .filter-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        margin-left: 5px;
+    }
+    
+    /* Dark mode for school year indicator */
+    :root.dark-mode .school-year-indicator {
+        background: linear-gradient(135deg, #66b0ff, #88c0ff);
+        box-shadow: 0 4px 10px rgba(102, 176, 255, 0.4);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .results-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .header-actions {
+            width: 100%;
+            align-items: stretch;
+        }
+        
+        .stats-nav-btn,
+        .distribution-nav-btn {
+            width: 100%;
+            min-width: auto;
+        }
+    }
+    </style>
 {% endblock %}
 
 {% block content %}

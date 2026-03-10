@@ -1,6 +1,29 @@
 /* ==================== CONFIGURE ELECTION POSITIONS STYLES ==================== */
 /* Following the same pattern as manage_departments.css - with proper sidebar margin */
 
+/* ==================== PREVENT FOUC ==================== */
+/* Set initial dark background to prevent flash */
+body {
+    background-color: #1a1a1a; /* True black background */
+    transition: background-color 0.3s ease;
+}
+
+/* Light mode override */
+:root:not(.dark-mode) body {
+    background-color: #f5f7fb;
+}
+
+/* Quick fade-in to hide any remaining flash */
+@keyframes quickFadeIn {
+    from { opacity: 0.99; }
+    to { opacity: 1; }
+}
+
+.configure-positions-page {
+    animation: quickFadeIn 0.1s ease-out;
+    opacity: 1;
+}
+
 /* ==================== CSS VARIABLES ==================== */
 :root {
     --sidebar-width: 280px;  /* Match your sidebar width */
@@ -15,6 +38,8 @@
     
     /* Card & UI colors */
     --card-radius: 10px;
+    --border-radius-sm: 6px;
+    --border-radius: 10px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -26,6 +51,7 @@
     --text-secondary: #6b7280;
     --card-bg: #ffffff;
     --border-color: #eaeaea;
+    --input-border: #eaeaea;
     --input-bg: #ffffff;
     --disabled-bg: #f1f5f9;
     --button-primary: #667eea;
@@ -33,25 +59,30 @@
     --button-success: #10b981;
     --button-success-hover: #059669;
     --link-color: #667eea;
+    --gray-light: #f1f5f9;
+    --primary: #667eea;
 }
 
-/* Dark mode variables */
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --input-bg: #1e293b;
-    --disabled-bg: #334155;
+/* Dark mode variables - TRUE BLACK theme applied to :root.dark-mode */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --border-color: #404040;
+    --input-border: #404040;
+    --input-bg: #2d2d2d;
+    --disabled-bg: #404040;
     --button-primary: #818cf8;
     --button-primary-hover: #6366f1;
     --button-success: #34d399;
     --button-success-hover: #10b981;
     --link-color: #818cf8;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --gray-light: #404040;
+    --primary: #818cf8;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
 /* ==================== THEME TRANSITION FIXES ==================== */
@@ -66,24 +97,22 @@
     width: 100%;
 }
 
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+/* Dark mode main content background - using :root.dark-mode */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
 }
 
 /* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
+:root:not(.dark-mode) .main-content {
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
 /* ==================== PAGE LAYOUT ==================== */
 /* MAIN FIX: Add margin-left to account for sidebar - NOW RESPONSIVE */
 .config-container {
-    width: calc(100% - var(--sidebar-width));  /* Use calc instead of fixed margin */
+    width: calc(100% - var(--sidebar-width));
     margin-left: var(--sidebar-width);
-    padding: clamp(15px, 3vw, 40px);  /* Responsive padding using clamp */
+    padding: clamp(15px, 3vw, 40px);
     min-height: 100vh;
     box-sizing: border-box;
     transition: var(--transition);
@@ -92,13 +121,13 @@ body:not(.dark-mode) .main-content,
 }
 
 /* Dark mode container - inherits from main-content */
-.dark-mode .config-container {
+:root.dark-mode .config-container {
     background: transparent;
 }
 
 /* ==================== PAGE TITLE ==================== */
 .page-title {
-    font-size: clamp(1.5rem, 4vw, 2rem);  /* Responsive font size */
+    font-size: clamp(1.5rem, 4vw, 2rem);
     font-weight: 700;
     margin-bottom: 10px;
     color: var(--text-color);
@@ -153,6 +182,7 @@ body:not(.dark-mode) .main-content,
     position: relative;
     z-index: 1;
     font-weight: 600;
+    color: white;
 }
 
 .election-meta {
@@ -172,6 +202,7 @@ body:not(.dark-mode) .main-content,
     backdrop-filter: blur(5px);
     transition: var(--transition);
     font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+    color: white;
 }
 
 .election-meta span:hover {
@@ -273,20 +304,20 @@ body:not(.dark-mode) .main-content,
     font-size: 1rem;
 }
 
-/* ==================== POSITION CARDS - SMALLER SIZE ==================== */
+/* ==================== POSITION CARDS ==================== */
 .position-card {
+    display: grid;
+    grid-template-columns: 40px 1fr 280px;
+    align-items: start;
+    gap: 15px;
+    padding: 15px 20px;
     background: var(--card-bg);
     border: 2px solid var(--border-color);
     border-radius: var(--card-radius);
-    padding: clamp(10px, 2vw, 15px);
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     transition: var(--transition);
-    display: flex;
-    align-items: center;
-    gap: clamp(10px, 2vw, 15px);
     box-shadow: var(--shadow-sm);
     animation: slideIn 0.3s ease-out;
-    flex-wrap: wrap;
 }
 
 .position-card:hover {
@@ -356,32 +387,40 @@ body:not(.dark-mode) .main-content,
     box-shadow: var(--shadow-sm);
 }
 
-/* Vote limit column */
+/* ==================== POSITION CONFIG FIELDS CONTAINER ==================== */
+.position-config-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 280px;
+}
+
+/* Vote limit field */
 .vote-limit {
-    flex: 0.8;
-    min-width: 110px;
-    margin-right: 5px;
+    width: 100%;
 }
 
 .vote-limit label {
     display: block;
-    font-size: clamp(0.7rem, 1.5vw, 0.75rem);
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     font-weight: 500;
 }
 
 .vote-limit input {
     width: 100%;
-    padding: clamp(6px, 1.5vw, 8px);
+    height: 42px;
+    padding: 8px 12px;
     border: 2px solid var(--border-color);
     border-radius: 6px;
-    font-size: clamp(0.85rem, 1.8vw, 0.9rem);
+    font-size: 0.95rem;
     text-align: center;
     background: var(--input-bg);
     color: var(--text-color);
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
 }
 
 .vote-limit input:hover {
@@ -409,11 +448,87 @@ body:not(.dark-mode) .main-content,
     box-shadow: var(--shadow-sm);
 }
 
-.limit-hint {
-    font-size: 0.65rem;
+/* ==================== COURSE RESTRICTION STYLES ==================== */
+.course-restriction {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.course-restriction label {
+    font-size: 0.75rem;
+    font-weight: 500;
     color: var(--text-secondary);
-    margin-top: 3px;
-    text-align: center;
+    margin-bottom: 4px;
+}
+
+.course-select {
+    width: 100%;
+    height: 42px;
+    padding: 8px 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    transition: var(--transition);
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.course-select:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.course-select:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.course-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--disabled-bg);
+    transform: none;
+}
+
+.course-select:disabled:hover {
+    border-color: var(--border-color);
+    box-shadow: none;
+}
+
+.course-hint {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.course-hint i {
+    color: var(--primary);
+    font-size: 0.7rem;
+}
+
+.course-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 
 /* ==================== SCOPE BADGE ==================== */
@@ -499,43 +614,66 @@ body:not(.dark-mode) .main-content,
     border-color: var(--button-primary);
 }
 
-/* ==================== DARK MODE SPECIFIC OVERRIDES ==================== */
-.dark-mode .position-card {
+/* ==================== DARK MODE SPECIFIC OVERRIDES - UPDATED ==================== */
+:root.dark-mode .position-card {
     background: var(--card-bg);
     border-color: var(--border-color);
 }
 
-.dark-mode .position-card.selected {
+:root.dark-mode .position-card.selected {
     background: rgba(16, 185, 129, 0.15);
 }
 
-.dark-mode .vote-limit input {
+:root.dark-mode .vote-limit input {
     background: var(--input-bg);
     color: var(--text-color);
     border-color: var(--border-color);
 }
 
-.dark-mode .vote-limit input:disabled {
+:root.dark-mode .vote-limit input:disabled {
     background: var(--disabled-bg);
 }
 
-.dark-mode .select-all-bar {
+:root.dark-mode .course-select {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+:root.dark-mode .course-select:disabled {
+    background: var(--disabled-bg);
+}
+
+:root.dark-mode .select-all-bar {
     background: var(--card-bg);
     border-color: var(--border-color);
 }
 
-.dark-mode .instruction-box {
+:root.dark-mode .instruction-box {
     background: var(--card-bg);
 }
 
-.dark-mode .cancel-btn {
+:root.dark-mode .cancel-btn {
     background: var(--bg-color);
     color: var(--text-color);
     border-color: var(--border-color);
 }
 
-.dark-mode .cancel-btn:hover {
+:root.dark-mode .cancel-btn:hover {
     background: var(--border-color);
+}
+
+:root.dark-mode .page-title,
+:root.dark-mode .page-description {
+    color: var(--text-color);
+}
+
+:root.dark-mode .election-meta span {
+    color: white;
+}
+
+:root.dark-mode .badge {
+    background: var(--button-primary);
 }
 
 /* ==================== ANIMATIONS ==================== */
@@ -575,12 +713,21 @@ body:not(.dark-mode) .main-content,
     .config-container {
         padding: 40px 60px;
     }
+    
+    .position-card {
+        grid-template-columns: 40px 1fr 320px;
+    }
 }
 
 /* Desktop */
 @media (max-width: 1200px) {
     .config-container {
         padding: 30px;
+    }
+    
+    .position-card {
+        grid-template-columns: 40px 1fr 280px;
+        gap: 12px;
     }
 }
 
@@ -590,6 +737,16 @@ body:not(.dark-mode) .main-content,
         margin-left: 250px;
         width: calc(100% - 250px);
         padding: 25px;
+    }
+    
+    .position-card {
+        grid-template-columns: 40px 1fr 260px;
+        gap: 10px;
+        padding: 12px 15px;
+    }
+    
+    .position-config-fields {
+        min-width: 260px;
     }
 }
 
@@ -602,9 +759,9 @@ body:not(.dark-mode) .main-content,
     }
 
     .position-card {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 15px;
     }
 
     .position-card:hover {
@@ -612,19 +769,29 @@ body:not(.dark-mode) .main-content,
     }
 
     .position-checkbox {
-        flex: 0 0 auto;
+        order: 1;
         align-self: flex-start;
     }
 
     .position-info {
+        order: 2;
         width: 100%;
         min-width: auto;
     }
 
-    .vote-limit {
+    .position-config-fields {
+        order: 3;
         width: 100%;
         min-width: auto;
-        margin-right: 0;
+    }
+    
+    .vote-limit input,
+    .course-select {
+        height: 44px;
+    }
+    
+    .course-badge {
+        max-width: 100%;
     }
 
     .action-buttons {
@@ -696,6 +863,15 @@ body:not(.dark-mode) .main-content,
     .position-card {
         padding: 12px;
     }
+    
+    .vote-limit input,
+    .course-select {
+        height: 42px;
+    }
+    
+    .position-config-fields {
+        gap: 10px;
+    }
 }
 
 /* Small Mobile */
@@ -704,12 +880,14 @@ body:not(.dark-mode) .main-content,
         padding: 10px;
     }
     
-    .vote-limit {
-        min-width: 100%;
-    }
-    
     .position-checkbox {
         align-self: center;
+    }
+    
+    .vote-limit input,
+    .course-select {
+        height: 40px;
+        font-size: 0.85rem;
     }
 }
 
@@ -736,7 +914,8 @@ body:not(.dark-mode) .main-content,
 
     .action-buttons,
     .select-all-bar input,
-    .vote-limit input {
+    .vote-limit input,
+    .course-restriction {
         display: none;
     }
 }

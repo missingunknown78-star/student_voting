@@ -7,6 +7,30 @@
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/voting_trends.css') }}">
 <!-- Add Chart.js for the charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    /* Make sure the floating toggle from base is visible */
+    .floating-theme-toggle {
+        display: block !important;
+        z-index: 10000;
+    }
+    
+    /* Adjust header actions layout */
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    /* Disable transitions during theme change to prevent glitching */
+    .no-transition * {
+        transition: none !important;
+    }
+    
+    /* Ensure the floating toggle doesn't interfere with header */
+    .dashboard-header {
+        z-index: 500;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -33,31 +57,26 @@
 
 <!-- ================= KPI CARDS ================= -->
 <div class="cards">
-
     <div class="card">
         <i class="fa-solid fa-users fa-2x card-icon"></i>
         <h2>Total Students</h2>
         <p>{{ total_students if total_students else 0 }}</p>
     </div>
-
     <div class="card">
         <i class="fa-solid fa-building-columns fa-2x card-icon"></i>
         <h2>Total Elections</h2>
         <p>{{ total_elections if total_elections else 0 }}</p>
     </div>
-
     <div class="card">
         <i class="fa-solid fa-calendar-check fa-2x card-icon"></i>
         <h2>Ongoing Elections</h2>
         <p>{{ ongoing_elections if ongoing_elections else 0 }}</p>
     </div>
-
     <div class="card">
         <i class="fa-solid fa-check-to-slot fa-2x card-icon"></i>
         <h2>Voter Turnout</h2>
         <p>{{ voter_turnout if voter_turnout else "0%" }}</p>
     </div>
-
 </div>
 
 <!-- ================= VOTING TRENDS CHART ================= -->

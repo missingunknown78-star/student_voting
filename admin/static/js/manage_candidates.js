@@ -1,5 +1,5 @@
 /* PHOTO LIGHTBOX */
-// manage_candidates.js - Updated with school year support
+// manage_candidates.js - Updated with school year support and platform field
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Manage Candidates JS loaded");
@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const addScope = document.getElementById('add_scope');
     if (addScope) {
         addScope.addEventListener('change', function() {
-            toggleDepartmentField('add');
             filterElectionsByScope('add');
         });
     }
@@ -41,7 +40,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const editScope = document.getElementById('edit_scope');
     if (editScope) {
         editScope.addEventListener('change', function() {
-            toggleDepartmentField('edit');
             filterElectionsByScope('edit');
         });
     }
@@ -59,6 +57,21 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editElection) {
         editElection.addEventListener('change', function() {
             filterPositionsByElection('edit');
+        });
+    }
+    
+    // Initialize department change for course loading
+    const addDepartment = document.getElementById('add_department');
+    if (addDepartment) {
+        addDepartment.addEventListener('change', function() {
+            loadCourses('add', this.value);
+        });
+    }
+    
+    const editDepartment = document.getElementById('edit_department');
+    if (editDepartment) {
+        editDepartment.addEventListener('change', function() {
+            loadCourses('edit', this.value);
         });
     }
     
@@ -80,10 +93,7 @@ function displaySchoolYearInfo() {
     }
 }
 
-// [Rest of your existing functions remain the same]
-// ... (keep all your existing functions like initModals, initFilters, etc.)
-
-
+/* PHOTO LIGHTBOX */
 document.querySelectorAll('.clickable-photo').forEach(img => {
     img.onclick = () => {
         document.getElementById('lightbox').style.display = 'flex';
@@ -102,9 +112,12 @@ document.getElementById('openAddCandidate').onclick = e => {
     
     // Reset form and clear any notifications
     document.getElementById('addCandidateForm').reset();
-    document.getElementById('add_department_field').style.display = 'none';
     document.getElementById('addCandidateNotification').style.display = 'none';
     document.getElementById('addCandidateNotification').className = 'modal-notification';
+    
+    // Clear course dropdown
+    const addCourse = document.getElementById('add_course');
+    addCourse.innerHTML = '<option value="">Select course (optional)</option>';
     
     // Hide ALL election options initially
     const addElection = document.getElementById('add_election');
@@ -145,11 +158,22 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
         // Set party list value
         document.getElementById('edit_party_list').value = btn.dataset.party || '';
         
+        // Platform will be loaded from server - you may need to add data-platform attribute
+        // For now, we'll leave it empty and it can be populated by server-side
+        
         document.getElementById('edit_position').value = btn.dataset.position;
         
         // Handle scope and department
         const scope = btn.dataset.scope || 'campus';
         document.getElementById('edit_scope').value = scope;
+        
+        // Set department
+        document.getElementById('edit_department').value = btn.dataset.department_id || '';
+        
+        // Load courses for the department
+        if (btn.dataset.department_id) {
+            loadCourses('edit', btn.dataset.department_id);
+        }
         
         // Get the election select element
         const editElection = document.getElementById('edit_election');
@@ -168,9 +192,6 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
         }
         
         if (scope === 'department') {
-            document.getElementById('edit_department_field').style.display = 'block';
-            document.getElementById('edit_department').value = btn.dataset.department_id || '';
-            
             // Show only department elections for the selected department
             const departmentId = btn.dataset.department_id;
             if (departmentId) {
@@ -187,8 +208,6 @@ document.querySelectorAll('.openEditModal').forEach(btn => {
                 }
             }
         } else {
-            document.getElementById('edit_department_field').style.display = 'none';
-            
             // Show only campus elections
             for (let i = 0; i < editElection.options.length; i++) {
                 const option = editElection.options[i];
@@ -238,11 +257,65 @@ function closeEditModal() {
     resetEditButtonState();
 }
 
-/* SHOW/HIDE Department field & FILTER Election dropdown based on SCOPE */
-function toggleDepartmentField(mode) {
+/* Function to load courses based on department selection */
+function loadCourses(mode, departmentId) {
+    const courseSelect = document.getElementById(mode + '_course');
+    
+    // Clear current options
+    courseSelect.innerHTML = '<option value="">Select course (optional)</option>';
+    
+    if (!departmentId) {
+        return;
+    }
+    
+    // Show loading state
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = 'Loading courses...';
+    loadingOption.disabled = true;
+    courseSelect.appendChild(loadingOption);
+    
+    // Fetch courses for the selected department
+    fetch(`/admin/courses/by_department/${departmentId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Clear loading option
+            courseSelect.innerHTML = '<option value="">Select course (optional)</option>';
+            
+            if (data.courses && data.courses.length > 0) {
+                data.courses.forEach(course => {
+                    const option = document.createElement('option');
+                    option.value = course.id;
+                    // FIXED: Use course_name and course_code instead of name and code
+                    option.textContent = course.course_name + (course.course_code ? ` (${course.course_code})` : '');
+                    courseSelect.appendChild(option);
+                });
+            } else {
+                // Optional: Add a disabled option indicating no courses
+                const noCoursesOption = document.createElement('option');
+                noCoursesOption.value = '';
+                noCoursesOption.textContent = 'No courses available for this department';
+                noCoursesOption.disabled = true;
+                courseSelect.appendChild(noCoursesOption);
+            }
+        })
+        .catch(err => {
+            console.error('Error loading courses:', err);
+            courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+            
+            // Optionally show a user-friendly error message
+            showGlobalNotification('Failed to load courses', 'error');
+        });
+}
+
+/* Filter elections by scope */
+function filterElectionsByScope(mode) {
     const scope = document.getElementById(mode + '_scope').value;
-    const deptField = document.getElementById(mode + '_department_field');
-    const deptSelect = document.getElementById(mode + '_department');
     const electionSelect = document.getElementById(mode + '_election');
     const options = electionSelect.options;
     
@@ -260,16 +333,24 @@ function toggleDepartmentField(mode) {
     }
     
     if (scope === 'department') {
-        deptField.style.display = 'block';
-        deptSelect.required = true;
-        deptSelect.value = ''; // Reset department selection
+        // Get selected department
+        const departmentId = document.getElementById(mode + '_department').value;
         
-        // Don't show any department elections yet - wait for department selection
-    } else {
-        deptField.style.display = 'none';
-        deptSelect.required = false;
-        deptSelect.value = '';
-        
+        if (departmentId) {
+            // Show only department elections for the selected department
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                if (option.value === "") continue;
+                
+                const optionScope = option.getAttribute('data-scope');
+                const optionDept = option.getAttribute('data-department');
+                
+                if (optionScope === 'department' && optionDept === departmentId) {
+                    option.style.display = 'block';
+                }
+            }
+        }
+    } else if (scope === 'campus') {
         // Show only campus elections
         for (let i = 0; i < options.length; i++) {
             const option = options[i];
@@ -294,37 +375,10 @@ document.addEventListener('DOMContentLoaded', function() {
         addDept.addEventListener('change', function() {
             const scope = document.getElementById('add_scope').value;
             if (scope === 'department') {
-                const electionSelect = document.getElementById('add_election');
-                const options = electionSelect.options;
-                
-                // Hide all election options first
-                for (let i = 0; i < options.length; i++) {
-                    options[i].style.display = 'none';
-                }
-                
-                // Show the placeholder option
-                for (let i = 0; i < options.length; i++) {
-                    if (options[i].value === "") {
-                        options[i].style.display = 'block';
-                        break;
-                    }
-                }
-                
-                // Show only elections for the selected department
-                if (this.value) {
-                    for (let i = 0; i < options.length; i++) {
-                        const option = options[i];
-                        if (option.value === "") continue;
-                        
-                        const optionDept = option.getAttribute('data-department');
-                        const optionScope = option.getAttribute('data-scope');
-                        
-                        if (optionScope === 'department' && optionDept === this.value) {
-                            option.style.display = 'block';
-                        }
-                    }
-                }
+                filterElectionsByScope('add');
             }
+            // Load courses when department changes
+            loadCourses('add', this.value);
         });
     }
     
@@ -334,37 +388,10 @@ document.addEventListener('DOMContentLoaded', function() {
         editDept.addEventListener('change', function() {
             const scope = document.getElementById('edit_scope').value;
             if (scope === 'department') {
-                const electionSelect = document.getElementById('edit_election');
-                const options = electionSelect.options;
-                
-                // Hide all election options first
-                for (let i = 0; i < options.length; i++) {
-                    options[i].style.display = 'none';
-                }
-                
-                // Show the placeholder option
-                for (let i = 0; i < options.length; i++) {
-                    if (options[i].value === "") {
-                        options[i].style.display = 'block';
-                        break;
-                    }
-                }
-                
-                // Show only elections for the selected department
-                if (this.value) {
-                    for (let i = 0; i < options.length; i++) {
-                        const option = options[i];
-                        if (option.value === "") continue;
-                        
-                        const optionDept = option.getAttribute('data-department');
-                        const optionScope = option.getAttribute('data-scope');
-                        
-                        if (optionScope === 'department' && optionDept === this.value) {
-                            option.style.display = 'block';
-                        }
-                    }
-                }
+                filterElectionsByScope('edit');
             }
+            // Load courses when department changes
+            loadCourses('edit', this.value);
         });
     }
 
@@ -372,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const addScope = document.getElementById('add_scope');
     if (addScope) {
         addScope.addEventListener('change', function() {
-            toggleDepartmentField('add');
+            filterElectionsByScope('add');
         });
     }
     
@@ -380,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const editScope = document.getElementById('edit_scope');
     if (editScope) {
         editScope.addEventListener('change', function() {
-            toggleDepartmentField('edit');
+            filterElectionsByScope('edit');
         });
     }
 
@@ -562,10 +589,12 @@ function updateTable(candidates, pagination) {
                            data-first="${escapeHtml(c.first_name) || ''}" 
                            data-last="${escapeHtml(c.last_name) || ''}" 
                            data-party="${escapeHtml(c.party_list) || ''}"
+                           data-platform="${escapeHtml(c.platform) || ''}"
                            data-position="${c.position_id || ''}" 
                            data-election="${c.election_id || ''}" 
                            data-department="${escapeHtml(c.department) || ''}"
                            data-department_id="${c.department_id || ''}"
+                           data-course_id="${c.course_id || ''}"
                            data-scope="${c.scope || 'campus'}">Edit</a>
                         <a href="#" class="delete-btn delete-candidate" data-id="${c.id}">Delete</a>
                     </div>
@@ -680,11 +709,32 @@ function attachEventListeners() {
             document.getElementById('edit_first').value = btn.dataset.first;
             document.getElementById('edit_last').value = btn.dataset.last;
             document.getElementById('edit_party_list').value = btn.dataset.party || '';
+            
+            // Set platform if available
+            if (btn.dataset.platform) {
+                document.getElementById('edit_platform').value = btn.dataset.platform;
+            } else {
+                document.getElementById('edit_platform').value = '';
+            }
+            
             document.getElementById('edit_position').value = btn.dataset.position;
             
             // Handle scope and department
             const scope = btn.dataset.scope || 'campus';
             document.getElementById('edit_scope').value = scope;
+            
+            // Set department
+            document.getElementById('edit_department').value = btn.dataset.department_id || '';
+            
+            // Load courses for the department
+            if (btn.dataset.department_id) {
+                loadCourses('edit', btn.dataset.department_id).then(() => {
+                    // Set course after courses are loaded
+                    if (btn.dataset.course_id) {
+                        document.getElementById('edit_course').value = btn.dataset.course_id;
+                    }
+                });
+            }
             
             // Get the election select element
             const editElection = document.getElementById('edit_election');
@@ -703,9 +753,6 @@ function attachEventListeners() {
             }
             
             if (scope === 'department') {
-                document.getElementById('edit_department_field').style.display = 'block';
-                document.getElementById('edit_department').value = btn.dataset.department_id || '';
-                
                 // Show only department elections for the selected department
                 const departmentId = btn.dataset.department_id;
                 if (departmentId) {
@@ -722,8 +769,6 @@ function attachEventListeners() {
                     }
                 }
             } else {
-                document.getElementById('edit_department_field').style.display = 'none';
-                
                 // Show only campus elections
                 for (let i = 0; i < editElection.options.length; i++) {
                     const option = editElection.options[i];
@@ -869,8 +914,11 @@ if (addCandidateForm) {
 
                 // Reset form fields but KEEP MODAL OPEN
                 addCandidateForm.reset();
-                document.getElementById('add_department_field').style.display = 'none';
                 document.getElementById('add_scope').value = '';
+                
+                // Clear course dropdown
+                const addCourse = document.getElementById('add_course');
+                addCourse.innerHTML = '<option value="">Select course (optional)</option>';
                 
                 // Reset election dropdown - hide all and show placeholder only
                 const addElection = document.getElementById('add_election');

@@ -5,460 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Vote - {{ election.title }}</title>
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
-    <style>
-        /* All your existing styles remain EXACTLY the same */
-        .phe-info {
-            background-color: #f0f7ff;
-            border-left: 4px solid #2563eb;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
-        .phe-info h4 {
-            margin-top: 0;
-            color: #2563eb;
-        }
-        .phe-info p {
-            margin: 8px 0;
-            font-size: 14px;
-        }
-        .encryption-badge {
-            display: inline-block;
-            background: #10b981;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        
-        .party-badge {
-            display: inline-block;
-            background: #e2e8f0;
-            color: #1e293b;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            text-align: center;
-            min-width: 80px;
-            max-width: 100%;
-            box-sizing: border-box;
-            word-break: break-word;
-            white-space: normal;
-            line-height: 1.2;
-        }
-        
-        .party-badge.independent {
-            background: #f1f5f9;
-            color: #475569;
-            font-style: italic;
-            border: 1px dashed #94a3b8;
-        }
-        
-        .candidate-course {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            margin-top: 4px;
-            width: 100%;
-        }
-        
-        .course-name {
-            font-size: 0.75rem;
-            color: #64748b;
-            font-weight: 500;
-            word-break: break-word;
-            max-width: 100%;
-        }
-        
-        .candidate-row {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            padding: 10px 6px;
-            border-radius: 12px;
-            width: 100%;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-        
-        .candidate-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-        
-        .candidate-details {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-        
-        .candidate-name {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 6px 0 2px 0;
-            text-align: center;
-            word-break: break-word;
-            max-width: 100%;
-        }
-        
-        .candidate-photo {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 4px;
-            max-width: 100%;
-        }
-        
-        .candidate-platform {
-            font-size: 0.7rem;
-            color: #475569;
-            background: #f8fafc;
-            padding: 6px 10px;
-            border-radius: 12px;
-            margin-top: 8px;
-            width: 100%;
-            text-align: center;
-            word-break: break-word;
-            box-sizing: border-box;
-        }
-        
-        .candidate-radio {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .candidate-row.selected {
-            border: 2px solid #22c55e;
-            background: #f0fdf4;
-            position: relative;
-            padding: 8px 4px;
-        }
-        
-        .candidate-row.selected::after {
-            content: '✓';
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: #22c55e;
-            color: white;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
-        }
-        
-        .candidate-row.selected-multi {
-            border: 2px solid #3b82f6;
-            background: #eff6ff;
-            position: relative;
-            padding: 8px 4px;
-        }
-        
-        .candidate-row.selected-multi::after {
-            content: '✓';
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: #3b82f6;
-            color: white;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-        }
-        
-        .vote-limit-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border-radius: 12px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            margin-left: 6px;
-            vertical-align: middle;
-        }
-        
-        /* NEW: Candidate count badge */
-        .candidate-count-badge {
-            display: inline-block;
-            padding: 3px 10px;
-            background: #475569;
-            color: white;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            white-space: nowrap;
-        }
-        
-        /* UPDATED: Position header with flex for right alignment */
-        .position-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            width: 100%;
-            gap: 10px;
-        }
-        
-        .position-title-container {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            flex: 1;
-            min-width: 0; /* Allows flex item to shrink below content size */
-        }
-        
-        .position-title {
-            margin: 0;
-            font-size: 1.1rem;
-            white-space: normal;
-            word-break: break-word;
-            line-height: 1.3;
-        }
-        
-        .selection-counter {
-            margin-top: 10px;
-            padding: 6px;
-            font-size: 0.8rem;
-            color: #64748b;
-            text-align: center;
-            background: #f8fafc;
-            border-radius: 20px;
-            border: 1px dashed #cbd5e1;
-        }
-        
-        .selection-counter .selected-count {
-            font-weight: bold;
-            color: #3b82f6;
-        }
-        
-        .candidate-row {
-            cursor: pointer;
-        }
-        
-        /* Loading Overlay Styles */
-        #loadingOverlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            backdrop-filter: blur(5px);
-        }
-        
-        .loading-container {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            max-width: 90%;
-            width: 350px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-        
-        .spinner {
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid #2563eb;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 25px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .loading-container h3 {
-            color: #1e293b;
-            margin-bottom: 15px;
-            font-size: 1.4rem;
-        }
-        
-        .loading-container p {
-            color: #64748b;
-            margin: 8px 0;
-            font-size: 1rem;
-        }
-        
-        .secure-badge {
-            background: #e8f0fe;
-            color: #2563eb;
-            padding: 8px 15px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            display: inline-block;
-            margin-top: 20px;
-            font-weight: 600;
-        }
-        
-        /* UPDATED: Mobile responsive styles */
-        @media (max-width: 768px) {
-            .position-header {
-                flex-wrap: nowrap;
-            }
-            
-            .position-title {
-                font-size: 1rem;
-            }
-            
-            .vote-limit-badge {
-                font-size: 0.6rem;
-                padding: 2px 6px;
-            }
-            
-            .candidate-count-badge {
-                font-size: 0.6rem;
-                padding: 2px 8px;
-                white-space: nowrap;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .party-badge {
-                min-width: 60px;
-                font-size: 9px;
-                padding: 3px 6px;
-            }
-            
-            .candidate-photo {
-                width: 60px;
-                height: 60px;
-            }
-            
-            .candidate-name {
-                font-size: 0.7rem;
-            }
-            
-            .course-name {
-                font-size: 0.6rem;
-            }
-            
-            .candidate-row {
-                padding: 8px 3px;
-            }
-            
-            .position-candidates {
-                gap: 4px;
-            }
-            
-            .loading-container {
-                padding: 25px;
-                width: 280px;
-            }
-            
-            .spinner {
-                width: 40px;
-                height: 40px;
-                border-width: 4px;
-            }
-            
-            /* UPDATED: Keep everything in one line on mobile */
-            .position-header {
-                flex-wrap: nowrap;
-                gap: 8px;
-            }
-            
-            .position-title-container {
-                flex-wrap: nowrap;
-                gap: 4px;
-            }
-            
-            .position-title {
-                font-size: 0.9rem;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 120px;
-            }
-            
-            .vote-limit-badge {
-                font-size: 0.55rem;
-                padding: 2px 5px;
-                white-space: nowrap;
-            }
-            
-            .candidate-count-badge {
-                font-size: 0.55rem;
-                padding: 2px 6px;
-                white-space: nowrap;
-            }
-        }
-
-        @media (max-width: 360px) {
-            .party-badge {
-                min-width: 50px;
-                font-size: 8px;
-                padding: 2px 4px;
-            }
-            
-            .candidate-photo {
-                width: 50px;
-                height: 50px;
-            }
-            
-            .candidate-name {
-                font-size: 0.65rem;
-            }
-            
-            .course-name {
-                font-size: 0.55rem;
-            }
-            
-            .vote-limit-badge {
-                font-size: 0.5rem;
-                padding: 1px 4px;
-            }
-            
-            .candidate-count-badge {
-                font-size: 0.5rem;
-                padding: 1px 5px;
-            }
-            
-            .position-title {
-                font-size: 0.8rem;
-                max-width: 100px;
-            }
-        }
-    </style>
 </head>
 <body>
 
@@ -477,17 +23,20 @@
 
 <div class="vote-container">
 
-    <!-- Header -->
-    <header class="vote-header">
-        <img src="{{ url_for('student.static', filename='image/school_logo.png') }}" alt="School Logo" class="logo">
-        <h1>Student Government Elections 2025-2026</h1>
-    </header>
+    <!-- CTU Header - Flexible width like cards -->
+    <div class="ctu-header">
+        <img src="{{ url_for('admin.static', filename='images/CTU HEADER.png', _external=True) }}" 
+             alt="CTU Logo"
+             onerror="this.style.display='none';">
+    </div>
 
     <!-- Election Title -->
     <div class="election-title">
         <h2>{{ election.title }}</h2>
         <span class="encryption-badge">🔒 Encrypted Voting</span>
     </div>
+
+
 
     <!-- PHE Information -->
     <section class="phe-info">
@@ -525,21 +74,20 @@
         {% for position_name, position_data in candidates_by_position.items() %}
         {% set candidate_count = position_data.candidates|length %}
         <div class="position-group" data-position-id="{{ position_data.position_id }}" data-max-votes="{{ position_data.max_votes }}">
-            <!-- UPDATED: Position header with title + badge on left, candidate count on right -->
+            <!-- Position header with title + badge on left, candidate count on right -->
             <div class="position-header">
                 <div class="position-title-container">
                     <h3 class="position-title">
                         {{ position_name }}
-                    </h3>
-                    <span class="vote-limit-badge">
-                        {% if position_data.max_votes > 1 %}
-                            Max {{ position_data.max_votes }}
-                        {% else %}
-                            Single
+                        {% if position_data.restricted_to_course %}
+                            <span class="course-restriction-badge-inline">
+                                <i class="fa-solid fa-graduation-cap"></i> {{ position_data.restricted_to_course }}
+                            </span>
                         {% endif %}
-                    </span>
+                    </h3>
+                   
                 </div>
-                <!-- Candidate count badge in upper right - stays on same line on mobile -->
+                <!-- Candidate count badge in upper right -->
                 <span class="candidate-count-badge">
                     🗳️ {{ candidate_count }} Candidate{% if candidate_count != 1 %}s{% endif %}
                 </span>
@@ -549,17 +97,19 @@
                 {% for candidate in position_data.candidates %}
                 <label class="candidate-row" for="candidate-{{ candidate.id }}">
                     <div class="candidate-info">
+                        <!-- Photo with slightly rounded corners -->
                         <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) if candidate.photo else url_for('static', filename='default_avatar.png') }}" 
                              alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
-                             class="candidate-photo">
+                             class="candidate-photo"
+                             onerror="this.src='{{ url_for('static', filename='default_avatar.png') }}'">
                         <div class="candidate-details">
                             <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
                             
                             <!-- Course and Party List -->
                             <div class="candidate-course">
-                                <span class="course-name">{{ candidate.course }}</span>
+                                <span class="course-name">{{ candidate.course.course_name if candidate.course else 'N/A' }}</span>
                                 
-                                <!-- Party List Badge - Centered -->
+                                <!-- Party List Badge -->
                                 {% if candidate.party_list and candidate.party_list.strip() %}
                                     <span class="party-badge">{{ candidate.party_list }}</span>
                                 {% else %}
@@ -573,7 +123,7 @@
                         </div>
                     </div>
                     
-                    <!-- Input field - changes based on max_votes, with unique ID -->
+                    <!-- Input field - changes based on max_votes -->
                     {% if position_data.max_votes > 1 %}
                         <input type="checkbox" 
                                name="position_{{ position_data.position_id }}" 
@@ -615,202 +165,32 @@
             <p class="submit-note">Your vote will be encrypted for maximum privacy</p>
         </div>
     </form>
+    
+    <!-- CTU Footer - Flexible width like cards -->
+    <div class="ctu-footer">
+        <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png', _external=True) }}" 
+             alt="CTU Footer"
+             onerror="this.style.display='none';">
+        <div class="footer-text">
+            Cebu Technological University - Moalboal Campus | Student Government
+        </div>
+    </div>
 
 </div>
 
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script src="{{ url_for('student.static', filename='js/vote_page.js') }}"></script>
 <script>
-    // FIXED: Set cast timestamp in Manila time and show loading when form is submitted
-    document.getElementById('voteForm').onsubmit = function() {
-        // Get current time in Manila timezone
-        const now = new Date();
-        
-        // Format as ISO string WITHOUT the Z (which indicates UTC)
-        // This sends the local time (Manila) to the server
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        
-        // Format: YYYY-MM-DD HH:MM:SS (Manila local time)
-        const manilaTimeStr = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-        
-        document.getElementById('cast-timestamp').value = manilaTimeStr;
-        
-        // Show loading overlay
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        
-        // Disable submit button to prevent double submission
-        document.getElementById('submitBtn').disabled = true;
-        
-        return true; // Allow form to submit
-    };
-
-    // Countdown Timer
-    const deadline = new Date("{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}").getTime();
-    const countdownEl = document.getElementById("countdown");
-    const submitBtn = document.getElementById("submitBtn");
-
-    function updateCountdown() {
-        const now = new Date().getTime();
-        const distance = deadline - now;
-
-        if (distance > 0) {
-            const days = Math.floor(distance / (1000*60*60*24));
-            const hours = Math.floor((distance % (1000*60*60*24)) / (1000*60*60));
-            const minutes = Math.floor((distance % (1000*60*60)) / (1000*60));
-            const seconds = Math.floor((distance % (1000*60)) / 1000);
-            countdownEl.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-        } else {
-            countdownEl.innerHTML = "Voting period has ended ⏰";
-            if(submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = "Voting Closed";
-                submitBtn.style.backgroundColor = "#999";
-            }
-            
-            // Disable all radio buttons
-            document.querySelectorAll('.candidate-radio').forEach(radio => {
-                radio.disabled = true;
-            });
-            
-            // Hide loading overlay if shown
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 1000);
-
-    // Update selection counter for multi-select positions
-    function updateSelectionCounter(positionId, maxVotes) {
-        const checkboxes = document.querySelectorAll(`input[name="position_${positionId}"]:checked`);
-        const counter = document.getElementById(`counter-${positionId}`);
-        
-        if (counter) {
-            const countSpan = counter.querySelector('.selected-count');
-            countSpan.textContent = checkboxes.length;
-        }
-    }
-
-    // Validate vote before submission - PRESERVING YOUR VALIDATION STYLE
-    function validateVote() {
-        const positionGroups = document.querySelectorAll('.position-group');
-        let allPositionsVoted = true;
-        
-        positionGroups.forEach(group => {
-            const positionName = group.querySelector('.position-title').textContent;
-            const maxVotes = parseInt(group.dataset.maxVotes);
-            
-            if (maxVotes === 1) {
-                // Single selection - check radios
-                const radios = group.querySelectorAll('input[type="radio"]:checked');
-                if (radios.length === 0) {
-                    allPositionsVoted = false;
-                    group.style.border = "2px solid #e53e3e";
-                    group.style.borderRadius = "8px";
-                    group.style.padding = "10px";
-                } else {
-                    group.style.border = "";
-                    group.style.padding = "";
-                }
-            } else {
-                // Multiple selection - check checkboxes
-                const checkboxes = group.querySelectorAll('input[type="checkbox"]:checked');
-                if (checkboxes.length === 0) {
-                    allPositionsVoted = false;
-                    group.style.border = "2px solid #e53e3e";
-                    group.style.borderRadius = "8px";
-                    group.style.padding = "10px";
-                } else {
-                    group.style.border = "";
-                    group.style.padding = "";
-                }
-            }
-        });
-        
-        if (!allPositionsVoted) {
-            alert("Please select candidates for all positions before submitting your vote.");
-            return false;
-        }
-        
-        return confirm("Are you sure you want to submit your vote?\n\nYour vote will be encrypted and cannot be changed.");
-    }
-
-    // Add visual feedback when selecting candidates - FIXED CLICK BEHAVIOR
-    document.querySelectorAll('.candidate-row').forEach(row => {
-        const radio = row.querySelector('.candidate-radio');
-        
-        if (radio) {
-            radio.addEventListener('change', function(e) {
-                const positionGroup = this.closest('.position-group');
-                const maxVotes = parseInt(positionGroup.dataset.maxVotes);
-                const positionId = positionGroup.dataset.positionId;
-                
-                if (this.type === 'radio') {
-                    // Single selection - remove all selected, add to this
-                    positionGroup.querySelectorAll('.candidate-row').forEach(r => {
-                        r.classList.remove('selected');
-                    });
-                    if (this.checked) {
-                        row.classList.add('selected');
-                    }
-                } else {
-                    // Multiple selection - toggle blue class
-                    if (this.checked) {
-                        row.classList.add('selected-multi');
-                    } else {
-                        row.classList.remove('selected-multi');
-                    }
-                    
-                    // Enforce max limit
-                    const checkboxes = positionGroup.querySelectorAll('input[type="checkbox"]:checked');
-                    if (checkboxes.length > maxVotes) {
-                        this.checked = false;
-                        row.classList.remove('selected-multi');
-                        alert(`You can only select up to ${maxVotes} candidates for this position.`);
-                    }
-                    
-                    updateSelectionCounter(positionId, maxVotes);
-                }
-                
-                // Stop propagation to prevent double events
-                e.stopPropagation();
-            });
-        }
-        
-        // Make entire row clickable - FIXED
-        row.addEventListener('click', function(e) {
-            // Prevent clicking on the input itself to avoid double triggering
-            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
-                const radio = this.querySelector('.candidate-radio');
-                if (radio && !radio.disabled) {
-                    e.preventDefault();
-                    if (radio.type === 'radio') {
-                        radio.checked = true;
-                    } else {
-                        radio.checked = !radio.checked;
-                    }
-                    // Trigger change event manually
-                    const event = new Event('change', { bubbles: true });
-                    radio.dispatchEvent(event);
-                }
-            }
-        });
-    });
-
-    // Initialize counters
-    document.addEventListener('DOMContentLoaded', function() {
-        {% for position_name, position_data in candidates_by_position.items() %}
-            {% if position_data.max_votes > 1 %}
-                updateSelectionCounter({{ position_data.position_id }}, {{ position_data.max_votes }});
-            {% endif %}
-        {% endfor %}
-        
-        // Hide loading overlay if it was showing from previous page load
-        document.getElementById('loadingOverlay').style.display = 'none';
-    });
+    // Pass Flask variables to JavaScript
+    window.electionEndDate = "{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}";
+    
+    {% for position_name, position_data in candidates_by_position.items() %}
+        {% if position_data.max_votes > 1 %}
+            window.initializeCounter({{ position_data.position_id }}, {{ position_data.max_votes }});
+        {% endif %}
+    {% endfor %}
 </script>
 
 </body>

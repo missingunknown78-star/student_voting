@@ -1,9 +1,20 @@
 /* ================================
    MANAGE DEPARTMENTS & COURSES CSS
-   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
+   FLOATING CARDS DESIGN - WITH TRUE BLACK DARK THEME
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
+/* Set initial dark background to prevent flash */
+body {
+    background-color: #1a1a1a; /* True black background */
+    transition: background-color 0.3s ease;
+}
+
+/* Light mode override */
+:root:not(.dark-mode) body {
+    background-color: #f5f7fb;
+}
+
 /* Quick fade-in to hide any remaining flash */
 @keyframes quickFadeIn {
     from { opacity: 0.99; }
@@ -50,26 +61,47 @@
     --filter-bg: #f8f9fa;
 }
 
-/* Dark mode variables */
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --table-header-bg: #334155;
-    --table-hover: rgba(51, 65, 85, 0.3);
-    --input-bg: #1e293b;
+/* Dark mode variables - TRUE BLACK theme */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --border-color: #404040;
+    --table-header-bg: #404040;
+    --table-hover: #3d3d3d;
+    --input-bg: #2d2d2d;
     --button-primary: #3b82f6;
     --button-primary-hover: #2563eb;
     --link-color: #f87171;
     --link-bg: rgba(248, 113, 113, 0.1);
     --link-hover-bg: rgba(248, 113, 113, 0.2);
     --link-border: rgba(248, 113, 113, 0.3);
-    --filter-bg: #1e293b;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --filter-bg: #2d2d2d;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* ==================== THEME TRANSITION FIXES ==================== */
+/* Force main-content to have transitions */
+.main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
+}
+
+/* Ensure the background shows through */
+.container {
+    background: transparent !important;
+}
+
+/* Dark mode main content background - using :root.dark-mode */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
+/* Light mode main content background */
+:root:not(.dark-mode) .main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
 /* ==================== PAGE LAYOUT ==================== */
@@ -79,14 +111,8 @@
     min-height: 100vh;
     box-sizing: border-box;
     transition: var(--transition);
-    /* REMOVED gradient background - now transparent to show gradient from main template */
     background: transparent;
     position: relative;
-}
-
-/* Dark mode container */
-.dark-mode .container {
-    background: transparent;
 }
 
 /* Page Header */
@@ -120,11 +146,11 @@
 }
 
 /* Stagger animation for cards */
-.container .card:nth-child(1) { animation-delay: 0.05s; } /* Page header card? */
-.container .card:nth-child(2) { animation-delay: 0.1s; } /* Add Department */
-.container .card:nth-child(3) { animation-delay: 0.15s; } /* Departments Table */
-.container .card:nth-child(4) { animation-delay: 0.2s; } /* Add Course */
-.container .card:nth-child(5) { animation-delay: 0.25s; } /* Courses Table */
+.container .card:nth-child(1) { animation-delay: 0.05s; }
+.container .card:nth-child(2) { animation-delay: 0.1s; }
+.container .card:nth-child(3) { animation-delay: 0.15s; }
+.container .card:nth-child(4) { animation-delay: 0.2s; }
+.container .card:nth-child(5) { animation-delay: 0.25s; }
 
 /* -------------------- Card Headings -------------------- */
 .container .card h3 {
@@ -191,8 +217,8 @@
     transform: translateY(-2px);
 }
 
-.dark-mode .container .card form input[type="text"]:focus,
-.dark-mode .container .card form select:focus {
+:root.dark-mode .container .card form input[type="text"]:focus,
+:root.dark-mode .container .card form select:focus {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), var(--shadow-md);
 }
 
@@ -205,8 +231,8 @@
     padding-right: 40px;
 }
 
-.dark-mode .container .card form select {
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+:root.dark-mode .container .card form select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b0b0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
 
 .container .card form button {
@@ -236,7 +262,7 @@
     transform: translateY(-1px);
 }
 
-.dark-mode .container .card form button:hover {
+:root.dark-mode .container .card form button:hover {
     box-shadow: var(--shadow-lg);
 }
 
@@ -393,6 +419,22 @@
     background: var(--primary-blue);
 }
 
+/* Dark mode flash messages */
+:root.dark-mode .flash-message.success {
+    background: #1e3a2a;
+    color: #a3d8a3;
+}
+
+:root.dark-mode .flash-message.danger {
+    background: #3a1e1e;
+    color: #f8a5a5;
+}
+
+:root.dark-mode .flash-message.info {
+    background: #1e3a3a;
+    color: #a8d8d8;
+}
+
 @keyframes fadeInFlash {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -426,14 +468,14 @@
 /* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
     .container {
-        margin-left: 250px;  /* Adjust for slightly smaller sidebar */
+        margin-left: 250px;
         padding: 25px 30px;
     }
 }
 
 @media (max-width: 768px) {
     .container {
-        margin-left: 0;  /* Remove margin on mobile when sidebar collapses */
+        margin-left: 0;
         padding: 20px;
     }
 

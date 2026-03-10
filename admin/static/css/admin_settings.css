@@ -1,7 +1,23 @@
 /* ============================================
    STUDENT GOV E-VOTING - SETTINGS PAGE
    Optimized CSS with Dark/Light Mode Support
+   TRUE BLACK DARK THEME
 =============================================== */
+
+/* ==================== PREVENT FOUC ==================== */
+body {
+    background-color: #1a1a1a; /* True black background */
+    transition: background-color 0.3s ease;
+}
+
+:root:not(.dark-mode) body {
+    background-color: #f5f7fb;
+}
+
+@keyframes quickFadeIn {
+    from { opacity: 0.99; }
+    to { opacity: 1; }
+}
 
 /* ==================== CSS VARIABLES ==================== */
 :root {
@@ -43,41 +59,48 @@
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Dark Mode Variables */
-.dark-mode {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --bg-info: #1e3a8a20;
-    --bg-warning: #92400e20;
-    --bg-danger: #991b1b20;
+/* Dark Mode Variables - TRUE BLACK theme */
+:root.dark-mode {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #404040;
+    --bg-info: #1e3a8a40;
+    --bg-warning: #92400e40;
+    --bg-danger: #991b1b40;
     
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
+    --text-primary: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --text-muted: #808080;
     
-    --border-color: #334155;
-    --hover-bg: #2d3a4f;
+    --border-color: #404040;
+    --hover-bg: #3d3d3d;
     
     --primary-gradient: linear-gradient(135deg, #4361ee, #7209b7);
     --primary-color: #4361ee;
     --secondary-color: #7209b7;
     
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
-/* ==================== MAIN LAYOUT ==================== */
+/* ==================== THEME TRANSITION FIXES ==================== */
 .main-content {
+    transition: background-color 0.3s ease, background-image 0.3s ease !important;
     margin-left: var(--sidebar-width);
     padding: calc(var(--header-height) + 20px) 40px 40px 30px;
     min-height: 100vh;
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
-    background-attachment: fixed;
-    transition: margin-left 0.3s ease;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Dark mode main content background */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
+/* Light mode main content background */
+:root:not(.dark-mode) .main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
 .settings-container {
@@ -134,10 +157,76 @@
     border: 1px solid var(--success-color);
 }
 
+/* ==================== BACK TO DASHBOARD BUTTON ==================== */
+.back-button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.back-button i {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.back-button:hover {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    transform: translateX(-5px);
+    box-shadow: 0 4px 15px rgba(255, 85, 0, 0.3);
+}
+
+.back-button:hover i {
+    transform: translateX(-3px);
+}
+
+:root.dark-mode .back-button:hover {
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+}
+
+/* Alternative style - more prominent */
+.back-button.prominent {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(255, 85, 0, 0.2);
+}
+
+.back-button.prominent:hover {
+    transform: translateX(-5px) translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 85, 0, 0.3);
+}
+
+/* Small version for mobile or tight spaces */
+.back-button.small {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    gap: 6px;
+}
+
+.back-button.small i {
+    font-size: 0.85rem;
+}
+
 /* ==================== SETTINGS SECTIONS LAYOUT ==================== */
 .settings-sections {
     display: flex;
     gap: 30px;
+    align-items: flex-start;
+    position: relative;
 }
 
 /* ==================== SETTINGS SIDEBAR ==================== */
@@ -147,12 +236,39 @@
     border-radius: var(--card-radius);
     padding: 20px;
     box-shadow: var(--shadow-md);
-    height: fit-content;
-    position: sticky;
-    top: calc(var(--header-height) + 20px);
     border: 1px solid var(--border-color);
     backdrop-filter: blur(10px);
     flex-shrink: 0;
+    
+    /* Sticky positioning */
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    align-self: flex-start;
+    
+    /* Smooth scrolling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--bg-tertiary);
+}
+
+/* Custom scrollbar for webkit browsers */
+.settings-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.settings-sidebar::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
 }
 
 .settings-nav-item {
@@ -191,11 +307,11 @@
     box-shadow: 0 4px 15px rgba(255, 85, 0, 0.3);
 }
 
-.dark-mode .settings-nav-item.active {
+:root.dark-mode .settings-nav-item.active {
     box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
 }
 
-/* ==================== SETTINGS CONTENT ==================== */
+/* Settings content takes remaining width */
 .settings-content {
     flex: 1;
     background: var(--bg-secondary);
@@ -203,6 +319,7 @@
     padding: 30px;
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
+    min-width: 0; /* Prevents overflow issues */
 }
 
 .settings-section {
@@ -345,9 +462,9 @@
     box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.2);
 }
 
-.dark-mode .form-group input:focus,
-.dark-mode .form-group select:focus,
-.dark-mode .form-group textarea:focus {
+:root.dark-mode .form-group input:focus,
+:root.dark-mode .form-group select:focus,
+:root.dark-mode .form-group textarea:focus {
     box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
 }
 
@@ -527,52 +644,6 @@ input:checked + .toggle-slider:before {
     font-family: 'Courier New', monospace;
 }
 
-/* ==================== RESPONSIVE DESIGN ==================== */
-@media (max-width: 1200px) {
-    .main-content {
-        padding: calc(var(--header-height) + 20px) 30px 30px 25px;
-    }
-}
-
-@media (max-width: 1024px) {
-    .main-content {
-        margin-left: 0;
-        padding: calc(var(--header-height) + 15px) 20px 20px;
-    }
-    
-    .settings-sections {
-        flex-direction: column;
-    }
-    
-    .settings-sidebar {
-        width: 100%;
-        position: static;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    .main-content {
-        padding: calc(var(--header-height) + 10px) 15px 15px;
-    }
-    
-    .settings-header {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .two-col-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-}
-
-
 /* ==================== AUDIT LOGS STYLES ==================== */
 .audit-timezone {
     font-size: 0.85rem;
@@ -750,90 +821,6 @@ input:checked + .toggle-slider:before {
     }
 }
 
-
-/* ==================== STICKY SIDEBAR ==================== */
-.settings-sections {
-    display: flex;
-    gap: 30px;
-    align-items: flex-start;
-    position: relative;
-}
-
-.settings-sidebar {
-    width: 280px;
-    background: var(--bg-secondary);
-    border-radius: var(--card-radius);
-    padding: 20px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    backdrop-filter: blur(10px);
-    flex-shrink: 0;
-    
-    /* Sticky positioning */
-    position: sticky;
-    top: 20px;
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
-    align-self: flex-start;
-    
-    /* Smooth scrolling */
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) var(--bg-tertiary);
-}
-
-/* Custom scrollbar for webkit browsers */
-.settings-sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.settings-sidebar::-webkit-scrollbar-track {
-    background: var(--bg-tertiary);
-    border-radius: 10px;
-}
-
-.settings-sidebar::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 10px;
-}
-
-.settings-sidebar::-webkit-scrollbar-thumb:hover {
-    background: var(--secondary-color);
-}
-
-/* Settings content takes remaining width */
-.settings-content {
-    flex: 1;
-    background: var(--bg-secondary);
-    border-radius: var(--card-radius);
-    padding: 30px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    min-width: 0; /* Prevents overflow issues */
-}
-
-/* When sidebar hits bottom of container, it stops sticking */
-.settings-sections::after {
-    content: '';
-    display: table;
-    clear: both;
-}
-
-/* Responsive behavior */
-@media (max-width: 1024px) {
-    .settings-sections {
-        flex-direction: column;
-    }
-    
-    .settings-sidebar {
-        width: 100%;
-        position: static;
-        max-height: none;
-        overflow-y: visible;
-        margin-bottom: 20px;
-    }
-}
-
-
 /* ==================== 2FA SETUP STYLES ==================== */
 .twofa-setup-container {
     text-align: center;
@@ -936,7 +923,7 @@ input:checked + .toggle-slider:before {
     transform: scale(1.02);
 }
 
-.dark-mode .twofa-setup-container input[type="text"]:focus {
+:root.dark-mode .twofa-setup-container input[type="text"]:focus {
     box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.2);
 }
 
@@ -972,7 +959,7 @@ input:checked + .toggle-slider:before {
     cursor: not-allowed;
 }
 
-.dark-mode .twofa-setup-container button[type="submit"] {
+:root.dark-mode .twofa-setup-container button[type="submit"] {
     box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
 }
 
@@ -1116,17 +1103,17 @@ input:checked + .toggle-slider:before {
 }
 
 /* Dark mode specific adjustments */
-.dark-mode .twofa-setup-container img {
-    background: #1e293b;
-    border-color: #475569;
+:root.dark-mode .twofa-setup-container img {
+    background: #2d2d2d;
+    border-color: #404040;
 }
 
-.dark-mode .backup-code {
-    background: #1e293b;
-    border-color: #475569;
+:root.dark-mode .backup-code {
+    background: #2d2d2d;
+    border-color: #404040;
 }
 
-.dark-mode .backup-code:hover {
+:root.dark-mode .backup-code:hover {
     border-color: var(--primary-color);
 }
 
@@ -1182,80 +1169,38 @@ input:checked + .toggle-slider:before {
     margin: 20px auto;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1200px) {
+    .main-content {
+        padding: calc(var(--header-height) + 20px) 30px 30px 25px;
+    }
 }
 
-
-/* ==================== BACK TO DASHBOARD BUTTON ==================== */
-.back-button {
-    padding: 12px 24px;
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    text-decoration: none;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 0;
+        padding: calc(var(--header-height) + 15px) 20px 20px;
+    }
+    
+    .settings-sections {
+        flex-direction: column;
+    }
+    
+    .settings-sidebar {
+        width: 100%;
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+        margin-bottom: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
 }
 
-.back-button i {
-    font-size: 1rem;
-    transition: transform 0.3s ease;
-}
-
-.back-button:hover {
-    background: var(--primary-gradient);
-    color: white;
-    border-color: transparent;
-    transform: translateX(-5px);
-    box-shadow: 0 4px 15px rgba(255, 85, 0, 0.3);
-}
-
-.back-button:hover i {
-    transform: translateX(-3px);
-}
-
-.dark-mode .back-button:hover {
-    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
-}
-
-/* Alternative style - more prominent */
-.back-button.prominent {
-    background: var(--primary-gradient);
-    color: white;
-    border: none;
-    box-shadow: 0 4px 12px rgba(255, 85, 0, 0.2);
-}
-
-.back-button.prominent:hover {
-    transform: translateX(-5px) translateY(-2px);
-    box-shadow: 0 8px 20px rgba(255, 85, 0, 0.3);
-}
-
-/* Small version for mobile or tight spaces */
-.back-button.small {
-    padding: 8px 16px;
-    font-size: 0.85rem;
-    gap: 6px;
-}
-
-.back-button.small i {
-    font-size: 0.85rem;
-}
-
-/* Responsive adjustments */
 @media (max-width: 768px) {
-    .back-button {
-        padding: 10px 18px;
-        font-size: 0.9rem;
+    .main-content {
+        padding: calc(var(--header-height) + 10px) 15px 15px;
     }
     
     .settings-header {
@@ -1267,6 +1212,35 @@ input:checked + .toggle-slider:before {
     .back-button:hover {
         transform: translateY(-2px);
     }
+    
+    .two-col-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .pagination {
+        flex-direction: column;
+        gap: 10px;
+    }
 }
 
+@media (max-width: 768px) {
+    .back-button {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+}
 
+/* ==================== ACCESSIBILITY ==================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

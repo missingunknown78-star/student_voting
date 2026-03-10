@@ -1,17 +1,17 @@
 /* ================================
    CREATE/MANAGE ELECTIONS PAGE CSS
-   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
+   FLOATING CARDS DESIGN - WITH TRUE BLACK DARK THEME
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
 body {
-    background-color: #0f172a; /* Dark background as default */
+    background-color: #1a1a1a; /* True black background */
     transition: background-color 0.3s ease;
 }
 
 /* Light mode override */
-body:not(.dark-mode) {
+:root:not(.dark-mode) body {
     background-color: #f5f7fb;
 }
 
@@ -50,22 +50,24 @@ body:not(.dark-mode) {
     --bg-color: #f5f7fb;
     --text-color: #2c3e50;
     --text-secondary: #6c757d;
-    --card-bg: white;
+    --card-bg: #ffffff;
+    --input-bg: #f8fafc;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Dark mode variables */
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --light-gray: #334155;
-    --dark-gray: #e2e8f0;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+/* Dark mode variables - applied to :root.dark-mode */
+:root.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --card-bg: #2d2d2d;
+    --light-gray: #404040;
+    --dark-gray: #f0f0f0;
+    --border-color: #404040;
+    --input-bg: #404040;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
 /* ==================== THEME TRANSITION FIXES ==================== */
@@ -79,45 +81,73 @@ body:not(.dark-mode) {
     background: transparent !important;
 }
 
-/* Dark mode main content background */
-body.dark-mode .main-content,
-.main-content.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+/* Dark mode main content background - targeting root.dark-mode */
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
 }
 
 /* Light mode main content background */
-body:not(.dark-mode) .main-content,
-.main-content:not(.dark-mode) {
+:root:not(.dark-mode) .main-content {
     background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
 }
 
-/* Dark mode specific overrides */
-body.dark-mode .election-form-container {
-    background: var(--card-bg);
-    border-color: var(--border-color);
+/* Dark mode specific overrides - using :root.dark-mode */
+:root.dark-mode .election-form-container {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
 }
 
-body.dark-mode .election-form-group input,
-body.dark-mode .election-form-group select,
-body.dark-mode .election-form-group textarea {
-    background: var(--light-gray);
-    color: var(--text-color);
-    border-color: var(--border-color);
+:root.dark-mode .election-form-group input,
+:root.dark-mode .election-form-group select,
+:root.dark-mode .election-form-group textarea {
+    background: var(--input-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
 }
 
-body.dark-mode .election-card {
-    background: var(--card-bg);
-    border-color: var(--border-color);
+:root.dark-mode .election-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
 }
 
-body.dark-mode .election-card.active {
-    background: rgba(16, 185, 129, 0.1);
+:root.dark-mode .election-card.active {
+    background: rgba(16, 185, 129, 0.15) !important;
 }
 
-body.dark-mode .election-list p {
-    background: var(--card-bg);
-    border-color: var(--border-color);
-    color: var(--text-secondary);
+:root.dark-mode .election-list p {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+:root.dark-mode .page-title,
+:root.dark-mode .page-description {
+    color: var(--text-color) !important;
+}
+
+:root.dark-mode h2,
+:root.dark-mode h3,
+:root.dark-mode h4 {
+    color: var(--text-color) !important;
+}
+
+:root.dark-mode .election-form-group label {
+    color: var(--text-color) !important;
+}
+
+:root.dark-mode .year-level-container {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--border-color) !important;
+}
+
+:root.dark-mode .reset-btn {
+    background: var(--input-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+:root.dark-mode .reset-btn:hover {
+    background: var(--border-color) !important;
 }
 
 /* ==================== PAGE LAYOUT ==================== */
@@ -125,7 +155,6 @@ body.dark-mode .election-list p {
     margin-left: var(--sidebar-width);
     padding: 20px 40px;
     min-height: 100vh;
-    /* REMOVED solid background - now transparent to show gradient from main template */
     background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
@@ -214,7 +243,7 @@ body.dark-mode .election-list p {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%; /* Ensure form groups take full width */
+    width: 100%;
 }
 
 .create-election-page .election-form-group label {
@@ -231,11 +260,11 @@ body.dark-mode .election-list p {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 0.95rem;
-    background: var(--light-gray);
+    background: var(--input-bg);
     color: var(--text-color);
     transition: var(--transition);
     font-family: inherit;
-    width: 100%; /* Make all inputs full width */
+    width: 100%;
     box-sizing: border-box;
     box-shadow: var(--shadow-sm);
 }
@@ -323,11 +352,6 @@ body.dark-mode .election-list p {
     cursor: pointer;
 }
 
-/* Dark mode adjustments */
-body.dark-mode .year-level-container {
-    background: rgba(255, 255, 255, 0.05);
-}
-
 /* Disabled state for year checkboxes */
 .year-checkbox-item input[type="checkbox"]:disabled {
     opacity: 0.5;
@@ -395,7 +419,7 @@ body.dark-mode .year-level-container {
     border-radius: 8px;
     cursor: pointer;
     transition: var(--transition);
-    width: 100%; /* Full width button */
+    width: 100%;
     margin-top: 10px;
     box-sizing: border-box;
     box-shadow: var(--shadow-sm);
@@ -423,7 +447,6 @@ body.dark-mode .year-level-container {
 }
 
 /* ==================== DEPARTMENT SELECTION ==================== */
-/* Make department group full width when displayed */
 .create-election-page #department_group {
     width: 100%;
 }
@@ -557,6 +580,50 @@ body.dark-mode .year-level-container {
     flex-shrink: 0;
 }
 
+/* Election success message */
+.flash-message.election-success {
+    background: #d4edda;
+    color: #155724;
+    border-left-color: #28a745;
+}
+
+.flash-message.election-success::before {
+    content: '✓';
+    background: #28a745;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* Election error message */
+.flash-message.election-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left-color: #dc3545;
+}
+
+.flash-message.election-error::before {
+    content: '⚠';
+    background: #dc3545;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
 /* Close button */
 .flash-message .close-btn {
     margin-left: auto;
@@ -585,30 +652,32 @@ body.dark-mode .year-level-container {
 }
 
 /* Dark mode flash messages */
-body.dark-mode .flash-message.success {
-    background: #1e3a2a;
-    color: #a3d8a3;
-    border-left-color: #28a745;
+:root.dark-mode .flash-message.success,
+:root.dark-mode .flash-message.election-success {
+    background: #1e3a2a !important;
+    color: #a3d8a3 !important;
+    border-left-color: #28a745 !important;
 }
 
-body.dark-mode .flash-message.error,
-body.dark-mode .flash-message.danger {
-    background: #3a1e1e;
-    color: #f8a5a5;
-    border-left-color: #dc3545;
+:root.dark-mode .flash-message.error,
+:root.dark-mode .flash-message.danger,
+:root.dark-mode .flash-message.election-error {
+    background: #3a1e1e !important;
+    color: #f8a5a5 !important;
+    border-left-color: #dc3545 !important;
 }
 
-body.dark-mode .flash-message.warning {
-    background: #3a2e1e;
-    color: #f0d78c;
-    border-left-color: #ffc107;
+:root.dark-mode .flash-message.warning {
+    background: #3a2e1e !important;
+    color: #f0d78c !important;
+    border-left-color: #ffc107 !important;
 }
 
-body.dark-mode .flash-message.info,
-body.dark-mode .flash-message.election {
-    background: #1e3a3a;
-    color: #a8d8d8;
-    border-left-color: #17a2b8;
+:root.dark-mode .flash-message.info,
+:root.dark-mode .flash-message.election {
+    background: #1e3a3a !important;
+    color: #a8d8d8 !important;
+    border-left-color: #17a2b8 !important;
 }
 
 /* ==================== SECTION DIVIDER ==================== */
@@ -656,10 +725,6 @@ body.dark-mode .flash-message.election {
     border-left: 4px solid var(--success-green);
     background: rgba(16, 185, 129, 0.05);
     box-shadow: var(--shadow-md);
-}
-
-.dark-mode .create-election-page .election-card.active {
-    background: rgba(16, 185, 129, 0.1);
 }
 
 .create-election-page .election-card.active:hover {
@@ -883,65 +948,4 @@ body.dark-mode .flash-message.election {
 .create-election-page .election-form-group textarea:focus-visible {
     outline: 2px solid var(--primary-blue);
     outline-offset: 1px;
-}
-
-
-
-/* Add these styles to your create_election.css */
-
-/* Election success message */
-.flash-message.election-success {
-    background: #d4edda;
-    color: #155724;
-    border-left-color: #28a745;
-}
-
-.flash-message.election-success::before {
-    content: '✓';
-    background: #28a745;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-/* Election error message */
-.flash-message.election-error {
-    background: #f8d7da;
-    color: #721c24;
-    border-left-color: #dc3545;
-}
-
-.flash-message.election-error::before {
-    content: '⚠';
-    background: #dc3545;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-/* Dark mode support */
-body.dark-mode .flash-message.election-success {
-    background: #1e3a2a;
-    color: #a3d8a3;
-    border-left-color: #28a745;
-}
-
-body.dark-mode .flash-message.election-error {
-    background: #3a1e1e;
-    color: #f8a5a5;
-    border-left-color: #dc3545;
 }

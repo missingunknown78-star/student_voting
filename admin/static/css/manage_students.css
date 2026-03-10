@@ -1,18 +1,17 @@
 /* ================================
    MANAGE STUDENTS PAGE CSS
-   Scoped to match import_students.css style
-   FLOATING CARDS DESIGN - WITH PROPER BACKGROUND
+   WITH PROPER DARK THEME SUPPORT
    ================================ */
 
 /* ==================== PREVENT FOUC ==================== */
 /* Set initial dark background to prevent flash */
-body {
-    background-color: #0f172a; /* Dark background as default */
+html {
+    background-color: #1a1a1a; /* Dark background as default */
     transition: background-color 0.3s ease;
 }
 
 /* Light mode override */
-body:not(.dark-mode) {
+:root:not(.dark-mode) {
     background-color: #f5f7fb;
 }
 
@@ -28,47 +27,75 @@ body:not(.dark-mode) {
 
 /* ==================== CSS VARIABLES ==================== */
 :root {
-    /* Light mode colors */
-    --primary-blue: #1a56db;
-    --secondary-blue: #3b82f6;
-    --accent-teal: #06b6d4;
-    --success-green: #10b981;
-    --warning-amber: #f59e0b;
-    --danger-red: #ef4444;
-    --dark-gray: #1f2937;
-    --light-gray: #f8fafc;
+    /* Light mode colors - from sample_testing.css */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --accent-color: #0066cc;
+    --accent-hover: #0052a3;
+    --border-color: #dddddd;
+    --card-bg: #ffffff;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --toggle-bg: #e0e0e0;
+    --toggle-color: #333;
+    --header-bg: #ffffff;
+    --table-header-bg: #f5f5f5;
+    --table-hover: #f9f9f9;
+    --modal-overlay: rgba(0, 0, 0, 0.5);
+    --filter-bg: #f8f9fa;
+    --success-green: #27ae60;
+    --danger-red: #c0392b;
     --sidebar-width: 280px;
-    --header-height: 80px;
     --card-radius: 12px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --border-color: rgba(226, 232, 240, 0.8);
-    --bg-color: #f5f7fb;
-    --text-color: #2c3e50;
-    --text-secondary: #6c757d;
-    --card-bg: white;
-    --header-bg: rgba(255, 255, 255, 0.95);
-    --filter-bg: #f8f9fa;
-    --table-hover: #f9f9f9;
 }
 
-/* Dark mode variables */
-.dark-mode {
-    --bg-color: #0f172a;
-    --text-color: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --card-bg: #1e293b;
-    --header-bg: rgba(30, 41, 59, 0.95);
-    --light-gray: #334155;
-    --dark-gray: #e2e8f0;
-    --border-color: rgba(51, 65, 85, 0.8);
-    --filter-bg: #1e293b;
-    --table-hover: rgba(51, 65, 85, 0.3);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+/* Dark mode variables - exactly like sample_testing.css */
+:root.dark-mode {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --accent-color: #66b0ff;
+    --accent-hover: #88c0ff;
+    --border-color: #404040;
+    --card-bg: #2d2d2d;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --toggle-bg: #404040;
+    --toggle-color: #f0f0f0;
+    --header-bg: #1a1a1a;
+    --table-header-bg: #2d2d2d;
+    --table-hover: #3d3d3d;
+    --modal-overlay: rgba(0, 0, 0, 0.8);
+    --filter-bg: #2d2d2d;
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* System preference - only if no manual override */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light-mode):not(.dark-mode) {
+        --bg-primary: #1a1a1a;
+        --bg-secondary: #2d2d2d;
+        --text-primary: #f0f0f0;
+        --text-secondary: #b0b0b0;
+        --accent-color: #66b0ff;
+        --accent-hover: #88c0ff;
+        --border-color: #404040;
+        --card-bg: #2d2d2d;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        --toggle-bg: #404040;
+        --toggle-color: #f0f0f0;
+        --header-bg: #1a1a1a;
+        --table-header-bg: #2d2d2d;
+        --table-hover: #3d3d3d;
+        --modal-overlay: rgba(0, 0, 0, 0.8);
+        --filter-bg: #2d2d2d;
+    }
 }
 
 /* ==================== PAGE LAYOUT ==================== */
@@ -76,7 +103,6 @@ body:not(.dark-mode) {
     margin-left: var(--sidebar-width);
     padding: 30px 40px;
     min-height: 100vh;
-    /* REMOVED solid background - now transparent to show gradient from main template */
     background: transparent;
     box-sizing: border-box;
     transition: var(--transition);
@@ -87,7 +113,7 @@ body:not(.dark-mode) {
     font-size: 1.8rem;
     font-weight: 600;
     margin-bottom: 8px;
-    color: var(--text-color);
+    color: var(--text-primary);
     transition: var(--transition);
 }
 
@@ -135,15 +161,15 @@ body:not(.dark-mode) {
     border: 1px solid var(--border-color);
     font-size: 0.9rem;
     background: var(--card-bg);
-    color: var(--text-color);
+    color: var(--text-primary);
     transition: var(--transition);
 }
 
 .manage-students-page .filter-bar select:focus,
 .manage-students-page .filter-bar input:focus {
     outline: none;
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(102, 176, 255, 0.2);
 }
 
 .manage-students-page .filter-bar select {
@@ -191,7 +217,7 @@ body:not(.dark-mode) {
 }
 
 .manage-students-page .students-table th {
-    background-color: var(--primary-blue);
+    background-color: var(--accent-color);
     color: white;
     padding: 12px 15px;
     text-align: left;
@@ -203,7 +229,7 @@ body:not(.dark-mode) {
 .manage-students-page .students-table td {
     padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
-    color: var(--text-color);
+    color: var(--text-primary);
     transition: var(--transition);
 }
 
@@ -259,12 +285,12 @@ body:not(.dark-mode) {
 }
 
 .manage-students-page .edit-btn {
-    background-color: var(--secondary-blue);
+    background-color: var(--accent-color);
     color: #fff;
 }
 
 .manage-students-page .edit-btn:hover {
-    background-color: var(--primary-blue);
+    background-color: var(--accent-hover);
     transform: translateY(-1px);
 }
 
@@ -294,21 +320,21 @@ body:not(.dark-mode) {
     cursor: pointer;
     border-radius: 4px;
     font-size: 0.9rem;
-    color: var(--text-color);
+    color: var(--text-primary);
     transition: var(--transition);
     min-width: 36px;
 }
 
 .manage-students-page .pagination button:hover:not(:disabled) {
-    background-color: var(--primary-blue);
+    background-color: var(--accent-color);
     color: white;
-    border-color: var(--primary-blue);
+    border-color: var(--accent-color);
 }
 
 .manage-students-page .pagination button:disabled {
-    background-color: var(--primary-blue);
+    background-color: var(--accent-color);
     color: white;
-    border-color: var(--primary-blue);
+    border-color: var(--accent-color);
     cursor: default;
 }
 
@@ -403,11 +429,11 @@ body:not(.dark-mode) {
     color: white;
     font-size: 0.9rem;
     animation: fadeInFlash 0.5s forwards;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.dark-mode .manage-students-page .flash-message {
+:root.dark-mode .manage-students-page .flash-message {
     border: 1px solid var(--border-color);
 }
 
@@ -420,7 +446,7 @@ body:not(.dark-mode) {
 }
 
 .manage-students-page .flash-message.info {
-    background: var(--primary-blue);
+    background: var(--accent-color);
 }
 
 @keyframes fadeInFlash {
@@ -432,8 +458,6 @@ body:not(.dark-mode) {
     from { opacity: 1; transform: translateY(0); }
     to { opacity: 0; transform: translateY(-10px); }
 }
-
-
 
 /* Page header with button */
 .page-header-with-button {
@@ -494,86 +518,49 @@ body:not(.dark-mode) {
 }
 
 /* Dark mode support */
-body.dark-mode .request-deletion-btn {
+:root.dark-mode .request-deletion-btn {
     background: linear-gradient(135deg, #d35400, #a04000);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-body.dark-mode .request-deletion-btn:hover {
+:root.dark-mode .request-deletion-btn:hover {
     background: linear-gradient(135deg, #e67e22, #d35400);
 }
 
-
-/* Page header with button - UPDATED for right alignment */
-.page-header-with-button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    width: 100%;
-}
-
-.header-left {
-    flex: 1;
-    display: flex;
-    justify-content: flex-start;
-}
-
-.header-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-}
-
-.header-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end; /* This pushes the button to the right */
-}
-
-.page-header-with-button .page-title {
-    margin-bottom: 0;
-    text-align: left;
-}
-
-/* Request Deletion Button - Right side */
-.request-deletion-btn {
+/* School Year Indicator - Now positioned in header-right */
+.school-year-indicator {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #e67e22, #d35400);
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
     color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.3);
+    margin-right: 15px;
     transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3);
-    white-space: nowrap; /* Prevents button text from wrapping */
+    white-space: nowrap;
 }
 
-.request-deletion-btn:hover {
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(230, 126, 34, 0.4);
-    color: white;
-}
-
-.request-deletion-btn i {
-    font-size: 1.1rem;
+.school-year-indicator i {
+    font-size: 0.9rem;
 }
 
 /* Dark mode support */
-body.dark-mode .request-deletion-btn {
-    background: linear-gradient(135deg, #d35400, #a04000);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+:root.dark-mode .school-year-indicator {
+    background: linear-gradient(135deg, #66b0ff, #88c0ff);
+    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.4);
 }
 
-body.dark-mode .request-deletion-btn:hover {
-    background: linear-gradient(135deg, #e67e22, #d35400);
+/* Header right container */
+.header-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
 }
 
 /* Responsive adjustments */
@@ -590,79 +577,21 @@ body.dark-mode .request-deletion-btn:hover {
         justify-content: center;
     }
     
-    .request-deletion-btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-/* School Year Indicator - Now positioned in header-right beside Request Deletion button */
-.school-year-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-    color: white;
-    border-radius: 30px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    box-shadow: 0 4px 10px rgba(26, 86, 219, 0.3);
-    margin-right: 15px;  /* Changed from margin-left to margin-right */
-    transition: all 0.3s ease;
-    white-space: nowrap;  /* Prevents text wrapping */
-}
-
-.school-year-indicator i {
-    font-size: 0.9rem;
-}
-
-/* Dark mode support */
-body.dark-mode .school-year-indicator {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
-}
-
-/* Header right container - now flex row to accommodate both elements */
-.header-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 15px;
-}
-
-/* Remove school year indicator styles from header-left */
-.header-left {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
     .header-right {
         flex-direction: column;
-        width: 100%;
         gap: 10px;
     }
     
     .school-year-indicator {
-        margin-right: 0;  /* Remove right margin on mobile */
+        margin-right: 0;
         width: 100%;
         justify-content: center;
-        white-space: normal;  /* Allow wrapping on mobile */
+        white-space: normal;
     }
     
     .request-deletion-btn {
         width: 100%;
         justify-content: center;
-    }
-    
-    .header-left {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
     }
 }
 
@@ -671,6 +600,11 @@ body.dark-mode .school-year-indicator {
         flex-direction: column;
         text-align: center;
         padding: 8px;
-        gap: 4px;  /* Smaller gap on mobile */
+        gap: 4px;
     }
+}
+
+/* Disable transitions during theme change */
+.no-transition * {
+    transition: none !important;
 }
