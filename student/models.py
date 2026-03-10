@@ -61,6 +61,9 @@ class Vote(db.Model):
     # FIXED: Change from String(256) to Text to store full JSON
     finder_hash = db.Column(db.Text, nullable=True)  # Changed to Text
     
+    # INSTEAD OF plain text candidate_ids_at_time, use a hash
+    candidate_list_hash = db.Column(db.String(64), nullable=True)  # SHA256 hash
+    
     cast_timestamp = db.Column(db.DateTime, nullable=True)
     recorded_timestamp = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -68,6 +71,8 @@ class Vote(db.Model):
     # Relationships
     student = db.relationship("Student", backref="student_votes")
     election = db.relationship("Election", backref="election_votes")
+    
+
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -251,3 +256,78 @@ class DeletionRequest(db.Model):
 
 
     
+
+class ContactInfo(db.Model):
+    __tablename__ = 'contact_info'
+    
+    id = db.Column(db.Integer, primary_key=True, default=1)  # Always ID 1 for single row
+    email = db.Column(db.String(100), nullable=False, default='election@school.edu')
+    phone = db.Column(db.String(50), nullable=False, default='0912-345-6789')
+    committee_name = db.Column(db.String(100), nullable=False, default='Election Committee')
+    additional_info = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True)
+    
+    # Relationship - reference Student instead of User
+    updater = db.relationship('Student', foreign_keys=[updated_by], backref='contact_updates')
+    
+    @classmethod
+    def get_settings(cls):
+        """Get the single contact info settings row"""
+        settings = cls.query.get(1)
+        if not settings:
+            settings = cls(id=1)
+            db.session.add(settings)
+            db.session.commit()
+        return settings
+
+
+class HelpPageContent(db.Model):
+    __tablename__ = 'help_page_content'
+    
+    id = db.Column(db.Integer, primary_key=True, default=1)  # Always ID 1 for single row
+    common_issues = db.Column(db.Text, nullable=True)
+    additional_resources = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True)
+    
+    # Relationship - reference Student instead of User
+    updater = db.relationship('Student', foreign_keys=[updated_by], backref='help_content_updates')
+    
+    @classmethod
+    def get_content(cls):
+        """Get the single help page content row"""
+        content = cls.query.get(1)
+        if not content:
+            content = cls(id=1)
+            db.session.add(content)
+            db.session.commit()
+        return content
+    
+
+
+class GuidelinesContent(db.Model):
+    __tablename__ = 'guidelines_content'
+    
+    id = db.Column(db.Integer, primary_key=True, default=1)
+    purpose = db.Column(db.Text, nullable=True)
+    voting_rules = db.Column(db.Text, nullable=True)
+    how_to_vote = db.Column(db.Text, nullable=True)
+    privacy_security = db.Column(db.Text, nullable=True)
+    important_reminders = db.Column(db.Text, nullable=True)
+    fingerprint_info = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='SET NULL'), nullable=True)
+    
+    # Relationship - make it optional
+    updater = db.relationship('Student', foreign_keys=[updated_by], backref='guidelines_updates')
+    
+    @classmethod
+    def get_content(cls):
+        """Get the single guidelines content row"""
+        content = cls.query.get(1)
+        if not content:
+            content = cls(id=1)
+            db.session.add(content)
+            db.session.commit()
+        return content

@@ -324,39 +324,85 @@ html {
     to { opacity: 0; transform: translateY(-10px); }
 }
 
-/* ==================== FLOATING INFO BUTTON ==================== */
+/* ==================== FLOATING INFO BUTTON - FORCED TO VERY RIGHT ==================== */
 .info-float-btn {
-    position: fixed;
-    top: 20px;
-    right: 25px;
-    width: 45px;
-    height: 45px;
-    background: var(--accent-color);
-    color: white;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    box-shadow: var(--shadow-md);
-    z-index: 999;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: fixed !important;
+    top: 20px !important;
+    right: 25px !important;
+    left: auto !important;  /* Ensure left doesn't interfere */
+    width: 45px !important;
+    height: 45px !important;
+    background: var(--accent-color) !important;
+    color: white !important;
+    border-radius: 50% !important;
+    border: none !important;
+    cursor: pointer !important;
+    font-size: 20px !important;
+    box-shadow: var(--shadow-md) !important;
+    z-index: 999 !important;
+    transition: var(--transition) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;  /* Remove any margins */
+    transform: none !important;  /* Reset any transforms */
 }
 
+/* Ensure it stays right even on hover */
 .info-float-btn:hover {
-    transform: scale(1.1) rotate(15deg);
-    background: var(--accent-hover);
-    box-shadow: var(--shadow-lg);
+    right: 25px !important;
+    left: auto !important;
+    transform: scale(1.1) rotate(15deg) !important;  /* Keep the hover effect but maintain right position */
+    background: var(--accent-hover) !important;
+    box-shadow: var(--shadow-lg) !important;
 }
 
+/* Dark mode specific */
 :root.dark-mode .info-float-btn {
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-md) !important;
 }
 
 :root.dark-mode .info-float-btn:hover {
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-lg) !important;
+}
+
+/* Responsive adjustments - keep it right on all screen sizes */
+@media (max-width: 768px) {
+    .info-float-btn {
+        top: 15px !important;
+        right: 15px !important;
+        left: auto !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .info-float-btn {
+        top: 10px !important;
+        right: 10px !important;
+        left: auto !important;
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 18px !important;
+    }
+}
+
+/* Extra safe override - target any parent that might affect it */
+body .info-float-btn,
+main .info-float-btn,
+.container .info-float-btn,
+.content .info-float-btn {
+    right: 25px !important;
+    left: auto !important;
+}
+
+@media (max-width: 768px) {
+    body .info-float-btn,
+    main .info-float-btn,
+    container .info-float-btn,
+    content .info-float-btn {
+        right: 15px !important;
+        left: auto !important;
+    }
 }
 
 /* ==================== STUDENTS TABLE - FLOATING CARD ==================== */
@@ -545,15 +591,22 @@ html {
     vertical-align: middle;
 }
 
-/* ==================== INFO MODAL - FLOATING CARD ==================== */
+/* ==================== INFO MODAL - FLOATING CARD - CENTERED ==================== */
 .info-modal-overlay {
-    display: none;
+    display: none;  /* Hidden by default */
     position: fixed;
     inset: 0;
     background: var(--modal-overlay);
     backdrop-filter: blur(5px);
     z-index: 1000;
     animation: fadeInOverlay 0.2s ease-out;
+}
+
+/* When modal is active (set by JavaScript) */
+.info-modal-overlay.active {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
 }
 
 @keyframes fadeInOverlay {
@@ -565,7 +618,7 @@ html {
     background: var(--card-bg);
     width: 90%;
     max-width: 480px;
-    margin: 120px auto;
+    margin: 0;
     border-radius: var(--card-radius);
     padding: 1.5rem 1.8rem;
     box-shadow: var(--shadow-lg);
@@ -573,6 +626,27 @@ html {
     border: 1px solid var(--border-color);
     transition: var(--transition);
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Rest of your modal styles remain the same */
+.info-modal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.info-modal::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.info-modal::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+}
+
+.info-modal::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover);
 }
 
 .info-modal:hover {
@@ -582,8 +656,14 @@ html {
 }
 
 @keyframes fadeInModal {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from { 
+        opacity: 0; 
+        transform: scale(0.95) translateY(-10px);
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1) translateY(0);
+    }
 }
 
 .info-modal h4 {
@@ -635,6 +715,20 @@ html {
     background: var(--table-hover);
     color: var(--text-primary);
     transform: rotate(90deg);
+}
+
+/* Dark mode specific adjustments */
+:root.dark-mode .info-modal {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .info-modal {
+        width: 95%;
+        padding: 1.2rem 1.5rem;
+        max-height: 85vh;
+    }
 }
 
 /* ==================== ANIMATED DOTS ==================== */

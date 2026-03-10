@@ -1,0 +1,219 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Help Page Settings{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .help-settings-container {
+        margin-left: 280px;
+        padding: 20px 40px;
+    }
+    
+    .settings-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 25px 30px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    .settings-card h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-color);
+        font-size: 0.95rem;
+    }
+    
+    .form-group textarea {
+        min-height: 150px;
+        resize: vertical;
+    }
+    
+    .save-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .save-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        color: var(--primary-blue);
+    }
+    
+    .info-note {
+        background: #d1ecf1;
+        color: #0c5460;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 5px solid #17a2b8;
+    }
+    
+    .dark-mode .info-note {
+        background: #1e3a3a;
+        color: #a8d8d8;
+        border-left-color: #17a2b8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="help-settings-container">
+    <a href="{{ url_for('admin.announcements') }}" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> Back to Announcements
+    </a>
+    
+    <h2 class="announcements-title">📞 Help Page Settings</h2>
+    <p class="page-description">Customize the contact information and content shown on the student help page</p>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message|replace('announcements_page:', '') }}
+                        <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
+                        <div class="flash-progress"></div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <div class="info-note">
+        <i class="fa-solid fa-info-circle"></i> 
+        Changes made here will immediately reflect on the student help page.
+    </div>
+    
+    <form method="POST" action="{{ url_for('admin.help_settings') }}">
+        <!-- Contact Information Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-address-card"></i> Contact Information</h3>
+            
+            <div class="form-group">
+                <label for="committee_name">Committee Name</label>
+                <input type="text" id="committee_name" name="committee_name" value="{{ contact.committee_name }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" value="{{ contact.email }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="text" id="phone" name="phone" value="{{ contact.phone }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="additional_info">Additional Information (Optional)</label>
+                <input type="text" id="additional_info" name="additional_info" value="{{ contact.additional_info or '' }}" placeholder="e.g., Office hours: Mon-Fri 9AM-5PM">
+            </div>
+        </div>
+        
+        <!-- Common Issues Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-gear"></i> Common Issues</h3>
+            <p class="page-description" style="margin-bottom: 15px;">Enter each issue on a new line. Use bullet points (•) for formatting.</p>
+            
+            <div class="form-group">
+                <label for="common_issues">Common Issues List</label>
+                <textarea id="common_issues" name="common_issues" rows="8" placeholder="• Cannot log in — check your student ID and password.
+• Voting page not loading — ensure stable internet connection.
+• Browser compatibility issues — try Chrome or Edge.">{{ help_content.common_issues or '' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div style="margin-top: 30px;">
+            <button type="submit" class="save-btn">
+                <i class="fa-solid fa-save"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Auto-dismiss flash messages
+document.addEventListener('DOMContentLoaded', function() {
+    const flashMessages = document.querySelectorAll('.flash-message');
+    
+    flashMessages.forEach(message => {
+        setTimeout(() => {
+            if (message.parentElement) {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            }
+        }, 5000);
+        
+        const closeBtn = message.querySelector('.flash-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

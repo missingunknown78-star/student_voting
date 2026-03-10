@@ -14,26 +14,40 @@
         <p class="page-description">Create and manage announcements for students and departments</p>
     </div>
 
-    <!-- Flash Messages - Only visible on this page -->
+    <!-- Flash Messages - Only show announcements page messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="flash-container">
                 {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
-                        {{ message }}
-                        <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
-                        <div class="flash-progress"></div>
-                    </div>
+                    <!-- Only show if message is from announcements page or has no source -->
+                    {% if 'announcements_page' in message or category == 'announcements' or message.startswith('Announcement') %}
+                        <div class="flash-message {{ category }}">
+                            <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                            {{ message|replace('announcements_page:', '') }}
+                            <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
+                            <div class="flash-progress"></div>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
 
-    <!-- Add Announcement Button -->
+    <!-- Add this after the Add Announcement button -->
+<!-- Update the button section -->
+<div style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
     <button class="add-announcement-btn" id="openModalBtn">
         <i class="fa-solid fa-plus"></i> Add Announcement
     </button>
+    
+    <a href="{{ url_for('admin.help_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #10b981, #059669); text-decoration: none;">
+        <i class="fa-solid fa-gear"></i> Help Settings
+    </a>
+    
+    <a href="{{ url_for('admin.guidelines_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); text-decoration: none;">
+        <i class="fa-solid fa-book"></i> Guidelines Settings
+    </a>
+</div>
 
     <!-- Add Modal - Desktop Style Layout -->
     <div id="addModal" class="modal">
@@ -178,7 +192,7 @@
                         </div>
                     </div>
                     <div class="announcement-actions">
-                        <button class="edit-btn" onclick="openEditModal({{ announcement.id }})">
+                        <button class="edit-btn" onclick="openEditModal({{ announcement.id }}, event)">
                             <i class="fa-solid fa-pen"></i> Edit
                         </button>
                         <button class="delete-btn" onclick="openDeleteModal({{ announcement.id }}, '{{ announcement.title|escape }}')">
@@ -373,63 +387,160 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ==================== EDIT FUNCTION ====================
-function openEditModal(announcementId) {
+// ==================== ENHANCED EDIT FUNCTION WITH DEBUGGING ====================
+function openEditModal(announcementId, event) {
+    // Prevent default button behavior
+    if (event) {
+        event.preventDefault();
+    }
+    
+    console.log('🔍 Opening edit modal for announcement ID:', announcementId);
+    
+    // Show loading state on button
+    const editBtn = event ? event.target.closest('.edit-btn') : document.querySelector(`.edit-btn[onclick*="${announcementId}"]`);
+    let originalText = '';
+    
+    if (editBtn) {
+        originalText = editBtn.innerHTML;
+        editBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+        editBtn.disabled = true;
+    }
+    
     // Fetch announcement data via AJAX
     fetch(`/admin/get-announcement/${announcementId}`)
-        .then(response => response.json())
+        .then(response => {
+            console.log('📡 Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('📦 Received data:', data);
+            
             if (data.success) {
-                const modal = document.getElementById('editModal');
+                // Get all form elements
+                const idField = document.getElementById('edit_id');
+                const titleField = document.getElementById('edit_title');
+                const contentField = document.getElementById('edit_content');
+                const dateField = document.getElementById('edit_date');
+                const deptSelect = document.getElementById('edit_department');
                 const form = document.getElementById('editAnnouncementForm');
+                const modal = document.getElementById('editModal');
                 
-                // Fill the form
-                document.getElementById('edit_id').value = data.announcement.id;
-                document.getElementById('edit_title').value = data.announcement.title;
-                document.getElementById('edit_content').value = data.announcement.content;
-                document.getElementById('edit_date').value = data.announcement.date;
+                // Check if all elements exist
+                if (!idField || !titleField || !contentField || !dateField || !deptSelect || !form || !modal) {
+                    console.error('❌ Missing form elements:', {
+                        idField: !!idField,
+                        titleField: !!titleField,
+                        contentField: !!contentField,
+                        dateField: !!dateField,
+                        deptSelect: !!deptSelect,
+                        form: !!form,
+                        modal: !!modal
+                    });
+                    alert('System error: Could not find form elements');
+                    
+                    // Reset button
+                    if (editBtn) {
+                        editBtn.innerHTML = originalText;
+                        editBtn.disabled = false;
+                    }
+                    return;
+                }
+                
+                // Fill the form with data
+                console.log('📝 Filling form with data:', data.announcement);
+                idField.value = data.announcement.id || '';
+                titleField.value = data.announcement.title || '';
+                contentField.value = data.announcement.content || '';
+                dateField.value = data.announcement.date || '';
                 
                 // Set department select
-                const deptSelect = document.getElementById('edit_department');
                 if (data.announcement.department_id) {
+                    console.log('🏢 Setting department to ID:', data.announcement.department_id);
                     deptSelect.value = data.announcement.department_id;
                 } else {
+                    console.log('🌍 Setting department to "all"');
                     deptSelect.value = 'all';
                 }
                 
                 // Set form action
-                form.action = `/admin/update-announcement/${announcementId}`;
+                const actionUrl = `/admin/update-announcement/${announcementId}`;
+                console.log('🔗 Setting form action to:', actionUrl);
+                form.action = actionUrl;
                 
                 // Show modal
+                console.log('🎯 Showing edit modal');
                 modal.classList.add('show');
                 setTimeout(applyThemeToMainContent, 10);
+                
+                // Reset button
+                if (editBtn) {
+                    editBtn.innerHTML = originalText;
+                    editBtn.disabled = false;
+                }
+            } else {
+                console.error('❌ Server returned success: false', data);
+                alert('Failed to load announcement data: Server returned error');
+                
+                // Reset button
+                if (editBtn) {
+                    editBtn.innerHTML = originalText;
+                    editBtn.disabled = false;
+                }
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to load announcement data');
+            console.error('❌ Error fetching announcement:', error);
+            alert('Failed to load announcement data. Check console for details.');
+            
+            // Reset button
+            if (editBtn) {
+                editBtn.innerHTML = originalText;
+                editBtn.disabled = false;
+            }
         });
 }
 
-// ==================== DELETE FUNCTION ====================
+// ==================== ENHANCED DELETE FUNCTION ====================
 function openDeleteModal(announcementId, announcementTitle) {
+    console.log('🗑️ Opening delete modal for:', announcementId, announcementTitle);
+    
     const modal = document.getElementById('deleteModal');
     const form = document.getElementById('deleteAnnouncementForm');
     const titleSpan = document.getElementById('deleteTitle');
+    const idField = document.getElementById('delete_id');
+    
+    // Check if elements exist
+    if (!modal || !form || !titleSpan || !idField) {
+        console.error('❌ Missing delete modal elements');
+        alert('System error: Could not find delete modal elements');
+        return;
+    }
     
     // Set the title
     titleSpan.textContent = announcementTitle;
     
     // Set the ID
-    document.getElementById('delete_id').value = announcementId;
+    idField.value = announcementId;
     
     // Set form action
-    form.action = `/admin/delete-announcement/${announcementId}`;
+    const actionUrl = `/admin/delete-announcement/${announcementId}`;
+    console.log('🔗 Setting delete form action to:', actionUrl);
+    form.action = actionUrl;
     
     // Show modal
     modal.classList.add('show');
     setTimeout(applyThemeToMainContent, 10);
 }
+
+// Add this to test if the edit function is being called
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.edit-btn')) {
+        console.log('✏️ Edit button clicked');
+    }
+});
 </script>
 
 <style>
@@ -547,6 +658,16 @@ function openDeleteModal(announcementId, announcementTitle) {
     background: #1e3a3a;
     color: #a8d8d8;
     border-left-color: #17a2b8;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
 }
 </style>
 {% endblock %}

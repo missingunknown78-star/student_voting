@@ -236,6 +236,9 @@ class Course(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
 
+import pytz
+from datetime import datetime
+
 class Announcement(db.Model):
     __tablename__ = 'announcements'
 
@@ -248,6 +251,34 @@ class Announcement(db.Model):
 
     # Optional: relationship to department
     department = db.relationship('Department', backref=db.backref('announcements', lazy=True))
+
+    @property
+    def created_at_manila(self):
+        """Convert created_at from UTC to Manila time"""
+        if self.created_at:
+            # Define timezones
+            utc = pytz.UTC
+            manila = pytz.timezone('Asia/Manila')
+            
+            # If created_at is naive (no timezone), assume it's UTC
+            if self.created_at.tzinfo is None:
+                # Tell Python it's UTC
+                utc_dt = utc.localize(self.created_at)
+            else:
+                utc_dt = self.created_at
+            
+            # Convert to Manila time
+            manila_dt = utc_dt.astimezone(manila)
+            return manila_dt
+        return None
+
+    @property
+    def created_at_formatted(self):
+        """Get formatted created_at in Manila time"""
+        manila_time = self.created_at_manila
+        if manila_time:
+            return manila_time.strftime('%b %d, %Y at %I:%M %p')
+        return None
 
     def __repr__(self):
         return f"<Announcement {self.title} - {self.date}>"

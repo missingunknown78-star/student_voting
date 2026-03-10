@@ -226,12 +226,17 @@ $(document).ready(function(){
     });
 
     // Info modal logic
-    $("#open-info-modal").on("click", function(){ $("#info-modal-overlay").fadeIn(200); });
-    $("#close-info-modal, #info-modal-overlay").on("click", function(e){
-        if(e.target.id === "close-info-modal" || e.target.id === "info-modal-overlay"){
-            $("#info-modal-overlay").fadeOut(200);
-        }
-    });
+    // When opening modal
+$("#open-info-modal").on("click", function(){ 
+    $("#info-modal-overlay").addClass("active");  // Add active class
+});
+
+// When closing modal
+$("#close-info-modal, #info-modal-overlay").on("click", function(e){
+    if(e.target.id === "close-info-modal" || e.target.id === "info-modal-overlay"){
+        $("#info-modal-overlay").removeClass("active");  // Remove active class
+    }
+});
 
     // Import button animation
     $(".import-form").on("submit", function(e){

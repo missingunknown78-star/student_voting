@@ -180,51 +180,100 @@ def decrypt_ballot(encrypted_vote_json, private_key):
         print(f"ERROR: Failed to decrypt vote: {str(e)}")
         return None
 
-def count_votes_for_election(election_id):
-    """Count votes for an election using the new single-vector format"""
+def count_votes_for_election_robust(election_id):
+    """Count votes for an election, handling votes with different candidate list lengths"""
+    import time
+    import json
+    start_time = time.time()
+    
     votes = Vote.query.filter_by(election_id=election_id).all()
     
-    # Get all candidates for this election
+    # Get all candidates for this election (current list)
     candidates = Candidate.query.filter_by(election_id=election_id).all()
     candidate_ids = [c.id for c in candidates]
     
     if not votes:
+        print(f"DEBUG: No votes found for election {election_id}")
         return {candidate_id: 0 for candidate_id in candidate_ids}
     
-    # Initialize with encrypted zeros
-    total_encrypted = [public_key.encrypt(0) for _ in candidate_ids]
+    print(f"DEBUG: Found {len(votes)} votes to process")
+    print(f"DEBUG: Current election has {len(candidate_ids)} candidates")
     
-    # Add all votes homomorphically
-    vote_count = 0
+    # Initialize vote counts
+    vote_counts = {candidate_id: 0 for candidate_id in candidate_ids}
+    
+    # Process each vote individually
+    processed_count = 0
+    skipped_count = 0
+    
     for vote in votes:
         try:
+            # Deserialize the encrypted vote
             enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
-            # Ensure we have the right length
-            if len(enc_votes) == len(total_encrypted):
-                for i in range(len(total_encrypted)):
-                    total_encrypted[i] = total_encrypted[i] + enc_votes[i]
-                vote_count += 1
+            
+            # Skip if no encrypted votes
+            if not enc_votes:
+                print(f"WARNING: Vote {vote.id} has no encrypted data - skipping")
+                skipped_count += 1
+                continue
+            
+            # ===== USE THE STORED CANDIDATE IDs =====
+            if vote.candidate_ids_at_time:
+                # Get the candidate list that was used when this vote was cast
+                original_candidate_ids = json.loads(vote.candidate_ids_at_time)
+                
+                print(f"DEBUG: Vote {vote.id} was cast for {len(original_candidate_ids)} candidates")
+                
+                # Map based on candidate IDs, not positions
+                for i, enc_vote in enumerate(enc_votes):
+                    if i < len(original_candidate_ids):
+                        candidate_id = original_candidate_ids[i]
+                        
+                        # Only count if this candidate still exists
+                        if candidate_id in vote_counts:
+                            try:
+                                decrypted_value = private_key.decrypt(enc_vote)
+                                vote_counts[candidate_id] += decrypted_value
+                            except Exception as e:
+                                print(f"ERROR decrypting: {e}")
+                        else:
+                            print(f"WARNING: Candidate {candidate_id} no longer exists")
+                
+                processed_count += 1
             else:
-                print(f"WARNING: Vote {vote.id} has wrong length: {len(enc_votes)} vs {len(total_encrypted)}")
+                # Fallback for old votes without candidate_ids_at_time
+                print(f"WARNING: Vote {vote.id} has no candidate_ids_at_time - using position mapping")
+                
+                # Try to get candidates that existed at vote time
+                vote_time = vote.cast_timestamp or vote.recorded_timestamp or vote.created_at
+                
+                candidates_at_time = Candidate.query.filter(
+                    Candidate.election_id == election_id,
+                    Candidate.created_at <= vote_time
+                ).all()
+                
+                if len(candidates_at_time) == len(enc_votes):
+                    for i, enc_vote in enumerate(enc_votes):
+                        if i < len(candidates_at_time):
+                            candidate_id = candidates_at_time[i].id
+                            try:
+                                decrypted_value = private_key.decrypt(enc_vote)
+                                vote_counts[candidate_id] += decrypted_value
+                            except:
+                                pass
+                    processed_count += 1
+                else:
+                    skipped_count += 1
+                    
         except Exception as e:
-            print(f"ERROR: Failed to process vote {vote.id}: {str(e)}")
+            print(f"ERROR processing vote {vote.id}: {e}")
+            skipped_count += 1
             continue
     
-    print(f"DEBUG: Processed {vote_count} votes homomorphically")
+    print(f"DEBUG: Processed {processed_count} votes successfully, skipped {skipped_count} votes")
+    print(f"DEBUG: Vote counting took {time.time() - start_time:.2f} seconds")
     
-    # Decrypt final totals
-    decrypted_totals = [private_key.decrypt(x) for x in total_encrypted]
-    
-    # Map to candidate IDs
-    result = dict(zip(candidate_ids, decrypted_totals))
-    
-    # Print results
-    print("DEBUG: Vote counts:")
-    for candidate_id, count in result.items():
-        if count > 0:
-            print(f"   Candidate {candidate_id}: {count} votes")
-    
-    return result
+    return vote_counts
 
 
 def send_email_change_notification(student, old_email, new_email):
@@ -591,6 +640,16 @@ def login():
             flash("Mismatched Credentials", "danger")
             return render_template('student_login.html')
 
+        # 🔐 ================= CHECK IF STUDENT STILL EXISTS IN CTU_STUDENTS =================
+        # Check if this student's ID number still exists in the ctu_students table
+        ctu_student = CtuStudent.query.filter_by(student_number=student.id_number).first()
+        
+        if not ctu_student:
+            # Student has been removed from CTU master list (graduated, stopped, or dropped)
+            flash("Your account is no longer active. Please contact the admin for assistance.", "danger")
+            return render_template('student_login.html')
+        # ====================================================================================
+
         if bcrypt.check_password_hash(student.password, password):
 
             # 🔐 ================= DEVICE TRUST CHECK =================
@@ -633,24 +692,18 @@ def login():
                     session['pending_login_student'] = student.id
                     session['pending_device_fp'] = device_fp
 
-                    # ❌ Removed this flash
-                    # flash(
-                    #     "New device detected. A verification email has been sent. Please check your inbox.",
-                    #     "warning"
-                    # )
-
                     return redirect(url_for('student.verify_device'))
                 else:
                     # FIRST login, no trusted devices yet → normal login
                     login_user(student)
-                    flash('Login successful!', 'success')  # This will show as floating notification
+                    flash('Login successful!', 'success')
                     return redirect(url_for('student.dashboard', trust_prompt=True))
 
             # 🔐 =======================================================
 
             # ✅ Trusted device → proceed with normal login
             login_user(student)
-            flash('Login successful!', 'success')  # This will show as floating notification
+            flash('Login successful!', 'success')
             return redirect(url_for('student.dashboard'))
 
         else:
@@ -1328,16 +1381,34 @@ def student_announcements():
         current_sy=school_year
     )
 
+
+from student.models import ContactInfo, HelpPageContent
 # ------------------- HELP -------------------
 @student_bp.route('/help')
 @login_required
 def help_page():
-    faqs = [
-        {"q": "How do I vote?", "a": "Go to Available Elections, select candidates, and submit."},
-        {"q": "Can I change my vote?", "a": "No — once submitted, votes are final."},
-        {"q": "Who to contact for issues?", "a": "Election Committee: comelec@example.edu"}
+    # Get contact info from database
+    contact_info = ContactInfo.get_settings()
+    
+    # Get help page content
+    help_content = HelpPageContent.get_content()
+    
+    # Split common issues into list if needed
+    common_issues_list = help_content.common_issues.split('\n') if help_content.common_issues else [
+        "Cannot log in — check your student ID and password.",
+        "Voting page not loading — ensure stable internet connection.",
+        "Browser compatibility issues — try Chrome or Edge.",
+        "Fingerprint login not working — register fingerprint in your dashboard.",
+        "Already voted status — ensure you are logged in with your correct account."
     ]
-    return render_template('help_page.html', faqs=faqs)
+    
+    return render_template('help_page.html', 
+                         contact=contact_info,
+                         common_issues=common_issues_list,
+                         help_content=help_content)
+
+
+
 
 
 # ------------------- VOTING -------------------
@@ -2628,31 +2699,15 @@ def refresh_results_api(election_id):
         # Initialize vote counts
         vote_counts = {candidate.id: 0 for candidate in all_candidates}
         
-        # Decrypt votes (use your actual decryption logic here)
+        # Decrypt votes using your existing robust function!
         if all_votes and all_candidate_ids:
             try:
-                private_key = get_private_key()
-                if private_key:
-                    total_vector = [0] * len(all_candidate_ids)
-                    
-                    for vote in all_votes:
-                        try:
-                            vote_list = json.loads(vote.encrypted_vote)
-                            for i, enc_dict in enumerate(vote_list):
-                                from phe import paillier
-                                enc_num = paillier.EncryptedNumber(
-                                    private_key.public_key,
-                                    int(enc_dict["ciphertext"]),
-                                    int(enc_dict["exponent"])
-                                )
-                                total_vector[i] += private_key.decrypt(enc_num)
-                        except:
-                            continue
-                    
-                    for i, candidate_id in enumerate(all_candidate_ids):
-                        vote_counts[candidate_id] = total_vector[i]
-            except:
-                pass
+                # Just use your existing robust counter!
+                vote_counts = count_votes_for_election_robust(election_id)
+            except Exception as e:
+                print(f"Decryption error: {e}")
+                # Fallback to zeros
+                vote_counts = {candidate.id: 0 for candidate in all_candidates}
         
         # Group by position
         candidates_by_position = {}
@@ -2737,17 +2792,15 @@ def refresh_results_api(election_id):
         print(f"Refresh error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+from student.models import GuidelinesContent
 # ------------------- GUIDELINES -------------------
 @student_bp.route('/guidelines')
 @login_required
 def guidelines():
-    rules = [
-        {"title": "Eligibility", "body": "All enrolled students with an active ID number are eligible."},
-        {"title": "Voting Period", "body": "Voting opens Nov 25 and closes Nov 30, 5:00 PM."},
-        {"title": "Prohibited Acts", "body": "Sharing of ballots, buying/selling votes, multiple submissions are prohibited."},
-        {"title": "Privacy", "body": "Ballot choices are private and not displayed in public records."}
-    ]
-    return render_template('guidelines.html', rules=rules)
+    # Get guidelines content from database
+    guidelines_content = GuidelinesContent.get_content()
+    
+    return render_template('guidelines.html', content=guidelines_content)
 
 # ------------------- ANNOUNCEMENTS -------------------
 @student_bp.route('/announcements')
@@ -2802,11 +2855,15 @@ def profile():
         student_id=current_user.id,
         status='pending'
     ).first() is not None
+    
+    # Check if student has fingerprint registered
+    # A fingerprint is registered if both passkey_id and public_key exist
+    has_fingerprint = current_user.passkey_id is not None and current_user.public_key is not None
 
     return render_template('profile.html',
         student=current_user,
         device_trusted=bool(device),
-        has_fingerprint=False,
+        has_fingerprint=has_fingerprint,  # Now accurately detects fingerprint status
         voting_history=[],
         has_voted_current=False,
         courses=courses,

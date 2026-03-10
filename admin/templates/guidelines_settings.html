@@ -1,0 +1,246 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Guidelines Settings{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .guidelines-settings-container {
+        margin-left: 280px;
+        padding: 20px 40px;
+    }
+    
+    .settings-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 25px 30px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    .settings-card h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 2px solid var(--primary-blue);
+        padding-bottom: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-color);
+        font-size: 0.95rem;
+    }
+    
+    .form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .save-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .save-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        color: var(--text-color);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        color: var(--primary-blue);
+    }
+    
+    .info-note {
+        background: #d1ecf1;
+        color: #0c5460;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 5px solid #17a2b8;
+    }
+    
+    .dark-mode .info-note {
+        background: #1e3a3a;
+        color: #a8d8d8;
+        border-left-color: #17a2b8;
+    }
+    
+    .format-hint {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="guidelines-settings-container">
+    <a href="{{ url_for('admin.announcements') }}" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> Back to Announcements
+    </a>
+    
+    <h2 class="announcements-title">📋 Voting Guidelines Settings</h2>
+    <p class="page-description">Customize the voting guidelines shown on the student guidelines page</p>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                        {{ message|replace('announcements_page:', '') }}
+                        <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
+                        <div class="flash-progress"></div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <div class="info-note">
+        <i class="fa-solid fa-info-circle"></i> 
+        Changes made here will immediately reflect on the student voting guidelines page. Use bullet points (•) for lists and number them for steps.
+    </div>
+    
+    <form method="POST" action="{{ url_for('admin.guidelines_settings') }}">
+        <!-- Purpose Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-bullseye"></i> Purpose of the Election</h3>
+            <div class="form-group">
+                <textarea id="purpose" name="purpose" rows="4" placeholder="Enter the purpose of the election...">{{ content.purpose or '' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Voting Rules Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-list"></i> Voting Rules</h3>
+            <div class="form-group">
+                <textarea id="voting_rules" name="voting_rules" rows="8" placeholder="• Each student is allowed to vote only once.
+• Votes submitted cannot be changed or canceled.
+• Only officially registered and verified students can participate.">{{ content.voting_rules or '' }}</textarea>
+                <div class="format-hint">Use bullet points (•) for each rule. One rule per line.</div>
+            </div>
+        </div>
+        
+        <!-- How to Vote Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-check-to-slot"></i> How to Vote</h3>
+            <div class="form-group">
+                <textarea id="how_to_vote" name="how_to_vote" rows="8" placeholder="1. Log in using your registered student account.
+2. Go to the Available Elections section.
+3. Select your preferred candidates for each position.">{{ content.how_to_vote or '' }}</textarea>
+                <div class="format-hint">Number each step (1., 2., 3., etc.). One step per line.</div>
+            </div>
+        </div>
+        
+        <!-- Privacy & Security Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-shield-halved"></i> Privacy & Security</h3>
+            <div class="form-group">
+                <textarea id="privacy_security" name="privacy_security" rows="4" placeholder="Enter privacy and security information...">{{ content.privacy_security or '' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Important Reminders Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-triangle-exclamation"></i> Important Reminders</h3>
+            <div class="form-group">
+                <textarea id="important_reminders" name="important_reminders" rows="6" placeholder="• Make sure you have a stable internet connection before voting.
+• Do not refresh or close the browser while submitting your vote.
+• Report any technical issues immediately to the election committee.">{{ content.important_reminders or '' }}</textarea>
+                <div class="format-hint">Use bullet points (•) for each reminder. One reminder per line.</div>
+            </div>
+        </div>
+        
+        <!-- Fingerprint Info Card -->
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-fingerprint"></i> Fingerprint Login Info</h3>
+            <div class="form-group">
+                <textarea id="fingerprint_info" name="fingerprint_info" rows="4" placeholder="Enter fingerprint login information...">{{ content.fingerprint_info or '' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div style="margin-top: 30px; margin-bottom: 50px;">
+            <button type="submit" class="save-btn">
+                <i class="fa-solid fa-save"></i> Save Guidelines
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Auto-dismiss flash messages
+document.addEventListener('DOMContentLoaded', function() {
+    const flashMessages = document.querySelectorAll('.flash-message');
+    
+    flashMessages.forEach(message => {
+        setTimeout(() => {
+            if (message.parentElement) {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            }
+        }, 5000);
+        
+        const closeBtn = message.querySelector('.flash-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                message.style.animation = 'fadeOut 0.5s ease forwards';
+                setTimeout(() => {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 500);
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

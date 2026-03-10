@@ -16,11 +16,11 @@
     <div class="help-card">
         <h3>⚙ Common Issues</h3>
         <ul>
-            <li>Cannot log in — check your student ID and password.</li>
-            <li>Voting page not loading — ensure stable internet connection.</li>
-            <li>Browser compatibility issues — try Chrome or Edge.</li>
-            <li>Fingerprint login not working — register fingerprint in your dashboard.</li>
-            <li>Already voted status — ensure you are logged in with your correct account.</li>
+            {% for issue in common_issues %}
+                {% if issue.strip() %}
+                    <li>{{ issue.strip('• ') }}</li>
+                {% endif %}
+            {% endfor %}
         </ul>
     </div>
 
@@ -28,11 +28,14 @@
     <div class="help-card">
         <h3>📞 Contact</h3>
         <p>
-            For further assistance, contact the election committee at:
+            For further assistance, contact the {{ contact.committee_name }} at:
         </p>
         <ul>
-            <li>Email: <a href="mailto:election@school.edu">election@school.edu</a></li>
-            <li>Phone: 0912-345-6789</li>
+            <li>Email: <a href="mailto:{{ contact.email }}">{{ contact.email }}</a></li>
+            <li>Phone: {{ contact.phone }}</li>
+            {% if contact.additional_info %}
+                <li>{{ contact.additional_info }}</li>
+            {% endif %}
         </ul>
     </div>
 

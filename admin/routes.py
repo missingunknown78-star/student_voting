@@ -1777,6 +1777,12 @@ from student.models import TrustedDevice
 # ---------------------- IMPORT STUDENTS ---------------------- #
 @admin_bp.route("/import_students", methods=["GET", "POST"])
 def import_students():
+    import time
+    import pandas as pd
+    from sqlalchemy import text
+    from datetime import datetime
+    
+    start_time = time.time()
 
     if request.method == "POST":
         file = request.files.get("excel_file")
@@ -1785,167 +1791,280 @@ def import_students():
             flash("No file selected.", "import-danger")
             return redirect(url_for("admin.import_students"))
 
+        temp_file_path = None
         try:
-            # STEP 1: Read Excel (force StudentNo as string)
-            df = pd.read_excel(file, dtype={"StudentNo": str})
-
-            # STEP 2: Clean column names
-            df.columns = (
-                df.columns
-                .astype(str)
-                .str.strip()
-                .str.replace("\u00a0", "", regex=False)
-                .str.replace("\t", "", regex=False)
-            )
-
-            # STEP 3: Validate columns
-            required_columns = ["StudentNo", "LastName", "FirstName"]
-            for col in required_columns:
-                if col not in df.columns:
-                    flash(f"Missing required column: {col}", "import-danger")
-                    return redirect(url_for("admin.import_students"))
-
-            # STEP 4: Build set of StudentNos from Excel
-            excel_student_nos = set()
-            excel_students_data = {}  # Store full data for later use
-
-            imported = 0
-            updated = 0
-
-            for _, row in df.iterrows():
-                student_number = str(row["StudentNo"]).strip()
-
-                # Remove trailing .0 if Excel casted it
-                if student_number.endswith(".0"):
-                    student_number = student_number[:-2]
-
-                first_name = str(row["FirstName"]).strip()
-                last_name  = str(row["LastName"]).strip()
-
-                if not student_number or student_number.lower() == "nan":
-                    continue
-
-                excel_student_nos.add(student_number)
-                excel_students_data[student_number] = {
-                    'first_name': first_name,
-                    'last_name': last_name
-                }
-
-                exists = CtuStudent.query.filter_by(
-                    student_number=student_number
-                ).first()
-
-                if exists:
-                    # Update existing record
-                    exists.first_name = first_name
-                    exists.last_name = last_name
-                    db.session.add(exists)
-                    updated += 1
-                else:
-                    # Insert new record
-                    s = CtuStudent(
-                        student_number=student_number,
-                        first_name=first_name,
-                        last_name=last_name,
-                    )
-                    db.session.add(s)
-                    imported += 1
-
-            # STEP 5: Get all current CTU students
-            db_students = CtuStudent.query.all()
+            # Save file temporarily to avoid memory issues with large Excel
+            import tempfile
+            import os
             
-            deleted_from_ctu = 0
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+                file.save(tmp.name)
+                temp_file_path = tmp.name
+            
+            print(f"📊 STEP 0: File saved in {time.time() - start_time:.2f}s")
+            
+            # STEP 1: Read Excel with optimized settings
+            # Only read necessary columns, use faster engine
+            df = pd.read_excel(
+                temp_file_path, 
+                dtype={"StudentNo": str},
+                usecols=["StudentNo", "LastName", "FirstName"],  # Only read needed columns
+                engine='openpyxl'  # Default Excel engine  # Faster engine if available, otherwise 'openpyxl'
+            )
+            
+            # Clean up temp file
+            os.unlink(temp_file_path)
+            
+            print(f"📊 STEP 1: Loaded Excel in {time.time() - start_time:.2f}s")
+            
+            # STEP 2: Clean data using vectorized operations (MUCH faster than loops)
+            df['StudentNo'] = df['StudentNo'].astype(str).str.strip()
+            df['StudentNo'] = df['StudentNo'].str.replace(r'\.0$', '', regex=True)
+            df['FirstName'] = df['FirstName'].astype(str).str.strip()
+            df['LastName'] = df['LastName'].astype(str).str.strip()
+            
+            # Remove rows with invalid student numbers
+            df = df[df['StudentNo'].notna() & (df['StudentNo'] != '') & (df['StudentNo'] != 'nan')]
+            
+            # Get unique student numbers (remove duplicates)
+            df = df.drop_duplicates(subset=['StudentNo'])
+            
+            excel_student_nos = set(df['StudentNo'].tolist())
+            excel_data = df.to_dict('records')
+            
+            print(f"📊 STEP 2: Cleaned data - {len(excel_data)} unique students in {time.time() - start_time:.2f}s")
+
+            # ===== OPTIMIZATION 1: Use RAW SQL for bulk operations =====
+            # Get connection for raw SQL (fastest for bulk operations)
+            connection = db.session.connection()
+            
+            # STEP 3: Get existing CTU students in one query
+            existing_result = connection.execute(
+                text("SELECT student_number, id, first_name, last_name FROM ctu_students")
+            )
+            existing_ctu = {}
+            for row in existing_result:
+                existing_ctu[row[0]] = {'id': row[1], 'first_name': row[2], 'last_name': row[3]}
+            
+            print(f"📊 STEP 3: Fetched {len(existing_ctu)} CTU students in {time.time() - start_time:.2f}s")
+            
+            # STEP 4: Get registered students and their vote status in ONE query
+            registered_result = connection.execute(
+                text("""
+                    SELECT s.id, s.id_number, 
+                           CASE WHEN v.student_id IS NOT NULL THEN 1 ELSE 0 END as has_voted
+                    FROM students s
+                    LEFT JOIN votes v ON s.id = v.student_id
+                """)
+            )
+            registered_map = {}
+            students_with_votes = set()
+            for row in registered_result:
+                registered_map[row[1]] = {'id': row[0], 'has_voted': row[2]}
+                if row[2]:
+                    students_with_votes.add(row[0])
+            
+            print(f"📊 STEP 4: Fetched {len(registered_map)} registered students in {time.time() - start_time:.2f}s")
+
+            # ===== OPTIMIZATION 2: Prepare bulk operations =====
+            # Prepare lists for batch operations
+            to_insert = []
+            to_update = []
+            
+            for student in excel_data:
+                student_no = student['StudentNo']
+                first_name = student['FirstName']
+                last_name = student['LastName']
+                
+                if student_no in existing_ctu:
+                    # Only update if name changed (reduce unnecessary updates)
+                    existing = existing_ctu[student_no]
+                    if existing['first_name'] != first_name or existing['last_name'] != last_name:
+                        to_update.append({
+                            'student_number': student_no,
+                            'first_name': first_name,
+                            'last_name': last_name
+                        })
+                else:
+                    to_insert.append({
+                        'student_number': student_no,
+                        'first_name': first_name,
+                        'last_name': last_name
+                    })
+            
+            print(f"📊 STEP 5: Prepared {len(to_insert)} inserts, {len(to_update)} updates in {time.time() - start_time:.2f}s")
+
+            # ===== OPTIMIZATION 3: BULK INSERT using executemany =====
+            if to_insert:
+                # Use SQLAlchemy's bulk insert (safer and still fast)
+                chunk_size = 1000
+                for i in range(0, len(to_insert), chunk_size):
+                    chunk = to_insert[i:i+chunk_size]
+                    
+                    # Prepare data for insertion
+                    insert_data = [{
+                        'student_number': s['student_number'],
+                        'first_name': s['first_name'],
+                        'last_name': s['last_name']
+                    } for s in chunk]
+                    
+                    # Use SQLAlchemy's bulk insert
+                    db.session.bulk_insert_mappings(CtuStudent, insert_data)
+                    db.session.flush()  # Flush but don't commit yet
+                    
+                    print(f"   Inserted chunk {i//chunk_size + 1}/{(len(to_insert)-1)//chunk_size + 1}")
+            
+            print(f"📊 STEP 6: Completed inserts in {time.time() - start_time:.2f}s")
+
+            # ===== OPTIMIZATION 4: BULK UPDATE using SQLAlchemy =====
+            if to_update:
+                chunk_size = 1000
+                for i in range(0, len(to_update), chunk_size):
+                    chunk = to_update[i:i+chunk_size]
+                    
+                    for student_data in chunk:
+                        # Update each student individually but in same transaction
+                        db.session.query(CtuStudent)\
+                            .filter(CtuStudent.student_number == student_data['student_number'])\
+                            .update({
+                                'first_name': student_data['first_name'],
+                                'last_name': student_data['last_name']
+                            }, synchronize_session=False)
+                    
+                    db.session.flush()
+                    print(f"   Updated chunk {i//chunk_size + 1}/{(len(to_update)-1)//chunk_size + 1}")
+            
+            print(f"📊 STEP 7: Completed updates in {time.time() - start_time:.2f}s")
+
+            # ===== OPTIMIZATION 5: Handle deletions =====
+            # Find students to delete (in DB but not in Excel)
+            to_delete_ctu = []
+            to_delete_registered = []
+            
+            for student_no, existing in existing_ctu.items():
+                if student_no not in excel_student_nos:
+                    to_delete_ctu.append(student_no)
+                    
+                    # Check if registered
+                    if student_no in registered_map and not registered_map[student_no]['has_voted']:
+                        to_delete_registered.append(registered_map[student_no]['id'])
+            
+            deleted_from_ctu = len(to_delete_ctu)
             deleted_from_registration = 0
-            kept_with_votes = 0
-
-            # STEP 6: Check each student in CTU list
-            for s in db_students:
-                if s.student_number not in excel_student_nos:
-                    # This student is NOT in the new Excel file
-                    
-                    # Check if this student is registered in students table
-                    registered_student = Student.query.filter_by(id_number=s.student_number).first()
-                    
-                    if registered_student:
-                        # Check if this student has any votes
-                        votes = Vote.query.filter_by(student_id=registered_student.id).count()
-                        
-                        if votes > 0:
-                            # Student has votes - keep for audit
-                            kept_with_votes += 1
-                            print(f"Student {registered_student.id_number} has {votes} votes - keeping record")
-                            
-                            # OPTIONAL: You can mark them as inactive if you have a status field
-                            # registered_student.status = 'graduated'
-                            # db.session.add(registered_student)
-                        else:
-                            # NO votes - SAFE TO DELETE from students table
-                            # First, manually delete related trusted devices
-                            from student.models import TrustedDevice
-                            TrustedDevice.query.filter_by(student_id=registered_student.id).delete()
-                            
-                            # Also delete any other related records if needed
-                            # (votes are already checked and are 0, so no need to delete votes)
-                            
-                            # Now delete the student
-                            db.session.delete(registered_student)
-                            deleted_from_registration += 1
-                            print(f"Deleted registered student: {registered_student.id_number}")
-                    
-                    # ALWAYS delete from ctu_students table
-                    db.session.delete(s)
-                    deleted_from_ctu += 1
-                    print(f"Deleted from CTU list: {s.student_number}")
-
-            # STEP 7: Commit all changes
+            
+            # Bulk delete CTU students
+            if to_delete_ctu:
+                chunk_size = 500
+                for i in range(0, len(to_delete_ctu), chunk_size):
+                    chunk = to_delete_ctu[i:i+chunk_size]
+                    db.session.query(CtuStudent)\
+                        .filter(CtuStudent.student_number.in_(chunk))\
+                        .delete(synchronize_session=False)
+                    db.session.flush()
+            
+            print(f"📊 STEP 8: Deleted {deleted_from_ctu} CTU students in {time.time() - start_time:.2f}s")
+            
+            # Bulk delete registered students (with no votes)
+            if to_delete_registered:
+                # First delete TrustedDevice records
+                chunk_size = 500
+                for i in range(0, len(to_delete_registered), chunk_size):
+                    chunk = to_delete_registered[i:i+chunk_size]
+                    from student.models import TrustedDevice
+                    db.session.query(TrustedDevice)\
+                        .filter(TrustedDevice.student_id.in_(chunk))\
+                        .delete(synchronize_session=False)
+                    db.session.flush()
+                
+                # Then delete students
+                for i in range(0, len(to_delete_registered), chunk_size):
+                    chunk = to_delete_registered[i:i+chunk_size]
+                    db.session.query(Student)\
+                        .filter(Student.id.in_(chunk))\
+                        .delete(synchronize_session=False)
+                    db.session.flush()
+                
+                deleted_from_registration = len(to_delete_registered)
+            
+            print(f"📊 STEP 9: Deleted {deleted_from_registration} registered students in {time.time() - start_time:.2f}s")
+            
+            # ===== OPTIMIZATION 6: Commit once at the end =====
             db.session.commit()
-
-            # ---------- AUDIT LOG: Student import completed ----------
+            
+            total_time = time.time() - start_time
+            print(f"✅ TOTAL TIME: {total_time:.2f} seconds for {len(excel_data)} students")
+            
+            # Audit log
             username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
             ip = request.remote_addr
             filename = file.filename if file else 'Unknown'
             
             log_audit(
                 action='IMPORT_STUDENTS',
-                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {imported}, Updated: {updated}, Deleted from CTU: {deleted_from_ctu}, Deleted registered: {deleted_from_registration}, Kept with votes: {kept_with_votes}"
+                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {len(to_insert)}, Updated: {len(to_update)}, Deleted from CTU: {deleted_from_ctu}, Deleted registered: {deleted_from_registration}, Time: {total_time:.2f}s"
             )
 
-            # Create appropriate flash message
-            if deleted_from_registration > 0:
-                flash(
-                    f"✅ Sync complete!\n"
-                    f"📥 Imported: {imported}\n"
-                    f"🔄 Updated: {updated}\n"
-                    f"🗑️ Removed from CTU list: {deleted_from_ctu}\n"
-                    f"🚫 Removed registered students: {deleted_from_registration}\n"
-                    f"⚠️ Kept (with votes): {kept_with_votes}",
-                    "import-success"
-                )
-            else:
-                flash(
-                    f"Sync complete. Imported: {imported}, Updated: {updated}, "
-                    f"Removed from CTU list: {deleted_from_ctu}",
-                    "import-success"
-                )
-                
+            flash(
+                f"✅ Sync complete in {total_time:.1f}s!\n"
+                f"📥 Imported: {len(to_insert)}\n"
+                f"🔄 Updated: {len(to_update)}\n"
+                f"🗑️ Removed from CTU list: {deleted_from_ctu}\n"
+                f"🚫 Removed registered students: {deleted_from_registration}",
+                "import-success"
+            )
+            
             return redirect(url_for("admin.import_students"))
 
         except Exception as e:
             db.session.rollback()
-            print(f"ERROR: {str(e)}")  # For debugging
+            print(f"❌ ERROR: {str(e)}")
+            print(f"❌ ERROR after {time.time() - start_time:.2f} seconds")
             
-            # ---------- AUDIT LOG: Student import failed ----------
-            username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
-            ip = request.remote_addr
-            filename = file.filename if file else 'Unknown'
-            
-            log_audit(
-                action='IMPORT_STUDENTS_FAILED',
-                description=f"Admin user '{username}' failed to import students from '{filename}' from IP: {ip} | Error: {str(e)}"
-            )
+            # Clean up temp file if it exists
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
             
             flash(f"Error importing file: {str(e)}", "import-danger")
             return redirect(url_for("admin.import_students"))
+
+    # ------------------ GET ------------------
+    page = request.args.get("page", 1, type=int)
+    search_query = request.args.get("q", "", type=str)
+
+    students_query = CtuStudent.query
+
+    if search_query:
+        search = f"%{search_query.strip()}%"
+        students_query = students_query.filter(
+            or_(
+                CtuStudent.student_number.ilike(search),
+                CtuStudent.first_name.ilike(search),
+                CtuStudent.last_name.ilike(search)
+            )
+        )
+
+    students = students_query.order_by(CtuStudent.last_name.asc()) \
+        .paginate(page=page, per_page=20, error_out=False)
+
+    # ------------------ TOTAL STUDENTS ------------------
+    total_students = CtuStudent.query.count()
+
+    # ---------- AUDIT LOG: Import students page viewed ----------
+    if request.method == "GET" and current_user.is_authenticated:
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='IMPORT_STUDENTS_VIEW',
+            description=f"Admin user '{username}' viewed the import students page from IP: {ip}"
+        )
+
+    return render_template(
+        "import_students.html",
+        students=students,
+        total_students=total_students
+    )
+
 
     # ------------------ GET ------------------
     page = request.args.get("page", 1, type=int)
@@ -3688,6 +3807,8 @@ def announcements():
             description=f"Admin user '{username}' created new announcement: '{title}' from IP: {ip} | Target: {department_name}, Date: {date}"
         )
 
+        # Tag the flash message for announcements page
+        flash('announcements_page:Announcement created successfully!', 'success')
         return redirect(url_for('admin.announcements'))
 
     # GET: fetch announcements to display
@@ -3708,24 +3829,6 @@ def announcements():
         announcements=announcements_list,
         now=now  # Pass current datetime to template
     )
-
-
-    # ----------- GET ANNOUNCEMENT FOR EDIT -----------
-@admin_bp.route('/get-announcement/<int:announcement_id>')
-@login_required
-def get_announcement(announcement_id):
-    announcement = Announcement.query.get_or_404(announcement_id)
-    
-    return jsonify({
-        'success': True,
-        'announcement': {
-            'id': announcement.id,
-            'title': announcement.title,
-            'content': announcement.content,
-            'date': announcement.date.strftime('%Y-%m-%d'),
-            'department_id': announcement.department_id
-        }
-    })
 
 # ----------- UPDATE ANNOUNCEMENT -----------
 @admin_bp.route('/update-announcement/<int:announcement_id>', methods=['POST'])
@@ -3759,7 +3862,8 @@ def update_announcement(announcement_id):
         description=f"Admin user '{username}' updated announcement: '{title}' (ID: {announcement_id}) from IP: {ip}"
     )
     
-    flash('Announcement updated successfully!', 'success')
+    # Tag the flash message for announcements page
+    flash('announcements_page:Announcement updated successfully!', 'success')
     return redirect(url_for('admin.announcements'))
 
 # ----------- DELETE ANNOUNCEMENT -----------
@@ -3781,9 +3885,152 @@ def delete_announcement(announcement_id):
         description=f"Admin user '{username}' deleted announcement: '{title}' (ID: {announcement_id}) from IP: {ip}"
     )
     
-    flash('Announcement deleted successfully!', 'success')
+    # Tag the flash message for announcements page
+    flash('announcements_page:Announcement deleted successfully!', 'success')
     return redirect(url_for('admin.announcements'))
 
+from student.models import ContactInfo, HelpPageContent
+
+# ----------- GET ANNOUNCEMENT FOR EDIT -----------
+@admin_bp.route('/get-announcement/<int:announcement_id>', methods=['GET'])
+@login_required
+def get_announcement(announcement_id):
+    try:
+        announcement = Announcement.query.get_or_404(announcement_id)
+        
+        # Format the date properly
+        date_str = announcement.date.strftime('%Y-%m-%d') if announcement.date else ''
+        
+        return jsonify({
+            'success': True,
+            'announcement': {
+                'id': announcement.id,
+                'title': announcement.title,
+                'content': announcement.content,
+                'date': date_str,
+                'department_id': announcement.department_id
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ----------- HELP PAGE MANAGEMENT -----------
+@admin_bp.route('/help-settings', methods=['GET', 'POST'])
+@login_required
+def help_settings():
+    contact_info = ContactInfo.get_settings()
+    help_content = HelpPageContent.get_content()
+    
+    if request.method == 'POST':
+        # Update contact info
+        contact_info.email = request.form.get('email')
+        contact_info.phone = request.form.get('phone')
+        contact_info.committee_name = request.form.get('committee_name')
+        contact_info.additional_info = request.form.get('additional_info')
+        contact_info.updated_by = current_user.id
+        
+        # Update help content
+        help_content.common_issues = request.form.get('common_issues')
+        help_content.updated_by = current_user.id
+        
+        db.session.commit()
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='UPDATE_HELP_SETTINGS',
+            description=f"Admin user '{username}' updated help page settings from IP: {ip}"
+        )
+        
+        flash('announcements_page:Help page settings updated successfully!', 'success')
+        return redirect(url_for('admin.help_settings'))
+    
+    return render_template('help_settings.html', 
+                         contact=contact_info, 
+                         help_content=help_content)
+
+
+
+# ----------- GET HELP SETTINGS FOR AJAX -----------
+@admin_bp.route('/get-help-settings')
+@login_required
+def get_help_settings():
+    contact_info = ContactInfo.get_settings()
+    help_content = HelpPageContent.get_content()
+    
+    return jsonify({
+        'success': True,
+        'contact': {
+            'email': contact_info.email,
+            'phone': contact_info.phone,
+            'committee_name': contact_info.committee_name,
+            'additional_info': contact_info.additional_info
+        },
+        'help_content': {
+            'common_issues': help_content.common_issues
+        }
+    })
+
+
+
+# ----------- GUIDELINES MANAGEMENT -----------
+@admin_bp.route('/guidelines-settings', methods=['GET', 'POST'])
+@login_required
+def guidelines_settings():
+    from student.models import GuidelinesContent
+    
+    guidelines_content = GuidelinesContent.get_content()
+    
+    if request.method == 'POST':
+        # Update guidelines content
+        guidelines_content.purpose = request.form.get('purpose')
+        guidelines_content.voting_rules = request.form.get('voting_rules')
+        guidelines_content.how_to_vote = request.form.get('how_to_vote')
+        guidelines_content.privacy_security = request.form.get('privacy_security')
+        guidelines_content.important_reminders = request.form.get('important_reminders')
+        guidelines_content.fingerprint_info = request.form.get('fingerprint_info')
+        # REMOVE THIS LINE - don't set updated_by
+        # guidelines_content.updated_by = current_user.id
+        
+        db.session.commit()
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        log_audit(
+            action='UPDATE_GUIDELINES',
+            description=f"Admin user '{username}' updated voting guidelines from IP: {ip}"
+        )
+        
+        flash('announcements_page:Guidelines updated successfully!', 'success')
+        return redirect(url_for('admin.guidelines_settings'))
+    
+    return render_template('guidelines_settings.html', content=guidelines_content)
+
+
+# ----------- GET GUIDELINES FOR AJAX -----------
+@admin_bp.route('/get-guidelines')
+@login_required
+def get_guidelines():
+    from student.models import GuidelinesContent
+    
+    guidelines_content = GuidelinesContent.get_content()
+    
+    return jsonify({
+        'success': True,
+        'content': {
+            'purpose': guidelines_content.purpose,
+            'voting_rules': guidelines_content.voting_rules,
+            'how_to_vote': guidelines_content.how_to_vote,
+            'privacy_security': guidelines_content.privacy_security,
+            'important_reminders': guidelines_content.important_reminders,
+            'fingerprint_info': guidelines_content.fingerprint_info
+        }
+    })
 
 
 @admin_bp.route('/results')
