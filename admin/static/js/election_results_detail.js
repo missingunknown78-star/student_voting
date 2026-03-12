@@ -293,3 +293,188 @@ function initializeNotificationStyles() {
         document.head.appendChild(style);
     }
 }
+
+
+// ==================== PDF UPLOAD FUNCTIONALITY ====================
+
+// Handle file input change
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('pdfFile');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                if (file.type === 'application/pdf') {
+                    fileNameDisplay.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981;"></i> ${file.name} (${formatFileSize(file.size)})`;
+                    fileNameDisplay.style.color = '#10b981';
+                } else {
+                    fileNameDisplay.innerHTML = '❌ Please select a valid PDF file';
+                    fileNameDisplay.style.color = '#ef4444';
+                    this.value = ''; // Clear the input
+                }
+            } else {
+                fileNameDisplay.innerHTML = 'No file chosen';
+                fileNameDisplay.style.color = 'var(--text-secondary)';
+            }
+        });
+    }
+
+    // Handle form submission
+    const uploadForm = document.getElementById('uploadPdfForm');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', uploadPdfResult);
+    }
+});
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Upload PDF function
+async function uploadPdfResult(e) {
+    e.preventDefault();
+    
+    const electionId = templateData.electionId;
+    const fileInput = document.getElementById('pdfFile');
+    const uploadBtn = document.getElementById('uploadPdfBtn');
+    const originalBtnText = uploadBtn.innerHTML;
+    
+    if (!fileInput.files.length) {
+        showNotification('error', '❌ Please select a PDF file to upload.');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    if (file.type !== 'application/pdf') {
+        showNotification('error', '❌ Only PDF files are allowed.');
+        return;
+    }
+    
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        showNotification('error', '❌ File size exceeds 10MB limit.');
+        return;
+    }
+    
+    // Optional: Add description prompt - MOVED THIS BEFORE FormData creation
+    const description = prompt('Enter a description for this PDF (optional):', '');
+    
+    // Check if user cancelled the prompt
+    if (description === null) {
+        // User clicked Cancel - stop the upload
+        showNotification('info', '📄 Upload cancelled.');
+        return;
+    }
+    
+    // Create form data ONLY after user confirms
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+    formData.append('csrf_token', csrfToken);
+    
+    // Only append description if user entered something (not empty)
+    if (description.trim() !== '') {
+        formData.append('description', description.trim());
+    }
+    
+    // Show loading state
+    uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
+    uploadBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`/admin/results/${electionId}/upload-pdf`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', '✅ PDF uploaded successfully!');
+            
+            // Clear file input
+            fileInput.value = '';
+            document.getElementById('fileNameDisplay').innerHTML = 'No file chosen';
+            document.getElementById('fileNameDisplay').style.color = 'var(--text-secondary)';
+            
+            // Reload the page after 1 second to show the new PDF
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showNotification('error', `❌ ${result.message || 'Failed to upload PDF.'}`);
+        }
+    } catch (error) {
+        console.error('Error uploading PDF:', error);
+        showNotification('error', '❌ Network error. Please try again.');
+    } finally {
+        uploadBtn.innerHTML = originalBtnText;
+        uploadBtn.disabled = false;
+    }
+}
+
+// Delete PDF function
+async function deletePdfResult(pdfId) {
+    if (!confirm('⚠️ Are you sure you want to delete this PDF? This action cannot be undone.')) {
+        return;
+    }
+    
+    const deleteBtn = document.querySelector(`#pdf-item-${pdfId} .pdf-delete-btn`);
+    const originalHtml = deleteBtn.innerHTML;
+    
+    // Show loading
+    deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    deleteBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`/admin/pdf-result/${pdfId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', '✅ PDF deleted successfully!');
+            
+            // Remove the PDF item from DOM with animation
+            const pdfItem = document.getElementById(`pdf-item-${pdfId}`);
+            pdfItem.style.transition = 'all 0.3s ease';
+            pdfItem.style.opacity = '0';
+            pdfItem.style.transform = 'translateX(20px)';
+            
+            setTimeout(() => {
+                pdfItem.remove();
+                
+                // Check if there are no more PDFs
+                const pdfList = document.querySelector('.pdf-list');
+                if (pdfList && pdfList.children.length === 0) {
+                    const existingPdfs = document.querySelector('.existing-pdfs');
+                    if (existingPdfs) {
+                        existingPdfs.remove();
+                    }
+                }
+            }, 300);
+        } else {
+            showNotification('error', `❌ ${result.message || 'Failed to delete PDF.'}`);
+        }
+    } catch (error) {
+        console.error('Error deleting PDF:', error);
+        showNotification('error', '❌ Network error. Please try again.');
+    } finally {
+        deleteBtn.innerHTML = originalHtml;
+        deleteBtn.disabled = false;
+    }
+}
+
+// Make delete function globally available
+window.deletePdfResult = deletePdfResult;

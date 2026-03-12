@@ -16,6 +16,7 @@ import json
 from phe import paillier
 import pickle
 import os
+from flask import render_template, redirect, url_for, flash, request, jsonify, session, send_file
 
 # WebAuthn imports
 from webauthn import (
@@ -2418,6 +2419,87 @@ def results_detail(election_id):
                          now=now_naive,
                          results_published=election.results_published)
 
+
+@student_bp.route('/pdf-result/<int:pdf_id>/download')
+@login_required
+def download_pdf_result(pdf_id):
+    """Download a PDF result file"""
+    try:
+        from admin.models import PdfResult
+        
+        pdf_result = PdfResult.query.get_or_404(pdf_id)
+        
+        # Check if student has access to this election
+        has_voted = Vote.query.filter_by(
+            student_id=current_user.id,
+            election_id=pdf_result.election_id
+        ).first() is not None
+        
+        if not has_voted:
+            flash('You can only access results for elections you have participated in.', 'warning')
+            return redirect(url_for('student.results'))
+        
+        # Get file path
+        file_path = os.path.join(current_app.root_path, 'static', pdf_result.file_path)
+        
+        if not os.path.exists(file_path):
+            flash('PDF file not found on server.', 'error')
+            return redirect(request.referrer or url_for('student.results_detail', election_id=pdf_result.election_id))
+        
+        # Log access (optional)
+        print(f"Student {current_user.id} downloaded PDF {pdf_id} for election {pdf_result.election_id}")
+        
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=pdf_result.filename,
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        print(f"Error downloading PDF: {str(e)}")
+        flash('Error downloading PDF file.', 'error')
+        return redirect(request.referrer or url_for('student.results'))
+
+@student_bp.route('/pdf-result/<int:pdf_id>/view')
+@login_required
+def view_pdf_result(pdf_id):
+    """View a PDF result file in browser"""
+    try:
+        from admin.models import PdfResult
+        
+        pdf_result = PdfResult.query.get_or_404(pdf_id)
+        
+        # Check if student has access to this election
+        has_voted = Vote.query.filter_by(
+            student_id=current_user.id,
+            election_id=pdf_result.election_id
+        ).first() is not None
+        
+        if not has_voted:
+            flash('You can only access results for elections you have participated in.', 'warning')
+            return redirect(url_for('student.results'))
+        
+        # Get file path
+        file_path = os.path.join(current_app.root_path, 'static', pdf_result.file_path)
+        
+        if not os.path.exists(file_path):
+            flash('PDF file not found on server.', 'error')
+            return redirect(request.referrer or url_for('student.results_detail', election_id=pdf_result.election_id))
+        
+        # Log access (optional)
+        print(f"Student {current_user.id} viewed PDF {pdf_id} for election {pdf_result.election_id}")
+        
+        return send_file(
+            file_path,
+            mimetype='application/pdf',
+            as_attachment=False  # This makes it display in browser
+        )
+        
+    except Exception as e:
+        print(f"Error viewing PDF: {str(e)}")
+        flash('Error viewing PDF file.', 'error')
+        return redirect(request.referrer or url_for('student.results'))
 
 # Helper functions that accept app context
 def count_total_voters_with_context(app, scope, department_id):

@@ -4770,6 +4770,147 @@ def get_admin_live_vote_counts(election_id):
     return vote_counts
     
 
+    
+from admin.models import PdfResult
+
+# Configure upload folder
+UPLOAD_FOLDER = 'admin/static/uploads/pdf_results'
+ALLOWED_EXTENSIONS = {'pdf'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@admin_bp.route('/results/<int:election_id>/upload-pdf', methods=['POST'])
+@admin_required
+def upload_pdf_result(election_id):
+    """Upload a PDF result file for an election"""
+    try:
+        election = Election.query.get_or_404(election_id)
+        
+        if 'pdf_file' not in request.files:
+            return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+        
+        file = request.files['pdf_file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'message': 'Only PDF files are allowed'}), 400
+        
+        # Secure filename and create unique name
+        original_filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"election_{election_id}_{timestamp}_{original_filename}"
+        
+        # Ensure upload directory exists
+        upload_dir = os.path.join(current_app.root_path, 'static/uploads/pdf_results')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Save file
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+        
+        # Get file size
+        file_size = os.path.getsize(file_path)
+        
+        # Get description from form
+        description = request.form.get('description', '')
+        
+        # Create database record
+        pdf_result = PdfResult(
+            election_id=election_id,
+            filename=original_filename,
+            file_path=f'uploads/pdf_results/{filename}',
+            file_size=file_size,
+            uploaded_by=current_user.id,
+            description=description
+        )
+        
+        db.session.add(pdf_result)
+        db.session.commit()
+        
+        # Log audit
+        username = getattr(current_user, 'username', 'Unknown')
+        log_audit(
+            action='PDF_UPLOAD',
+            description=f"Admin '{username}' uploaded PDF result '{original_filename}' for election '{election.title}' (ID: {election_id})"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'PDF uploaded successfully',
+            'pdf_id': pdf_result.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error uploading PDF: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@admin_bp.route('/pdf-result/<int:pdf_id>/delete', methods=['POST'])
+@admin_required
+def delete_pdf_result(pdf_id):
+    """Delete a PDF result"""
+    try:
+        pdf_result = PdfResult.query.get_or_404(pdf_id)
+        election_title = pdf_result.election.title if pdf_result.election else 'Unknown'
+        
+        # Delete file from filesystem
+        file_path = os.path.join(current_app.root_path, 'static', pdf_result.file_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Delete database record
+        db.session.delete(pdf_result)
+        db.session.commit()
+        
+        # Log audit
+        username = getattr(current_user, 'username', 'Unknown')
+        log_audit(
+            action='PDF_DELETE',
+            description=f"Admin '{username}' deleted PDF result '{pdf_result.filename}' for election '{election_title}'"
+        )
+        
+        return jsonify({'success': True, 'message': 'PDF deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting PDF: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@admin_bp.route('/pdf-result/<int:pdf_id>/download')
+@admin_required
+def download_pdf_result(pdf_id):
+    """Download a PDF result"""
+    try:
+        pdf_result = PdfResult.query.get_or_404(pdf_id)
+        file_path = os.path.join(current_app.root_path, 'static', pdf_result.file_path)
+        
+        if not os.path.exists(file_path):
+            flash('PDF file not found on server.', 'error')
+            return redirect(request.referrer or url_for('admin.results_page'))
+        
+        # Log audit
+        username = getattr(current_user, 'username', 'Unknown')
+        log_audit(
+            action='PDF_DOWNLOAD',
+            description=f"Admin '{username}' downloaded PDF result '{pdf_result.filename}' for election ID: {pdf_result.election_id}"
+        )
+        
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=pdf_result.filename,
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        print(f"Error downloading PDF: {str(e)}")
+        flash('Error downloading PDF file.', 'error')
+        return redirect(request.referrer or url_for('admin.results_page'))
+
+
 
 @admin_bp.route('/results/<int:election_id>/tally', methods=['POST'])
 @admin_required

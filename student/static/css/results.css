@@ -1026,3 +1026,217 @@
         background: rgba(255,255,255,0.3);
     }
 }
+
+
+/* ==================== SIMPLIFIED OFFICIAL REPORT SECTION ==================== */
+.official-report-message {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 12px 12px;
+    border-radius: 10px;
+    margin: 12px 0;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
+}
+
+.official-report-message i {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+}
+
+.official-report-message h3 {
+    font-size: 1rem;
+    margin-bottom: 2px;
+    font-weight: 600;
+    color: white;
+}
+
+.official-report-message p {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    margin: 0 auto 10px;
+    color: white;
+}
+
+/* Official PDFs Container - Ultra Compact */
+.official-pdfs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.official-pdf-item {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.official-pdf-icon {
+    width: 28px;
+    height: 28px;
+    background: #dc2626;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.official-pdf-icon i {
+    font-size: 0.9rem;
+    color: white;
+    margin: 0;
+}
+
+.official-pdf-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.official-pdf-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    word-break: break-word;
+}
+
+.official-pdf-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.6rem;
+    color: #64748b;
+}
+
+.official-pdf-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.official-pdf-meta i {
+    font-size: 0.55rem !important;
+    color: #059669;
+    margin: 0 !important;
+}
+
+.official-pdf-description {
+    font-size: 0.6rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+    display: inline-block;
+}
+
+.official-pdf-description i {
+    font-size: 0.55rem !important;
+    margin-right: 2px !important;
+}
+
+.official-pdf-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.official-pdf-download-btn,
+.official-pdf-view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.6rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.official-pdf-download-btn {
+    background: #059669;
+    color: white;
+}
+
+.official-pdf-view-btn {
+    background: #4f46e5;
+    color: white;
+}
+
+.official-pdf-download-btn i,
+.official-pdf-view-btn i {
+    font-size: 0.55rem !important;
+    margin: 0 !important;
+}
+
+.official-report-footer {
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    color: white;
+}
+
+.official-report-footer i {
+    font-size: 0.65rem !important;
+    margin: 0 !important;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .official-pdf-item {
+    background: #2d2d2d;
+    border-color: #404040;
+}
+
+body.dark-mode .official-pdf-name {
+    color: #e2e8f0;
+}
+
+body.dark-mode .official-pdf-meta {
+    color: #94a3b8;
+}
+
+body.dark-mode .official-pdf-description {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .official-pdf-item {
+        flex-wrap: wrap;
+        padding: 8px;
+    }
+    
+    .official-pdf-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 2px;
+    }
+}
+
+@media (max-width: 320px) {
+    .official-pdf-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .official-pdf-actions {
+        justify-content: flex-start;
+    }
+}

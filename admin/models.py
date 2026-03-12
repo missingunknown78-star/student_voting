@@ -559,4 +559,36 @@ class AdminTrustedDevice(db.Model):
 
 
 
+class PdfResult(db.Model):
+    """Model for storing uploaded PDF result files"""
+    __tablename__ = 'pdf_results'
+
+    id = db.Column(db.Integer, primary_key=True)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer, nullable=True)  # Size in bytes
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=True)
+    uploaded_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
+    description = db.Column(db.String(500), nullable=True)
+    
+    # Relationships
+    election = db.relationship('Election', backref=db.backref('pdf_results', lazy=True, cascade='all, delete-orphan'))
+    uploader = db.relationship('Admin', backref=db.backref('uploaded_pdfs', lazy=True))
+    
+    def __repr__(self):
+        return f'<PdfResult {self.filename} for Election {self.election_id}>'
+    
+    @property
+    def formatted_size(self):
+        """Return file size in human readable format"""
+        if not self.file_size:
+            return 'Unknown'
+        
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if self.file_size < 1024.0:
+                return f"{self.file_size:.1f} {unit}"
+            self.file_size /= 1024.0
+        return f"{self.file_size:.1f} TB"
+
         

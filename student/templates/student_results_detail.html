@@ -300,7 +300,8 @@ body.dark-mode .processing-message i {
     </section>
 
     <!-- Content Based on Election State and Publication -->
-    {% if election.end_date < now_naive %}
+        <!-- Content Based on Election State and Publication -->
+        {% if election.end_date < now_naive %}
         <!-- ELECTION ENDED -->
         {% if results_published %}
             <!-- FINAL RESULTS - PUBLISHED -->
@@ -320,17 +321,82 @@ body.dark-mode .processing-message i {
                 {% include 'partials/results_partial.html' %}
             </div>
         {% else %}
-            <!-- PROCESSING - NOT PUBLISHED YET -->
-            <div class="info-message processing-message">
-                <i class="fa-solid fa-hourglass-half"></i>
-                <h3>Results Are Being Processed</h3>
-                <p>The official results have not been published yet. Please check back later.</p>
-                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.8;">
-                    <i class="fa-regular fa-calendar"></i> Election ended: {{ election.end_date.strftime('%B %d, %Y at %I:%M %p') }}
+            <!-- PROCESSING - CHECK FOR PDF UPLOADS -->
+            {% set pdf_results = election.pdf_results|list %}
+            {% if pdf_results and pdf_results|length > 0 %}
+                <!-- OFFICIAL REPORT AVAILABLE -->
+                <div class="info-message official-report-message">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <h3>📄 Official Election Report Available</h3>
+                    <p>The Commission on Elections (COMELEC) has released the official report of the winners and complete election results.</p>
+                    
+                    <!-- PDF List -->
+                    <div class="official-pdfs-container">
+                        {% for pdf in pdf_results|sort(attribute='uploaded_at', reverse=true) %}
+                        <div class="official-pdf-item">
+                            <div class="official-pdf-icon">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div class="official-pdf-details">
+                                <div class="official-pdf-name">{{ pdf.filename }}</div>
+                                <div class="official-pdf-meta">
+                                    <span><i class="fa-regular fa-calendar"></i> {{ pdf.uploaded_at.strftime('%B %d, %Y') }}</span>
+                                    <span><i class="fa-regular fa-clock"></i> {{ pdf.uploaded_at.strftime('%I:%M %p') }}</span>
+                                    {% if pdf.formatted_size %}
+                                    <span><i class="fa-regular fa-file"></i> {{ pdf.formatted_size }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if pdf.description %}
+                                <div class="official-pdf-description">
+                                    <i class="fa-regular fa-note-sticky"></i> {{ pdf.description }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="official-pdf-actions">
+                                <a href="{{ url_for('student.download_pdf_result', pdf_id=pdf.id) }}" 
+                                   class="official-pdf-download-btn" 
+                                   target="_blank"
+                                   title="Download PDF">
+                                    <i class="fa-solid fa-download"></i>
+                                    <span>Download</span>
+                                </a>
+                                <a href="{{ url_for('student.view_pdf_result', pdf_id=pdf.id) }}" 
+                                   class="official-pdf-view-btn" 
+                                   target="_blank"
+                                   title="View PDF">
+                                    <i class="fa-solid fa-eye"></i>
+                                    <span>View</span>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="official-report-footer">
+                        <i class="fa-regular fa-circle-check"></i>
+                        <span>This is the official certified report from COMELEC. Results are final and verified.</span>
+                    </div>
                 </div>
-            </div>
+                
+                <!-- Hide processing message -->
+                <style>
+                    .processing-message {
+                        display: none !important;
+                    }
+                </style>
+            {% else %}
+                <!-- PROCESSING - NO PDFS YET -->
+                <div class="info-message processing-message">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                    <h3>Results Are Being Processed</h3>
+                    <p>The official results have not been published yet. Please check back later.</p>
+                    <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.8;">
+                        <i class="fa-regular fa-calendar"></i> Election ended: {{ election.end_date.strftime('%B %d, %Y at %I:%M %p') }}
+                    </div>
+                </div>
+            {% endif %}
             
-            <!-- Hide results container -->
+            <!-- Hide results container for processing state -->
             <style>
                 #results-container {
                     display: none;

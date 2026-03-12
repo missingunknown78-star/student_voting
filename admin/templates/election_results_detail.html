@@ -109,11 +109,72 @@
         </div>
     </div>
     
-    <!-- Export Actions - Direct download PDF button -->
-<div class="export-actions">
-    <button class="export-btn" id="exportPdfBtn">
-        <i class="fa-solid fa-file-pdf"></i> Export Results (PDF) - Letter Size
-    </button>
+<!-- Export Actions - Split into two columns -->
+<div class="export-actions-container">
+    <!-- Left side: Upload PDF Form -->
+    <div class="upload-pdf-section">
+        <form id="uploadPdfForm" enctype="multipart/form-data" class="upload-pdf-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+            <div class="file-upload-wrapper">
+                <label for="pdfFile" class="file-upload-label">
+                    <i class="fa-solid fa-cloud-upload-alt"></i>
+                    <span class="upload-text">Choose PDF File</span>
+                </label>
+                <input type="file" id="pdfFile" name="pdf_file" accept=".pdf" class="file-upload-input">
+                <div class="file-name-display" id="fileNameDisplay">No file chosen</div>
+            </div>
+            <button type="submit" class="upload-btn" id="uploadPdfBtn">
+                <i class="fa-solid fa-upload"></i> Upload Result PDF
+            </button>
+        </form>
+        
+        <!-- Display existing PDFs if any -->
+        {% if election.pdf_results and election.pdf_results|length > 0 %}
+        <div class="existing-pdfs">
+            <div class="existing-pdfs-header">
+                <i class="fa-solid fa-file-pdf"></i>
+                <span>Uploaded PDF Results ({{ election.pdf_results|length }})</span>
+            </div>
+            <div class="pdf-list">
+                {% for pdf in election.pdf_results|sort(attribute='uploaded_at', reverse=true) %}
+                <div class="pdf-item" id="pdf-item-{{ pdf.id }}">
+                    <div class="pdf-info">
+                        <i class="fa-solid fa-file-pdf pdf-icon"></i>
+                        <div class="pdf-details">
+                            <div class="pdf-name">{{ pdf.filename }}</div>
+                            <div class="pdf-meta">
+                                <span class="pdf-size">{{ pdf.formatted_size }}</span>
+                                <span class="pdf-date">{{ pdf.uploaded_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                                {% if pdf.uploader %}
+                                <span class="pdf-uploader">by {{ pdf.uploader.username }}</span>
+                                {% endif %}
+                            </div>
+                            {% if pdf.description %}
+                            <div class="pdf-description">{{ pdf.description }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="pdf-actions">
+                        <a href="{{ url_for('admin.download_pdf_result', pdf_id=pdf.id) }}" class="pdf-download-btn" title="Download PDF">
+                            <i class="fa-solid fa-download"></i>
+                        </a>
+                        <button type="button" class="pdf-delete-btn" onclick="deletePdfResult({{ pdf.id }})" title="Delete PDF">
+                            <i class="fa-solid fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Right side: Export PDF button -->
+    <div class="export-pdf-section">
+        <button class="export-btn" id="exportPdfBtn">
+            <i class="fa-solid fa-file-pdf"></i> Export Results (PDF) - Letter Size
+        </button>
+    </div>
 </div>
     
     <!-- =========================================== -->

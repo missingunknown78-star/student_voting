@@ -357,6 +357,51 @@
             page-break-inside: auto;
         }
         
+        /* FIXED COLUMN WIDTHS FOR DETAILED RESULTS TABLES - Ensures all tables have same column widths */
+        .detailed-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.1in 0;
+            font-size: 11pt;
+            border: 1px solid #333;
+            page-break-inside: auto;
+            table-layout: fixed; /* This ensures fixed column widths */
+        }
+        
+        .detailed-results-table th,
+        .detailed-results-table td {
+            border: 1px solid #333;
+            padding: 0.06in 0.1in;
+            vertical-align: top;
+            overflow: hidden;
+        }
+        
+        /* Fixed column widths for all detailed results tables */
+        .detailed-results-table th:nth-child(1),
+        .detailed-results-table td:nth-child(1) {
+            width: 10%;
+        }
+        
+        .detailed-results-table th:nth-child(2),
+        .detailed-results-table td:nth-child(2) {
+            width: 45%;
+        }
+        
+        .detailed-results-table th:nth-child(3),
+        .detailed-results-table td:nth-child(3) {
+            width: 15%;
+        }
+        
+        .detailed-results-table th:nth-child(4),
+        .detailed-results-table td:nth-child(4) {
+            width: 15%;
+        }
+        
+        .detailed-results-table th:nth-child(5),
+        .detailed-results-table td:nth-child(5) {
+            width: 15%;
+        }
+        
         /* FOOTER */
         .site-footer {
             flex-shrink: 0;
@@ -571,17 +616,17 @@
                         {{ position_name }}{% if is_tallied and max_winners > 1 %} ({{ max_winners }} WINNERS){% endif %}
                     </div>
                     
-                    <!-- Table with proper page breaking for long lists -->
+                    <!-- Table with fixed column widths for consistency across all positions -->
                     <div class="long-table-container">
-                        <table>
+                        <table class="detailed-results-table">
                             <thead>
                                 <tr>
-                                    <th width="10%">Rank</th>
-                                    <th width="45%">Candidate</th>
-                                    <th width="15%">Votes</th>
-                                    <th width="15%">Percentage</th>
+                                    <th>Rank</th>
+                                    <th>Candidate</th>
+                                    <th>Votes</th>
+                                    <th>Percentage</th>
                                     {% if is_tallied %}
-                                    <th width="15%">Result</th>
+                                    <th>Result</th>
                                     {% endif %}
                                 </tr>
                             </thead>
