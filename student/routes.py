@@ -2875,7 +2875,7 @@ def profile():
     pending_application = PendingCandidate.query.filter_by(student_id=current_user.id, status='pending').first()
     has_pending_application = pending_application is not None
     
-    # Get pending application details if exists
+    # Get pending application details if exists - FIXED: changed 'created_at' to 'applied_at'
     pending_application_details = None
     if pending_application:
         # Fetch election and position details
@@ -2886,7 +2886,7 @@ def profile():
             'position_name': position.name if position else 'Unknown Position',
             'party_list': pending_application.party_list,
             'scope': pending_application.scope,
-            'created_at': pending_application.created_at
+            'applied_at': pending_application.applied_at  # FIXED: changed from created_at to applied_at
         }
     
     # Check if student's application was rejected
@@ -2904,7 +2904,8 @@ def profile():
             'position_name': position.name if position else 'Unknown Position',
             'party_list': rejected_application.party_list,
             'scope': rejected_application.scope,
-            'rejected_at': rejected_application.updated_at if hasattr(rejected_application, 'updated_at') else None
+            'applied_at': rejected_application.applied_at,  # Added applied_at for rejected
+            'rejected_at': rejected_application.reviewed_at if hasattr(rejected_application, 'reviewed_at') else None  # Fixed: reviewed_at not updated_at
         }
     
     # Check if student is already a candidate (approved)
