@@ -79,6 +79,16 @@
         .no-transition * {
             transition: none !important;
         }
+        
+        /* Ensure body background is always correct */
+        body {
+            background-color: #1a1a1a;
+            transition: background-color 0.3s ease;
+        }
+        
+        :root:not(.dark-mode) body {
+            background-color: #f5f7fb;
+        }
     </style>
 </head>
 <body>
@@ -87,7 +97,7 @@
         <h1><i class="fa-solid fa-gear"></i> System Settings</h1>
         <div>
             <!-- Back button that redirects to admin dashboard -->
-            <a href="{{ url_for('admin.dashboard') }}" class="back-button">
+            <a href="{{ url_for('admin.dashboard') }}" class="back-button" onclick="handleBackClick(event)">
                 <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
@@ -291,59 +301,33 @@
     </div>
 </div>
 
+<!-- Global Theme JS - Load this first -->
+<script src="{{ url_for('admin.static', filename='js/theme-manager.js') }}"></script>
+
 <!-- Link to external JavaScript -->
 <script src="{{ url_for('admin.static', filename='js/admin_settings.js') }}"></script>
 
 <script>
+// Handle back button click to ensure theme persists
+function handleBackClick(event) {
+    // Let the browser navigate normally
+    // Theme will persist because it's stored in localStorage
+    console.log('Navigating back to dashboard...');
+}
+
+// Refresh theme manager when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Settings page loaded, refreshing theme manager...');
+    if (window.themeManager) {
+        window.themeManager.refresh();
+    }
+});
+
 // Current state for audit logs
 let currentPage = {{ logs.page }};
 let currentSearch = '{{ search or '' }}';
 let currentStartDate = '{{ start_date or '' }}';
 let currentEndDate = '{{ end_date or '' }}';
-
-// Theme toggle functionality for the content button
-document.addEventListener('DOMContentLoaded', function() {
-    const themeBtn = document.getElementById('contentThemeBtn');
-    const html = document.documentElement;
-    
-    if (themeBtn) {
-        // Set initial icon
-        updateThemeIcon();
-        
-        // Add click handler
-        themeBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Temporarily disable transitions
-            html.classList.add('no-transition');
-            
-            // Toggle theme
-            if (html.classList.contains('dark-mode')) {
-                html.classList.remove('dark-mode');
-                localStorage.setItem('theme', 'light');
-            } else {
-                html.classList.add('dark-mode');
-                localStorage.setItem('theme', 'dark');
-            }
-            
-            // Update icon
-            updateThemeIcon();
-            
-            // Re-enable transitions
-            setTimeout(() => {
-                html.classList.remove('no-transition');
-            }, 50);
-        });
-    }
-    
-    function updateThemeIcon() {
-        if (themeBtn) {
-            const isDark = html.classList.contains('dark-mode');
-            themeBtn.innerHTML = `<i class="fa-solid ${isDark ? 'fa-moon' : 'fa-sun'}"></i>`;
-            themeBtn.title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
-        }
-    }
-});
 
 // 2FA Functions
 function show2FASetup() {
@@ -372,6 +356,11 @@ function show2FASetup() {
             if (data.success) {
                 const setupHTML = generateSetupFormHTML(data);
                 if (setupFormContainer) setupFormContainer.innerHTML = setupHTML;
+                
+                // Refresh theme manager for new content
+                if (window.themeManager) {
+                    window.themeManager.refresh();
+                }
             } else {
                 if (setupFormContainer) {
                     setupFormContainer.innerHTML = `<p class="error-msg">Error: ${data.message || 'Failed to load 2FA setup'}</p>`;
@@ -501,6 +490,11 @@ function loadAuditLogs(page = 1) {
     .then(response => response.text())
     .then(html => {
         tableContainer.innerHTML = html;
+        
+        // Refresh theme manager for new content
+        if (window.themeManager) {
+            window.themeManager.refresh();
+        }
     })
     .catch(error => {
         console.error('Error:', error);
@@ -661,9 +655,13 @@ function trustCurrentDevice() {
 }
 
 function revokeTrustedDevice(deviceId, event) {
+    console.log('Revoke function called for device:', deviceId);
+    
+    // Get the button that was clicked
     const button = event ? event.target.closest('button') : document.querySelector(`button[onclick*="${deviceId}"]`);
     
     if (!button) {
+        console.error('Button not found');
         showNotification('Error: Could not find the device button', 'error');
         return;
     }
@@ -672,10 +670,12 @@ function revokeTrustedDevice(deviceId, event) {
         return;
     }
     
+    // Show loading state
     const originalText = button.innerHTML;
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
     button.disabled = true;
     
+    // Send the request
     fetch(`/admin/trusted-devices/remove/${deviceId}`, {
         method: 'POST',
         headers: {
@@ -684,16 +684,37 @@ function revokeTrustedDevice(deviceId, event) {
         },
         body: JSON.stringify({})
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json().then(data => {
+            console.log('Response data:', data);
+            return { status: response.status, data: data };
+        });
+    })
+    .then(({ status, data }) => {
         if (data.success) {
+            // Show success message using notification system
             showNotification(data.message || 'Device removal email sent successfully! Please check your email.', 'success');
+            
+            // Update button to show pending state
             button.innerHTML = '<i class="fa-solid fa-clock"></i> Pending Confirmation';
             button.style.background = '#f59e0b';
             button.style.borderColor = '#f59e0b';
             button.disabled = true;
+            
+            // Add a small note that they need to check email
+            const deviceItem = button.closest('.device-item');
+            if (deviceItem) {
+                const pendingNote = document.createElement('div');
+                pendingNote.className = 'pending-note';
+                pendingNote.innerHTML = '<small style="color: #f59e0b; display: block; margin-top: 5px;"><i class="fa-solid fa-envelope"></i> Check email to confirm removal</small>';
+                deviceItem.querySelector('.device-actions').appendChild(pendingNote);
+            }
         } else {
+            // Show error message
             showNotification(data.message || 'Failed to remove device', 'error');
+            
+            // Restore button state
             button.innerHTML = originalText;
             button.disabled = false;
         }
@@ -701,6 +722,43 @@ function revokeTrustedDevice(deviceId, event) {
     .catch(error => {
         console.error('Fetch error:', error);
         showNotification('Network error occurred. Please try again.', 'error');
+        
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Alternative simpler version
+function simpleRevokeDevice(deviceId) {
+    console.log('Simple revoke for device:', deviceId);
+    
+    if (!confirm('Remove this device?')) {
+        return;
+    }
+    
+    const button = document.querySelector(`.device-item[data-device-id="${deviceId}"] .btn-icon`);
+    if (!button) return;
+    
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    fetch(`/admin/trusted-devices/test-remove/${deviceId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        showNotification(data.message, data.success ? 'success' : 'error');
+        if (data.success) {
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
         button.innerHTML = originalText;
         button.disabled = false;
     });
@@ -713,11 +771,82 @@ function showNotification(message, type = 'info') {
         container = document.createElement('div');
         container.className = 'notification-container';
         document.body.appendChild(container);
+        
+        // Add styles for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            .notification-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+            }
+            
+            .notification {
+                background: white;
+                border-radius: 8px;
+                padding: 15px 20px;
+                margin-bottom: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideIn 0.3s ease;
+                border-left: 4px solid;
+                min-width: 300px;
+            }
+            
+            .notification.success {
+                border-left-color: #10b981;
+            }
+            
+            .notification.error {
+                border-left-color: #ef4444;
+            }
+            
+            .notification.info {
+                border-left-color: #3b82f6;
+            }
+            
+            .notification.warning {
+                border-left-color: #f59e0b;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            .dark-mode .notification {
+                background: #1e293b;
+                color: #f1f5f9;
+            }
+        `;
+        document.head.appendChild(style);
     }
     
+    // Create notification
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     
+    // Add icon based on type
     let icon = 'fa-info-circle';
     if (type === 'success') icon = 'fa-check-circle';
     if (type === 'error') icon = 'fa-exclamation-circle';
@@ -730,6 +859,7 @@ function showNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
+    // Auto remove after 5 seconds
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => notification.remove(), 300);

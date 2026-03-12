@@ -56,6 +56,10 @@ class Candidate(db.Model):
     
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)  # NEW: Course field
     course = db.relationship('Course', backref='candidates', lazy=True)  # NEW: Course relationship
+    
+    # NEW: Program Type field (Day/Night)
+    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id'), nullable=True)
+    program_type = db.relationship('ProgramType', backref='candidates', lazy=True)  # NEW: Program Type relationship
 
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
@@ -88,6 +92,30 @@ class Candidate(db.Model):
             ).first()
             return ep.max_votes if ep else 1
         return 1
+    
+    # NEW: Helper to check if candidate matches student's program type
+    def matches_student_program_type(self, student_program_type_id):
+        """Check if candidate's program type matches student's program type"""
+        # If candidate has no program type restriction, they match anyone
+        if not self.program_type_id:
+            return True
+        # Otherwise, must match exactly
+        return self.program_type_id == student_program_type_id
+    
+    # NEW: Helper to get program type name
+    @property
+    def program_type_name(self):
+        """Get the program type name (Day/Night) or None"""
+        return self.program_type.name if self.program_type else None
+    
+    # NEW: Helper to check if candidate is restricted to a specific program type
+    @property
+    def is_program_type_restricted(self):
+        """Check if candidate is restricted to a specific program type"""
+        return self.program_type_id is not None
+    
+    def __repr__(self):
+        return f'<Candidate {self.first_name} {self.last_name}>'
 
 
 # admin/models.py - Complete Election class with caching fields
@@ -343,15 +371,15 @@ class AuditLog(db.Model):
     
 
     # Add this after your Position model (around line 40-50)
-
 class ElectionPosition(db.Model):
-    """Junction table linking elections to positions with vote limits and course restrictions"""
+    """Junction table linking elections to positions with vote limits and course/program type restrictions"""
     __tablename__ = 'election_positions'
 
     id = db.Column(db.Integer, primary_key=True)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='SET NULL'), nullable=True)  # NEW: For course-specific positions
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='SET NULL'), nullable=True)  # For course-specific positions
+    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id', ondelete='SET NULL'), nullable=True)  # NEW: For Day/Night specific positions
     
     # THIS IS THE KEY FIELD - how many votes allowed for this position in this election
     max_votes = db.Column(db.Integer, nullable=False, default=1)
@@ -369,7 +397,8 @@ class ElectionPosition(db.Model):
     # Relationships
     election = db.relationship('Election', backref=db.backref('election_positions', cascade='all, delete-orphan'))
     position = db.relationship('Position', backref=db.backref('election_positions', cascade='all, delete-orphan'))
-    course = db.relationship('Course', backref='election_positions')  # NEW: Course relationship
+    course = db.relationship('Course', backref='election_positions')  # Course relationship
+    program_type = db.relationship('ProgramType', backref='election_positions')  # NEW: Program type relationship
 
     # Ensure unique combination of election and position
     __table_args__ = (
@@ -377,8 +406,14 @@ class ElectionPosition(db.Model):
     )
 
     def __repr__(self):
-        course_info = f" course={self.course_id}" if self.course_id else ""
-        return f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}{course_info}>'
+        parts = [f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}']
+        if self.course_id:
+            parts.append(f' course={self.course_id}')
+        if self.program_type_id:
+            parts.append(f' program_type={self.program_type_id}')
+        parts.append('>')
+        return ''.join(parts)
+
 
 
         # Add this to your models.py
@@ -514,3 +549,7 @@ class AdminTrustedDevice(db.Model):
             'browser': browser,
             'os': os
         }
+
+
+
+        

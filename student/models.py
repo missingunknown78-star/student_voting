@@ -30,6 +30,7 @@ class Student(db.Model, UserMixin):
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
+    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id'), nullable=True)  # NEW FIELD
     
     birth_date = db.Column(db.Date)
     id_number = db.Column(db.String(50), unique=True)
@@ -47,6 +48,7 @@ class Student(db.Model, UserMixin):
     # Relationships
     department = db.relationship('Department', backref='students')
     course_rel = db.relationship('Course', backref='students')
+    # program_type relationship is handled by backref in ProgramType model
 
 
 
@@ -216,6 +218,35 @@ class Vote(db.Model):
         except:
             # If it's not JSON, return the raw string (might be the old format)
             return self.finder_hash
+        
+    @property
+    def voted_candidate_ids(self):
+        """Extract candidate IDs from finder_hash without parsing JSON repeatedly"""
+        if not self.finder_hash:
+            return []
+        
+        # Check if we have a cached version
+        if hasattr(self, '_cached_candidate_ids'):
+            return self._cached_candidate_ids
+        
+        try:
+            finder_data = json.loads(self.finder_hash)
+            candidate_ids = []
+            
+            if isinstance(finder_data, dict):
+                if 'hashes' in finder_data:
+                    candidate_ids = [item['candidate_id'] for item in finder_data['hashes'] 
+                                   if 'candidate_id' in item]
+            elif isinstance(finder_data, list):
+                candidate_ids = [item['candidate_id'] for item in finder_data 
+                               if isinstance(item, dict) and 'candidate_id' in item]
+            
+            # Cache it
+            self._cached_candidate_ids = candidate_ids
+            return candidate_ids
+            
+        except:
+            return []
 
 
 class TrustedDevice(db.Model):
@@ -331,3 +362,18 @@ class GuidelinesContent(db.Model):
             db.session.add(content)
             db.session.commit()
         return content
+
+# Add this to your student/models.py file
+
+class ProgramType(db.Model):
+    __tablename__ = 'program_types'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)  # 'Day' or 'Night'
+    description = db.Column(db.String(200))
+    
+    # Relationship
+    students = db.relationship('Student', backref='program_type_rel', lazy=True)
+    
+    def __repr__(self):
+        return f'<ProgramType {self.name}>'

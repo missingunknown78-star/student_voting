@@ -100,7 +100,7 @@
             <!-- ELECTIONS -->
             <a href="{{ url_for('admin.create_department_election') }}"
                class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
-               <i class="fa-solid fa-building-columns"></i> Create Elections
+               <i class="fa-solid fa-building-columns"></i> Manage Elections
             </a>
 
             <!-- COLLEGES / DEPARTMENTS -->
@@ -138,11 +138,121 @@
 <!-- Single theme management script -->
 <script src="{{ url_for('admin.static', filename='js/theme-manager.js') }}"></script>
 
-<!-- School Year Sync Script -->
+<!-- Sidebar Scroll Position Persistence Script -->
 <script>
     (function() {
         const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
         window.currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
+        
+        // =============== SIDEBAR SCROLL POSITION PERSISTENCE ===============
+        (function() {
+            const SCROLL_POSITION_KEY = 'adminSidebarScrollPosition';
+            const sidebar = document.getElementById('sidebar');
+            
+            if (!sidebar) return;
+            
+            // Save scroll position before navigating away
+            function setupScrollSave() {
+                const sidebarLinks = document.querySelectorAll('.sidebar-nav a:not([href*="logout"])');
+                
+                sidebarLinks.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        if (this.classList.contains('disabled-link')) return;
+                        
+                        // Save current scroll position
+                        const currentScroll = sidebar.scrollTop;
+                        localStorage.setItem(SCROLL_POSITION_KEY, currentScroll);
+                        console.log('Saved scroll position:', currentScroll);
+                    });
+                });
+            }
+            
+            // Restore scroll position with multiple attempts
+            function restoreScrollPosition() {
+                if (!sidebar) return;
+                
+                const savedPosition = localStorage.getItem(SCROLL_POSITION_KEY);
+                
+                if (savedPosition !== null) {
+                    const position = parseInt(savedPosition);
+                    
+                    // Multiple attempts to ensure it restores after content loads
+                    const applyScroll = function(attempt) {
+                        setTimeout(() => {
+                            sidebar.scrollTop = position;
+                            console.log(`Applied scroll position (attempt ${attempt}):`, sidebar.scrollTop);
+                        }, attempt * 50);
+                    };
+                    
+                    // Try at different intervals
+                    applyScroll(1);  // 50ms
+                    applyScroll(4);  // 200ms
+                    applyScroll(10); // 500ms
+                    applyScroll(20); // 1000ms
+                }
+            }
+            
+            // =============== ENSURE ACTIVE LINK IS VISIBLE (WITHOUT LOSING POSITION) ===============
+            function ensureActiveLinkVisible() {
+                if (!sidebar) return;
+                
+                const activeLink = document.querySelector('.sidebar-nav a.active');
+                if (!activeLink) return;
+                
+                // Get the saved position first
+                const savedPosition = localStorage.getItem(SCROLL_POSITION_KEY);
+                
+                // If we have a saved position, use that instead of auto-scrolling to active
+                if (savedPosition !== null) {
+                    return; // Already restored by restoreScrollPosition
+                }
+                
+                // Only auto-scroll to active if no saved position exists (first visit)
+                const linkTop = activeLink.offsetTop;
+                const linkHeight = activeLink.offsetHeight;
+                const sidebarHeight = sidebar.clientHeight;
+                const currentScroll = sidebar.scrollTop;
+                
+                // Check if active link is outside visible area
+                const isAboveView = linkTop < currentScroll;
+                const isBelowView = linkTop + linkHeight > currentScroll + sidebarHeight;
+                
+                if (isAboveView || isBelowView) {
+                    const scrollToPosition = Math.max(0, linkTop - (sidebarHeight / 2) + (linkHeight / 2));
+                    sidebar.scrollTop = scrollToPosition;
+                    // Save this position for next time
+                    localStorage.setItem(SCROLL_POSITION_KEY, scrollToPosition);
+                }
+            }
+            
+            // Clear position on logout
+            function setupLogoutClear() {
+                const logoutLink = document.querySelector('.sidebar-nav a[href*="logout"]');
+                if (logoutLink) {
+                    logoutLink.addEventListener('click', function() {
+                        localStorage.removeItem(SCROLL_POSITION_KEY);
+                        console.log('Cleared scroll position on logout');
+                    });
+                }
+            }
+            
+            // Initialize
+            setupScrollSave();
+            restoreScrollPosition();
+            setupLogoutClear();
+            
+            // Run after everything else loads
+            window.addEventListener('load', function() {
+                restoreScrollPosition();
+                ensureActiveLinkVisible();
+            });
+            
+            // Run after dynamic content might load
+            setTimeout(restoreScrollPosition, 300);
+            setTimeout(restoreScrollPosition, 800);
+            setTimeout(restoreScrollPosition, 1500);
+            
+        })();
         
         // Mark main content as ready after a tiny delay
         setTimeout(function() {

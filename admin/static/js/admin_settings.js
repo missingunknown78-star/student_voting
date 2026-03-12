@@ -443,7 +443,6 @@ function applyAuditFilters() {
     return false;
 }
 
-
 function clearAuditFilters() {
     const form = document.getElementById('auditFilterForm');
     if (form) {
@@ -570,5 +569,3 @@ function showNotification(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, 5000);
 }
-
-

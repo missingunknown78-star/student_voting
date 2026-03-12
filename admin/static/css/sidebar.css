@@ -2,14 +2,50 @@
 :root {
     --sidebar-bg: #0a0a0a;  /* Black base */
     --sidebar-hover: #1a1a1a;
-    --sidebar-active: #1a3a6b;  /* Deep navy blue - changed from orange-red */
+    --sidebar-active: #0f766e;  /* Deep teal for light mode */
     --sidebar-text: #ffffff;
     --sidebar-text-muted: #cccccc;
     --sidebar-width: 280px;
     --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --gradient-primary: linear-gradient(135deg, #0a1a3a 0%, #1a3a6b 50%, #0a0a0a 100%);  /* Navy blue to black */
-    --gradient-logo: linear-gradient(135deg, #0a1a3a 0%, #1a3a6b 50%, #2a4a8a 100%);  /* Navy blue variations */
+    
+    /* Light mode gradients */
+    --gradient-primary: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+    --gradient-logo: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #6b21a5 100%);
+    --border-color: rgba(15, 118, 110, 0.3);
+    --shadow-color: rgba(15, 118, 110, 0.2);
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --icon-color: #0f766e;
+    --hover-bg: linear-gradient(90deg, rgba(15, 118, 110, 0.2), rgba(107, 33, 165, 0.2));
+    --active-bg: linear-gradient(90deg, rgba(15, 118, 110, 0.3), rgba(107, 33, 165, 0.3));
+    --active-border: #0f766e;
+    --hover-border: #0f766e;
+    --sidebar-border: 1px solid rgba(0, 0, 0, 0.1); /* Light border for light mode */
+    
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Dark mode variables - Fire theme with yellow, red, orange, black */
+:root.dark-mode {
+    --sidebar-bg: #000000;
+    --sidebar-hover: #1a1a1a;
+    --sidebar-active: #f59e0b;  /* Amber/orange */
+    --sidebar-text: #ffffff;
+    --sidebar-text-muted: #cccccc;
+    
+    /* Dark mode gradients - Fire theme */
+    --gradient-primary: linear-gradient(135deg, #000000 0%, #7c2d12 50%, #991b1b 100%); /* Black to burnt orange to red */
+    --gradient-logo: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #dc2626 100%); /* Yellow to orange to red */
+    --border-color: rgba(245, 158, 11, 0.4); /* Orange border */
+    --shadow-color: rgba(220, 38, 38, 0.3); /* Red shadow */
+    --text-primary: #ffffff;
+    --text-secondary: #fcd34d; /* Light yellow */
+    --icon-color: #fbbf24; /* Yellow icons */
+    --hover-bg: linear-gradient(90deg, rgba(245, 158, 11, 0.4), rgba(220, 38, 38, 0.4)); /* Orange to red gradient */
+    --active-bg: linear-gradient(90deg, rgba(245, 158, 11, 0.7), rgba(220, 38, 38, 0.7)); /* Stronger orange to red */
+    --active-border: #f59e0b; /* Orange border */
+    --hover-border: #fbbf24; /* Yellow border */
+    --sidebar-border: 2px solid #000000; /* SOLID BLACK LINE - no shadow */
 }
 
 /* ------------------- Sidebar Container ------------------- */
@@ -26,15 +62,138 @@
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 1000;
-    box-shadow: 5px 0 15px rgba(26, 58, 107, 0.3);  /* Navy blue shadow - changed */
+    /* NO BOX SHADOW - replaced with border */
+    border-right: var(--sidebar-border);
     transition: var(--sidebar-transition);
-    border-right: 1px solid rgba(26, 58, 107, 0.4);  /* Navy blue border - changed */
     
     /* COMPLETELY INVISIBLE SCROLLBAR */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Light mode specific text colors - with stronger visibility */
+:root:not(.dark-mode) .sidebar {
+    --sidebar-text: #0f172a;
+    --sidebar-text-muted: #334155;
+    border-right: 1px solid rgba(0, 0, 0, 0.1); /* Light border for light mode */
+}
+
+:root:not(.dark-mode) .sidebar-header h2 {
+    color: #0f172a !important;
+    text-shadow: none;
+    font-weight: 700;
+}
+
+:root:not(.dark-mode) .sidebar-header p {
+    color: #0f766e;
+    font-weight: 600;
+    text-shadow: none;
+}
+
+:root:not(.dark-mode) .sidebar-nav a {
+    color: #0f172a;
+    font-weight: 600;
+    text-shadow: none;
+    border: 1px solid rgba(15, 118, 110, 0.2);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+:root:not(.dark-mode) .sidebar-nav a i {
+    color: #0f766e;
+    opacity: 1;
+}
+
+/* Stronger hover state for light mode */
+:root:not(.dark-mode) .sidebar-nav a:hover {
+    background: linear-gradient(90deg, rgba(15, 118, 110, 0.3), rgba(107, 33, 165, 0.3));
+    color: #0f172a;
+    border-color: #0f766e;
+    border-width: 2px;
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(15, 118, 110, 0.3);
+}
+
+:root:not(.dark-mode) .sidebar-nav a:hover i {
+    color: #0f766e;
+    transform: scale(1.1);
+}
+
+/* Stronger active state for light mode */
+:root:not(.dark-mode) .sidebar-nav a.active {
+    background: linear-gradient(90deg, rgba(15, 118, 110, 0.4), rgba(107, 33, 165, 0.4));
+    color: #0f172a;
+    font-weight: 700;
+    border-color: #0f766e;
+    border-width: 2px;
+    box-shadow: 0 4px 20px rgba(15, 118, 110, 0.3);
+    position: relative;
+}
+
+:root:not(.dark-mode) .sidebar-nav a.active i {
+    color: #0f766e;
+    opacity: 1;
+}
+
+:root:not(.dark-mode) .sidebar-nav a.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 70%;
+    background: #0f766e;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 15px #0f766e;
+}
+
+/* Dark mode styles - Fire theme */
+:root.dark-mode .sidebar-nav a {
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+:root.dark-mode .sidebar-nav a i {
+    color: #fbbf24; /* Yellow icons */
+}
+
+:root.dark-mode .sidebar-nav a:hover {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.4), rgba(220, 38, 38, 0.4));
+    border-color: #fbbf24; /* Yellow border */
+    border-width: 2px;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4); /* Red shadow */
+}
+
+:root.dark-mode .sidebar-nav a:hover i {
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+:root.dark-mode .sidebar-nav a.active {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.7), rgba(220, 38, 38, 0.7));
+    border-color: #f59e0b; /* Orange border */
+    border-width: 2px;
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.5); /* Red shadow */
+}
+
+:root.dark-mode .sidebar-nav a.active i {
+    color: #ffffff;
+}
+
+:root.dark-mode .sidebar-nav a.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 70%;
+    background: #fbbf24; /* Yellow indicator */
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 15px #fbbf24; /* Yellow glow */
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -50,12 +209,17 @@
     text-align: center;
     padding: 30px 20px 25px;
     position: relative;
-    background: rgba(0, 0, 0, 0.7);  /* Semi-transparent black */
+    background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(26, 58, 107, 0.5);  /* Navy blue border - changed */
+    border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 20;
+}
+
+:root.dark-mode .sidebar-header {
+    background: rgba(0, 0, 0, 0.7);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.5);
 }
 
 /* Logo container with decorative elements */
@@ -77,14 +241,14 @@
     background: var(--gradient-logo);
     border-radius: 50%;
     filter: blur(10px);
-    opacity: 0.3;
+    opacity: 0.4;
     z-index: 1;
     animation: pulse 4s ease-in-out infinite;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.5; }
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
 }
 
 /* Logo image */
@@ -93,45 +257,56 @@
     height: 100px;
     object-fit: contain;
     border-radius: 50%;
-    border: 3px solid rgba(26, 58, 107, 0.6);  /* Navy blue border - changed */
+    border: 3px solid var(--border-color);
     padding: 5px;
     background: var(--gradient-logo);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(42, 74, 138, 0.3),  /* Lighter navy glow - changed */
-                inset 0 2px 10px rgba(42, 74, 138, 0.2);  /* Navy inner glow - changed */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
     position: relative;
     z-index: 2;
     transition: var(--sidebar-transition);
 }
 
+:root.dark-mode .sidebar-header img.logo {
+    border: 3px solid rgba(245, 158, 11, 0.6);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
 .sidebar-header img.logo:hover {
     transform: scale(1.05);
-    border-color: rgba(42, 74, 138, 0.8);  /* Lighter navy border - changed */
-    box-shadow: 0 10px 25px rgba(26, 58, 107, 0.5),  /* Navy shadow - changed */
-                0 0 0 1px rgba(42, 74, 138, 0.4);  /* Navy glow - changed */
+    border-color: var(--sidebar-active);
+    box-shadow: 0 10px 25px var(--shadow-color);
 }
 
 /* School name styling */
 .sidebar-header h2 {
     font-size: 1.1rem;
-    color: #ffffff !important;  /* Pure white for contrast */
     margin: 0 0 5px 0;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.5px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);  /* Black shadow for readability */
+}
+
+:root.dark-mode .sidebar-header h2 {
+    color: #ffffff !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .sidebar-header p {
-    color: #aac8ff;  /* Light navy blue - changed from gold */
     font-size: 0.85rem;
     margin: 0;
     padding: 5px 0;
-    border-top: 1px solid rgba(42, 74, 138, 0.5);  /* Navy border - changed */
-    border-bottom: 1px solid rgba(42, 74, 138, 0.5);  /* Navy border - changed */
-    background: rgba(0, 0, 0, 0.3);  /* Semi-transparent black */
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     margin-top: 5px;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+    font-weight: 600;
+}
+
+:root.dark-mode .sidebar-header p {
+    color: #fbbf24; /* Yellow text */
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(245, 158, 11, 0.5);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.5);
 }
 
 /* ------------------- Sidebar Navigation ------------------- */
@@ -140,27 +315,34 @@
     flex-direction: column;
     padding: 20px 0;
     flex-grow: 1;
-    background: rgba(0, 0, 0, 0.5);  /* Semi-transparent black overlay */
+    background: rgba(255, 255, 255, 0.1);
 }
 
-/* Navigation items */
+:root.dark-mode .sidebar-nav {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Navigation items - base styles */
 .sidebar-nav a {
     padding: 14px 25px;
-    color: #ffffff;  /* White text for contrast */
     text-decoration: none;
     display: flex;
     align-items: center;
     gap: 14px;
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 600;
     margin: 2px 15px;
     border-radius: 12px;
     transition: var(--sidebar-transition);
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(26, 58, 107, 0.3);  /* Navy border - changed */
-    background: rgba(0, 0, 0, 0.3);  /* Semi-transparent black */
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);  /* Text shadow for readability */
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+:root.dark-mode .sidebar-nav a {
+    background: rgba(0, 0, 0, 0.3);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* Icons styling */
@@ -169,90 +351,56 @@
     text-align: center;
     font-size: 1.1rem;
     transition: var(--sidebar-transition);
-    opacity: 0.9;
-    color: #aac8ff;  /* Light navy blue icons - changed from yellow */
-}
-
-/* Hover state */
-.sidebar-nav a:hover {
-    background: linear-gradient(90deg, rgba(26, 58, 107, 0.4), rgba(42, 74, 138, 0.4));  /* Navy gradient - changed */
-    border-color: rgba(42, 74, 138, 0.6);  /* Lighter navy border - changed */
-    transform: translateX(5px);
-    color: #ffffff;  /* White text */
-    box-shadow: 0 4px 15px rgba(26, 58, 107, 0.4);  /* Navy shadow - changed */
-}
-
-.sidebar-nav a:hover i {
-    opacity: 1;
-    transform: scale(1.1);
-    color: #cce0ff;  /* Very light navy blue - changed from bright yellow */
-}
-
-/* Active state */
-.sidebar-nav a.active {
-    background: linear-gradient(90deg, rgba(26, 58, 107, 0.7), rgba(42, 74, 138, 0.7));  /* Strong navy gradient - changed */
-    border-color: rgba(42, 74, 138, 0.8);  /* Lighter navy border - changed */
-    color: #ffffff;
-    box-shadow: 0 4px 20px rgba(26, 58, 107, 0.6),  /* Navy shadow - changed */
-                inset 0 1px 10px rgba(42, 74, 138, 0.3);  /* Navy inner glow - changed */
-}
-
-.sidebar-nav a.active i {
-    color: #cce0ff;  /* Very light navy blue - changed from bright yellow */
     opacity: 1;
 }
 
-.sidebar-nav a.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 60%;
-    background: #cce0ff;  /* Light navy blue - changed from bright yellow */
-    border-radius: 0 4px 4px 0;
-    box-shadow: 0 0 10px #cce0ff;  /* Light navy glow - changed */
-}
-
-/* Disabled link styling */
-.sidebar-nav a.disabled-link {
-    opacity: 0.6;
-    cursor: not-allowed;
-    border-color: rgba(26, 58, 107, 0.2);  /* Navy border - changed */
-}
-
-.sidebar-nav a.disabled-link:hover {
-    background: rgba(0, 0, 0, 0.3);
-    transform: none;
-    border-color: rgba(26, 58, 107, 0.2);  /* Navy border - changed */
-    box-shadow: none;
-}
-
-/* Logout button styling (last item) - MORE RED ON HOVER */
+/* Logout button styling - RED (keeping red for both modes) */
 .sidebar-nav a:last-child {
     margin-top: auto;
     margin-bottom: 20px;
-    background: linear-gradient(90deg, rgba(220, 38, 38, 0.3), rgba(185, 28, 28, 0.3));  /* Red gradient - changed from navy */
-    border-color: rgba(220, 38, 38, 0.5);  /* Red border - changed from navy */
-    color: #ffcccc;  /* Light red text - changed from navy */
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.15), rgba(185, 28, 28, 0.15));
+    border-color: rgba(220, 38, 38, 0.3);
 }
 
-.sidebar-nav a:last-child i {
-    color: #ff9999;  /* Light red icon - changed from navy */
+:root:not(.dark-mode) .sidebar-nav a:last-child {
+    color: #991b1b;
+    font-weight: 700;
 }
 
+:root:not(.dark-mode) .sidebar-nav a:last-child i {
+    color: #dc2626;
+}
+
+:root.dark-mode .sidebar-nav a:last-child {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.3), rgba(185, 28, 28, 0.3));
+    border-color: rgba(220, 38, 38, 0.5);
+    color: #ffcccc;
+}
+
+:root.dark-mode .sidebar-nav a:last-child i {
+    color: #ff9999;
+}
+
+/* Hover state for logout */
 .sidebar-nav a:last-child:hover {
-    background: linear-gradient(90deg, rgba(220, 38, 38, 0.8), rgba(185, 28, 28, 0.9));  /* Strong red gradient on hover */
-    border-color: rgba(239, 68, 68, 1);  /* Bright red border on hover */
-    color: #ffffff;  /* Pure white text on hover */
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.6);  /* Red shadow on hover */
-    transform: translateX(5px);  /* Keep the slide effect */
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.25), rgba(185, 28, 28, 0.25));
+    border-color: rgba(239, 68, 68, 0.7);
+    border-width: 2px;
+}
+
+:root.dark-mode .sidebar-nav a:last-child:hover {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.8), rgba(185, 28, 28, 0.9));
+    border-color: rgba(239, 68, 68, 1);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.6);
 }
 
 .sidebar-nav a:last-child:hover i {
-    color: #ffffff;  /* White icon on hover */
-    transform: scale(1.1);  /* Slight scale effect on icon */
+    transform: scale(1.1);
+}
+
+:root.dark-mode .sidebar-nav a:last-child:hover i {
+    color: #ffffff;
 }
 
 /* ------------------- Animation for menu items ------------------- */
@@ -330,14 +478,14 @@
     }
 }
 
-/* ------------------- Mobile Toggle Button (Optional) ------------------- */
+/* ------------------- Mobile Toggle Button ------------------- */
 .sidebar-toggle {
     display: none;
     position: fixed;
     top: 20px;
     left: 20px;
     z-index: 1001;
-    background: linear-gradient(135deg, #0a1a3a, #1a3a6b);  /* Navy gradient - changed */
+    background: linear-gradient(135deg, #0f766e, #6b21a5);
     color: white;
     border: none;
     width: 40px;
@@ -346,13 +494,21 @@
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(26, 58, 107, 0.5);  /* Navy shadow - changed */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: var(--sidebar-transition);
+}
+
+:root.dark-mode .sidebar-toggle {
+    background: linear-gradient(135deg, #f59e0b, #dc2626);
 }
 
 .sidebar-toggle:hover {
     transform: scale(1.1);
-    background: linear-gradient(135deg, #1a3a6b, #0a1a3a);  /* Reverse navy gradient - changed */
+    background: linear-gradient(135deg, #6b21a5, #0f766e);
+}
+
+:root.dark-mode .sidebar-toggle:hover {
+    background: linear-gradient(135deg, #dc2626, #f59e0b);
 }
 
 @media (max-width: 768px) {
@@ -361,8 +517,7 @@
     }
 }
 
-/* ------------------- Scrollbar Removal Fix for All Browsers ------------------- */
-/* For WebKit browsers (Chrome, Safari, Edge) */
+/* ------------------- Scrollbar Removal ------------------- */
 .sidebar::-webkit-scrollbar {
     width: 0px !important;
     height: 0px !important;
@@ -386,14 +541,9 @@
     display: none !important;
 }
 
-/* For Firefox */
 .sidebar {
     scrollbar-width: none !important;
     scrollbar-color: transparent transparent !important;
-}
-
-/* For Internet Explorer and Edge Legacy */
-.sidebar {
     -ms-overflow-style: none !important;
 }
 
@@ -409,7 +559,7 @@
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1a3a6b, #0a1a3a);  /* Navy gradient - changed */
+    background: linear-gradient(135deg, #0f766e, #6b21a5);
     border: 2px solid rgba(255, 255, 255, 0.8);
     color: white;
     font-size: 1.2rem;
@@ -417,34 +567,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(26, 58, 107, 0.5),  /* Navy shadow - changed */
-                0 0 0 2px rgba(42, 74, 138, 0.3);  /* Navy glow - changed */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
 }
 
+:root.dark-mode .floating-theme-btn {
+    background: linear-gradient(135deg, #f59e0b, #dc2626);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+}
+
 .floating-theme-btn:hover {
     transform: scale(1.1) rotate(15deg);
-    background: linear-gradient(135deg, #0a1a3a, #1a3a6b);  /* Reverse navy gradient - changed */
-    box-shadow: 0 6px 20px rgba(26, 58, 107, 0.7),  /* Navy shadow - changed */
-                0 0 0 3px rgba(42, 74, 138, 0.4);  /* Navy glow - changed */
+    background: linear-gradient(135deg, #6b21a5, #0f766e);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark-mode .floating-theme-btn:hover {
+    background: linear-gradient(135deg, #dc2626, #f59e0b);
 }
 
 .floating-theme-btn:active {
     transform: scale(0.95);
 }
 
-
 /* Pulse animation */
 @keyframes pulse-glow {
     0%, 100% { 
-        box-shadow: 0 4px 15px rgba(26, 58, 107, 0.5),  /* Navy shadow - changed */
-                    0 0 0 2px rgba(42, 74, 138, 0.3);  /* Navy glow - changed */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
     50% { 
-        box-shadow: 0 4px 20px rgba(26, 58, 107, 0.7),  /* Navy shadow - changed */
-                    0 0 0 3px rgba(42, 74, 138, 0.4);  /* Navy glow - changed */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }
 }
 
@@ -452,18 +606,16 @@
     animation: pulse-glow 3s infinite;
 }
 
-.dark-mode .floating-theme-btn {
+:root.dark-mode .floating-theme-btn {
     animation: pulse-glow-dark 3s infinite;
 }
 
 @keyframes pulse-glow-dark {
     0%, 100% { 
-        box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3), 
-                    0 0 0 2px rgba(114, 9, 183, 0.2); 
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
     }
     50% { 
-        box-shadow: 0 4px 20px rgba(67, 97, 238, 0.5), 
-                    0 0 0 3px rgba(114, 9, 183, 0.3); 
+        box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
     }
 }
 

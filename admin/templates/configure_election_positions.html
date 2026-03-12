@@ -5,7 +5,6 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/configure_positions.css') }}">
-<!-- No inline styles needed anymore - all moved to configure_positions.css -->
 {% endblock %}
 
 {% block content %}
@@ -25,14 +24,13 @@
     <div class="instruction-box">
         <h3>📋 How to Configure</h3>
         <p>Select which positions will be included in this election and set how many candidates students can vote for per position.</p>
-        <p><strong>For Campus-Wide Elections:</strong> You can also restrict positions to specific courses (e.g., for House of Representatives).</p>
-        <p><strong>Example:</strong> For Senators, set "Max Votes" to 12. For Course Representatives, select the specific course from the dropdown.</p>
+        <p><strong>For Campus-Wide Elections:</strong> You can also restrict positions to specific courses or program types (Day/Night).</p>
     </div>
 
-    <form method="POST">
+    <form method="POST" id="configForm">
         <div class="select-all-bar">
             <label>
-                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <input type="checkbox" id="selectAll">
                 <strong>Select All Positions</strong>
             </label>
             <span class="selection-counter">
@@ -40,77 +38,120 @@
             </span>
         </div>
 
-        <!-- Sort positions by ID -->
-        {% for position in all_positions|sort(attribute='id') %}
-        <div class="position-card" id="position-{{ position.id }}" data-position-id="{{ position.id }}">
-            <div class="position-checkbox">
-                <input type="checkbox" 
-                       name="positions" 
-                       value="{{ position.id }}" 
-                       id="pos_{{ position.id }}"
-                       onchange="togglePositionSelection({{ position.id }})"
-                       {% if position.id in configured_position_ids %}checked{% endif %}>
-            </div>
-            
-            <div class="position-info">
-                <div class="position-name">
-                    {{ position.name }}
-                    {% if position.description %}
-                        <span class="badge">{{ position.description|truncate(30) }}</span>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="position-config-fields">
-                <!-- Vote Limit Field (Top) -->
-                <div class="vote-limit">
-                    <label for="max_votes_{{ position.id }}">Max Votes</label>
-                    <input type="number" 
-                           name="max_votes_{{ position.id }}" 
-                           id="max_votes_{{ position.id }}"
-                           min="1" 
-                           max="50"
-                           value="{{ configured_positions.get(position.id, 1) }}"
-                           {% if position.id not in configured_position_ids %}disabled{% endif %}
-                           onchange="validateVoteLimit(this)">
+        <!-- Positions Grid - Fixed 3 columns -->
+        <div class="positions-grid">
+            {% for position in all_positions|sort(attribute='id') %}
+            <div class="position-card" id="position-{{ position.id }}" data-position-id="{{ position.id }}">
+                <!-- Card Header with Checkbox and Position Name -->
+                <div class="card-header">
+                    <div class="header-left">
+                        <input type="checkbox" 
+                               name="positions" 
+                               value="{{ position.id }}" 
+                               id="pos_{{ position.id }}"
+                               class="position-checkbox">
+                    </div>
+                    <div class="header-center">
+                        <span class="position-name">{{ position.name }}</span>
+                    </div>
+                    <div class="header-right">
+                        {% if position.description %}
+                            <span class="badge">{{ position.description|truncate(15) }}</span>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <!-- Course Dropdown Field (Bottom) - Only for campus-wide elections -->
-                {% if election.scope == 'campus' %}
-                <div class="course-restriction">
-                    <label for="course_{{ position.id }}">Course (Optional)</label>
-                    <select name="course_{{ position.id }}" 
-                            id="course_{{ position.id }}" 
-                            class="course-select"
-                            {% if position.id not in configured_position_ids %}disabled{% endif %}
-                            onchange="updateCourseBadge({{ position.id }})">
-                        <option value="">-- All Courses --</option>
-                        {% for course in all_courses %}
-                            <option value="{{ course.id }}" 
-                                    {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
-                                {{ course.course_name }} {% if course.course_code %}({{ course.course_code }}){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <div class="course-hint">
-                        <i class="fa-solid fa-graduation-cap"></i> 
-                        <span id="course-badge-{{ position.id }}" class="course-badge">
-                            {% if position_courses.get(position.id) %}
-                                {% for course in all_courses %}
-                                    {% if course.id == position_courses.get(position.id) %}
-                                        {{ course.course_name }}
+                <!-- Configuration Options Stacked Vertically -->
+                <div class="config-stack">
+                    <!-- Max Votes -->
+                    <div class="config-item">
+                        <div class="config-label">
+                            <i class="fa-solid fa-square-poll-vertical"></i>
+                            <span>Max Votes</span>
+                        </div>
+                        <div class="config-input-group">
+                            <input type="number" 
+                                   name="max_votes_{{ position.id }}" 
+                                   id="max_votes_{{ position.id }}"
+                                   min="1" 
+                                   max="50"
+                                   value="{{ configured_positions.get(position.id, 1) }}"
+                                   class="vote-input"
+                                   disabled>
+                        </div>
+                    </div>
+
+                    <!-- Program Type -->
+                    <div class="config-item">
+                        <div class="config-label">
+                            <i class="fa-solid fa-calendar-alt"></i>
+                            <span>Program Type</span>
+                        </div>
+                        <div class="config-input-group">
+                            <select name="program_type_{{ position.id }}" 
+                                    id="program_type_{{ position.id }}" 
+                                    class="program-select"
+                                    disabled>
+                                <option value="">All Programs</option>
+                                {% for program_type in program_types %}
+                                    <option value="{{ program_type.id }}" 
+                                            {% if position_program_types.get(position.id) == program_type.id %}selected{% endif %}>
+                                        {{ program_type.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="config-badge" id="program-badge-{{ position.id }}">
+                            {% if position_program_types.get(position.id) %}
+                                {% for program_type in program_types %}
+                                    {% if program_type.id == position_program_types.get(position.id) %}
+                                        {{ program_type.name }}
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
-                                All Courses
+                                All
                             {% endif %}
-                        </span>
+                        </div>
                     </div>
+
+                    <!-- Course Restriction (Only for campus-wide elections) -->
+                    {% if election.scope == 'campus' %}
+                    <div class="config-item">
+                        <div class="config-label">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <span>Course</span>
+                        </div>
+                        <div class="config-input-group">
+                            <select name="course_{{ position.id }}" 
+                                    id="course_{{ position.id }}" 
+                                    class="course-select"
+                                    disabled>
+                                <option value="">All Courses</option>
+                                {% for course in all_courses %}
+                                    <option value="{{ course.id }}" 
+                                            {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
+                                        {{ course.course_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="config-badge" id="course-badge-{{ position.id }}">
+                            {% if position_courses.get(position.id) %}
+                                {% for course in all_courses %}
+                                    {% if course.id == position_courses.get(position.id) %}
+                                        {{ course.course_name|truncate(12) }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                All
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
 
         <div class="action-buttons">
             <a href="{{ url_for('admin.create_election') }}" class="cancel-btn">← Back to Elections</a>
@@ -121,7 +162,6 @@
     </form>
 </div>
 
-<!-- Hidden field to store return URL for sidebar highlighting -->
 <input type="hidden" id="return_url" value="{{ url_for('admin.create_election') }}">
 
 <script>
@@ -136,8 +176,7 @@ function toggleSelectAll() {
     
     checkboxes.forEach(checkbox => {
         checkbox.checked = selectAll.checked;
-        const positionId = checkbox.value;
-        togglePositionSelection(positionId);
+        togglePositionSelection(checkbox.value);
     });
     updateSelectedCount();
 }
@@ -146,22 +185,20 @@ function togglePositionSelection(positionId) {
     const checkbox = document.getElementById(`pos_${positionId}`);
     const card = document.getElementById(`position-${positionId}`);
     const limitInput = document.getElementById(`max_votes_${positionId}`);
+    const programSelect = document.getElementById(`program_type_${positionId}`);
     const courseSelect = document.getElementById(`course_${positionId}`);
     
-    if (checkbox.checked) {
+    if (checkbox && checkbox.checked) {
         card.classList.add('selected');
-        limitInput.disabled = false;
-        if (courseSelect) {
-            courseSelect.disabled = false;
-        }
+        if (limitInput) limitInput.disabled = false;
+        if (programSelect) programSelect.disabled = false;
+        if (courseSelect) courseSelect.disabled = false;
     } else {
         card.classList.remove('selected');
-        limitInput.disabled = true;
-        if (courseSelect) {
-            courseSelect.disabled = true;
-        }
+        if (limitInput) limitInput.disabled = true;
+        if (programSelect) programSelect.disabled = true;
+        if (courseSelect) courseSelect.disabled = true;
     }
-    updateSelectedCount();
 }
 
 function validateVoteLimit(input) {
@@ -171,16 +208,6 @@ function validateVoteLimit(input) {
     } else if (value > 50) {
         input.value = 50;
         alert('Maximum votes cannot exceed 50');
-    }
-}
-
-function updateCourseBadge(positionId) {
-    const courseSelect = document.getElementById(`course_${positionId}`);
-    const courseBadge = document.getElementById(`course-badge-${positionId}`);
-    
-    if (courseSelect && courseBadge) {
-        const selectedOption = courseSelect.options[courseSelect.selectedIndex];
-        courseBadge.textContent = selectedOption.text;
     }
 }
 
@@ -196,12 +223,13 @@ function validateForm() {
     checkboxes.forEach(checkbox => {
         const positionId = checkbox.value;
         const limitInput = document.getElementById(`max_votes_${positionId}`);
-        const value = parseInt(limitInput.value);
-        
-        if (isNaN(value) || value < 1) {
-            const positionName = checkbox.closest('.position-card').querySelector('.position-name').textContent.trim();
-            alert(`Please set a valid vote limit for ${positionName}`);
-            valid = false;
+        if (limitInput) {
+            const value = parseInt(limitInput.value);
+            if (isNaN(value) || value < 1) {
+                const positionName = checkbox.closest('.position-card').querySelector('.position-name').textContent.trim();
+                alert(`Please set a valid vote limit for ${positionName}`);
+                valid = false;
+            }
         }
     });
     
@@ -211,19 +239,55 @@ function validateForm() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    {% for position in all_positions %}
-        togglePositionSelection({{ position.id }});
-    {% endfor %}
+    const checkboxes = document.querySelectorAll('input[name="positions"]');
+    const selectAllCheckbox = document.getElementById('selectAll');
     
-    // Add form validation
-    document.querySelector('form').addEventListener('submit', function(e) {
-        if (!validateForm()) {
-            e.preventDefault();
-        }
+    // Set all checkboxes to unchecked and inputs disabled
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        togglePositionSelection(checkbox.value);
     });
     
-    // Store the return URL in sessionStorage for when we come back
-    const returnUrl = document.getElementById('return_url').value;
+    updateSelectedCount();
+    
+    // Add event listeners to individual checkboxes
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            togglePositionSelection(this.value);
+            updateSelectedCount();
+            
+            // Update select all checkbox state
+            if (selectAllCheckbox) {
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+            }
+        });
+    });
+    
+    // Add select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            toggleSelectAll();
+        });
+    }
+    
+    // Add vote limit validation
+    document.querySelectorAll('.vote-input').forEach(input => {
+        input.addEventListener('change', function() {
+            validateVoteLimit(this);
+        });
+    });
+    
+    // Form validation
+    const configForm = document.getElementById('configForm');
+    if (configForm) {
+        configForm.addEventListener('submit', function(e) {
+            if (!validateForm()) {
+                e.preventDefault();
+            }
+        });
+    }
+    
     sessionStorage.setItem('return_to_elections', 'true');
 });
 </script>

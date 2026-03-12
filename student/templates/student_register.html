@@ -93,6 +93,21 @@
                 </select>
             </div>
 
+            <!-- PROGRAM TYPE (DAY/NIGHT) - NEW DROPDOWN -->
+            <div class="input-group">
+                <label>Program Type</label>
+                <select name="program_type" required>
+                    <option value="">-- Select Program Type --</option>
+                    {% for program_type in program_types %}
+                        <option value="{{ program_type.id }}"
+                            {% if session.get('registration_data', {}).get('program_type')|int == program_type.id %}selected{% endif %}>
+                            {{ program_type.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="field-hint">Select "Day" for day program, "Night" for evening program</small>
+            </div>
+
             <!-- BIRTH DATE -->
             <div class="input-group">
                 <label>Birth Date</label>

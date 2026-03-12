@@ -13,6 +13,9 @@ if (!window.themeManagerInitialized) {
         init() {
             console.log('ThemeManager initializing...');
             
+            // Apply saved theme immediately
+            this.applySavedTheme();
+            
             // Find all theme toggle buttons
             this.findButtons();
             
@@ -25,13 +28,38 @@ if (!window.themeManagerInitialized) {
             // Listen for system theme changes
             this.listenForSystemChanges();
             
+            // Listen for page navigation (for SPA-like behavior)
+            this.listenForPageChanges();
+            
             // Mark as initialized
             window.themeManagerInitialized = true;
             
             console.log(`ThemeManager initialized with ${this.buttons.length} buttons`);
         }
         
+        applySavedTheme() {
+            // Get theme from localStorage or default to dark
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            
+            // Apply theme
+            if (savedTheme === 'dark') {
+                this.html.classList.add('dark-mode');
+                this.html.classList.remove('light-mode');
+            } else {
+                this.html.classList.remove('dark-mode');
+                this.html.classList.add('light-mode');
+            }
+            
+            // Update color scheme
+            this.html.style.colorScheme = savedTheme === 'dark' ? 'dark' : 'light';
+            
+            console.log('Applied saved theme:', savedTheme);
+        }
+        
         findButtons() {
+            // Clear existing buttons array
+            this.buttons = [];
+            
             // Find sidebar button
             const sidebarBtn = document.getElementById('floatingThemeBtn');
             if (sidebarBtn) this.buttons.push(sidebarBtn);
@@ -39,6 +67,10 @@ if (!window.themeManagerInitialized) {
             // Find header button (if on dashboard)
             const headerBtn = document.getElementById('headerThemeBtn');
             if (headerBtn) this.buttons.push(headerBtn);
+            
+            // Find content button in settings page
+            const contentBtn = document.getElementById('contentThemeBtn');
+            if (contentBtn) this.buttons.push(contentBtn);
             
             // Find any other theme buttons
             document.querySelectorAll('.theme-toggle-btn, [data-theme-toggle]').forEach(btn => {
@@ -48,6 +80,8 @@ if (!window.themeManagerInitialized) {
         
         addClickListeners() {
             this.buttons.forEach(btn => {
+                if (!btn) return;
+                
                 // Remove any existing listeners by cloning
                 const newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
@@ -128,6 +162,28 @@ if (!window.themeManagerInitialized) {
                 }
             });
         }
+        
+        listenForPageChanges() {
+            // Listen for popstate (back/forward navigation)
+            window.addEventListener('popstate', () => {
+                setTimeout(() => this.refresh(), 100);
+            });
+            
+            // Listen for page show (when coming from cache/back button)
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    setTimeout(() => this.refresh(), 100);
+                }
+            });
+        }
+        
+        // Method to refresh theme manager (call when new content is loaded)
+        refresh() {
+            console.log('Refreshing ThemeManager...');
+            this.findButtons();
+            this.addClickListeners();
+            this.updateAllButtons();
+        }
     }
 
     // Initialize when DOM is ready
@@ -139,5 +195,9 @@ if (!window.themeManagerInitialized) {
         window.themeManager = new ThemeManager();
     }
 } else {
-    console.log('ThemeManager already initialized, skipping...');
+    console.log('ThemeManager already initialized, refreshing...');
+    // If already initialized, just refresh the buttons
+    if (window.themeManager) {
+        window.themeManager.refresh();
+    }
 }

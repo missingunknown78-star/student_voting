@@ -29,9 +29,17 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeNotificationStyles();
 });
 
-// PDF Export Function - Direct download with proper .pdf extension
+// In your election_results_detail.js
 function exportToPDF() {
     const electionId = templateData.electionId;
+    const isTallied = templateData.isTallied; // Make sure this is passed from template
+    
+    // Check if tallied first
+    if (!isTallied) {
+        showNotification('error', '❌ PDF results are only available after official tally. Please tally the votes first.');
+        return;
+    }
+    
     const pdfBtn = document.getElementById('exportPdfBtn');
     const originalText = pdfBtn.innerHTML;
     
@@ -41,11 +49,9 @@ function exportToPDF() {
     
     // Show loading overlay
     const overlay = document.getElementById('pdfLoadingOverlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-    }
+    if (overlay) overlay.style.display = 'flex';
     
-    // Use fetch to get the PDF blob
+    // Fetch PDF
     fetch(`/admin/results/${electionId}/pdf`, {
         method: 'GET',
         headers: {
@@ -54,60 +60,35 @@ function exportToPDF() {
     })
     .then(response => {
         if (!response.ok) {
+            if (response.status === 403) {
+                throw new Error('PDF not available until election is tallied');
+            }
             throw new Error('Network response was not ok');
         }
         return response.blob();
     })
     .then(blob => {
-        // Create a blob URL for the PDF
+        // Download PDF (same as before)
         const url = window.URL.createObjectURL(blob);
-        
-        // Create a temporary link element
         const link = document.createElement('a');
         link.href = url;
-        
-        // Get filename from Content-Disposition header or use default
-        const filename = `${templateData.electionTitle.replace(/[^a-z0-9]/gi, '_')}_Results.pdf`;
-        
-        link.download = filename;
-        link.style.display = 'none';
-        
-        // Append to body, click, and remove
+        link.download = `${templateData.electionTitle.replace(/[^a-z0-9]/gi, '_')}_Official_Results.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        // Clean up the blob URL
-        setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-        }, 100);
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
         
-        // Reset button state
-        pdfBtn.innerHTML = originalText;
-        pdfBtn.disabled = false;
-        
-        // Hide overlay
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-        
-        // Show success notification
-        showNotification('success', `✅ PDF downloaded as "${filename}" (Letter size)`);
+        showNotification('success', '✅ Official results PDF downloaded successfully!');
     })
     .catch(error => {
         console.error('Error:', error);
-        
-        // Reset button state
+        showNotification('error', error.message || '❌ Failed to generate PDF.');
+    })
+    .finally(() => {
         pdfBtn.innerHTML = originalText;
         pdfBtn.disabled = false;
-        
-        // Hide overlay
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-        
-        // Show error notification
-        showNotification('error', '❌ Failed to generate PDF. Please try again.');
+        if (overlay) overlay.style.display = 'none';
     });
 }
 

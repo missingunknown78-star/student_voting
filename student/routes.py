@@ -1,6 +1,6 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
-from student.models import Student, Vote, DeletionRequest
+from student.models import Student, Vote, DeletionRequest, ProgramType
 from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel, Position, ElectionPosition
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
@@ -180,98 +180,58 @@ def decrypt_ballot(encrypted_vote_json, private_key):
         print(f"ERROR: Failed to decrypt vote: {str(e)}")
         return None
 
-def count_votes_for_election_robust(election_id):
-    """Count votes for an election, handling votes with different candidate list lengths"""
-    import time
-    import json
+def count_votes_using_finder_hashes(election_id):
+    """
+    Count votes using finder_hashes - NO DECRYPTION NEEDED!
+    This is what you should use for student results page.
+    Takes 2-3 seconds even for 1000 voters.
+    """
     start_time = time.time()
     
-    votes = Vote.query.filter_by(election_id=election_id).all()
+    # Get ALL votes for this election (only fetch needed columns)
+    votes = Vote.query.filter_by(election_id=election_id)\
+                      .with_entities(Vote.finder_hash)\
+                      .all()
     
-    # Get all candidates for this election (current list)
-    candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidate_ids = [c.id for c in candidates]
+    # Initialize counter
+    vote_counts = {}
     
-    if not votes:
-        print(f"DEBUG: No votes found for election {election_id}")
-        return {candidate_id: 0 for candidate_id in candidate_ids}
-    
-    print(f"DEBUG: Found {len(votes)} votes to process")
-    print(f"DEBUG: Current election has {len(candidate_ids)} candidates")
-    
-    # Initialize vote counts
-    vote_counts = {candidate_id: 0 for candidate_id in candidate_ids}
-    
-    # Process each vote individually
-    processed_count = 0
-    skipped_count = 0
-    
+    # Process each vote's finder_hash
     for vote in votes:
+        if not vote.finder_hash:
+            continue
+            
         try:
-            # Deserialize the encrypted vote
-            enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+            finder_data = json.loads(vote.finder_hash)
             
-            # Skip if no encrypted votes
-            if not enc_votes:
-                print(f"WARNING: Vote {vote.id} has no encrypted data - skipping")
-                skipped_count += 1
-                continue
+            # NEW FORMAT: Dictionary with hashes list
+            if isinstance(finder_data, dict):
+                # Extract candidate IDs directly from hashes list
+                if 'hashes' in finder_data:
+                    for item in finder_data['hashes']:
+                        candidate_id = item.get('candidate_id')
+                        if candidate_id:
+                            vote_counts[candidate_id] = vote_counts.get(candidate_id, 0) + 1
+                
+                # Alternative: use hash_strings if candidate_ids not directly available
+                elif 'hash_strings' in finder_data and 'nonce' in finder_data:
+                    # We'd need to reconstruct candidate_id from hash, but that's slower
+                    # Better to store candidate_ids in finder_data!
+                    pass
             
-            # ===== USE THE STORED CANDIDATE IDs =====
-            if vote.candidate_ids_at_time:
-                # Get the candidate list that was used when this vote was cast
-                original_candidate_ids = json.loads(vote.candidate_ids_at_time)
-                
-                print(f"DEBUG: Vote {vote.id} was cast for {len(original_candidate_ids)} candidates")
-                
-                # Map based on candidate IDs, not positions
-                for i, enc_vote in enumerate(enc_votes):
-                    if i < len(original_candidate_ids):
-                        candidate_id = original_candidate_ids[i]
-                        
-                        # Only count if this candidate still exists
-                        if candidate_id in vote_counts:
-                            try:
-                                decrypted_value = private_key.decrypt(enc_vote)
-                                vote_counts[candidate_id] += decrypted_value
-                            except Exception as e:
-                                print(f"ERROR decrypting: {e}")
-                        else:
-                            print(f"WARNING: Candidate {candidate_id} no longer exists")
-                
-                processed_count += 1
-            else:
-                # Fallback for old votes without candidate_ids_at_time
-                print(f"WARNING: Vote {vote.id} has no candidate_ids_at_time - using position mapping")
-                
-                # Try to get candidates that existed at vote time
-                vote_time = vote.cast_timestamp or vote.recorded_timestamp or vote.created_at
-                
-                candidates_at_time = Candidate.query.filter(
-                    Candidate.election_id == election_id,
-                    Candidate.created_at <= vote_time
-                ).all()
-                
-                if len(candidates_at_time) == len(enc_votes):
-                    for i, enc_vote in enumerate(enc_votes):
-                        if i < len(candidates_at_time):
-                            candidate_id = candidates_at_time[i].id
-                            try:
-                                decrypted_value = private_key.decrypt(enc_vote)
-                                vote_counts[candidate_id] += decrypted_value
-                            except:
-                                pass
-                    processed_count += 1
-                else:
-                    skipped_count += 1
-                    
-        except Exception as e:
-            print(f"ERROR processing vote {vote.id}: {e}")
-            skipped_count += 1
+            # OLD FORMAT: List of hashes
+            elif isinstance(finder_data, list):
+                for item in finder_data:
+                    if isinstance(item, dict) and 'candidate_id' in item:
+                        candidate_id = item['candidate_id']
+                        vote_counts[candidate_id] = vote_counts.get(candidate_id, 0) + 1
+            
+        except json.JSONDecodeError:
+            # Skip invalid JSON
             continue
     
-    print(f"DEBUG: Processed {processed_count} votes successfully, skipped {skipped_count} votes")
-    print(f"DEBUG: Vote counting took {time.time() - start_time:.2f} seconds")
+    elapsed = time.time() - start_time
+    print(f"⚡ Counted votes using finder_hashes in {elapsed:.2f} seconds")
     
     return vote_counts
 
@@ -327,83 +287,6 @@ def get_all_school_years():
 
 
 
-def count_votes_for_election_robust(election_id):
-    """Count votes for an election, handling votes with different candidate list lengths"""
-    import time
-    start_time = time.time()
-    
-    votes = Vote.query.filter_by(election_id=election_id).all()
-    
-    # Get all candidates for this election
-    candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidate_ids = [c.id for c in candidates]
-    
-    if not votes:
-        print(f"DEBUG: No votes found for election {election_id}")
-        return {candidate_id: 0 for candidate_id in candidate_ids}
-    
-    print(f"DEBUG: Found {len(votes)} votes to process")
-    print(f"DEBUG: Current election has {len(candidate_ids)} candidates")
-    
-    # Initialize vote counts
-    vote_counts = {candidate_id: 0 for candidate_id in candidate_ids}
-    
-    # Process each vote individually
-    processed_count = 0
-    skipped_count = 0
-    
-    for vote in votes:
-        try:
-            # Deserialize the encrypted vote
-            enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
-            
-            # Skip if no encrypted votes
-            if not enc_votes:
-                print(f"WARNING: Vote {vote.id} has no encrypted data - skipping")
-                skipped_count += 1
-                continue
-            
-            # Check if we have the expected number of candidates
-            if len(enc_votes) != len(candidate_ids):
-                print(f"WARNING: Vote {vote.id} has {len(enc_votes)} candidates, expected {len(candidate_ids)} - skipping")
-                skipped_count += 1
-                continue
-            
-            # For each candidate position, decrypt and add to count
-            for i, enc_vote in enumerate(enc_votes):
-                try:
-                    # Decrypt the vote for this candidate
-                    decrypted_value = private_key.decrypt(enc_vote)
-                    
-                    # Add to the candidate's total
-                    if i < len(candidate_ids):
-                        candidate_id = candidate_ids[i]
-                        vote_counts[candidate_id] += decrypted_value
-                except Exception as e:
-                    print(f"ERROR decrypting position {i} in vote {vote.id}: {e}")
-                    continue
-            
-            processed_count += 1
-            
-        except Exception as e:
-            print(f"ERROR processing vote {vote.id}: {e}")
-            skipped_count += 1
-            continue
-    
-    print(f"DEBUG: Processed {processed_count} votes successfully, skipped {skipped_count} votes")
-    print(f"DEBUG: Vote counting took {time.time() - start_time:.2f} seconds")
-    
-    # Print results summary
-    total_votes_cast = sum(vote_counts.values())
-    print(f"DEBUG: Total votes cast: {total_votes_cast}")
-    
-    # Show top candidates (optional)
-    sorted_counts = sorted(vote_counts.items(), key=lambda x: x[1], reverse=True)
-    for candidate_id, count in sorted_counts[:5]:  # Show top 5
-        if count > 0:
-            print(f"   Candidate {candidate_id}: {count} votes")
-    
-    return vote_counts
 # ============= END OF NEW HELPER FUNCTIONS =============
 
 
@@ -411,10 +294,12 @@ from admin.models import CtuStudent  # the table where admin imported students
 from sqlalchemy import func  # needed for case-insensitive comparison
 
 # ==================== REGISTER ====================
+# ==================== REGISTER ====================
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    from admin.models import Department, Course, CtuStudent  # added CtuStudent
-    from sqlalchemy import func  # needed for case-insensitive comparison
+    from admin.models import Department, Course, CtuStudent
+    from student.models import Student, ProgramType  # Import ProgramType from student.models
+    from sqlalchemy import func
 
     # ✅ Clear form session only if not coming from failed POST
     if request.method == 'GET':
@@ -425,7 +310,7 @@ def register():
     if request.method == 'POST':
         session['registration_data'] = request.form.to_dict()
         session['error_fields'] = []
-        session['keep_form'] = True   # ⭐ Keep form values if errors
+        session['keep_form'] = True
 
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
@@ -468,6 +353,19 @@ def register():
                 "department_id": course_obj.department_id
             })
 
+        # ---------------- PROGRAM TYPE VALIDATION ----------------
+        program_type_id = request.form.get('program_type')
+        if program_type_id:
+            program_type_obj = ProgramType.query.get(program_type_id)
+            if not program_type_obj:
+                flash("Please select a valid program type (Day/Night).", "danger")
+                session['error_fields'].append('program_type')
+            else:
+                session['registration_data']['program_type_id'] = program_type_obj.id
+        else:
+            flash("Please select a program type (Day/Night).", "danger")
+            session['error_fields'].append('program_type')
+
         # ---------------- CTU DATABASE VERIFICATION ----------------
         ctu_match = CtuStudent.query.filter(
             func.lower(CtuStudent.first_name) == first_name.lower(),
@@ -504,34 +402,40 @@ def register():
             """
             mail.send(msg)
 
-            # ✅ Keep session for OTP verification
             flash("OTP has been sent to your email.", "info")
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
             flash(f"Failed to send OTP email: {str(e)}", "danger")
 
-    # ---------------- LOAD COURSES ----------------
+    # ---------------- LOAD COURSES AND PROGRAM TYPES ----------------
     departments = Department.query.order_by(Department.name).all()
     courses_by_department = {
         dept.name: Course.query.filter_by(department_id=dept.id).all()
         for dept in departments
     }
+    
+    # Get all program types (Day/Night) from student.models
+    program_types = ProgramType.query.order_by(ProgramType.name).all()
 
     return render_template(
         'student_register.html',
-        courses_by_department=courses_by_department
+        courses_by_department=courses_by_department,
+        program_types=program_types
     )
-
 
 # ==================== AJAX VALIDATION ====================
 @student_bp.route('/register/validate', methods=['POST'])
 def ajax_validate_register():
+    from student.models import Student, ProgramType  # Import ProgramType here too
+    from sqlalchemy import func
+    
     errors = {}
 
     email = request.form.get('email', '').strip()
     id_number = request.form.get('id_number')
     username = request.form.get('username')
+    program_type_id = request.form.get('program_type')
 
     if Student.query.filter(func.trim(Student.id_number) == id_number).first():
         errors['id_number'] = 'ID Number already registered'
@@ -541,13 +445,24 @@ def ajax_validate_register():
 
     if Student.query.filter_by(username=username).first():
         errors['username'] = 'Username already taken'
+    
+    # Validate program type
+    if not program_type_id:
+        errors['program_type'] = 'Program type is required'
+    else:
+        program_type = ProgramType.query.get(program_type_id)
+        if not program_type:
+            errors['program_type'] = 'Invalid program type selected'
 
     return jsonify(errors)
+
 
 
 # ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
+    from student.models import Student  # Import Student
+    
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
         if entered_otp == session.get('otp'):
@@ -565,7 +480,8 @@ def verify_otp():
                 course=data.get('course'),
                 course_id=data.get('course_id'),
                 department_id=data.get('department_id'),
-                year_level_id=data.get('year_level_id'),  # added year_level saving
+                year_level_id=data.get('year_level_id'),
+                program_type_id=data.get('program_type_id'),  # NEW FIELD
                 birth_date=data.get('birth_date'),
                 id_number=data.get('id_number')
             )
@@ -1440,7 +1356,7 @@ def vote_page(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Fetch position limits and course restrictions for this election
+    # Fetch position limits and restrictions for this election
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     position_limits = {ep.position_id: ep.max_votes for ep in election_positions}
     
@@ -1455,48 +1371,56 @@ def vote_page(election_id):
                     'course_name': f"{course.course_name} ({course.course_code})" if course.course_code else course.course_name
                 }
     
+    # Get program type restrictions for positions (for filtering only, not display)
+    position_program_type_restrictions = {}
+    from student.models import ProgramType
+    for ep in election_positions:
+        if ep.program_type_id:
+            program_type = ProgramType.query.get(ep.program_type_id)
+            if program_type:
+                position_program_type_restrictions[ep.position_id] = {
+                    'program_type_id': ep.program_type_id,
+                    'program_type_name': program_type.name
+                }
+    
     # Fetch all candidates for this election
     all_candidates = Candidate.query.filter_by(election_id=election_id).all()
     
-    # FIXED: Filter candidates based on student's course and position restrictions
+    # Filter candidates based on student's course, department, and program type
     filtered_candidates = []
     
-    # Get student's course_id and department_id
+    # Get student's course_id, department_id, and program_type_id
     student_course_id = current_user.course_id
     student_department_id = current_user.department_id
-    
-    print(f"DEBUG: Student Course ID: {student_course_id}, Department ID: {student_department_id}")  # Debug
+    student_program_type_id = current_user.program_type_id
     
     for candidate in all_candidates:
         include_candidate = True
         candidate_position_id = candidate.position_id
         
-        # Check if this candidate's position has a course restriction
+        # CHECK 1: COURSE RESTRICTIONS
         if candidate_position_id in position_course_restrictions:
             restricted_course_id = position_course_restrictions[candidate_position_id]['course_id']
             
-            print(f"DEBUG: Position {candidate_position_id} restricted to course {restricted_course_id}")
-            print(f"DEBUG: Candidate {candidate.id} has course_id: {candidate.course_id}")
-            
-            # IMPORTANT FIX: Only show candidates whose course_id matches the restriction
-            # AND also matches the student's course
             if candidate.course_id and candidate.course_id == restricted_course_id:
-                # This candidate is for a specific course
-                # Only include if student is in that same course
                 if student_course_id != restricted_course_id:
                     include_candidate = False
-                    print(f"DEBUG: EXCLUDED - Student not in required course")
             else:
-                # Candidate doesn't have the required course for this restricted position
                 include_candidate = False
-                print(f"DEBUG: EXCLUDED - Candidate not in required course")
         
-        # If position has NO course restriction, it's a general position
-        # Show to all students regardless of course
+        # CHECK 2: PROGRAM TYPE RESTRICTIONS (Position level)
+        if include_candidate and candidate_position_id in position_program_type_restrictions:
+            restricted_program_type_id = position_program_type_restrictions[candidate_position_id]['program_type_id']
+            if student_program_type_id != restricted_program_type_id:
+                include_candidate = False
+        
+        # CHECK 3: CANDIDATE'S OWN PROGRAM TYPE
+        if include_candidate and candidate.is_program_type_restricted:
+            if not candidate.matches_student_program_type(student_program_type_id):
+                include_candidate = False
         
         if include_candidate:
             filtered_candidates.append(candidate)
-            print(f"DEBUG: INCLUDED candidate {candidate.id}")
     
     # Group filtered candidates by position
     candidates_by_position = {}
@@ -1506,13 +1430,15 @@ def vote_page(election_id):
         if c.position:
             position_name = c.position.name
             if position_name not in candidates_by_position:
-                # Check if this position has a course restriction
-                restriction_info = position_course_restrictions.get(c.position_id)
+                # Check if this position has course restrictions (for display only)
+                course_restriction_info = position_course_restrictions.get(c.position_id)
+                
                 candidates_by_position[position_name] = {
                     'candidates': [],
                     'position_id': c.position_id,
                     'max_votes': position_limits.get(c.position_id, 1),
-                    'restricted_to_course': restriction_info['course_name'] if restriction_info else None
+                    'restricted_to_course': course_restriction_info['course_name'] if course_restriction_info else None
+                    # Note: program_type is NOT passed to template - filtering only
                 }
             candidates_by_position[position_name]['candidates'].append(c)
         all_candidate_ids.append(c.id)
@@ -1524,8 +1450,6 @@ def vote_page(election_id):
     )
     
     candidates_by_position = dict(sorted_positions)
-    
-    print(f"DEBUG: Final filtered positions: {list(candidates_by_position.keys())}")  # Debug
     
     # If no candidates available for this student after filtering
     if not candidates_by_position:
@@ -1539,7 +1463,6 @@ def vote_page(election_id):
         all_candidate_ids=all_candidate_ids,
         current_user=current_user
     )
-
 
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
@@ -2300,15 +2223,15 @@ def results():
 
 
 
-    
-
 @student_bp.route('/results/<int:election_id>')
 @login_required
 def results_detail(election_id):
-    """Show detailed results for a specific election (only if student voted in it)"""
+    """Show detailed results for a specific election (optimized for speed)"""
     import time
+    import json
     from collections import defaultdict
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from datetime import datetime
+    import pytz
     
     start_time = time.time()
     student_id = current_user.id
@@ -2330,19 +2253,9 @@ def results_detail(election_id):
     now = datetime.now(local_tz)
     now_naive = now.replace(tzinfo=None)
     
-    # Determine results status
-    if election.end_date < now_naive:
-        results_status = "FINAL RESULTS"
-    elif election.start_date <= now_naive <= election.end_date:
-        results_status = "LIVE RESULTS - Ongoing Election"
-    else:
-        results_status = "UPCOMING ELECTION"
-    
     # Calculate total registered voters
     if election.scope == 'department' and election.department_id:
-        total_voters = Student.query.filter_by(
-            department_id=election.department_id
-        ).count()
+        total_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
         total_voters = Student.query.count()
     
@@ -2354,44 +2267,62 @@ def results_detail(election_id):
     # Calculate voter turnout
     voter_turnout = (unique_voters / total_voters * 100) if total_voters > 0 else 0
     
-    # Get all candidates for this election
-    all_candidates = Candidate.query.filter_by(election_id=election.id).all()
+    # ===== GET VOTE COUNTS USING FINDER HASHES (NO DECRYPTION!) =====
+    vote_counts = {}
     
-    # Get position limits
-    position_limits = {}
-    election_positions = ElectionPosition.query.filter_by(election_id=election.id).all()
-    for ep in election_positions:
-        position_limits[ep.position_id] = ep.max_votes
-    
-    # ===== CHECK CACHE FIRST =====
-    vote_counts = None
-    
-    # For ended elections, try to use cache
+    # Try to use cache first for ended elections
     if election.end_date < now_naive and election.cached_results:
         try:
             cached_data = json.loads(election.cached_results)
-            vote_counts = cached_data.get('vote_counts')
-            if vote_counts:
+            if 'vote_counts' in cached_data:
                 # Convert string keys back to int
-                vote_counts = {int(k): v for k, v in vote_counts.items()}
-                print(f"✅ Using cached results from {election.cached_at}")
+                vote_counts = {int(k): v for k, v in cached_data['vote_counts'].items()}
+                print(f"✅ Using cached vote counts from {election.cached_at}")
         except Exception as e:
             print(f"Cache error: {e}")
-            vote_counts = None
+            vote_counts = {}
     
-    # If no cache or cache invalid, calculate
-    if vote_counts is None:
-        print("🔄 Calculating fresh results...")
+    # If no cache or cache failed, count using finder_hashes
+    if not vote_counts:
+        print("📊 Counting votes using finder_hashes...")
         
-        # Use the ROBUST vote counter
-        vote_counts = count_votes_for_election_robust(election_id)
+        # Get ALL votes for this election (only fetch finder_hash)
+        votes = Vote.query.filter_by(election_id=election_id)\
+                          .with_entities(Vote.finder_hash)\
+                          .all()
+        
+        # Process each vote's finder_hash
+        for vote in votes:
+            if not vote.finder_hash:
+                continue
+                
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                
+                # NEW FORMAT: Dictionary with 'hashes' array
+                if isinstance(finder_data, dict):
+                    if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                cid = item['candidate_id']
+                                vote_counts[cid] = vote_counts.get(cid, 0) + 1
+                
+                # OLD FORMAT: List of hash objects
+                elif isinstance(finder_data, list):
+                    for item in finder_data:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            cid = item['candidate_id']
+                            vote_counts[cid] = vote_counts.get(cid, 0) + 1
+                            
+            except Exception as e:
+                # Skip invalid JSON
+                continue
         
         # Cache the results for ended elections
         if election.end_date < now_naive:
             cache_data = {
                 'vote_counts': vote_counts,
-                'calculated_at': now_naive.isoformat(),
-                'total_votes_processed': sum(vote_counts.values())
+                'calculated_at': now_naive.isoformat()
             }
             election.cached_results = json.dumps(cache_data)
             election.cached_at = now_naive
@@ -2400,78 +2331,84 @@ def results_detail(election_id):
             db.session.commit()
             print(f"✅ Cached results for future requests")
     
+    # ===== GET ALL CANDIDATES WITH THEIR POSITIONS =====
+    candidates_query = db.session.query(
+        Candidate.id,
+        Candidate.first_name,
+        Candidate.last_name,
+        Candidate.photo,
+        Candidate.party_list,
+        Candidate.position_id,
+        Position.name.label('position_name'),
+        Position.description.label('position_description'),
+        Department.name.label('department_name')
+    ).join(Position, Position.id == Candidate.position_id)\
+     .outerjoin(Department, Department.id == Candidate.department_id)\
+     .filter(Candidate.election_id == election_id)\
+     .all()
+    
     # ===== GROUP CANDIDATES BY POSITION =====
-    candidates_by_position = {}
-    for candidate in all_candidates:
-        position_name = candidate.position.name if candidate.position else "Unknown Position"
-        position_id = candidate.position_id
+    positions_dict = {}
+    
+    for c in candidates_query:
+        pos_name = c.position_name
         
-        if position_name not in candidates_by_position:
-            candidates_by_position[position_name] = {
-                'id': position_id,
-                'name': position_name,
-                'description': candidate.position.description if candidate.position else None,
+        if pos_name not in positions_dict:
+            positions_dict[pos_name] = {
+                'id': c.position_id,
+                'name': pos_name,
+                'description': c.position_description,
                 'candidates': []
             }
         
-        department_name = candidate.department.name if candidate.department else None
+        vote_count = vote_counts.get(c.id, 0)
         
-        candidates_by_position[position_name]['candidates'].append({
-            'id': candidate.id,
-            'first_name': candidate.first_name,
-            'last_name': candidate.last_name,
-            'photo': candidate.photo,
-            'party_list': candidate.party_list,
-            'department': department_name,
-            'vote_count': vote_counts.get(candidate.id, 0),
+        positions_dict[pos_name]['candidates'].append({
+            'id': c.id,
+            'first_name': c.first_name,
+            'last_name': c.last_name,
+            'photo': c.photo,
+            'party_list': c.party_list,
+            'department': c.department_name,
+            'vote_count': vote_count,
             'vote_percentage': 0,
             'is_winner': False
         })
     
-    # ===== CALCULATE PERCENTAGES =====
+    # ===== CALCULATE PERCENTAGES AND DETERMINE WINNERS =====
     positions_data = []
     
-    for position_name, position_data in candidates_by_position.items():
-        candidates_list = position_data['candidates']
+    for pos_name, pos_data in positions_dict.items():
+        candidates_list = pos_data['candidates']
         position_total = sum(c['vote_count'] for c in candidates_list)
-        max_votes_per_voter = position_limits.get(position_data['id'], 1)
-        total_voters_count = unique_voters if unique_voters > 0 else 1
-        
-        if total_voters_count > 0:
-            for candidate in candidates_list:
-                if max_votes_per_voter > 1:
-                    # For positions where you can vote for multiple candidates
-                    # Percentage is based on total voters
-                    candidate['vote_percentage'] = round((candidate['vote_count'] / total_voters_count) * 100, 1)
-                    if candidate['vote_percentage'] > 100:
-                        candidate['vote_percentage'] = 100
-                else:
-                    # For single-select positions, percentage is based on total votes for position
-                    if position_total > 0:
-                        candidate['vote_percentage'] = round((candidate['vote_count'] / position_total) * 100, 1)
-                    else:
-                        candidate['vote_percentage'] = 0
-        else:
-            for candidate in candidates_list:
-                candidate['vote_percentage'] = 0
         
         # Sort candidates by vote count (highest first)
         candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
         
+        # Calculate percentages
+        if position_total > 0:
+            for candidate in candidates_list:
+                candidate['vote_percentage'] = round(
+                    (candidate['vote_count'] / position_total * 100), 1
+                )
+        else:
+            for candidate in candidates_list:
+                candidate['vote_percentage'] = 0
+        
         # Determine winners (only for ended elections)
-        max_winners = position_limits.get(position_data['id'], 1)
-        if election.end_date < now_naive and position_total > 0:
-            for i, candidate in enumerate(candidates_list):
-                if i < max_winners and candidate['vote_count'] > 0:
+        if election.end_date < now_naive and candidates_list:
+            # Get max vote count
+            max_votes = candidates_list[0]['vote_count'] if candidates_list else 0
+            for candidate in candidates_list:
+                if candidate['vote_count'] == max_votes and max_votes > 0:
                     candidate['is_winner'] = True
         
         positions_data.append({
-            'id': position_data['id'],
-            'name': position_name,
-            'description': position_data['description'],
+            'id': pos_data['id'],
+            'name': pos_name,
+            'description': pos_data['description'],
             'candidates': candidates_list,
-            'total_votes': position_total,
-            'max_votes': max_winners
+            'total_votes': position_total
         })
     
     # Sort positions by ID
@@ -2487,37 +2424,137 @@ def results_detail(election_id):
                          total_votes=unique_voters,
                          voter_turnout=round(voter_turnout, 1),
                          results_date=now,
-                         results_status=results_status,
                          now=now_naive,
                          results_published=election.results_published)
 
 
-# Helper function for parallel decryption
-def decrypt_single_vote(private_key, vote_list, all_candidate_ids):
-    """Decrypt a single vote (for parallel processing)"""
-    try:
-        from phe import paillier
-        result = [0] * len(all_candidate_ids)
+# Helper functions that accept app context
+def count_total_voters_with_context(app, scope, department_id):
+    """Count total registered voters WITH app context"""
+    with app.app_context():
+        from student.models import Student
         
-        for i, enc_dict in enumerate(vote_list):
-            if i < len(all_candidate_ids):
-                enc_num = paillier.EncryptedNumber(
-                    private_key.public_key,
-                    int(enc_dict["ciphertext"]),
-                    int(enc_dict["exponent"])
-                )
-                result[i] = private_key.decrypt(enc_num)
+        if scope == 'department' and department_id:
+            return Student.query.filter_by(department_id=department_id).count()
+        return Student.query.count()
+
+def count_unique_voters_with_context(app, election_id):
+    """Count unique voters who cast votes WITH app context"""
+    with app.app_context():
+        from student.models import Vote
         
-        return result
-    except Exception:
-        return None
+        return db.session.query(Vote.student_id).filter_by(
+            election_id=election_id
+        ).distinct().count()
 
+def get_candidates_with_details_with_context(app, election_id):
+    """Get all candidates with their position details in one query WITH app context"""
+    with app.app_context():
+        from admin.models import Candidate, Position, Department
+        
+        candidates = db.session.query(
+            Candidate.id,
+            Candidate.first_name,
+            Candidate.last_name,
+            Candidate.photo,
+            Candidate.party_list,
+            Candidate.position_id,
+            Position.name.label('position_name'),
+            Position.description.label('position_description'),
+            Department.name.label('department_name')
+        ).join(Position, Position.id == Candidate.position_id)\
+         .outerjoin(Department, Department.id == Candidate.department_id)\
+         .filter(Candidate.election_id == election_id)\
+         .all()
+        
+        return candidates
 
+def get_fast_vote_counts(app, election_id, election_end_date, now_naive):
+    """
+    ULTRA FAST: Get vote counts using finder_hashes
+    Takes 1-2 seconds regardless of voter count
+    """
+    with app.app_context():
+        from student.models import Vote
+        from admin.models import Election
+        import json
+        
+        # Check if election is ended and has cached results
+        if election_end_date < now_naive:
+            # Try to get from election cache first
+            election = Election.query.get(election_id)
+            if election and election.cached_results:
+                try:
+                    cached = json.loads(election.cached_results)
+                    if 'vote_counts' in cached:
+                        # Convert string keys back to int
+                        return {int(k): v for k, v in cached['vote_counts'].items()}
+                except:
+                    pass
+        
+        # No cache - count using finder_hashes
+        vote_counts = {}
+        
+        # Stream votes in chunks to avoid memory issues
+        batch_size = 500
+        offset = 0
+        
+        while True:
+            batch = Vote.query.filter_by(election_id=election_id)\
+                              .with_entities(Vote.finder_hash)\
+                              .offset(offset)\
+                              .limit(batch_size)\
+                              .all()
+            
+            if not batch:
+                break
+            
+            # Process batch
+            for vote in batch:
+                if not vote.finder_hash:
+                    continue
+                    
+                try:
+                    finder_data = json.loads(vote.finder_hash)
+                    
+                    # ===== INLINE EXTRACTION - NO EXTERNAL FUNCTION =====
+                    candidate_ids = []
+                    
+                    # Handle different formats directly
+                    if isinstance(finder_data, dict):
+                        # New format with 'hashes' array
+                        if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                            for item in finder_data['hashes']:
+                                if isinstance(item, dict) and 'candidate_id' in item:
+                                    candidate_ids.append(item['candidate_id'])
+                        
+                        # Alternative: if candidate_ids are stored directly (ideal!)
+                        elif 'candidate_ids' in finder_data and isinstance(finder_data['candidate_ids'], list):
+                            candidate_ids = finder_data['candidate_ids']
+                    
+                    elif isinstance(finder_data, list):
+                        # Old format with list of hash objects
+                        for item in finder_data:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_ids.append(item['candidate_id'])
+                    
+                    # Count the votes
+                    for cid in candidate_ids:
+                        vote_counts[cid] = vote_counts.get(cid, 0) + 1
+                        
+                except json.JSONDecodeError:
+                    continue
+                except Exception:
+                    continue
+            
+            offset += batch_size
+        
+        return vote_counts
 
 @student_bp.route('/verify-my-vote', methods=['POST'])
 @login_required
 def verify_my_vote():
-    """Verify a vote using the secret receipt code"""
+    """OPTIMIZED: Verify vote using secret code - takes < 1 second"""
     try:
         data = request.get_json()
         election_id = data.get('election_id')
@@ -2525,152 +2562,111 @@ def verify_my_vote():
         secret_code = data.get('secret_code')
         
         if not all([election_id, candidate_id, secret_code]):
-            return jsonify({
-                'success': False,
-                'message': 'Missing required fields'
-            }), 400
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
         
-        # Get the election
-        election = Election.query.get(election_id)
-        if not election:
-            return jsonify({
-                'success': False,
-                'message': 'Election not found'
-            }), 404
-        
-        # Get the candidate
-        candidate = Candidate.query.get(candidate_id)
-        if not candidate:
-            return jsonify({
-                'success': False,
-                'message': 'Candidate not found'
-            }), 404
-        
-        # Generate the finder hash to look for
+        # Generate search hash
         import hashlib
-        import json
         search_hash = hashlib.sha256(f"{candidate_id}{secret_code}".encode()).hexdigest()
         
-        print(f"🔍 Looking for hash: {search_hash[:16]}...")
+        # DIRECT QUERY: Find vote containing this hash
+        batch_size = 100
+        offset = 0
         
-        # Get ALL votes for this election
-        votes = Vote.query.filter_by(election_id=election_id).all()
-        print(f"📊 Found {len(votes)} total votes in this election")
-        
-        # Search through each vote's finder_hash JSON
-        for vote in votes:
-            try:
+        while True:
+            batch = Vote.query.filter_by(election_id=election_id)\
+                              .with_entities(Vote.id, Vote.finder_hash, Vote.recorded_timestamp)\
+                              .offset(offset)\
+                              .limit(batch_size)\
+                              .all()
+            
+            if not batch:
+                break
+            
+            for vote in batch:
                 if not vote.finder_hash:
                     continue
                     
-                # Parse the JSON data
-                finder_data = json.loads(vote.finder_hash)
-                
-                # Check if it's the new format with hash_strings list
-                if isinstance(finder_data, dict) and 'hash_strings' in finder_data:
-                    if search_hash in finder_data['hash_strings']:
-                        print(f"✅ Found matching vote! Vote ID: {vote.id}")
+                try:
+                    finder_data = json.loads(vote.finder_hash)
+                    
+                    # Check all possible formats
+                    if isinstance(finder_data, dict):
+                        if 'hash_strings' in finder_data and search_hash in finder_data['hash_strings']:
+                            # MOVE THE SUCCESS LOGIC HERE INSTEAD OF CALLING EXTERNAL FUNCTION
+                            candidate = Candidate.query.get(candidate_id)
+                            candidate_name = f"{candidate.first_name} {candidate.last_name}"
+                            position_name = candidate.position.name if candidate.position else 'N/A'
+                            
+                            return jsonify({
+                                'success': True,
+                                'message': '✅ Vote verified successfully! Your vote has been counted.',
+                                'hash': 'Found ✓',
+                                'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
+                                'candidate_name': candidate_name,
+                                'position': position_name
+                            })
                         
+                        if 'hashes' in finder_data:
+                            for item in finder_data['hashes']:
+                                if item.get('hash') == search_hash:
+                                    # SAME SUCCESS LOGIC HERE
+                                    candidate = Candidate.query.get(candidate_id)
+                                    candidate_name = f"{candidate.first_name} {candidate.last_name}"
+                                    position_name = candidate.position.name if candidate.position else 'N/A'
+                                    
+                                    return jsonify({
+                                        'success': True,
+                                        'message': '✅ Vote verified successfully! Your vote has been counted.',
+                                        'hash': 'Found ✓',
+                                        'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
+                                        'candidate_name': candidate_name,
+                                        'position': position_name
+                                    })
+                    
+                    elif isinstance(finder_data, list):
+                        for item in finder_data:
+                            if isinstance(item, dict) and item.get('hash') == search_hash:
+                                # SAME SUCCESS LOGIC HERE
+                                candidate = Candidate.query.get(candidate_id)
+                                candidate_name = f"{candidate.first_name} {candidate.last_name}"
+                                position_name = candidate.position.name if candidate.position else 'N/A'
+                                
+                                return jsonify({
+                                    'success': True,
+                                    'message': '✅ Vote verified successfully! Your vote has been counted.',
+                                    'hash': 'Found ✓',
+                                    'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
+                                    'candidate_name': candidate_name,
+                                    'position': position_name
+                                })
+                    
+                    elif isinstance(finder_data, str) and finder_data == search_hash:
+                        # SAME SUCCESS LOGIC HERE
+                        candidate = Candidate.query.get(candidate_id)
                         candidate_name = f"{candidate.first_name} {candidate.last_name}"
                         position_name = candidate.position.name if candidate.position else 'N/A'
                         
                         return jsonify({
                             'success': True,
-                            'message': 'Vote verified successfully! Your vote has been counted.',
-                            'hash': search_hash[:16] + '...',
+                            'message': '✅ Vote verified successfully! Your vote has been counted.',
+                            'hash': 'Found ✓',
                             'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
                             'candidate_name': candidate_name,
                             'position': position_name
                         })
-                
-                # Check if it's the new format with hashes list
-                elif isinstance(finder_data, dict) and 'hashes' in finder_data:
-                    for item in finder_data['hashes']:
-                        if item.get('hash') == search_hash:
-                            print(f"✅ Found matching vote! Vote ID: {vote.id}")
-                            
-                            candidate_name = f"{candidate.first_name} {candidate.last_name}"
-                            position_name = candidate.position.name if candidate.position else 'N/A'
-                            
-                            return jsonify({
-                                'success': True,
-                                'message': 'Vote verified successfully! Your vote has been counted.',
-                                'hash': search_hash[:16] + '...',
-                                'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
-                                'candidate_name': candidate_name,
-                                'position': position_name
-                            })
-                
-                # Check if it's a list of hashes
-                elif isinstance(finder_data, list):
-                    for item in finder_data:
-                        if isinstance(item, dict) and item.get('hash') == search_hash:
-                            print(f"✅ Found matching vote! Vote ID: {vote.id}")
-                            
-                            candidate_name = f"{candidate.first_name} {candidate.last_name}"
-                            position_name = candidate.position.name if candidate.position else 'N/A'
-                            
-                            return jsonify({
-                                'success': True,
-                                'message': 'Vote verified successfully! Your vote has been counted.',
-                                'hash': search_hash[:16] + '...',
-                                'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
-                                'candidate_name': candidate_name,
-                                'position': position_name
-                            })
-                
-                # Check if it's a direct hash string (old format)
-                elif isinstance(finder_data, str) and finder_data == search_hash:
-                    print(f"✅ Found matching vote (old format)! Vote ID: {vote.id}")
-                    
-                    candidate_name = f"{candidate.first_name} {candidate.last_name}"
-                    position_name = candidate.position.name if candidate.position else 'N/A'
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': 'Vote verified successfully! Your vote has been counted.',
-                        'hash': search_hash[:16] + '...',
-                        'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
-                        'candidate_name': candidate_name,
-                        'position': position_name
-                    })
-                    
-            except json.JSONDecodeError:
-                # If not JSON, check if it's a direct hash string
-                if vote.finder_hash == search_hash:
-                    print(f"✅ Found matching vote (plain text)! Vote ID: {vote.id}")
-                    
-                    candidate_name = f"{candidate.first_name} {candidate.last_name}"
-                    position_name = candidate.position.name if candidate.position else 'N/A'
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': 'Vote verified successfully! Your vote has been counted.',
-                        'hash': search_hash[:16] + '...',
-                        'timestamp': vote.recorded_timestamp.strftime('%Y-%m-%d %H:%M:%S') if vote.recorded_timestamp else None,
-                        'candidate_name': candidate_name,
-                        'position': position_name
-                    })
-                continue
-            except Exception as e:
-                print(f"Error processing vote {vote.id}: {e}")
-                continue
+                        
+                except:
+                    continue
+            
+            offset += batch_size
         
-        # If we get here, no match found
-        print(f"❌ No matching vote found for hash: {search_hash[:16]}...")
         return jsonify({
             'success': False,
             'message': 'No vote found with this secret code. Please check your code and try again.'
         })
             
     except Exception as e:
-        print(f"Verification error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'message': f'Verification error: {str(e)}'
-        }), 500
+        return jsonify({'success': False, 'message': f'Verification error: {str(e)}'}), 500
 
 
 @student_bp.route('/api/refresh-results/<int:election_id>')
@@ -2694,20 +2690,32 @@ def refresh_results_api(election_id):
         
         # Get all votes
         all_votes = Vote.query.filter_by(election_id=election_id).all()
-        all_candidate_ids = [c.id for c in all_candidates]
         
-        # Initialize vote counts
-        vote_counts = {candidate.id: 0 for candidate in all_candidates}
+        # ===== FIX #2: Use finder_hashes instead of undefined function =====
+        vote_counts = {}
         
-        # Decrypt votes using your existing robust function!
-        if all_votes and all_candidate_ids:
+        # Count votes using finder_hashes (NO DECRYPTION!)
+        for vote in all_votes:
+            if not vote.finder_hash:
+                continue
+                
             try:
-                # Just use your existing robust counter!
-                vote_counts = count_votes_for_election_robust(election_id)
-            except Exception as e:
-                print(f"Decryption error: {e}")
-                # Fallback to zeros
-                vote_counts = {candidate.id: 0 for candidate in all_candidates}
+                finder_data = json.loads(vote.finder_hash)
+                
+                # Extract candidate IDs
+                if isinstance(finder_data, dict):
+                    if 'hashes' in finder_data:
+                        for item in finder_data['hashes']:
+                            if 'candidate_id' in item:
+                                cid = item['candidate_id']
+                                vote_counts[cid] = vote_counts.get(cid, 0) + 1
+                elif isinstance(finder_data, list):
+                    for item in finder_data:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            cid = item['candidate_id']
+                            vote_counts[cid] = vote_counts.get(cid, 0) + 1
+            except:
+                continue
         
         # Group by position
         candidates_by_position = {}

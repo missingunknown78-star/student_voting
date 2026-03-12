@@ -851,7 +851,6 @@ def dashboard():
     # KPI counts with school year filter
     # ================================
     total_students = Student.query.count()  # Total students always same
-    total_candidates = Candidate.query.count()  # Total candidates always same
     total_elections = election_query.count()
     total_votes = vote_query.count()
 
@@ -879,26 +878,6 @@ def dashboard():
         turnout_percentage = (total_votes / total_students) * 100
         voter_turnout = f"{turnout_percentage:.1f}%"
 
-    # ================================
-    # Convert elections to JSON-serializable format for calendar
-    # ================================
-    elections_for_calendar = []
-    for election in recent_elections_all:
-        elections_for_calendar.append({
-            'id': election.id,
-            'title': election.title,
-            'description': election.description,
-            'election_type': election.election_type,
-            'scope': election.scope,
-            'department': election.department,  # department name
-            'department_id': election.department_id,
-            'start_date': election.start_date.isoformat() if election.start_date else None,
-            'end_date': election.end_date.isoformat() if election.end_date else None,
-            'status': election.status,  # This calls the property method
-            'year_levels': election.year_levels,
-            'year_levels_list': election.year_levels_list,
-        })
-
     # Get all available school years from elections
     all_elections = Election.query.order_by(Election.start_date.asc()).all()
     school_years = set()
@@ -916,21 +895,19 @@ def dashboard():
     
     log_audit(
         action='DASHBOARD_VIEW',
-        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | School Year: {school_year or 'All'} | Stats: {total_students} students, {total_candidates} candidates, {total_elections} elections, {total_votes} votes"
+        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | School Year: {school_year or 'All'} | Stats: {total_students} students, {total_elections} elections, {total_votes} votes"
     )
 
     return render_template(
         'admin_dashboard.html',
         admin=current_user,
         total_students=total_students,
-        total_candidates=total_candidates,
         total_elections=total_elections,
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
         voter_turnout=voter_turnout,
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
-        elections_for_calendar=elections_for_calendar,
         school_years=school_years,
         current_sy=school_year,
         now=now
@@ -3557,13 +3534,20 @@ def configure_election_positions(election_id):
     # Get all courses for dropdown (for campus-wide elections)
     all_courses = Course.query.order_by(Course.course_name).all()
     
+    # Get all program types (Day/Night)
+    from student.models import ProgramType  # Import ProgramType
+    program_types = ProgramType.query.order_by(ProgramType.name).all()
+    
     # Get currently configured positions for this election
     configured_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     configured_position_ids = [ep.position_id for ep in configured_positions]
     configured_positions_dict = {ep.position_id: ep.max_votes for ep in configured_positions}
     
-    # NEW: Get course restrictions for configured positions
+    # Get course restrictions for configured positions
     position_courses = {ep.position_id: ep.course_id for ep in configured_positions if ep.course_id}
+    
+    # Get program type restrictions for configured positions
+    position_program_types = {ep.position_id: ep.program_type_id for ep in configured_positions if ep.program_type_id}
     
     if request.method == 'POST':
         # Get form data
@@ -3578,15 +3562,19 @@ def configure_election_positions(election_id):
             position_id = int(position_id_str)
             max_votes = request.form.get(f'max_votes_{position_id}', type=int, default=1)
             
-            # NEW: Get course restriction if applicable
+            # Get course restriction if applicable
             course_id = request.form.get(f'course_{position_id}', type=int)
+            
+            # Get program type restriction
+            program_type_id = request.form.get(f'program_type_{position_id}', type=int)
             
             ep = ElectionPosition(
                 election_id=election_id,
                 position_id=position_id,
                 max_votes=max_votes,
                 min_votes=1,  # Default minimum
-                course_id=course_id if course_id else None,  # NEW: Save course restriction
+                course_id=course_id if course_id else None,
+                program_type_id=program_type_id if program_type_id else None,
                 display_order=display_order
             )
             db.session.add(ep)
@@ -3603,20 +3591,22 @@ def configure_election_positions(election_id):
         )
         
         flash('Election positions configured successfully!', 'success')
-        return redirect(url_for('admin.create_election'))
+        
+        # CHANGED: Redirect back to the same page instead of create_election
+        return redirect(url_for('admin.configure_election_positions', election_id=election_id))
     
     # For GET request, pass ALL needed variables to template
     return render_template(
         'configure_election_positions.html',
         election=election,
         all_positions=all_positions,
-        all_courses=all_courses,  # NEW: Pass courses to template
+        all_courses=all_courses,
+        program_types=program_types,
         configured_position_ids=configured_position_ids,
         configured_positions=configured_positions_dict,
-        position_courses=position_courses  # NEW: Pass course restrictions
+        position_courses=position_courses,
+        position_program_types=position_program_types
     )
-
-
     
 # admin/routes.py - UPDATE your create_election route
 @admin_bp.route('/create-election', methods=['GET', 'POST'])
@@ -4136,6 +4126,10 @@ def vote_distribution():
 @admin_bp.route('/results/<int:election_id>')
 @admin_required
 def election_results(election_id):
+    """OPTIMIZED: Uses finder_hashes for live results, TallyVote for official results"""
+    import json
+    from collections import defaultdict
+    
     election = Election.query.get_or_404(election_id)
     
     tz = pytz.timezone('Asia/Manila')
@@ -4153,6 +4147,7 @@ def election_results(election_id):
     else:
         status = "Upcoming"
     
+    # Check if election has been officially tallied
     is_tallied = False
     tally_timestamp = None
     
@@ -4164,70 +4159,62 @@ def election_results(election_id):
                 election_id=election_id
             ).order_by(TallyVote.tally_timestamp.desc()).first()
             tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
-    else:
-        is_tallied = check_if_tallied(election_id)
-        if is_tallied:
-            tally_timestamp = get_tally_timestamp(election_id)
     
+    # Get all candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidate_results = []
-    total_votes_cast = 0
     
-    # COUNT UNIQUE VOTERS (students who have voted in this election)
-    unique_voters = db.session.query(Vote.student_id).filter_by(
-        election_id=election_id
-    ).distinct().count()
-    
-    # GET POSITION LIMITS FROM ElectionPosition TABLE
+    # GET POSITION LIMITS
     position_limits = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
     
-    # FIRST PASS: Get vote counts for all candidates
-    if is_tallied and TALLY_VOTE_AVAILABLE:
-        tally_records = TallyVote.query.filter_by(election_id=election_id).all()
-        tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
-        
-        for candidate in candidates:
-            vote_count = tally_dict.get(candidate.id, 0)
-            
-            candidate_results.append({
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'photo': candidate.photo,
-                'position': candidate.position.name if candidate.position else "N/A",
-                'position_id': candidate.position_id,
-                'department': candidate.department.name if candidate.department else "All Departments",
-                'vote_count': vote_count,
-                'voter_percentage': 0,  # Percentage based on voters
-                'is_tallied': True
-            })
-            total_votes_cast += vote_count
-    else:
-        for candidate in candidates:
-            vote_count = count_votes_for_candidate(candidate.id, election_id)
-            
-            candidate_results.append({
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'photo': candidate.photo,
-                'position': candidate.position.name if candidate.position else "N/A",
-                'position_id': candidate.position_id,
-                'department': candidate.department.name if candidate.department else "All Departments",
-                'vote_count': vote_count,
-                'voter_percentage': 0,  # Percentage based on voters
-                'is_tallied': is_tallied
-            })
-            total_votes_cast += vote_count
+    # COUNT UNIQUE VOTERS
+    unique_voters = db.session.query(Vote.student_id).filter_by(
+        election_id=election_id
+    ).distinct().count()
     
-    # ===== CORRECTED: Calculate percentages based on UNIQUE VOTERS =====
-    # This works the same for both single and multi-winner positions
+    # ===== GET VOTE COUNTS - OPTIMIZED! =====
+    if is_tallied and TALLY_VOTE_AVAILABLE:
+        # STATE 1: OFFICIALLY TALLIED - Use TallyVote table (INSTANT!)
+        print("📊 Using official tally results")
+        tally_records = TallyVote.query.filter_by(election_id=election_id).all()
+        vote_counts = {t.candidate_id: t.vote_count for t in tally_records}
+        
+        # Ensure all candidates have at least 0
+        for candidate in candidates:
+            if candidate.id not in vote_counts:
+                vote_counts[candidate.id] = 0
+                
+    else:
+        # STATE 2: LIVE RESULTS - Use finder_hashes (NO DECRYPTION, 2-3 seconds!)
+        print("📊 Using finder_hashes for live results")
+        vote_counts = get_admin_live_vote_counts(election_id)
+    
+    # Build candidate results
+    candidate_results = []
+    total_votes_cast = 0
+    
+    for candidate in candidates:
+        vote_count = vote_counts.get(candidate.id, 0)
+        total_votes_cast += vote_count
+        
+        candidate_results.append({
+            'id': candidate.id,
+            'first_name': candidate.first_name,
+            'last_name': candidate.last_name,
+            'photo': candidate.photo,
+            'position': candidate.position.name if candidate.position else "N/A",
+            'position_id': candidate.position_id,
+            'department': candidate.department.name if candidate.department else "All Departments",
+            'vote_count': vote_count,
+            'voter_percentage': 0,  # Calculate after
+            'is_tallied': is_tallied
+        })
+    
+    # Calculate percentages based on UNIQUE VOTERS
     if unique_voters > 0:
         for candidate in candidate_results:
-            # Percentage of voters who voted for this candidate
             candidate['voter_percentage'] = round((candidate['vote_count'] / unique_voters) * 100, 2)
     
     # Group candidates by position for winner determination
@@ -4238,19 +4225,17 @@ def election_results(election_id):
             candidates_by_position[position] = []
         candidates_by_position[position].append(candidate)
     
-    # Sort candidates within each position by vote count (descending)
+    # Sort candidates within each position by vote count
     for position in candidates_by_position:
         candidates_by_position[position].sort(key=lambda x: x['vote_count'], reverse=True)
     
-    # Determine winners for each position based on max_votes
+    # Determine winners for each position
     winners_by_position = {}
-    
     for position_name, candidates_in_pos in candidates_by_position.items():
         if candidates_in_pos:
             position_id = candidates_in_pos[0]['position_id']
             max_winners = position_limits.get(position_id, 1)
             
-            # Take the top N candidates where N = max_winners
             winners = []
             for i, candidate in enumerate(candidates_in_pos):
                 if i < max_winners and candidate['vote_count'] > 0:
@@ -4258,7 +4243,8 @@ def election_results(election_id):
                 else:
                     break
             
-            winners_by_position[position_name] = winners
+            if winners:
+                winners_by_position[position_name] = winners
     
     # Sort winners_by_position by position_id
     position_order = []
@@ -4289,6 +4275,7 @@ def election_results(election_id):
     for pos_id in sorted(candidates_by_pos_id.keys()):
         sorted_candidate_results.extend(candidates_by_pos_id[pos_id])
     
+    # Calculate voter statistics
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
@@ -4297,7 +4284,7 @@ def election_results(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
-    # ---------- AUDIT LOG ----------
+    # AUDIT LOG
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -4311,7 +4298,7 @@ def election_results(election_id):
         election=election,
         candidate_results=sorted_candidate_results,
         winners_by_position=sorted_winners_by_position,
-        total_voters=unique_voters,  # Renamed for clarity
+        total_voters=unique_voters,
         total_votes_cast=total_votes_cast,
         total_eligible_voters=total_eligible_voters,
         voter_turnout=voter_turnout,
@@ -4322,7 +4309,71 @@ def election_results(election_id):
         tally_timestamp=tally_timestamp
     )
 
+
+def get_admin_live_vote_counts(election_id):
+    """
+    ULTRA FAST: Get vote counts using finder_hashes for admin live results
+    NO DECRYPTION! Takes 2-3 seconds even for thousands of voters
+    """
+    vote_counts = {}
     
+    # Stream votes in chunks to avoid memory issues
+    batch_size = 500
+    offset = 0
+    
+    while True:
+        batch = Vote.query.filter_by(election_id=election_id)\
+                          .with_entities(Vote.finder_hash)\
+                          .offset(offset)\
+                          .limit(batch_size)\
+                          .all()
+        
+        if not batch:
+            break
+        
+        # Process each vote in the batch
+        for vote in batch:
+            if not vote.finder_hash:
+                continue
+                
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                
+                # Extract candidate IDs based on format
+                candidate_ids = []
+                
+                if isinstance(finder_data, dict):
+                    # New format with 'hashes' array
+                    if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_ids.append(item['candidate_id'])
+                    
+                    # Even better: if candidate_ids stored directly
+                    elif 'candidate_ids' in finder_data and isinstance(finder_data['candidate_ids'], list):
+                        candidate_ids = finder_data['candidate_ids']
+                
+                elif isinstance(finder_data, list):
+                    # Old format
+                    for item in finder_data:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            candidate_ids.append(item['candidate_id'])
+                
+                # Count the votes
+                for cid in candidate_ids:
+                    vote_counts[cid] = vote_counts.get(cid, 0) + 1
+                    
+            except json.JSONDecodeError:
+                continue
+            except Exception:
+                continue
+        
+        offset += batch_size
+    
+    return vote_counts
+    
+
+
 @admin_bp.route('/results/<int:election_id>/tally', methods=['POST'])
 @admin_required
 def tally_election_results(election_id):
@@ -4562,7 +4613,7 @@ def get_tally_results(election_id):
 @admin_bp.route('/results/<int:election_id>/pdf')
 @admin_required
 def election_results_pdf(election_id):
-    """Generate PDF of election results using WeasyPrint - Letter size, direct download"""
+    """Generate PDF - ONLY AVAILABLE AFTER OFFICIAL TALLY"""
     election = Election.query.get_or_404(election_id)
     
     tz = pytz.timezone('Asia/Manila')
@@ -4581,7 +4632,7 @@ def election_results_pdf(election_id):
     else:
         status = "Upcoming"
     
-    # Check if tallied
+    # ===== CRITICAL: CHECK IF TALLIED FIRST =====
     is_tallied = False
     tally_timestamp = None
     
@@ -4593,10 +4644,21 @@ def election_results_pdf(election_id):
                 election_id=election_id
             ).order_by(TallyVote.tally_timestamp.desc()).first()
             tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
-    else:
-        is_tallied = check_if_tallied(election_id)
-        if is_tallied:
-            tally_timestamp = get_tally_timestamp(election_id)
+    
+    # ===== BLOCK PDF IF NOT TALLIED =====
+    if not is_tallied:
+        # Return error message (can be JSON for AJAX or flash for redirect)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': False,
+                'message': 'PDF results are only available after official tally. Please tally the votes first.'
+            }), 403
+        else:
+            flash('PDF results are only available after official tally. Please tally the votes first.', 'warning')
+            return redirect(url_for('admin.election_results', election_id=election_id))
+    
+    # ===== ONLY GET HERE IF TALLIED =====
+    print(f"📊 Generating PDF for election {election_id} using official tally results")
     
     # Get candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()
@@ -4608,57 +4670,39 @@ def election_results_pdf(election_id):
         election_id=election_id
     ).distinct().count()
     
-    # GET POSITION LIMITS FROM ElectionPosition TABLE
+    # GET POSITION LIMITS
     position_limits = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
     
-    # Get vote counts from TallyVote if tallied, otherwise from Vote table
-    if is_tallied and TALLY_VOTE_AVAILABLE:
-        tally_records = TallyVote.query.filter_by(election_id=election_id).all()
-        tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
+    # ===== USE TALLY TABLE ONLY (NO DECRYPTION, NO FALLBACK) =====
+    tally_records = TallyVote.query.filter_by(election_id=election_id).all()
+    tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
+    
+    for candidate in candidates:
+        vote_count = tally_dict.get(candidate.id, 0)
         
-        for candidate in candidates:
-            vote_count = tally_dict.get(candidate.id, 0)
-            
-            candidate_results.append({
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'photo': candidate.photo,
-                'position': candidate.position.name if candidate.position else "N/A",
-                'position_id': candidate.position_id,
-                'department': candidate.department.name if candidate.department else "All Departments",
-                'vote_count': vote_count,
-                'voter_percentage': 0,
-                'is_tallied': True
-            })
-            total_votes_cast += vote_count
-    else:
-        for candidate in candidates:
-            vote_count = count_votes_for_candidate(candidate.id, election_id)
-            
-            candidate_results.append({
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'photo': candidate.photo,
-                'position': candidate.position.name if candidate.position else "N/A",
-                'position_id': candidate.position_id,
-                'department': candidate.department.name if candidate.department else "All Departments",
-                'vote_count': vote_count,
-                'voter_percentage': 0,
-                'is_tallied': is_tallied
-            })
-            total_votes_cast += vote_count
+        candidate_results.append({
+            'id': candidate.id,
+            'first_name': candidate.first_name,
+            'last_name': candidate.last_name,
+            'photo': candidate.photo,
+            'position': candidate.position.name if candidate.position else "N/A",
+            'position_id': candidate.position_id,
+            'department': candidate.department.name if candidate.department else "All Departments",
+            'vote_count': vote_count,
+            'voter_percentage': 0,
+            'is_tallied': True
+        })
+        total_votes_cast += vote_count
     
     # Calculate percentages based on UNIQUE VOTERS
     if unique_voters > 0:
         for candidate in candidate_results:
             candidate['voter_percentage'] = round((candidate['vote_count'] / unique_voters) * 100, 2)
     
-    # ===== CRITICAL: WINNER DETERMINATION LOGIC =====
+    # ===== WINNER DETERMINATION =====
     # Group candidates by position
     candidates_by_position = {}
     for candidate in candidate_results:
@@ -4667,11 +4711,11 @@ def election_results_pdf(election_id):
             candidates_by_position[position] = []
         candidates_by_position[position].append(candidate)
     
-    # Sort candidates within each position by vote count (descending)
+    # Sort candidates within each position by vote count
     for position in candidates_by_position:
         candidates_by_position[position].sort(key=lambda x: x['vote_count'], reverse=True)
     
-    # Determine winners for each position based on max_votes
+    # Determine winners
     winners_by_position = {}
     
     for position_name, candidates_in_pos in candidates_by_position.items():
@@ -4679,7 +4723,6 @@ def election_results_pdf(election_id):
             position_id = candidates_in_pos[0]['position_id']
             max_winners = position_limits.get(position_id, 1)
             
-            # Take the top N candidates where N = max_winners (only those with votes > 0)
             winners = []
             for i, candidate in enumerate(candidates_in_pos):
                 if i < max_winners and candidate['vote_count'] > 0:
@@ -4687,7 +4730,7 @@ def election_results_pdf(election_id):
                 else:
                     break
             
-            if winners:  # Only add if there are winners
+            if winners:
                 winners_by_position[position_name] = winners
     
     # Sort winners_by_position by position_id
@@ -4704,7 +4747,7 @@ def election_results_pdf(election_id):
         if position_name in winners_by_position:
             sorted_winners_by_position[position_name] = winners_by_position[position_name]
     
-    # Sort candidate_results by position_id first, then by vote count
+    # Sort candidate_results by position_id
     candidates_by_pos_id = {}
     for candidate in candidate_results:
         pos_id = candidate['position_id']
@@ -4728,12 +4771,12 @@ def election_results_pdf(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
-    # Render HTML template for PDF - WITH ALL VARIABLES
+    # Render HTML template for PDF
     html = render_template(
-        'election_results_pdf.html',  # Make sure path is correct
+        'election_results_pdf.html',
         election=election,
         candidate_results=sorted_candidate_results,
-        winners_by_position=sorted_winners_by_position,  # THIS WAS MISSING!
+        winners_by_position=sorted_winners_by_position,
         total_voters=unique_voters,
         total_votes_cast=total_votes_cast,
         total_eligible_voters=total_eligible_voters,
@@ -4743,28 +4786,21 @@ def election_results_pdf(election_id):
         now=now,
         is_tallied=is_tallied,
         tally_timestamp=tally_timestamp,
-        position_limits=position_limits  # Also pass position limits
+        position_limits=position_limits
     )
     
     try:
-        # Generate PDF using WeasyPrint with LETTER size
+        # Generate PDF using WeasyPrint
         from weasyprint import HTML, CSS
         from weasyprint.text.fonts import FontConfiguration
         
         font_config = FontConfiguration()
         
-        # Create PDF with LETTER size and proper margins
         pdf = HTML(string=html, base_url=request.host_url).write_pdf(
             stylesheets=[CSS(string='''
                 @page {
                     size: letter;
                     margin: 0.75in;
-                    @top-center {
-                        content: " ";
-                        font-family: Arial, sans-serif;
-                        font-size: 9pt;
-                        color: #666;
-                    }
                     @bottom-center {
                         content: "Page " counter(page) " of " counter(pages);
                         font-family: Arial, sans-serif;
@@ -4776,40 +4812,36 @@ def election_results_pdf(election_id):
             font_config=font_config
         )
         
-        # Generate filename with proper .pdf extension
-        filename = f"{election.title}_Results_{now.strftime('%Y%m%d_%H%M')}.pdf"
-        # Remove any invalid characters from filename
+        # Generate filename
+        filename = f"{election.title}_Official_Results_{now.strftime('%Y%m%d_%H%M')}.pdf"
         filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
         
-        # Create response with proper headers for direct download
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response.headers['Content-Length'] = len(pdf)
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
         
         # Log PDF generation
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         log_audit(
             action='ELECTION_RESULTS_PDF_EXPORT',
-            description=f"Admin user '{username}' exported PDF results for election: '{election.title}' (ID: {election_id}) from IP: {ip}"
+            description=f"Admin user '{username}' exported OFFICIAL PDF results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Source: TallyVote table"
         )
         
         return response
         
     except Exception as e:
-        # Log error
         current_app.logger.error(f"PDF Generation Error: {str(e)}")
         
-        # Return error message as JSON
-        return jsonify({
-            'success': False,
-            'error': 'PDF generation failed. Please try again or contact support.',
-            'details': str(e)
-        }), 500
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': False,
+                'error': 'PDF generation failed. Please try again or contact support.',
+                'details': str(e)
+            }), 500
+        else:
+            flash(f'PDF generation failed: {str(e)}', 'danger')
+            return redirect(url_for('admin.election_results', election_id=election_id))
 
 
 

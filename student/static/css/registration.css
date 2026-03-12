@@ -263,3 +263,32 @@ h2 {
     color: #e74c3c;
     margin-top: 4px;
 }
+
+
+
+/* Add these styles to your existing registration.css */
+
+/* Program Type dropdown hint */
+.field-hint {
+    display: block;
+    font-size: 11px;
+    color: #777;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Error state for program type dropdown */
+.input-error select {
+    border-color: #e74c3c !important;
+    box-shadow: 0 0 5px rgba(231, 76, 60, 0.5);
+}
+
+/* Ensure small text doesn't get error color */
+.input-error .field-hint {
+    color: #777 !important;
+}
+
+/* Additional spacing for the program type dropdown */
+.input-group:has(select[name="program_type"]) {
+    margin-bottom: 20px;
+}
