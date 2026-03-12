@@ -27,6 +27,21 @@
     .dashboard-header {
         z-index: 500;
     }
+    
+    /* Make the application card clickable */
+    .clickable-card {
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .clickable-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(155, 89, 182, 0.2) !important;
+    }
+    
+    .clickable-card:active {
+        transform: translateY(-2px);
+    }
 </style>
 {% endblock %}
 
@@ -69,10 +84,12 @@
         <h2>Ongoing Elections</h2>
         <p>{{ ongoing_elections if ongoing_elections else 0 }}</p>
     </div>
-    <div class="card">
-        <i class="fa-solid fa-check-to-slot fa-2x card-icon"></i>
-        <h2>Voter Turnout</h2>
-        <p>{{ voter_turnout if voter_turnout else "0%" }}</p>
+    <!-- ===== REPLACED: Application Requests Card (clickable) ===== -->
+    <div class="card clickable-card" onclick="window.location.href='{{ url_for('admin.pending_candidates') }}'" style="cursor: pointer;">
+        <i class="fa-solid fa-file-pen fa-2x card-icon"></i>
+        <h2>Application Requests</h2>
+        <p>{{ pending_applications if pending_applications else 0 }}</p>
+        <small style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">Click to view</small>
     </div>
 </div>
 

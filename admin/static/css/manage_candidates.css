@@ -1154,3 +1154,92 @@ body:not(.dark-mode) {
 .platform-counter.warning {
     animation: pulseWarning 1s ease-in-out infinite;
 }
+
+
+/* Convert Students Button - Matching other buttons */
+.convert-students-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 10px 20px;
+    white-space: nowrap;
+    font-family: var(--font-family);
+    box-shadow: var(--box-shadow);
+}
+
+.convert-students-btn:hover {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.5);
+    color: white;
+}
+
+.convert-students-btn i {
+    font-size: 1rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .title-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .convert-students-btn,
+    .position-list-btn,
+    .add-position-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
+/* Application Requests Button */
+.app-requests-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 10px 20px;
+    white-space: nowrap;
+    font-family: var(--font-family);
+    box-shadow: var(--box-shadow);
+}
+
+.app-requests-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.5);
+    color: white;
+}
+
+.app-requests-btn i {
+    font-size: 1rem;
+}
+
+/* Dark mode support */
+:root.dark-mode .app-requests-btn {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark-mode .app-requests-btn:hover {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+}

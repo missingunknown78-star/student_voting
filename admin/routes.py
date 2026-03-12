@@ -36,6 +36,8 @@ from admin.models import AdminTrustedDevice
 from flask import make_response
 from datetime import datetime
 import pytz
+from admin.models import YearLevel
+from student.models import PendingCandidate
 # Add this near your other imports
 
 
@@ -854,6 +856,11 @@ def dashboard():
     total_elections = election_query.count()
     total_votes = vote_query.count()
 
+    # ===== NEW: Get pending applications count =====
+    from student.models import PendingCandidate
+    pending_applications = PendingCandidate.query.filter_by(status='pending').count()
+    # ===============================================
+
     # ================================
     # Recent elections table with school year filter
     # ================================
@@ -872,12 +879,6 @@ def dashboard():
     # Calculate ongoing elections (based on current date, not filtered by school year)
     ongoing_elections = sum(1 for e in Election.query.all() if e.status == 'Open')
 
-    # Calculate voter turnout (using filtered votes)
-    voter_turnout = "0%"
-    if total_students > 0:
-        turnout_percentage = (total_votes / total_students) * 100
-        voter_turnout = f"{turnout_percentage:.1f}%"
-
     # Get all available school years from elections
     all_elections = Election.query.order_by(Election.start_date.asc()).all()
     school_years = set()
@@ -895,7 +896,7 @@ def dashboard():
     
     log_audit(
         action='DASHBOARD_VIEW',
-        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | School Year: {school_year or 'All'} | Stats: {total_students} students, {total_elections} elections, {total_votes} votes"
+        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | School Year: {school_year or 'All'} | Stats: {total_students} students, {total_elections} elections, {total_votes} votes, {pending_applications} pending applications"
     )
 
     return render_template(
@@ -905,15 +906,13 @@ def dashboard():
         total_elections=total_elections,
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
-        voter_turnout=voter_turnout,
+        pending_applications=pending_applications,  # NEW: Pass to template
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
         school_years=school_years,
         current_sy=school_year,
         now=now
     )
-
-
 
 
 # Add these imports at the top of your admin/routes.py if not already present
@@ -2680,8 +2679,392 @@ def process_deletion_request(request_id):
     return jsonify({'success': True})
 
 
+from student.models import QualifiedCandidate
 
-# ---------------------- Departments & Courses ---------------------- #
+@admin_bp.route('/convert-to-candidates')
+@login_required
+def convert_to_candidates():
+    """Page for admin to select students and qualify them as candidates"""
+    from sqlalchemy import or_
+    from student.models import QualifiedCandidate
+    
+    # Get filter parameters
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
+    department_id = request.args.get('department', 'all')
+    course_id = request.args.get('course', 'all')
+    year_level = request.args.get('year_level', 'all')
+    
+    per_page = 15
+    
+    # Base query - get all students
+    query = Student.query
+    
+    # Apply search filter
+    if search:
+        query = query.filter(
+            or_(
+                Student.first_name.ilike(f'%{search}%'),
+                Student.last_name.ilike(f'%{search}%'),
+                Student.id_number.ilike(f'%{search}%')
+            )
+        )
+    
+    # Apply department filter
+    if department_id != 'all' and department_id:
+        query = query.filter(Student.department_id == int(department_id))
+    
+    # Apply course filter
+    if course_id != 'all' and course_id:
+        query = query.filter(Student.course_id == int(course_id))
+    
+    # Apply year level filter
+    if year_level != 'all' and year_level:
+        query = query.filter(Student.year_level_id == int(year_level))
+    
+    # Order by ID
+    query = query.order_by(Student.id_number)
+    
+    # Paginate
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    students = paginated.items
+    
+    # Get qualified students
+    qualified = QualifiedCandidate.query.all()
+    qualified_student_ids = [q.student_id for q in qualified]
+    qualified_count = len(qualified_student_ids)
+    
+    # Get filter dropdown data
+    departments = Department.query.all()
+    courses = Course.query.all()
+    year_levels = YearLevel.query.all()
+    
+    return render_template('convert_to_candidates.html',
+                         students=students,
+                         departments=departments,
+                         courses=courses,
+                         year_levels=year_levels,
+                         qualified_student_ids=qualified_student_ids,
+                         qualified_count=qualified_count,
+                         current_page=page,
+                         total_pages=paginated.pages,
+                         total_students=paginated.total,
+                         search=search,
+                         department_filter=department_id,
+                         course_filter=course_id,
+                         year_filter=year_level)
+
+
+@admin_bp.route('/qualify-student', methods=['POST'])
+@login_required
+def qualify_student():
+    """Mark a student as qualified candidate"""
+    try:
+        data = request.get_json()
+        student_id = data.get('student_id')
+        
+        if not student_id:
+            return jsonify({'success': False, 'message': 'Student ID required'}), 400
+        
+        # Check if student exists
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({'success': False, 'message': 'Student not found'}), 404
+        
+        # Check if already qualified
+        existing = QualifiedCandidate.query.filter_by(student_id=student_id).first()
+        if existing:
+            return jsonify({'success': False, 'message': 'Student is already qualified'}), 400
+        
+        # Create qualification record
+        qualification = QualifiedCandidate(
+            student_id=student_id,
+            status='pending'
+        )
+        
+        db.session.add(qualification)
+        db.session.commit()
+        
+        # Log the action - REMOVED ip_address parameter
+        log_audit(
+            action='QUALIFY_STUDENT',
+            description=f"Qualified student {student.first_name} {student.last_name} as candidate"
+        )
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Student qualified successfully!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error qualifying student: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/remove-qualification', methods=['POST'])
+@login_required
+def remove_qualification():
+    """Remove qualification from a student"""
+    try:
+        data = request.get_json()
+        student_id = data.get('student_id')
+        
+        if not student_id:
+            return jsonify({'success': False, 'message': 'Student ID required'}), 400
+        
+        # Find and delete qualification
+        qualification = QualifiedCandidate.query.filter_by(student_id=student_id).first()
+        if not qualification:
+            return jsonify({'success': False, 'message': 'Student is not qualified'}), 404
+        
+        student = Student.query.get(student_id)
+        
+        db.session.delete(qualification)
+        db.session.commit()
+        
+        # Log the action - REMOVED ip_address parameter
+        log_audit(
+            action='REMOVE_QUALIFICATION',
+            description=f"Removed candidate qualification for student {student.first_name} {student.last_name}"
+        )
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Qualification removed successfully!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error removing qualification: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
+
+
+@admin_bp.route('/pending-candidates')
+@login_required
+def pending_candidates():
+    """View and manage pending candidate applications"""
+    from student.models import PendingCandidate
+    from sqlalchemy import or_
+    
+    # Get filter parameters
+    page = request.args.get('page', 1, type=int)
+    status = request.args.get('status', 'pending')
+    search = request.args.get('search', '').strip()
+    per_page = 10
+    
+    # Base query
+    query = PendingCandidate.query
+    
+    # Filter by status
+    if status != 'all':
+        query = query.filter(PendingCandidate.status == status)
+    
+    # Search filter
+    if search:
+        query = query.join(Position).join(Election).outerjoin(Student).filter(
+            or_(
+                PendingCandidate.first_name.ilike(f'%{search}%'),
+                PendingCandidate.last_name.ilike(f'%{search}%'),
+                Position.name.ilike(f'%{search}%'),
+                Election.title.ilike(f'%{search}%'),
+                Student.id_number.ilike(f'%{search}%')
+            )
+        )
+    
+    # Order by most recent first
+    query = query.order_by(PendingCandidate.applied_at.desc())
+    
+    # Paginate
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    applications = paginated.items
+    
+    # Get statistics
+    stats = {
+        'pending': PendingCandidate.query.filter_by(status='pending').count(),
+        'approved': PendingCandidate.query.filter_by(status='approved').count(),
+        'rejected': PendingCandidate.query.filter_by(status='rejected').count(),
+        'total': PendingCandidate.query.count()
+    }
+    
+    return render_template('pending_candidates.html',
+                         applications=applications,
+                         pagination=paginated,
+                         stats=stats,
+                         status_filter=status,
+                         search=search)
+
+
+@admin_bp.route('/pending-candidate/<int:id>')
+@login_required
+def get_pending_candidate(id):
+    """Get pending candidate details for modal view"""
+    from student.models import PendingCandidate
+    
+    try:
+        pending = PendingCandidate.query.get_or_404(id)
+        student = Student.query.get(pending.student_id) if pending.student_id else None
+        
+        # Get course and year level names
+        course_name = None
+        year_name = None
+        
+        if student:
+            if student.course_id:
+                course = Course.query.get(student.course_id)
+                course_name = course.course_name if course else None
+            if student.year_level_id:
+                year = YearLevel.query.get(student.year_level_id)
+                year_name = year.year_name if year else None
+        
+        return jsonify({
+            'success': True,
+            'application': {
+                'id': pending.id,
+                'first_name': pending.first_name,
+                'last_name': pending.last_name,
+                'student_id': student.id_number if student else 'N/A',
+                'course': course_name or (student.course if student else 'N/A'),
+                'year_level': year_name or 'N/A',
+                'party_list': pending.party_list,
+                'platform': pending.platform,
+                'position': pending.position.name if pending.position else 'N/A',
+                'election': pending.election.title if pending.election else 'N/A',
+                'election_id': pending.election_id,
+                'scope': pending.scope,
+                'applied_at': pending.applied_at.strftime('%Y-%m-%d %H:%M') if pending.applied_at else 'N/A',
+                'status': pending.status
+            }
+        })
+    except Exception as e:
+        print(f"Error in get_pending_candidate: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/approve-pending/<int:id>', methods=['POST'])
+@login_required
+def approve_pending(id):
+    """Approve a pending candidate application and move to candidates table"""
+    from student.models import PendingCandidate
+    from datetime import datetime
+    
+    try:
+        pending = PendingCandidate.query.get_or_404(id)
+        
+        if pending.status != 'pending':
+            return jsonify({'success': False, 'message': 'This application is no longer pending'}), 400
+        
+        # FIXED: Check if candidate already exists with same name in the SAME election only
+        existing = Candidate.query.filter_by(
+            first_name=pending.first_name,
+            last_name=pending.last_name,
+            election_id=pending.election_id  # Add election_id to check
+        ).first()
+        
+        if existing:
+            pending.status = 'rejected'
+            pending.rejection_reason = f'Candidate with same name already exists in this election: {pending.election.title if pending.election else "Unknown"}'
+            pending.reviewed_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify({
+                'success': False, 
+                'message': f'A candidate with the name {pending.first_name} {pending.last_name} already exists in this election. Cannot approve.'
+            }), 400
+        
+        # Create new candidate
+        new_candidate = Candidate(
+            first_name=pending.first_name,
+            last_name=pending.last_name,
+            party_list=pending.party_list,
+            platform=pending.platform,
+            department_id=pending.department_id,
+            course_id=pending.course_id,
+            position_id=pending.position_id,
+            election_id=pending.election_id,
+            scope=pending.scope,
+            photo=pending.photo
+        )
+        
+        db.session.add(new_candidate)
+        
+        # Update pending record
+        pending.status = 'approved'
+        pending.reviewed_at = datetime.utcnow()
+        if hasattr(current_user, 'id'):
+            pending.reviewed_by = current_user.id
+        
+        db.session.commit()
+        
+        # Log the action
+        try:
+            from admin.routes import log_audit
+            log_audit(
+                action='APPROVE_CANDIDATE',
+                description=f"Approved candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'}",
+                ip_address=request.remote_addr
+            )
+        except:
+            pass
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Candidate {pending.first_name} {pending.last_name} approved successfully for {pending.election.title if pending.election else "election"}!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in approve_pending: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/reject-pending/<int:id>', methods=['POST'])
+@login_required
+def reject_pending(id):
+    """Reject a pending candidate application"""
+    from student.models import PendingCandidate
+    from datetime import datetime
+    
+    try:
+        data = request.get_json()
+        reason = data.get('reason', 'Application rejected')
+        
+        if not reason:
+            return jsonify({'success': False, 'message': 'Rejection reason is required'}), 400
+        
+        pending = PendingCandidate.query.get_or_404(id)
+        
+        if pending.status != 'pending':
+            return jsonify({'success': False, 'message': 'This application is no longer pending'}), 400
+        
+        pending.status = 'rejected'
+        pending.rejection_reason = reason
+        pending.reviewed_at = datetime.utcnow()
+        if hasattr(current_user, 'id'):
+            pending.reviewed_by = current_user.id
+        
+        db.session.commit()
+        
+        # Log the action
+        try:
+            from admin.routes import log_audit
+            log_audit(
+                action='REJECT_CANDIDATE',
+                description=f"Rejected candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'}. Reason: {reason}",
+                ip_address=request.remote_addr
+            )
+        except:
+            pass
+        
+        return jsonify({'success': True, 'message': 'Application rejected'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in reject_pending: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+        # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
 @admin_required
 def manage_departments():
@@ -2990,6 +3373,21 @@ def manage_candidates():
             flash('Please fill in all required fields.', 'danger')
             return redirect(url_for('admin.manage_candidates'))
 
+        # ===== NEW: Check for duplicate candidate in the SAME election =====
+        existing_candidate = Candidate.query.filter_by(
+            first_name=first_name,
+            last_name=last_name,
+            election_id=election_id
+        ).first()
+        
+        if existing_candidate:
+            error_msg = f'A candidate with the name {first_name} {last_name} already exists in this election: {election.title}'
+            if is_ajax:
+                return jsonify({'success': False, 'message': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect(url_for('admin.manage_candidates'))
+        # ===================================================================
+
         # Validate department based on scope (but department is now optional)
         if scope == 'department' and not department_id_form:
             # Department is optional now, so we don't require it
@@ -3078,7 +3476,6 @@ def manage_candidates():
         selected_scope=selected_scope,
         current_sy=school_year  # Pass current school year to template
     )
-
 
 
 @admin_bp.route('/candidates/filter', methods=['GET'])

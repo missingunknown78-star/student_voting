@@ -561,6 +561,17 @@
     {% endif %}
     
     <div class="title-buttons">
+
+        <!-- Application Requests Button -->
+        <a href="{{ url_for('admin.pending_candidates') }}" class="app-requests-btn">
+            <i class="fa-solid fa-clock"></i> Application Requests
+        </a>
+        
+        <!-- NEW: Convert Students to Candidates Button -->
+        <a href="{{ url_for('admin.convert_to_candidates') }}" class="convert-students-btn">
+            <i class="fa-solid fa-user-plus"></i> Student Candidates
+        </a>
+        
         <button class="position-btn position-list-btn" id="openPositionListModal">
             <i class="fa-solid fa-list"></i> Position List
         </button>

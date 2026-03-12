@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% set active_page = 'apply_candidate' %}
+
+{% block title %}Candidate Application{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/application_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('student.static', filename='css/apply-candidate.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="{{ url_for('student.static', filename='js/candidate-application.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="application-container">
+    <h1 class="page-title">
+        Candidate Application Center
+    </h1>
+    
+    <!-- Action Button Container - Show if qualified and no pending application -->
+    {% if is_qualified and not has_pending_application %}
+    <div class="action-button-container">
+        <button id="applyAsCandidateBtn" class="action-button">
+            <i class="fa-solid fa-star"></i> 
+            {% if has_approved_application or has_rejected_application %}
+                Apply for Another Election
+            {% else %}
+                Apply Now
+            {% endif %}
+        </button>
+    </div>
+    {% endif %}
+    
+    {% if not is_qualified %}
+        <div class="status-card info-message">
+            <i class="fa-solid fa-info-circle status-icon-large"></i>
+            <h3>Not Qualified</h3>
+            <p>You are not currently qualified to apply as a candidate.</p>
+            <p class="help-text">Please check back later or contact the COMELEC admin for more information.</p>
+        </div>
+    {% endif %}
+    
+    <!-- Display ALL applications from PendingCandidate table -->
+    {% if all_applications %}
+        <h2 style="margin: 30px 0 15px; color: #333; font-size: 1.5rem;">
+            <i class="fa-solid fa-file-lines"></i> Your Applications ({{ all_applications|length }})
+        </h2>
+        
+        {% for app in all_applications %}
+            {% if app.status == 'pending' %}
+                <!-- PENDING APPLICATION CARD -->
+                <div class="status-card status-pending">
+                    <div class="status-header">
+                        <i class="fa-solid fa-clock status-icon"></i>
+                        <div>
+                            <h2>Application #{{ loop.index }} - Pending Review</h2>
+                            <p>Submitted on {{ app.applied_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="details-table">
+                        <h3>
+                            <i class="fa-solid fa-file-lines"></i> Application Details
+                        </h3>
+                        <table>
+                            <tr>
+                                <td>Election:</td>
+                                <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Position:</td>
+                                <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            </tr>
+                            {% if app.party_list %}
+                            <tr>
+                                <td>Party List:</td>
+                                <td>{{ app.party_list }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td>Scope:</td>
+                                <td>{{ app.scope|title }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p class="notification-message">
+                        <i class="fa-solid fa-bell"></i> Please check this page for updates on your application status.
+                    </p>
+                </div>
+            {% endif %}
+            
+            {% if app.status == 'approved' %}
+                <!-- APPROVED APPLICATION CARD -->
+                <div class="status-card status-approved">
+                    <div class="status-header">
+                        <i class="fa-solid fa-check-circle status-icon"></i>
+                        <div>
+                            <h2>Application #{{ loop.index }} - Approved!</h2>
+                            <p>Your application for <strong>{{ app.election.title if app.election else 'Unknown Election' }}</strong> has been approved</p>
+                        </div>
+                    </div>
+                    
+                    <div class="details-table">
+                        <h3>
+                            <i class="fa-solid fa-star"></i> Application Details
+                        </h3>
+                        <table>
+                            <tr>
+                                <td>Election:</td>
+                                <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Position:</td>
+                                <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            </tr>
+                            {% if app.party_list %}
+                            <tr>
+                                <td>Party List:</td>
+                                <td>{{ app.party_list }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td>Scope:</td>
+                                <td>{{ app.scope|title }}</td>
+                            </tr>
+                            {% if app.reviewed_at %}
+                            <tr>
+                                <td>Reviewed on:</td>
+                                <td>{{ app.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if app.status == 'rejected' %}
+                <!-- REJECTED APPLICATION CARD -->
+                <div class="status-card status-rejected">
+                    <div class="status-header">
+                        <i class="fa-solid fa-times-circle status-icon"></i>
+                        <div>
+                            <h2>Application #{{ loop.index }} - Not Approved</h2>
+                            <p>Your application for <strong>{{ app.election.title if app.election else 'Unknown Election' }}</strong> was rejected</p>
+                        </div>
+                    </div>
+                    
+                    <div class="details-table">
+                        <h3>Application Details</h3>
+                        <table>
+                            <tr>
+                                <td>Election:</td>
+                                <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Position:</td>
+                                <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            </tr>
+                            {% if app.party_list %}
+                            <tr>
+                                <td>Party List:</td>
+                                <td>{{ app.party_list }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    
+                    <div class="reason-box">
+                        <strong><i class="fa-solid fa-info-circle"></i> Rejection Reason:</strong>
+                        <p>{{ app.rejection_reason or 'No specific reason provided.' }}</p>
+                    </div>
+                    
+                    {% if app.reviewed_at %}
+                    <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+                        <i class="fa-solid fa-calendar"></i> Reviewed on: {{ app.reviewed_at.strftime('%B %d, %Y') }}
+                    </p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <!-- No applications yet, show qualified message -->
+        {% if is_qualified %}
+        <div class="status-card status-qualified">
+            <div class="status-header">
+                <i class="fa-solid fa-star status-icon"></i>
+                <div>
+                    <h2>You are Qualified!</h2>
+                    <p>You are eligible to apply as a candidate</p>
+                </div>
+            </div>
+            
+            <p class="qualified-message">
+                Based on your academic standing and eligibility, you have been qualified to run as a candidate 
+                in the upcoming elections. Click the "Apply Now" button above to start your application.
+            </p>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Candidate Application Modal -->
+<div id="candidateApplicationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-star"></i> Apply as Candidate</h2>
+            <span class="close-modal" onclick="closeCandidateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <!-- Notification container inside modal -->
+            <div id="candidateApplicationNotification" class="modal-notification"></div>
+            
+            <form id="candidateApplicationForm" enctype="multipart/form-data">
+                <div class="form-group full-width">
+                    <label>Your Name</label>
+                    <p id="applicantName">{{ student.first_name }} {{ student.last_name }}</p>
+                </div>
+
+                <!-- Party List Field -->
+                <div class="form-group">
+                    <label>Party List</label>
+                    <input type="text" name="party_list" id="apply_party_list" placeholder="Enter party list (e.g., Lakas, Aksyon, etc.)">
+                    <small class="form-hint">Optional: Leave blank if independent</small>
+                </div>
+
+                <!-- Platform Field -->
+                <div class="form-group">
+                    <label>Platform</label>
+                    <textarea name="platform" id="apply_platform" rows="3" placeholder="Enter your platform, goals, or manifesto"></textarea>
+                    <small class="form-hint">Tell voters what you stand for</small>
+                </div>
+
+                <!-- ELECTION SCOPE -->
+                <div class="form-group">
+                    <label>Election Scope <span class="required">*</span></label>
+                    <select name="scope" id="apply_scope" required onchange="filterElectionsForApply()">
+                        <option value="" disabled selected>Select Election Scope</option>
+                        <option value="campus">Campus-Wide Election</option>
+                        <option value="department">Department Election</option>
+                    </select>
+                </div>
+
+                <!-- Election Field -->
+                <div class="form-group">
+                    <label>Election <span class="required">*</span></label>
+                    <select name="election_id" id="apply_election" required>
+                        <option value="" disabled selected>Select election</option>
+                        {% for election in active_elections %}
+                            <option value="{{ election.id }}" 
+                                    data-scope="{{ election.scope }}"
+                                    data-department="{{ election.department_id }}">
+                                {{ election.title }} 
+                                ({{ election.scope|title }}) 
+                                {% if election.display_status %}
+                                    - {{ election.display_status }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Showing active and upcoming elections only</small>
+                </div>
+
+                <!-- Position Field -->
+                <div class="form-group">
+                    <label>Position <span class="required">*</span></label>
+                    <select name="position_id" id="apply_position" required>
+                        <option value="" disabled selected>Select position</option>
+                        {% for position in positions %}
+                        <option value="{{ position.id }}">{{ position.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Photo Field -->
+                <div class="form-group full-width">
+                    <label>Photo (Optional)</label>
+                    <input type="file" name="photo" id="apply_photo" accept="image/*">
+                    <small class="form-hint">Upload a campaign photo</small>
+                </div>
+
+                <div class="form-group full-width">
+                    <div class="info-box">
+                        <i class="fa-solid fa-info-circle"></i>
+                        <span>Your application will be reviewed by the COMELEC admin. You will be notified via email once approved.</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="bulk-candidate-btn" id="applySubmitBtn">
+                        <span class="button-text">Submit Application</span>
+                        <span class="loading-spinner"></span>
+                    </button>
+                    <button type="button" class="reset-btn" onclick="closeCandidateModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

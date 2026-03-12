@@ -1,0 +1,283 @@
+<!-- Candidate Application Modal -->
+<div id="candidateApplicationModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 850px !important; background: var(--modal-bg);">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-star" style="color: #9b59b6;"></i> Apply as Candidate</h2>
+            <span class="close-modal" onclick="closeCandidateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <!-- Notification container inside modal -->
+            <div id="candidateApplicationNotification" class="modal-notification" style="display: none;"></div>
+            
+            <form id="candidateApplicationForm" enctype="multipart/form-data" style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; row-gap: 20px;">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Your Name</label>
+                    <p id="applicantName" style="font-weight: 600; color: var(--text-primary); background: var(--bg-secondary); padding: 12px 15px; border-radius: 10px; border: 2px solid var(--border-color); margin: 0;"></p>
+                </div>
+
+                <!-- Party List Field -->
+                <div class="form-group">
+                    <label>Party List</label>
+                    <input type="text" name="party_list" id="apply_party_list" placeholder="Enter party list (e.g., Lakas, Aksyon, etc.)">
+                    <small class="form-hint">Optional: Leave blank if independent</small>
+                </div>
+
+                <!-- Platform Field -->
+                <div class="form-group">
+                    <label>Platform</label>
+                    <textarea name="platform" id="apply_platform" rows="3" placeholder="Enter your platform, goals, or manifesto" style="min-height: 100px;"></textarea>
+                    <small class="form-hint">Tell voters what you stand for</small>
+                </div>
+
+                <!-- ELECTION SCOPE -->
+                <div class="form-group">
+                    <label>Election Scope <span class="required">*</span></label>
+                    <select name="scope" id="apply_scope" required onchange="filterElectionsForApply()">
+                        <option value="" disabled selected>Select Election Scope</option>
+                        <option value="campus">Campus-Wide Election</option>
+                        <option value="department">Department Election</option>
+                    </select>
+                </div>
+
+                <!-- Election Field -->
+                <div class="form-group">
+                    <label>Election <span class="required">*</span></label>
+                    <select name="election_id" id="apply_election" required>
+                        <option value="" disabled selected>Select election</option>
+                        {% for election in active_elections %}
+                            <option value="{{ election.id }}" 
+                                    data-scope="{{ election.scope }}"
+                                    data-department="{{ election.department_id }}"
+                                    style="display: none;">
+                                {{ election.title }} ({{ election.scope|title }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Position Field -->
+                <div class="form-group">
+                    <label>Position <span class="required">*</span></label>
+                    <select name="position_id" id="apply_position" required>
+                        <option value="" disabled selected>Select position</option>
+                        {% for position in positions %}
+                        <option value="{{ position.id }}">{{ position.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Photo Field -->
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Photo (Optional)</label>
+                    <input type="file" name="photo" id="apply_photo" accept="image/*">
+                    <small class="form-hint">Upload a campaign photo</small>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <div class="info-box" style="background: rgba(155, 89, 182, 0.1); border-left: 4px solid #9b59b6; padding: 15px;">
+                        <i class="fa-solid fa-info-circle" style="color: #9b59b6;"></i>
+                        <span>Your application will be reviewed by the COMELEC admin. You will be notified via email once approved.</span>
+                    </div>
+                </div>
+
+                <div class="button-group" style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
+                    <button type="submit" class="bulk-candidate-btn" id="applySubmitBtn" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                        <span class="button-text">Submit Application</span>
+                        <span class="loading-spinner" style="display: none;"></span>
+                    </button>
+                    <button type="button" class="reset-btn" onclick="closeCandidateModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal styles matching your convert_to_candidates.css */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--modal-bg);
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    animation: zoomIn 0.3s forwards;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--modal-text);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.close-modal {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.close-modal:hover {
+    color: var(--danger-color);
+    background: rgba(231, 76, 60, 0.1);
+    transform: rotate(90deg);
+}
+
+.form-group {
+    margin-bottom: 0;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--modal-text);
+    font-size: 0.9rem;
+}
+
+.form-group input[type="text"],
+.form-group select,
+.form-group textarea,
+.form-group input[type="file"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    background: var(--input-bg);
+    color: var(--modal-text);
+    font-family: inherit;
+    box-shadow: var(--shadow-sm);
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.required {
+    color: #dc3545;
+    margin-left: 3px;
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.info-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-notification {
+    padding: 15px 20px;
+    margin-bottom: 25px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideDown 0.3s ease;
+    border-left: 5px solid transparent;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    grid-column: 1 / -1;
+}
+
+.modal-notification.success {
+    background: #00c851;
+    background: linear-gradient(135deg, #00c851, #00a844);
+    color: white;
+    border-left-color: #007e33;
+}
+
+.modal-notification.error {
+    background: #ff4444;
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    border-left-color: #a70000;
+}
+
+.modal-notification i {
+    font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .modal-content form {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

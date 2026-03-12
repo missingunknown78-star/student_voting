@@ -131,54 +131,45 @@ def deserialize_encrypted_vote(encrypted_data):
         
 def count_votes_for_candidates(election_id, candidate_ids):
     """Count votes for candidates in an election using homomorphic addition"""
-    votes = Vote.query.filter_by(election_id=election_id).all()
-    
-    if not votes:
-        return {candidate_id: 0 for candidate_id in candidate_ids}
-    
-    # Initialize with encrypted zeros
-    total_encrypted = [public_key.encrypt(0) for _ in candidate_ids]
-    
-    # Add all votes homomorphically
-    for vote in votes:
-        enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
-        for i in range(len(total_encrypted)):
-            total_encrypted[i] = total_encrypted[i] + enc_votes[i]
-    
-    # Decrypt final totals
-    decrypted_totals = [private_key.decrypt(x) for x in total_encrypted]
-    
-    # Map to candidate IDs
-    return dict(zip(candidate_ids, decrypted_totals))
-
-# ============= ADD THE NEW HELPER FUNCTIONS HERE =============
-def decrypt_ballot(encrypted_vote_json, private_key):
-    """Decrypt a ballot that was encrypted with the new method"""
     try:
-        vote_data = json.loads(encrypted_vote_json)
+        votes = Vote.query.filter_by(election_id=election_id).all()
         
-        if vote_data.get('method') == 'ballot_encrypt_v1':
-            # Reconstruct encrypted number
-            from phe import EncryptedNumber
-            
-            ciphertext = int(vote_data['ciphertext'])
-            exponent = vote_data['exponent']
-            
-            # Create encrypted number and decrypt
-            encrypted_ballot = EncryptedNumber(public_key, ciphertext, exponent)
-            ballot_json = private_key.decrypt(encrypted_ballot)
-            
-            # Parse ballot data
-            ballot_data = json.loads(ballot_json)
-            
-            return ballot_data
-        else:
-            # Handle old format if needed
-            print("WARNING: Unknown encryption method")
-            return None
+        if not votes:
+            return {candidate_id: 0 for candidate_id in candidate_ids}
+        
+        # Initialize with encrypted zeros
+        total_encrypted = [public_key.encrypt(0) for _ in candidate_ids]
+        
+        # Add all votes homomorphically
+        valid_votes = 0
+        for vote in votes:
+            try:
+                enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+                # Check if the length matches
+                if len(enc_votes) != len(candidate_ids):
+                    print(f"Warning: Vote {vote.id} has {len(enc_votes)} candidates, expected {len(candidate_ids)}")
+                    continue
+                    
+                for i in range(len(total_encrypted)):
+                    total_encrypted[i] = total_encrypted[i] + enc_votes[i]
+                valid_votes += 1
+            except Exception as e:
+                print(f"Error processing vote {vote.id}: {e}")
+                continue
+        
+        if valid_votes == 0:
+            return {candidate_id: 0 for candidate_id in candidate_ids}
+        
+        # Decrypt final totals
+        decrypted_totals = [private_key.decrypt(x) for x in total_encrypted]
+        
+        # Map to candidate IDs
+        return dict(zip(candidate_ids, decrypted_totals))
+        
     except Exception as e:
-        print(f"ERROR: Failed to decrypt vote: {str(e)}")
-        return None
+        print(f"Error in count_votes_for_candidates: {e}")
+        # Fallback to finder_hashes method
+        return count_votes_using_finder_hashes(election_id)
 
 def count_votes_using_finder_hashes(election_id):
     """
@@ -2865,21 +2856,150 @@ def profile():
     ).first() is not None
     
     # Check if student has fingerprint registered
-    # A fingerprint is registered if both passkey_id and public_key exist
     has_fingerprint = current_user.passkey_id is not None and current_user.public_key is not None
+
+    # ============= Candidate Qualification Data =============
+    from student.models import QualifiedCandidate, PendingCandidate
+    from datetime import datetime
+    import pytz
+    
+    # Use timezone-aware datetime
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    # Check if student is qualified to apply (exists in qualified_candidates table)
+    qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
+    is_qualified = qualification is not None
+    
+    # Check if student has a pending application
+    pending_application = PendingCandidate.query.filter_by(student_id=current_user.id, status='pending').first()
+    has_pending_application = pending_application is not None
+    
+    # Get pending application details if exists
+    pending_application_details = None
+    if pending_application:
+        # Fetch election and position details
+        election = Election.query.get(pending_application.election_id)
+        position = Position.query.get(pending_application.position_id)
+        pending_application_details = {
+            'election_title': election.title if election else 'Unknown Election',
+            'position_name': position.name if position else 'Unknown Position',
+            'party_list': pending_application.party_list,
+            'scope': pending_application.scope,
+            'created_at': pending_application.created_at
+        }
+    
+    # Check if student's application was rejected
+    rejected_application = PendingCandidate.query.filter_by(student_id=current_user.id, status='rejected').first()
+    application_rejected = rejected_application is not None
+    rejection_reason = rejected_application.rejection_reason if rejected_application else None
+    
+    # Get rejected application details
+    rejected_application_details = None
+    if rejected_application:
+        election = Election.query.get(rejected_application.election_id)
+        position = Position.query.get(rejected_application.position_id)
+        rejected_application_details = {
+            'election_title': election.title if election else 'Unknown Election',
+            'position_name': position.name if position else 'Unknown Position',
+            'party_list': rejected_application.party_list,
+            'scope': rejected_application.scope,
+            'rejected_at': rejected_application.updated_at if hasattr(rejected_application, 'updated_at') else None
+        }
+    
+    # Check if student is already a candidate (approved)
+    candidate = Candidate.query.filter_by(
+        first_name=current_user.first_name,
+        last_name=current_user.last_name
+    ).first()
+    is_already_candidate = candidate is not None
+    
+    # Get candidate details if already a candidate
+    candidate_details = None
+    if is_already_candidate and candidate:
+        election = Election.query.get(candidate.election_id)
+        position = Position.query.get(candidate.position_id)
+        candidate_details = {
+            'election_title': election.title if election else 'Unknown Election',
+            'position_name': position.name if position else 'Unknown Position',
+            'party_list': candidate.party_list,
+            'scope': candidate.scope if hasattr(candidate, 'scope') else 'campus'
+        }
+    
+    # ============= Get ACTIVE and UPCOMING elections (exclude ended) =============
+    # Get elections that haven't ended yet (active OR upcoming)
+    # Use naive datetime for database comparison since DB stores naive datetimes
+    naive_now = now.replace(tzinfo=None)
+    
+    available_elections = Election.query.filter(
+        Election.end_date >= naive_now  # End date is in the future
+    ).order_by(Election.start_date.asc()).all()  # Order by start date (soonest first)
+    
+    # Filter elections based on student's eligibility and add display status
+    eligible_elections = []
+    for election in available_elections:
+        # Skip if election is department-specific but student not in that department
+        if election.scope == 'department' and election.department_id != current_user.department_id:
+            continue
+        
+        # Check if student's year level is eligible (for campus elections)
+        if election.scope == 'campus' and not election.can_vote(current_user.year_level_id):
+            continue
+        
+        # Make election dates timezone-aware for comparison with now
+        election_start = election.start_date
+        election_end = election.end_date
+        
+        # If dates are naive, make them aware (assuming they're in Manila time)
+        if election_start.tzinfo is None:
+            election_start = tz.localize(election_start)
+        if election_end.tzinfo is None:
+            election_end = tz.localize(election_end)
+        
+        # Add status for display purposes
+        if election_start <= now <= election_end:
+            election.display_status = "Active"
+        elif election_start > now:
+            election.display_status = "Upcoming"
+        
+        eligible_elections.append(election)
+    
+    # Also separate them if needed for other purposes
+    active_elections = [e for e in eligible_elections if e.display_status == "Active"]
+    upcoming_elections = [e for e in eligible_elections if e.display_status == "Upcoming"]
+    
+    # Get all positions for the modal dropdown
+    positions = Position.query.all()
+    # =====================================================================================
 
     return render_template('profile.html',
         student=current_user,
         device_trusted=bool(device),
-        has_fingerprint=has_fingerprint,  # Now accurately detects fingerprint status
+        has_fingerprint=has_fingerprint,
         voting_history=[],
         has_voted_current=False,
         courses=courses,
         year_levels=year_levels,
         has_pending_deletion=has_pending_deletion,
         school_years=get_all_school_years(),
-        current_sy=school_year
+        current_sy=school_year,
+        # Candidate qualification data
+        is_qualified=is_qualified,
+        has_pending_application=has_pending_application,
+        pending_application_details=pending_application_details,
+        is_already_candidate=is_already_candidate,
+        candidate_details=candidate_details,
+        application_rejected=application_rejected,
+        rejected_application_details=rejected_application_details,
+        rejection_reason=rejection_reason,
+        # Pass eligible elections (active + upcoming) to template
+        active_elections=eligible_elections,  # This now contains both active AND upcoming
+        # Optional: pass separated lists if needed elsewhere
+        active_only=active_elections,
+        upcoming_only=upcoming_elections,
+        positions=positions
     )
+
 
 @student_bp.route('/profile/edit', methods=['POST'])
 @login_required
@@ -3336,6 +3456,183 @@ def send_deletion_confirmation_email(student, reason):
     except Exception as e:
         print(f"Failed to send deletion confirmation email: {e}")
         # Don't raise the exception - we don't want to block the request if email fails
+
+
+
+@student_bp.route('/apply-as-candidate/page')
+@login_required
+def apply_as_candidate_page():
+    """Render the candidate application page"""
+    from student.models import QualifiedCandidate, PendingCandidate
+    from datetime import datetime
+    import pytz
+    
+    # Use timezone-aware datetime
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    # Check if student is qualified
+    qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
+    is_qualified = qualification is not None
+    
+    # ===== Get ALL applications from PendingCandidate table ONLY =====
+    all_applications = PendingCandidate.query.filter_by(
+        student_id=current_user.id
+    ).order_by(PendingCandidate.applied_at.desc()).all()
+    
+    # Check if there's any pending application
+    has_pending_application = any(app.status == 'pending' for app in all_applications)
+    
+    # Check if there's any approved application
+    has_approved_application = any(app.status == 'approved' for app in all_applications)
+    
+    # Check if there's any rejected application
+    has_rejected_application = any(app.status == 'rejected' for app in all_applications)
+    
+    # Get active elections for the modal
+    naive_now = now.replace(tzinfo=None)
+    available_elections = Election.query.filter(
+        Election.end_date >= naive_now
+    ).order_by(Election.start_date.asc()).all()
+    
+    # Filter elections based on eligibility
+    eligible_elections = []
+    for election in available_elections:
+        if election.scope == 'department' and election.department_id != current_user.department_id:
+            continue
+        if election.scope == 'campus' and not election.can_vote(current_user.year_level_id):
+            continue
+        
+        election_start = election.start_date
+        election_end = election.end_date
+        if election_start.tzinfo is None:
+            election_start = tz.localize(election_start)
+        if election_end.tzinfo is None:
+            election_end = tz.localize(election_end)
+        
+        if election_start <= now <= election_end:
+            election.display_status = "Active"
+        elif election_start > now:
+            election.display_status = "Upcoming"
+        
+        eligible_elections.append(election)
+    
+    positions = Position.query.all()
+    
+    return render_template('apply_as_candidate.html',
+        student=current_user,
+        is_qualified=is_qualified,
+        all_applications=all_applications,  # Pass all applications from PendingCandidate
+        has_pending_application=has_pending_application,
+        has_approved_application=has_approved_application,
+        has_rejected_application=has_rejected_application,
+        active_elections=eligible_elections,
+        positions=positions
+    )
+
+from student.models import PendingCandidate, QualifiedCandidate
+
+@student_bp.route('/apply-as-candidate', methods=['POST'])
+@login_required
+def apply_as_candidate():
+    """Allow qualified students to submit candidate application"""
+    try:
+        # Get form data
+        party_list = request.form.get('party_list')
+        platform = request.form.get('platform')
+        scope = request.form.get('scope')
+        election_id = request.form.get('election_id')
+        position_id = request.form.get('position_id')
+        
+        # Validate required fields
+        if not all([scope, election_id, position_id]):
+            return jsonify({'success': False, 'message': 'Please fill in all required fields'}), 400
+        
+        # Check if student is qualified
+        qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
+        if not qualification:
+            return jsonify({'success': False, 'message': 'You are not qualified to apply as a candidate'}), 403
+        
+        # Check if already has pending application for THIS SPECIFIC ELECTION
+        existing_pending = PendingCandidate.query.filter_by(
+            student_id=current_user.id, 
+            election_id=election_id,
+            status='pending'
+        ).first()
+        if existing_pending:
+            return jsonify({'success': False, 'message': 'You already have a pending application for this election'}), 400
+        
+        # Check if already has a rejected application for THIS SPECIFIC ELECTION
+        # Optional: You can allow reapplication even if rejected, or block it
+        existing_rejected = PendingCandidate.query.filter_by(
+            student_id=current_user.id,
+            election_id=election_id,
+            status='rejected'
+        ).first()
+        
+        # If you want to allow reapplication even after rejection, remove this check
+        # If you want to block reapplication, uncomment the lines below
+        """
+        if existing_rejected:
+            return jsonify({'success': False, 'message': 'Your previous application for this election was rejected. Please contact COMELEC for more information.'}), 400
+        """
+        
+        # Check if already a candidate in THIS SPECIFIC ELECTION
+        existing_candidate = Candidate.query.filter_by(
+            first_name=current_user.first_name,
+            last_name=current_user.last_name,
+            election_id=election_id  # Add election_id filter
+        ).first()
+        
+        if existing_candidate:
+            return jsonify({'success': False, 'message': 'You are already a candidate in this election'}), 400
+        
+        # Handle photo upload
+        photo_file = request.files.get('photo')
+        photo_filename = None
+        
+        if photo_file and photo_file.filename:
+            from werkzeug.utils import secure_filename
+            import os
+            import time
+            
+            filename = secure_filename(photo_file.filename)
+            name, ext = os.path.splitext(filename)
+            photo_filename = f"pending_{current_user.id}_{int(time.time())}{ext}"
+            
+            photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
+            os.makedirs(photo_folder, exist_ok=True)
+            photo_file.save(os.path.join(photo_folder, photo_filename))
+        
+        # Create pending candidate record
+        pending = PendingCandidate(
+            student_id=current_user.id,
+            first_name=current_user.first_name,
+            last_name=current_user.last_name,
+            party_list=party_list if party_list else None,
+            platform=platform if platform else None,
+            department_id=current_user.department_id,
+            course_id=current_user.course_id,
+            position_id=position_id,
+            election_id=election_id,
+            scope=scope,
+            photo=photo_filename,
+            status='pending'
+        )
+        
+        db.session.add(pending)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Your application has been submitted for review!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in apply_as_candidate: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
 
 
 @student_bp.route('/request-deletion', methods=['POST'])

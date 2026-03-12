@@ -1,0 +1,612 @@
+/* ============================================
+   CANDIDATE APPLICATION MODAL CSS
+   Desktop-like Compact View for All Screens
+=============================================== */
+
+/* ==================== CSS VARIABLES - Light Mode Only ==================== */
+:root {
+    --modal-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --input-border: #e9ecef;
+    --input-bg: #ffffff;
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.05);
+    --danger-color: #e74c3c;
+    --success-color: #00c851;
+    --error-color: #ff4444;
+    --primary-purple: #9b59b6;
+    --primary-purple-dark: #8e44ad;
+    --gray-light: #f8f9fa;
+    --gray: #6c757d;
+}
+
+/* ==================== MODAL BASE STYLES ==================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.modal-content {
+    background-color: var(--modal-bg);
+    padding: 20px;
+    border-radius: 16px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 95vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    animation: zoomIn 0.3s forwards;
+    position: relative;
+    margin: 0 auto;
+}
+
+/* Hide scrollbar but keep functionality */
+.modal-content::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    background: transparent;
+}
+
+.modal-content {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* ==================== MODAL HEADER ==================== */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-header h2 i {
+    color: var(--primary-purple);
+    font-size: 1.3rem;
+}
+
+.close-modal {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.close-modal:hover {
+    color: var(--danger-color);
+    background: rgba(231, 76, 60, 0.1);
+    transform: rotate(90deg);
+}
+
+/* ==================== MODAL BODY ==================== */
+.modal-body {
+    margin-bottom: 0;
+}
+
+/* Two-column form layout - ALWAYS TWO COLUMNS */
+.modal-body form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Full width elements */
+.modal-body .form-group.full-width,
+.modal-body .form-group:has(textarea),
+.modal-body .form-group:has(input[type="file"]),
+.modal-body .info-box,
+.modal-body .button-group {
+    grid-column: 1 / -1;
+}
+
+/* ==================== FORM GROUPS - COMPACT ==================== */
+.form-group {
+    margin-bottom: 0;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+}
+
+.form-group input[type="text"],
+.form-group select,
+.form-group textarea,
+.form-group input[type="file"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: inherit;
+    box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
+}
+
+/* Smaller textarea */
+.form-group textarea {
+    min-height: 70px;
+    max-height: 120px;
+    resize: vertical;
+    line-height: 1.4;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+}
+
+/* Hover effects */
+.form-group input[type="text"]:hover,
+.form-group select:hover,
+.form-group textarea:hover,
+.form-group input[type="file"]:hover {
+    border-color: var(--primary-purple);
+}
+
+/* Focus effects */
+.form-group input[type="text"]:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.form-group input[type="file"]:focus {
+    outline: none;
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.2);
+}
+
+/* Select dropdown styling */
+.form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239b59b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px;
+    padding-right: 36px;
+}
+
+/* File input styling */
+.form-group input[type="file"] {
+    padding: 6px 10px;
+}
+
+.form-group input[type="file"]::file-selector-button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--primary-purple), var(--primary-purple-dark));
+    color: white;
+    border: none;
+    font-weight: 500;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+}
+
+.form-group input[type="file"]::file-selector-button:hover {
+    background: linear-gradient(135deg, var(--primary-purple-dark), #7d3c98);
+}
+
+/* Student name display - more compact */
+#applicantName {
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--gray-light);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* ==================== FORM HINTS & REQUIRED FIELDS ==================== */
+.required {
+    color: #dc3545;
+    margin-left: 2px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    font-style: italic;
+    line-height: 1.2;
+}
+
+/* ==================== INFO BOX - COMPACT ==================== */
+.info-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    background: rgba(155, 89, 182, 0.1);
+    border-left: 4px solid var(--primary-purple);
+    margin: 5px 0;
+}
+
+.info-box i {
+    color: var(--primary-purple);
+    font-size: 1rem;
+}
+
+.info-box span {
+    color: var(--text-primary);
+    line-height: 1.4;
+    font-size: 0.8rem;
+}
+
+/* ==================== NOTIFICATION INSIDE MODAL ==================== */
+.modal-notification {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideDown 0.3s ease;
+    border-left: 5px solid transparent;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    grid-column: 1 / -1;
+    display: none;
+}
+
+.modal-notification.success {
+    background: linear-gradient(135deg, #00c851, #00a844);
+    color: white;
+    border-left-color: #007e33;
+}
+
+.modal-notification.error {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    border-left-color: #a70000;
+}
+
+.modal-notification i {
+    font-size: 1.2rem;
+}
+
+/* ==================== BUTTON GROUP - COMPACT ==================== */
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.button-group button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 120px;
+    justify-content: center;
+}
+
+/* Submit button */
+.button-group .bulk-candidate-btn {
+    background: linear-gradient(135deg, var(--primary-purple), var(--primary-purple-dark));
+    color: white;
+    box-shadow: 0 4px 6px rgba(155, 89, 182, 0.3);
+}
+
+.button-group .bulk-candidate-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(155, 89, 182, 0.4);
+}
+
+.button-group .bulk-candidate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Cancel button */
+.button-group .reset-btn {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+    box-shadow: 0 4px 6px rgba(127, 140, 141, 0.3);
+}
+
+.button-group .reset-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(127, 140, 141, 0.4);
+}
+
+/* ==================== LOADING SPINNER ==================== */
+.loading-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 6px;
+    display: none;
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-15px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ==================== RESPONSIVE - KEEP TWO COLUMNS ==================== */
+@media (max-width: 768px) {
+    .modal {
+        padding: 5px;
+    }
+    
+    .modal-content {
+        padding: 15px;
+        max-height: 98vh;
+    }
+    
+    /* KEEP TWO COLUMNS - just make them slightly more compact */
+    .modal-body form {
+        gap: 10px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    .modal-header h2 i {
+        font-size: 1.2rem;
+    }
+    
+    .close-modal {
+        width: 28px;
+        height: 28px;
+        font-size: 22px;
+    }
+    
+    .form-group label {
+        font-size: 0.75rem;
+    }
+    
+    .form-group input[type="text"],
+    .form-group select,
+    .form-group textarea,
+    .form-group input[type="file"] {
+        padding: 7px 10px;
+        font-size: 0.8rem;
+    }
+    
+    .form-group textarea {
+        min-height: 60px;
+    }
+    
+    .button-group button {
+        padding: 8px 15px;
+        min-width: 100px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 12px;
+    }
+    
+    /* STILL TWO COLUMNS - just even more compact */
+    .modal-body form {
+        gap: 8px;
+    }
+    
+    .modal-header {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.1rem;
+        gap: 5px;
+    }
+    
+    .modal-header h2 i {
+        font-size: 1.1rem;
+    }
+    
+    .close-modal {
+        width: 26px;
+        height: 26px;
+        font-size: 20px;
+    }
+    
+    .form-group label {
+        font-size: 0.7rem;
+        margin-bottom: 3px;
+    }
+    
+    .form-group input[type="text"],
+    .form-group select,
+    .form-group textarea,
+    .form-group input[type="file"] {
+        padding: 6px 8px;
+        font-size: 0.75rem;
+        border-width: 1.5px;
+    }
+    
+    .form-group textarea {
+        min-height: 50px;
+    }
+    
+    .form-group select {
+        background-position: right 8px center;
+        background-size: 12px;
+        padding-right: 28px;
+    }
+    
+    .form-group input[type="file"]::file-selector-button {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        margin-right: 6px;
+    }
+    
+    .form-hint {
+        font-size: 0.6rem;
+    }
+    
+    #applicantName {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+    
+    .info-box {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    
+    .info-box i {
+        font-size: 0.9rem;
+    }
+    
+    .info-box span {
+        font-size: 0.75rem;
+    }
+    
+    .button-group {
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 10px;
+    }
+    
+    .button-group button {
+        padding: 7px 12px;
+        min-width: 90px;
+        font-size: 0.75rem;
+        gap: 4px;
+    }
+    
+    .modal-notification {
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .modal-notification i {
+        font-size: 1rem;
+    }
+}
+
+/* For very small screens, keep two columns but make them equal width */
+@media (max-width: 360px) {
+    .modal-content {
+        padding: 10px;
+    }
+    
+    .modal-body form {
+        grid-template-columns: 1fr 1fr; /* Still two columns */
+        gap: 6px;
+    }
+    
+    .form-group input[type="text"],
+    .form-group select,
+    .form-group textarea {
+        padding: 5px 6px;
+    }
+    
+    .button-group {
+        flex-direction: row; /* Keep buttons side by side */
+        flex-wrap: wrap;
+    }
+    
+    .button-group button {
+        flex: 1;
+        min-width: 80px;
+        padding: 6px 8px;
+    }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+.text-center {
+    text-align: center;
+}
+
+.mt-15 {
+    margin-top: 15px;
+}
+
+.mb-15 {
+    margin-bottom: 15px;
+}
+
+.w-100 {
+    width: 100%;
+}

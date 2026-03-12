@@ -377,3 +377,59 @@ class ProgramType(db.Model):
     
     def __repr__(self):
         return f'<ProgramType {self.name}>'
+    
+
+
+class QualifiedCandidate(db.Model):
+    __tablename__ = 'qualified_candidates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False, unique=True)
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=True)
+    
+    # Rejection reason if rejected
+    rejection_reason = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    student = db.relationship('Student', backref=db.backref('qualification', uselist=False))
+    reviewer = db.relationship('Admin', foreign_keys=[reviewed_by])
+    
+    def __repr__(self):
+        return f'<QualifiedCandidate {self.student_id}>'
+    
+
+
+class PendingCandidate(db.Model):
+    __tablename__ = 'pending_candidates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    party_list = db.Column(db.String(200), nullable=True)
+    platform = db.Column(db.Text, nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
+    position_id = db.Column(db.Integer, db.ForeignKey('positions.id'), nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
+    scope = db.Column(db.String(50), nullable=False)
+    photo = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)
+    
+    # Relationships
+    student = db.relationship('Student', backref=db.backref('pending_candidacy', uselist=False))
+    department = db.relationship('Department')
+    course = db.relationship('Course')
+    position = db.relationship('Position')
+    election = db.relationship('Election')
+    reviewer = db.relationship('Admin', foreign_keys=[reviewed_by])
+    
+    def __repr__(self):
+        return f'<PendingCandidate {self.first_name} {self.last_name}>'

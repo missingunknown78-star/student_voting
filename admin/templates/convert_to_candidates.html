@@ -1,0 +1,146 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Qualify Students as Candidates{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/convert_to_candidates.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="manage-students-page">
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fa-solid fa-star"></i> Qualify Students as Candidates
+        </h1>
+        <a href="{{ url_for('admin.manage_candidates') }}" class="request-deletion-btn">
+            <i class="fa-solid fa-arrow-left"></i> Back to Candidates
+        </a>
+    </div>
+    
+    <p class="page-description">
+        Mark students as qualified candidates. Qualified students will be able to apply for candidacy from their profile.
+    </p>
+
+    <!-- Stats Card -->
+    <div class="stats-card">
+        <div class="stats-info">
+            <h3>Total Students</h3>
+            <p>{{ total_students }}</p>
+        </div>
+        <div class="stats-info">
+            <h3>Qualified Students</h3>
+            <p>{{ qualified_count }}</p>
+        </div>
+    </div>
+
+    <!-- Filter Bar - Compact -->
+    <form method="GET" class="filter-bar" id="filterForm">
+        <input type="text" name="search" placeholder="Search by ID or name..." value="{{ search }}" id="searchInput" class="search-input-compact">
+        
+        <select name="department" id="departmentFilter" class="filter-select-compact">
+            <option value="all">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}" {% if department_filter == dept.id|string %}selected{% endif %}>{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <select name="course" id="courseFilter" class="filter-select-compact">
+            <option value="all">All Courses</option>
+            {% for course in courses %}
+            <option value="{{ course.id }}" {% if course_filter == course.id|string %}selected{% endif %}>{{ course.course_name }}</option>
+            {% endfor %}
+        </select>
+        
+        <select name="year_level" id="yearFilter" class="filter-select-compact">
+            <option value="all">All Year Levels</option>
+            {% for year in year_levels %}
+            <option value="{{ year.id }}" {% if year_filter == year.id|string %}selected{% endif %}>{{ year.year_name }}</option>
+            {% endfor %}
+        </select>
+        
+
+        <a href="{{ url_for('admin.convert_to_candidates') }}" class="reset-btn-compact">
+            <i class="fa-solid fa-undo"></i> Reset
+        </a>
+    </form>
+
+    <!-- Table Container -->
+    <div class="table-container">
+        <table class="students-table">
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Course</th>
+                    <th>Year Level</th>
+                    <th>Qualification Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if students and students|length > 0 %}
+                    {% for student in students %}
+                    {% set full_name = student.first_name ~ ' ' ~ student.last_name %}
+                    {% set is_qualified = student.id in qualified_student_ids %}
+                    <tr data-id="{{ student.id }}" 
+                        data-first="{{ student.first_name }}" 
+                        data-last="{{ student.last_name }}"
+                        data-course="{{ student.course }}"
+                        data-department="{{ student.department_id }}">
+                        <td>{{ student.id_number }}</td>
+                        <td>{{ full_name }}</td>
+                        <td>{{ student.course or 'N/A' }}</td>
+                        <td>{{ student.year_level.year_name if student.year_level else 'N/A' }}</td>
+                        <td>
+                            {% if is_qualified %}
+                                <span class="candidate-badge">
+                                    <i class="fa-solid fa-star"></i> Qualified
+                                </span>
+                            {% else %}
+                                <span class="not-candidate-badge">
+                                    <i class="fa-solid fa-user"></i> Not Qualified
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if is_qualified %}
+                                <button class="action-btn remove-btn" onclick="removeQualification({{ student.id }})">
+                                    <i class="fa-solid fa-times"></i> Remove
+                                </button>
+                            {% else %}
+                                <button class="action-btn qualify-btn" onclick="qualifyStudent({{ student.id }})">
+                                    <i class="fa-solid fa-check"></i> Qualify
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fa-solid fa-users-slash"></i>
+                            <h3>No Students Found</h3>
+                            <p>No students match your current filter criteria.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% for page_num in range(1, total_pages + 1) %}
+            <button onclick="goToPage({{ page_num }})" {% if page_num == current_page %}disabled{% endif %}>
+                {{ page_num }}
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Load JavaScript -->
+<script src="{{ url_for('admin.static', filename='js/convert_to_candidates.js') }}"></script>
+{% endblock %}

@@ -44,6 +44,13 @@ class Position(db.Model):
 
 class Candidate(db.Model):
     __tablename__ = 'candidates'
+    __table_args__ = (
+        # This creates a composite unique constraint
+        # A candidate can have the same name in different elections,
+        # but cannot have duplicate name in the same election
+        db.UniqueConstraint('first_name', 'last_name', 'election_id', 
+                           name='unique_candidate_per_election'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
@@ -115,7 +122,7 @@ class Candidate(db.Model):
         return self.program_type_id is not None
     
     def __repr__(self):
-        return f'<Candidate {self.first_name} {self.last_name}>'
+        return f'<Candidate {self.first_name} {self.last_name} (Election: {self.election_id})>'
 
 
 # admin/models.py - Complete Election class with caching fields

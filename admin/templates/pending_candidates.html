@@ -1,0 +1,527 @@
+{% extends "admin_base.html" %}
+{% block title %}Candidate Applications{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/pending_candidates.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="title-bar">
+        <h1><i class="fa-solid fa-clock"></i> Candidate Applications</h1>
+        <a href="{{ url_for('admin.manage_candidates') }}" class="back-btn">
+            <i class="fa-solid fa-arrow-left"></i> Back to Candidates
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon pending">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Pending</h3>
+                <p>{{ stats.pending }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon approved">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Approved</h3>
+                <p>{{ stats.approved }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon rejected">
+                <i class="fa-solid fa-times-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Rejected</h3>
+                <p>{{ stats.rejected }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon total">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total</h3>
+                <p>{{ stats.total }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <a href="{{ url_for('admin.pending_candidates', status='all') }}" class="tab {% if status_filter == 'all' %}active{% endif %}">All</a>
+        <a href="{{ url_for('admin.pending_candidates', status='pending') }}" class="tab {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+        <a href="{{ url_for('admin.pending_candidates', status='approved') }}" class="tab {% if status_filter == 'approved' %}active{% endif %}">Approved</a>
+        <a href="{{ url_for('admin.pending_candidates', status='rejected') }}" class="tab {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <form method="GET" class="search-form">
+            <input type="hidden" name="status" value="{{ status_filter }}">
+            <input type="text" name="search" placeholder="Search by name, position, or election..." value="{{ search }}" class="search-input">
+            <button type="submit" class="search-btn">
+                <i class="fa-solid fa-search"></i> Search
+            </button>
+            {% if search %}
+            <a href="{{ url_for('admin.pending_candidates', status=status_filter) }}" class="clear-btn">
+                <i class="fa-solid fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Applications Table -->
+    <div class="table-container">
+        <table class="applications-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Student Name</th>
+                    <th>Party List</th>
+                    <th>Position</th>
+                    <th>Election</th>
+                    <th>Applied Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if applications and applications|length > 0 %}
+                    {% for app in applications %}
+                    <tr id="app-{{ app.id }}">
+                        <td>
+                            {% if app.photo %}
+                                <img src="{{ url_for('admin.static', filename='images/' ~ app.photo) }}" 
+                                     class="candidate-photo clickable-photo"
+                                     alt="Photo"
+                                     onclick="showPhoto('{{ url_for('admin.static', filename='images/' ~ app.photo) }}')">
+                            {% else %}
+                                <div class="no-photo">📸</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="student-name">
+                                {{ app.first_name }} {{ app.last_name }}
+                                <small class="student-id">ID: {{ app.student.id_number if app.student else 'N/A' }}</small>
+                            </div>
+                        </td>
+                        <td>{{ app.party_list or 'Independent' }}</td>
+                        <td>{{ app.position.name if app.position else 'N/A' }}</td>
+                        <td>
+                            <div class="election-info">
+                                <span class="election-title">{{ app.election.title if app.election else 'N/A' }}</span>
+                                {% if app.scope %}
+                                <span class="scope-badge {{ app.scope }}">{{ app.scope|title }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ app.applied_at.strftime('%Y-%m-%d %H:%M') if app.applied_at else 'N/A' }}</td>
+                        <td>
+                            <span class="status-badge status-{{ app.status }}">
+                                {% if app.status == 'pending' %}
+                                    <i class="fa-solid fa-clock"></i> Pending
+                                {% elif app.status == 'approved' %}
+                                    <i class="fa-solid fa-check-circle"></i> Approved
+                                {% elif app.status == 'rejected' %}
+                                    <i class="fa-solid fa-times-circle"></i> Rejected
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="view-btn" onclick="viewApplication({{ app.id }})">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                {% if app.status == 'pending' %}
+                                <button class="approve-btn" onclick="approveApplication({{ app.id }})">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                                <button class="reject-btn" onclick="showRejectModal({{ app.id }})">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fa-solid fa-inbox"></i>
+                            <h3>No Applications Found</h3>
+                            <p>There are no candidate applications to display.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('admin.pending_candidates', page=pagination.prev_num, status=status_filter, search=search) }}" class="page-link">
+                <i class="fa-solid fa-chevron-left"></i> Prev
+            </a>
+        {% endif %}
+
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                {% if page_num == pagination.page %}
+                    <span class="page-current">{{ page_num }}</span>
+                {% else %}
+                    <a href="{{ url_for('admin.pending_candidates', page=page_num, status=status_filter, search=search) }}" class="page-link">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+                <span class="page-dots">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+            <a href="{{ url_for('admin.pending_candidates', page=pagination.next_num, status=status_filter, search=search) }}" class="page-link">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- View Application Modal -->
+<div id="viewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-star"></i> Application Details</h2>
+            <span class="close" onclick="closeModal('viewModal')">&times;</span>
+        </div>
+        <div class="modal-body" id="viewModalBody">
+            <div class="loading-spinner"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn" onclick="closeModal('viewModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Confirmation Modal -->
+<div id="approveModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-check-circle" style="color: #27ae60;"></i> Approve Application</h2>
+            <span class="close" onclick="closeModal('approveModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to approve this candidate application?</p>
+            <p class="warning-text">This will move the candidate to the official candidates list.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="approve-btn" id="confirmApproveBtn">Yes, Approve</button>
+            <button class="cancel-btn" onclick="closeModal('approveModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal with Reason -->
+<div id="rejectModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-times-circle" style="color: #e74c3c;"></i> Reject Application</h2>
+            <span class="close" onclick="closeModal('rejectModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Please provide a reason for rejection:</p>
+            <textarea id="rejectReason" class="reject-textarea" placeholder="Enter reason for rejection..." rows="3"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="reject-btn" id="confirmRejectBtn">Submit Rejection</button>
+            <button class="cancel-btn" onclick="closeModal('rejectModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img">
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast" style="display: none;"></div>
+
+<script>
+let currentApplicationId = null;
+
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    toast.style.display = 'block';
+    
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+}
+
+function viewApplication(id) {
+    currentApplicationId = id;
+    const modal = document.getElementById('viewModal');
+    const modalBody = document.getElementById('viewModalBody');
+    
+    modalBody.innerHTML = '<div class="loading-spinner"></div>';
+    modal.style.display = 'flex';
+    
+    fetch(`/admin/pending-candidate/${id}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const app = data.application;
+            modalBody.innerHTML = `
+                <div class="application-detail">
+                    <div class="detail-row">
+                        <div class="detail-label">Student Information</div>
+                        <div class="detail-value">
+                            <p><strong>Name:</strong> ${escapeHtml(app.first_name)} ${escapeHtml(app.last_name)}</p>
+                            <p><strong>Student ID:</strong> ${escapeHtml(app.student_id || 'N/A')}</p>
+                            <p><strong>Course:</strong> ${escapeHtml(app.course || 'N/A')}</p>
+                            <p><strong>Year Level:</strong> ${escapeHtml(app.year_level || 'N/A')}</p>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Application Details</div>
+                        <div class="detail-value">
+                            <p><strong>Party List:</strong> ${escapeHtml(app.party_list || 'Independent')}</p>
+                            <p><strong>Platform:</strong> ${escapeHtml(app.platform || 'No platform provided')}</p>
+                            <p><strong>Position:</strong> ${escapeHtml(app.position)}</p>
+                            <p><strong>Election:</strong> ${escapeHtml(app.election)} (${escapeHtml(app.scope)})</p>
+                            <p><strong>Applied:</strong> ${escapeHtml(app.applied_at)}</p>
+                            <p><strong>Status:</strong> <span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            modalBody.innerHTML = `<p class="error-msg">Error: ${escapeHtml(data.message || 'Failed to load application details')}</p>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        modalBody.innerHTML = '<p class="error-msg">Error loading application details. Please try again.</p>';
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return text;
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function approveApplication(id) {
+    currentApplicationId = id;
+    document.getElementById('approveModal').style.display = 'flex';
+}
+
+function showRejectModal(id) {
+    currentApplicationId = id;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function showPhoto(src) {
+    document.getElementById('lightbox').style.display = 'flex';
+    document.getElementById('lightbox-img').src = src;
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+
+// Approve button click handler
+document.getElementById('confirmApproveBtn').addEventListener('click', function() {
+    if (!currentApplicationId) {
+        showToast('No application selected', 'error');
+        return;
+    }
+    
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving...';
+    
+    fetch(`/admin/approve-pending/${currentApplicationId}`, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.message || 'Server error'); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('✅ Application approved successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            closeModal('approveModal');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('❌ Error approving application: ' + error.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        closeModal('approveModal');
+    });
+});
+
+// Reject button click handler
+document.getElementById('confirmRejectBtn').addEventListener('click', function() {
+    if (!currentApplicationId) {
+        showToast('No application selected', 'error');
+        return;
+    }
+    
+    const reason = document.getElementById('rejectReason').value.trim();
+    if (!reason) {
+        showToast('Please provide a reason for rejection.', 'error');
+        return;
+    }
+    
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Rejecting...';
+    
+    fetch(`/admin/reject-pending/${currentApplicationId}`, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.message || 'Server error'); });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('✅ Application rejected.', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            closeModal('rejectModal');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('❌ Error rejecting application: ' + error.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        closeModal('rejectModal');
+    });
+});
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+}
+
+// Add escape key handler
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.style.display = 'none';
+        });
+    }
+});
+</script>
+
+<style>
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    z-index: 10001;
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.success {
+    background: linear-gradient(135deg, #00c851, #00a844);
+}
+
+.toast.error {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
