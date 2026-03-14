@@ -323,18 +323,25 @@
             <h1 class="page-title">Manage Students</h1>
         </div>
         <div class="header-center"></div>
-        <div class="header-right">
-            <!-- School Year Indicator moved here beside Request Deletion button -->
-            {% if current_sy %}
-            <div class="school-year-indicator">
-                <i class="fa-solid fa-calendar"></i>
-                <span>School Year: <strong>{{ current_sy }}</strong></span>
-            </div>
-            {% endif %}
-            <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
-                <i class="fa-solid fa-clock"></i> Request Deletion
-            </a>
-        </div>
+        <!-- In the header-right div, add this after the school year indicator -->
+<div class="header-right">
+    <!-- School Year Indicator moved here beside Request Deletion button -->
+    {% if current_sy %}
+    <div class="school-year-indicator">
+        <i class="fa-solid fa-calendar"></i>
+        <span>School Year: <strong>{{ current_sy }}</strong></span>
+    </div>
+    {% endif %}
+    
+    <!-- NEW: Manage All Students Button -->
+    <a href="{{ url_for('admin.all_registered_students') }}" class="manage-all-btn">
+        <i class="fa-solid fa-users"></i> Manage All Students
+    </a>
+    
+    <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
+        <i class="fa-solid fa-clock"></i> Request Deletion
+    </a>
+</div>
     </div>
     <p class="page-description">View and manage registered students efficiently.</p>
 

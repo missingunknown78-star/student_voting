@@ -1,0 +1,66 @@
+{% if students and students.items %}
+<table class="students-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Student ID</th>
+            <th>Last Name</th>
+            <th>First Name</th>
+            <th>Course</th>
+            <th>Year Level</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for student in students.items %}
+        <tr>
+            <td>{{ ((students.page - 1) * students.per_page) + loop.index }}</td>
+            <td>{{ student.id_number }}</td>
+            <td>{{ student.last_name }}</td>
+            <td>{{ student.first_name }}</td>
+            <td>{{ student.course or (student.course_rel.course_name if student.course_rel else '') }}</td>
+            <td>{{ student.year_level.year_name if student.year_level else '' }}</td>
+            <td>
+                {% if student.id_number in registered_numbers %}
+                    <span class="status-registered">Registered</span>
+                {% else %}
+                    <span class="status-not-registered">Not Registered</span>
+                {% endif %}
+            </td>
+            <td>
+                <button class="delete-btn" onclick="openDeleteModal(
+                    '{{ student.id }}',
+                    '{{ student.id_number }}',
+                    '{{ student.last_name }}, {{ student.first_name }}',
+                    '{{ student.course or (student.course_rel.course_name if student.course_rel else 'N/A') }}'
+                )">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if students.pages > 1 %}
+<div class="pagination">
+    {% if students.has_prev %}
+        <a href="#" onclick="loadStudents({{ students.prev_num }}); return false;">&laquo; Prev</a>
+    {% endif %}
+
+    {% for p in students.iter_pages() %}
+        {% if p %}
+            <a href="#" onclick="loadStudents({{ p }}); return false;" {% if students.page == p %}class="active"{% endif %}>{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if students.has_next %}
+        <a href="#" onclick="loadStudents({{ students.next_num }}); return false;">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<p>No students found.</p>
+{% endif %}

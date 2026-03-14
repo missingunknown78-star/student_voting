@@ -2152,6 +2152,66 @@ def candidates():
                          current_sy=school_year)
 
 
+
+@student_bp.route('/candidate/<int:candidate_id>')
+@login_required
+def view_candidate(candidate_id):
+    candidate = Candidate.query.get_or_404(candidate_id)
+    
+    # Get election details
+    election = candidate.election
+    
+    # Get course details
+    course_name = candidate.course.course_name if candidate.course else "Not specified"
+    course_code = candidate.course.course_code if candidate.course else ""
+    
+    # Get department details
+    department_name = candidate.department.name if candidate.department else "Not specified"
+    
+    # Get program type
+    program_type = candidate.program_type.name if candidate.program_type else "Not specified"
+    
+    # Get position name
+    position_name = candidate.position.name if candidate.position else "Not specified"
+    
+    return render_template('view_candidate.html',
+                         candidate=candidate,
+                         election=election,
+                         course_name=course_name,
+                         course_code=course_code,
+                         department_name=department_name,
+                         program_type=program_type,
+                         position_name=position_name)
+
+
+
+
+@student_bp.route('/api/candidate/<int:candidate_id>')
+@login_required
+def get_candidate_api(candidate_id):
+    """API endpoint to get candidate details as JSON"""
+    candidate = Candidate.query.get_or_404(candidate_id)
+    
+    # Build response data
+    data = {
+        'id': candidate.id,
+        'first_name': candidate.first_name,
+        'last_name': candidate.last_name,
+        'party_list': candidate.party_list,
+        'platform': candidate.platform,
+        'scope': candidate.scope.upper() if candidate.scope else 'Not specified',
+        'course': candidate.course.course_name if candidate.course else 'Not specified',
+        'course_code': candidate.course.course_code if candidate.course else '',
+        'department': candidate.department.name if candidate.department else 'Not specified',
+        'program_type': candidate.program_type.name if candidate.program_type else 'Not specified',
+        'position': candidate.position.name if candidate.position else 'Not specified',
+        'election': candidate.election.title if candidate.election else 'Not specified',
+        'election_type': candidate.election.election_type if candidate.election else 'Not specified',
+        'photo': candidate.photo
+    }
+    
+    return jsonify(data)                        
+
 from datetime import datetime
 from sqlalchemy import func
 
@@ -2214,7 +2274,7 @@ def results():
                          current_sy=school_year)
 
 
-
+from admin.models import PdfResult
 @student_bp.route('/results/<int:election_id>')
 @login_required
 def results_detail(election_id):
@@ -2244,6 +2304,58 @@ def results_detail(election_id):
     local_tz = pytz.timezone("Asia/Manila")
     now = datetime.now(local_tz)
     now_naive = now.replace(tzinfo=None)
+    
+    # ===== CHECK IF STUDENT IS A QUALIFIED CANDIDATE =====
+    from student.models import QualifiedCandidate
+    is_qualified = QualifiedCandidate.query.filter_by(student_id=student_id).first() is not None
+    
+    # ===== CHECK IF STUDENT IS RUNNING IN THIS ELECTION =====
+    running_in_this_election = False
+    my_candidate_data = None
+    
+    if is_qualified:
+        # Check if this student is a candidate in this election
+        my_candidacy = Candidate.query.filter_by(
+            election_id=election_id,
+            first_name=current_user.first_name,
+            last_name=current_user.last_name
+        ).first()
+        
+        if my_candidacy:
+            running_in_this_election = True
+            
+            # Get vote distribution for this candidate from VoteDistribution table
+            from admin.models import VoteDistribution
+            
+            dist_records = VoteDistribution.query.filter_by(
+                election_id=election_id,
+                candidate_id=my_candidacy.id
+            ).all()
+            
+            total_votes = sum(d.vote_count for d in dist_records)
+            
+            department_breakdown = []
+            for dist in dist_records:
+                dept = Department.query.get(dist.department_id)
+                if dept:
+                    department_breakdown.append({
+                        'department_name': dept.name,
+                        'votes': dist.vote_count,
+                        'percentage': dist.percentage or 0
+                    })
+            
+            # Sort by votes descending
+            department_breakdown.sort(key=lambda x: x['votes'], reverse=True)
+            
+            my_candidate_data = {
+                'id': my_candidacy.id,
+                'position': my_candidacy.position.name if my_candidacy.position else "Unknown",
+                'total_votes': total_votes,
+                'department_breakdown': department_breakdown
+            }
+    
+    # ===== GET PDF RESULTS =====
+    pdf_results = PdfResult.query.filter_by(election_id=election_id).order_by(PdfResult.uploaded_at.desc()).all()
     
     # Calculate total registered voters
     if election.scope == 'department' and election.department_id:
@@ -2417,7 +2529,12 @@ def results_detail(election_id):
                          voter_turnout=round(voter_turnout, 1),
                          results_date=now,
                          now=now_naive,
-                         results_published=election.results_published)
+                         results_published=election.results_published,
+                         # NEW VARIABLES
+                         is_qualified_candidate=is_qualified,
+                         running_in_this_election=running_in_this_election,
+                         my_candidate=my_candidate_data,
+                         pdf_results=pdf_results)
 
 
 @student_bp.route('/pdf-result/<int:pdf_id>/download')

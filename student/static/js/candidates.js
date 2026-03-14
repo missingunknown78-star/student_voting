@@ -178,11 +178,9 @@ function resetAllFilters() {
 }
 
 function updateStats() {
-    // Get total elections from the data attribute (static - doesn't change)
     const statsContainer = document.querySelector('.election-stats');
     if (!statsContainer) return;
     
-    // Get the static total elections value (stored in data attribute)
     const totalElections = statsContainer.dataset.totalElections || 
                           document.querySelectorAll('.election-section').length;
     
@@ -222,7 +220,6 @@ function updateStatsDisplay(candidates, positions, elections) {
     const statsContainer = document.querySelector('.election-stats');
     if (!statsContainer) return;
     
-    // Get all stat elements
     const statsElements = statsContainer.querySelectorAll('.stat');
     
     if (statsElements.length >= 3) {
@@ -239,9 +236,6 @@ function updateStatsDisplay(candidates, positions, elections) {
         const positionsLabel = positionsStat.querySelector('.stat-label');
         positionsNumber.textContent = positions;
         positionsLabel.textContent = positions === 1 ? 'Position' : 'Positions';
-        
-        // Elections remain static (don't update)
-        // Keep the original value
     }
 }
 
@@ -263,28 +257,27 @@ function updateFilterCount() {
 
 // Photo Modal Functions
 function initializePhotoModal() {
-    // Close modal with Escape key
+    const modal = document.getElementById('photoModal');
+    if (!modal) return;
+    
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closePhotoModal();
-            if (document.getElementById('filterContent').classList.contains('show')) {
-                closeFilter();
-            }
         }
     });
 
-    // Close modal when clicking outside
-    const modal = document.getElementById('photoModal');
     modal.addEventListener('click', function(e) {
         if (e.target === this) {
             closePhotoModal();
         }
     });
 
-    // Prevent modal content clicks from closing the modal
-    document.querySelector('.photo-modal-content').addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
+    const modalContent = document.querySelector('.photo-modal-content');
+    if (modalContent) {
+        modalContent.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
 }
 
 function openCandidatePhoto(element) {
@@ -292,9 +285,11 @@ function openCandidatePhoto(element) {
     const modalImg = document.getElementById('photoModalImg');
     const modalCaption = document.getElementById('photoModalCaption');
     
+    if (!modal || !modalImg || !modalCaption) return;
+    
     const photoUrl = element.getAttribute('data-photo-url');
     const candidateCard = element.closest('.candidate-card');
-    const candidateName = candidateCard.querySelector('.candidate-name').textContent;
+    const candidateName = candidateCard ? candidateCard.querySelector('.candidate-name').textContent : 'Candidate';
     
     modalImg.src = photoUrl;
     modalCaption.textContent = candidateName + ' - Profile Photo';
@@ -305,11 +300,42 @@ function openCandidatePhoto(element) {
 
 function closePhotoModal() {
     const modal = document.getElementById('photoModal');
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
 }
 
-// View candidate profile function
-function viewCandidateProfile(candidateId) {
-    window.location.href = `/student/candidate/${candidateId}`;
+// Remove or comment out the conflicting showCandidateProfile function
+// The modal functionality is now handled by openCandidateProfileModal in the HTML
+
+// Close all modals function
+function closeAllModals() {
+    closePhotoModal();
+    if (document.getElementById('candidateProfileModal')) {
+        document.getElementById('candidateProfileModal').classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
+    if (document.getElementById('filterContent')?.classList.contains('show')) {
+        closeFilter();
+    }
 }
+
+// Add meta tags for static URLs
+function addStaticUrlMetaTags() {
+    if (!document.querySelector('meta[name="admin-static-url"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'admin-static-url';
+        meta.content = '/admin/static/';
+        document.head.appendChild(meta);
+    }
+    if (!document.querySelector('meta[name="student-static-url"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'student-static-url';
+        meta.content = '/student/static/';
+        document.head.appendChild(meta);
+    }
+}
+
+// Initialize meta tags on load
+addStaticUrlMetaTags();

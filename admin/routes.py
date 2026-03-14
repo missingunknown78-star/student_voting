@@ -209,7 +209,6 @@ MAX_2FA_ATTEMPTS = 5      # max allowed failed 2FA attempts
 TWO_FA_COOLDOWN = 300     # cooldown for 2FA in seconds
 
 # ------------------- Admin Login Route ------------------- #
-# ------------------- Admin Login Route ------------------- #
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     ip = request.remote_addr
@@ -232,39 +231,48 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
+        # METHOD 1: Simple Python-side case-sensitive check (works with ALL databases)
+        # First, get all admins with this username (case-insensitive)
         admin = Admin.query.filter_by(username=username).first()
+        
+        # Then do a case-sensitive comparison in Python
+        if admin and admin.username == username:  # Python string comparison IS case-sensitive
+            # Now verify password
+            if bcrypt.check_password_hash(admin.password, password) and admin.role == 'Admin':
+                # Reset failed attempts
+                session[f'login_attempts_{ip}'] = 0
+                session[f'login_cooldown_{ip}'] = 0
+                session.permanent = True
 
-        if admin and bcrypt.check_password_hash(admin.password, password) and admin.role == 'Admin':
-            # Reset failed attempts
-            session[f'login_attempts_{ip}'] = 0
-            session[f'login_cooldown_{ip}'] = 0
-            session.permanent = True
-
-            # ---------- AUDIT LOG: Successful login attempt ----------
-            log_audit(
-                action='LOGIN_SUCCESS',
-                description=f"Admin user '{username}' logged in successfully from IP: {ip}"
-            )
-
-            # Redirect to 2FA setup if no totp_secret
-            if not getattr(admin, 'totp_secret', None):
-                session['pre_2fa_admin_id'] = admin.id
-                # ---------- AUDIT LOG: 2FA not set up ----------
+                # ---------- AUDIT LOG: Successful login attempt ----------
                 log_audit(
-                    action='2FA_REQUIRED',
-                    description=f"Admin user '{username}' redirected to 2FA setup - TOTP secret not configured"
+                    action='LOGIN_SUCCESS',
+                    description=f"Admin user '{username}' logged in successfully from IP: {ip}"
                 )
-                return redirect(url_for('admin.setup_2fa'))
+
+                # Redirect to 2FA setup if no totp_secret
+                if not getattr(admin, 'totp_secret', None):
+                    session['pre_2fa_admin_id'] = admin.id
+                    # ---------- AUDIT LOG: 2FA not set up ----------
+                    log_audit(
+                        action='2FA_REQUIRED',
+                        description=f"Admin user '{username}' redirected to 2FA setup - TOTP secret not configured"
+                    )
+                    return redirect(url_for('admin.setup_2fa'))
+                else:
+                    session['pre_2fa_admin_id'] = admin.id
+                    # ---------- AUDIT LOG: 2FA verification required ----------
+                    log_audit(
+                        action='2FA_VERIFICATION',
+                        description=f"Admin user '{username}' redirected to 2FA verification"
+                    )
+                    return redirect(url_for('admin.verify_2fa'))
             else:
-                session['pre_2fa_admin_id'] = admin.id
-                # ---------- AUDIT LOG: 2FA verification required ----------
-                log_audit(
-                    action='2FA_VERIFICATION',
-                    description=f"Admin user '{username}' redirected to 2FA verification"
-                )
-                return redirect(url_for('admin.verify_2fa'))
-
-        else:
+                # Password incorrect
+                admin = None  # Set to None to trigger failed login handling
+        
+        # If we get here, login failed (either no admin found or password incorrect)
+        if not admin:
             # Increment failed attempts
             attempts += 1
             session[f'login_attempts_{ip}'] = attempts
@@ -2553,6 +2561,167 @@ def delete_student(id):
     return jsonify({"success": True})
 
 
+# ==================== ALL REGISTERED STUDENTS PAGE ====================
+@admin_bp.route('/all-registered-students')
+@admin_required
+def all_registered_students():
+    """Display all registered students"""
+    
+    school_year = session.get('admin_current_school_year')
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    students = Student.query.order_by(Student.last_name).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    # Get registered student numbers
+    ctu_students = CtuStudent.query.all()
+    registered_numbers = {s.student_number for s in ctu_students if s.student_number}
+    
+    # Get filter dropdown data
+    departments = Department.query.all()
+    courses = Course.query.all()
+    year_levels = YearLevel.query.all()
+    
+    return render_template(
+        'all_registered_students.html',
+        students=students,
+        departments=[{"id": d.id, "name": d.name} for d in departments],
+        courses=[{"id": c.id, "name": c.course_name, "department_id": c.department_id} for c in courses],
+        year_levels=[{"id": y.id, "year_name": y.year_name} for y in year_levels],
+        registered_numbers=registered_numbers,
+        current_sy=school_year
+    )
+
+
+# ==================== AJAX DATA ====================
+@admin_bp.route('/all-students-data')
+@admin_required
+def all_students_data():
+    """AJAX endpoint for filtered students"""
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    department_id = request.args.get('department_id', '')
+    course_id = request.args.get('course_id', '')
+    year_level_id = request.args.get('year_level_id', '')
+    search = request.args.get('search', '')
+    
+    query = Student.query
+    
+    if department_id:
+        query = query.filter(Student.department_id == int(department_id))
+    if course_id:
+        query = query.filter(Student.course_id == int(course_id))
+    if year_level_id:
+        query = query.filter(Student.year_level_id == int(year_level_id))
+    if search:
+        query = query.filter(
+            or_(
+                Student.id_number.ilike(f'%{search}%'),
+                Student.first_name.ilike(f'%{search}%'),
+                Student.last_name.ilike(f'%{search}%')
+            )
+        )
+    
+    students = query.order_by(Student.last_name).paginate(page=page, per_page=per_page)
+    
+    ctu_students = CtuStudent.query.all()
+    registered_numbers = {s.student_number for s in ctu_students if s.student_number}
+    
+    html = render_template(
+        'partials/students_table.html',
+        students=students,
+        registered_numbers=registered_numbers
+    )
+    
+    return jsonify({
+        'html': html,
+        'current_page': students.page,
+        'total_pages': students.pages
+    })
+
+
+# ==================== DELETE STUDENT ====================
+@admin_bp.route('/delete-all-student/<int:id>', methods=['POST'])
+@admin_required
+def delete_all_student(id):
+    """Delete a student permanently"""
+    
+    student = Student.query.get_or_404(id)
+    
+    # Store student info before deletion for audit log
+    student_name = f"{student.first_name} {student.last_name}"
+    student_id_number = student.id_number
+    
+    try:
+        # MANUALLY DELETE ALL RELATED RECORDS FIRST
+        from student.models import Vote, TrustedDevice, DeletionRequest, QualifiedCandidate, PendingCandidate
+        
+        # Delete in correct order to avoid foreign key issues
+        print(f"Deleting student ID: {id}")
+        
+        # 1. Delete pending candidates
+        pending = PendingCandidate.query.filter_by(student_id=id).all()
+        for p in pending:
+            db.session.delete(p)
+        print(f"Deleted {len(pending)} pending candidates")
+        
+        # 2. Delete qualified candidates
+        qualified = QualifiedCandidate.query.filter_by(student_id=id).all()
+        for q in qualified:
+            db.session.delete(q)
+        print(f"Deleted {len(qualified)} qualified candidates")
+        
+        # 3. Delete deletion requests
+        requests = DeletionRequest.query.filter_by(student_id=id).all()
+        for r in requests:
+            db.session.delete(r)
+        print(f"Deleted {len(requests)} deletion requests")
+        
+        # 4. Delete trusted devices
+        devices = TrustedDevice.query.filter_by(student_id=id).all()
+        for d in devices:
+            db.session.delete(d)
+        print(f"Deleted {len(devices)} trusted devices")
+        
+        # 5. Delete votes
+        votes = Vote.query.filter_by(student_id=id).all()
+        for v in votes:
+            db.session.delete(v)
+        print(f"Deleted {len(votes)} votes")
+        
+        # 6. Finally delete the student
+        db.session.delete(student)
+        
+        # Commit all changes
+        db.session.commit()
+        print(f"Successfully deleted student ID: {id}")
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='DELETE_STUDENT_PERMANENT',
+            description=f"Admin user '{username}' deleted student: {student_name} (ID: {student_id_number}) from IP: {ip}"
+        )
+        
+        return jsonify({"success": True, "message": "Student deleted successfully"})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR deleting student {id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            "success": False, 
+            "message": str(e)
+        }), 500
+
+    
 from student.models import DeletionRequest
 # Add these routes to your admin routes file
 
@@ -3696,6 +3865,16 @@ def delete_candidate(id):
     election_title = candidate.election.title if candidate.election else 'N/A'
     
     try:
+        # FIRST: Manually delete related tally_votes records
+        # This fixes the foreign key constraint error
+        from admin.models import TallyVote
+        
+        # Delete all tally votes for this candidate
+        tally_votes = TallyVote.query.filter_by(candidate_id=id).all()
+        for tv in tally_votes:
+            db.session.delete(tv)
+        
+        # Now delete the candidate
         db.session.delete(candidate)
         db.session.commit()
         
@@ -3717,6 +3896,10 @@ def delete_candidate(id):
         
     except Exception as e:
         db.session.rollback()
+        print(f"Error deleting candidate: {str(e)}")  # For debugging
+        import traceback
+        traceback.print_exc()
+        
         if is_ajax:
             return jsonify({
                 'success': False,
@@ -3724,28 +3907,6 @@ def delete_candidate(id):
             }), 500
         flash(f'Error deleting candidate: {str(e)}', 'error')
         return redirect(url_for('admin.manage_candidates'))
-
-
-# NEW: Add route to get courses by department
-# NEW: Add route to get courses by department
-@admin_bp.route('/courses/by_department/<int:department_id>', methods=['GET'])
-@admin_required
-def get_courses_by_department(department_id):
-    """AJAX endpoint to get courses for a department"""
-    from admin.models import Course
-    
-    courses = Course.query.filter_by(department_id=department_id).order_by(Course.course_name).all()
-    
-    courses_data = []
-    for course in courses:
-        courses_data.append({
-            'id': course.id,
-            'course_name': course.course_name,  # Changed from 'name' to match model
-            'course_code': course.course_code    # Changed from 'code' to match model
-        })
-    
-    return jsonify({'courses': courses_data})
-
         
 # ---------------------- Manage Positions ---------------------- #
 @admin_bp.route('/manage_positions', methods=['GET', 'POST'])
@@ -4508,16 +4669,6 @@ def results_page():
     )
 
 
-@admin_bp.route('/vote-distribution')
-def vote_distribution():
-    """Vote Distribution Analysis Page"""
-    # Sample data - will be replaced with database queries later
-    current_sy = session.get('current_sy')
-    
-    return render_template('vote_distribution.html', 
-                         current_sy=current_sy,
-                         title='Vote Distribution')
-
 
 
 @admin_bp.route('/results/<int:election_id>')
@@ -4972,6 +5123,7 @@ def tally_election_results(election_id):
         
         tally_timestamp = datetime.utcnow()
         
+        # ===== 1. SAVE TO TallyVote TABLE (official results) =====
         TallyVote.query.filter_by(election_id=election_id).delete()
         
         for candidate_id, vote_count in candidate_vote_map.items():
@@ -4983,6 +5135,92 @@ def tally_election_results(election_id):
             )
             db.session.add(tally)
         
+        # ===== 2. POPULATE VoteDistribution TABLE =====
+        # Clear existing distribution data
+        VoteDistribution.query.filter_by(election_id=election_id).delete()
+        
+        # Get all votes with student department info
+        from collections import defaultdict
+        import json
+        
+        votes_with_dept = db.session.query(
+            Vote,
+            Student.department_id
+        ).join(
+            Student, Vote.student_id == Student.id
+        ).filter(
+            Vote.election_id == election_id
+        ).all()
+        
+        # Count votes by candidate and department
+        # IMPORTANT: Use a SET to track unique (vote_id, candidate_id) combinations
+        # This prevents counting multiple hashes from the same vote as separate votes
+        counted_combinations = set()
+        dept_vote_counts = defaultdict(int)
+        
+        for vote, dept_id in votes_with_dept:
+            if not dept_id:
+                continue
+                
+            # Parse finder_hash to get candidate IDs
+            if vote.finder_hash:
+                try:
+                    finder_data = json.loads(vote.finder_hash)
+                    
+                    if isinstance(finder_data, dict) and 'hashes' in finder_data:
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_id = item['candidate_id']
+                                
+                                # Create unique key for this (vote_id, candidate_id)
+                                vote_candidate_key = (vote.id, candidate_id)
+                                
+                                # Only count if we haven't counted this combination before
+                                if vote_candidate_key not in counted_combinations:
+                                    counted_combinations.add(vote_candidate_key)
+                                    
+                                    # Only count if this candidate was in our tallied results
+                                    if candidate_id in candidate_vote_map:
+                                        dept_vote_counts[(candidate_id, dept_id)] += 1
+                except:
+                    continue
+        
+        # Insert into VoteDistribution
+        distribution_records = 0
+        for (candidate_id, dept_id), count in dept_vote_counts.items():
+            candidate = Candidate.query.get(candidate_id)
+            if candidate:
+                dist = VoteDistribution(
+                    election_id=election_id,
+                    candidate_id=candidate_id,
+                    department_id=dept_id,
+                    vote_count=count,
+                    position_id=candidate.position_id,
+                    position_name=candidate.position.name if candidate.position else None
+                )
+                db.session.add(dist)
+                distribution_records += 1
+        
+        # Calculate percentages for all records
+        db.session.flush()
+        
+        # Calculate percentages using only the tallied candidates
+        from sqlalchemy import func
+        candidate_totals = db.session.query(
+            VoteDistribution.candidate_id,
+            func.sum(VoteDistribution.vote_count).label('total')
+        ).filter(
+            VoteDistribution.election_id == election_id
+        ).group_by(VoteDistribution.candidate_id).all()
+        
+        totals_dict = {c_id: total for c_id, total in candidate_totals}
+        
+        distributions = VoteDistribution.query.filter_by(election_id=election_id).all()
+        for dist in distributions:
+            total = totals_dict.get(dist.candidate_id, 1)
+            dist.percentage = (dist.vote_count / total * 100) if total > 0 else 0
+        
+        # ===== COMMIT ALL CHANGES =====
         db.session.commit()
         
         # ---------- AUDIT LOG: Tally election results ----------
@@ -4997,7 +5235,7 @@ def tally_election_results(election_id):
         
         return jsonify({
             'success': True,
-            'message': f'Tally completed: {unique_voters} voters, {total_votes_counted} votes for {len(candidates)} candidates.',
+            'message': f'Tally completed: {unique_voters} voters, {total_votes_counted} votes for {len(candidates)} candidates. Also populated {distribution_records} department distribution records.',
             'data': {
                 'unique_voters': unique_voters,
                 'total_votes': total_votes_counted,
@@ -5005,12 +5243,16 @@ def tally_election_results(election_id):
                 'candidates_tallied': len(candidates),
                 'tally_timestamp': tally_timestamp.isoformat(),
                 'election_title': election.title,
-                'results': candidate_results
+                'results': candidate_results,
+                'distribution_records': distribution_records,
+                'unique_vote_combinations': len(counted_combinations)
             }
         })
         
     except Exception as e:
         db.session.rollback()
+        import traceback
+        traceback.print_exc()
         
         # ---------- AUDIT LOG: Tally election failed ----------
         username = getattr(current_user, 'username', 'Unknown')
@@ -5598,6 +5840,256 @@ def statistics():
         most_active_month=most_active_month,
         largest_election=largest_election
     )
+
+
+from admin.models import VoteDistribution
+@admin_bp.route('/vote-distribution')
+@admin_required
+def vote_distribution():  # ← CHANGED: function name matches what template expects
+    """Main vote distribution page"""
+    # Get all elections for the dropdown
+    elections = Election.query.order_by(Election.created_at.desc()).all()
+    
+    # Get current school year
+    current_sy = current_app.config.get('CURRENT_SCHOOL_YEAR', '2024-2025')
+    
+    return render_template('vote_distribution.html', 
+                          elections=elections, 
+                          current_sy=current_sy)
+
+
+@admin_bp.route('/api/vote-distribution/<int:election_id>')
+@admin_required
+def get_vote_distribution(election_id):
+    """API endpoint to get vote distribution data from vote_distributions table"""
+    
+    election = Election.query.get_or_404(election_id)
+    
+    # Check if distribution data exists
+    distribution_exists = VoteDistribution.query.filter_by(election_id=election_id).first()
+    if not distribution_exists:
+        return jsonify({
+            'success': False,
+            'message': 'No distribution data found. Please populate first.',
+            'suggestion': 'Use the populate endpoint to generate data.'
+        }), 404
+    
+    # Get all candidates for this election
+    candidates = Candidate.query.filter_by(election_id=election_id)\
+        .join(Position)\
+        .order_by(Position.name, Candidate.last_name)\
+        .all()
+    
+    # Build distribution data FROM vote_distributions TABLE
+    distribution_data = []
+    for candidate in candidates:
+        # Get distribution records for this candidate
+        dist_records = VoteDistribution.query.filter_by(
+            election_id=election_id,
+            candidate_id=candidate.id
+        ).all()
+        
+        total_votes = sum(d.vote_count for d in dist_records)
+        
+        candidate_data = {
+            'id': candidate.id,
+            'name': f"{candidate.first_name} {candidate.last_name}",
+            'initials': f"{candidate.first_name[0]}{candidate.last_name[0]}" if candidate.first_name and candidate.last_name else "??",
+            'position': candidate.position.name if candidate.position else "Unknown",
+            'position_id': candidate.position_id,
+            'total_votes': total_votes,
+            'department_breakdown': []
+        }
+        
+        # Add department breakdown from vote_distributions
+        for dist in dist_records:
+            dept = Department.query.get(dist.department_id)
+            if dept:
+                candidate_data['department_breakdown'].append({
+                    'department_id': dept.id,
+                    'department_name': dept.name,
+                    'votes': dist.vote_count,
+                    'percentage': dist.percentage or 0
+                })
+        
+        # Sort departments by vote count (highest first)
+        candidate_data['department_breakdown'].sort(key=lambda x: x['votes'], reverse=True)
+        
+        distribution_data.append(candidate_data)
+    
+    # Calculate stats
+    total_votes = sum(d.vote_count for d in VoteDistribution.query.filter_by(election_id=election_id).all())
+    total_candidates = len(candidates)
+    depts_with_votes = db.session.query(VoteDistribution.department_id)\
+        .filter_by(election_id=election_id)\
+        .distinct().count()
+    
+    # Calculate voter turnout
+    total_students = Student.query.count()
+    voted_students = db.session.query(Vote.student_id)\
+        .filter_by(election_id=election_id)\
+        .distinct().count()
+    turnout = round((voted_students / total_students * 100), 1) if total_students > 0 else 0
+    
+    # Group by position
+    positions = {}
+    for candidate in distribution_data:
+        pos_name = candidate['position']
+        if pos_name not in positions:
+            positions[pos_name] = []
+        positions[pos_name].append(candidate)
+    
+    # Sort candidates by votes within each position
+    for pos in positions:
+        positions[pos].sort(key=lambda x: x['total_votes'], reverse=True)
+    
+    return jsonify({
+        'success': True,
+        'election': {
+            'id': election.id,
+            'title': election.title,
+            'scope': election.scope
+        },
+        'stats': {
+            'total_candidates': total_candidates,
+            'total_departments': depts_with_votes,
+            'total_votes': total_votes,
+            'voter_turnout': turnout
+        },
+        'positions': positions,
+        'all_candidates': distribution_data
+    })
+
+
+@admin_bp.route('/api/vote-distribution/export/<int:election_id>/<string:format>')
+@admin_required
+def export_vote_distribution(election_id, format):
+    """Export vote distribution data"""
+    import csv
+    import io
+    from datetime import datetime
+    
+    election = Election.query.get_or_404(election_id)
+    
+    if format not in ['csv', 'excel', 'pdf']:
+        return jsonify({'success': False, 'error': 'Invalid format'}), 400
+    
+    if format == 'csv':
+        # Create CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['Position', 'Candidate', 'Department', 'Votes', 'Percentage'])
+        
+        # Get data from vote_distributions table
+        distributions = VoteDistribution.query.filter_by(election_id=election_id)\
+            .join(Candidate)\
+            .join(Department)\
+            .order_by(VoteDistribution.position_name, Candidate.last_name)\
+            .all()
+        
+        # Write data
+        for dist in distributions:
+            writer.writerow([
+                dist.position_name or dist.position.name,
+                f"{dist.candidate.first_name} {dist.candidate.last_name}",
+                dist.department.name,
+                dist.vote_count,
+                f"{dist.percentage or 0}%"
+            ])
+        
+        # Create response
+        output.seek(0)
+        filename = f"vote_distribution_{election.title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8-sig')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    return jsonify({'success': False, 'error': 'Format not implemented yet'}), 400
+
+
+@admin_bp.route('/api/vote-distribution/populate/<int:election_id>', methods=['POST'])
+@admin_required
+def populate_vote_distribution(election_id):
+    """Manually populate vote_distributions table from votes"""
+    import json
+    from collections import defaultdict
+    
+    try:
+        # Clear existing distribution data for this election
+        VoteDistribution.query.filter_by(election_id=election_id).delete()
+        
+        # Get all votes for this election
+        votes = Vote.query.filter_by(election_id=election_id).all()
+        
+        if not votes:
+            return jsonify({'success': False, 'message': 'No votes found'}), 404
+        
+        # Count votes by candidate and department
+        vote_counts = defaultdict(int)
+        
+        for vote in votes:
+            if not vote.finder_hash:
+                continue
+                
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                
+                # Get student's department
+                student = Student.query.get(vote.student_id)
+                if not student or not student.department_id:
+                    continue
+                
+                dept_id = student.department_id
+                
+                # Extract candidate IDs
+                if isinstance(finder_data, dict) and 'hashes' in finder_data:
+                    for item in finder_data['hashes']:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            candidate_id = item['candidate_id']
+                            vote_counts[(candidate_id, dept_id)] += 1
+                            
+            except json.JSONDecodeError:
+                continue
+        
+        # Insert into VoteDistribution table
+        records_created = 0
+        for (candidate_id, dept_id), count in vote_counts.items():
+            candidate = Candidate.query.get(candidate_id)
+            if candidate:
+                dist = VoteDistribution(
+                    election_id=election_id,
+                    candidate_id=candidate_id,
+                    department_id=dept_id,
+                    vote_count=count,
+                    position_id=candidate.position_id,
+                    position_name=candidate.position.name if candidate.position else None
+                )
+                db.session.add(dist)
+                records_created += 1
+        
+        db.session.commit()
+        
+        # Calculate percentages
+        if records_created > 0:
+            VoteDistribution.calculate_percentages(election_id)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Populated {records_created} distribution records',
+            'records_created': records_created
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 
 
 @admin_bp.route("/audit-logs", methods=["GET"])

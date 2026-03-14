@@ -1,0 +1,231 @@
+{% extends "admin_base.html" %}
+
+{% block title %}All Registered Students{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/all_students.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+{% endblock %}
+
+{% block content %}
+<div class="all-students-page">
+    
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">All Registered Students</h1>
+            <p>View and manage all registered students.</p>
+        </div>
+        <a href="{{ url_for('admin.manage_students') }}" class="back-btn">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </div>
+    
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <select id="departmentFilter">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <select id="courseFilter">
+            <option value="">All Courses</option>
+            {% for course in courses %}
+            <option value="{{ course.id }}" data-dept="{{ course.department_id }}">{{ course.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <select id="yearLevelFilter">
+            <option value="">All Year Levels</option>
+            {% for year in year_levels %}
+            <option value="{{ year.id }}">{{ year.year_name }}</option>
+            {% endfor %}
+        </select>
+        
+        <input type="text" id="searchInput" placeholder="Search...">
+    </div>
+    
+    <!-- Table Container -->
+    <div class="table-container">
+        <div id="studentsTableContainer">
+            {% include 'partials/students_table.html' %}
+        </div>
+    </div>
+    
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Confirm Deletion</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Delete this student? This cannot be undone.</p>
+            <div class="student-info">
+                <p><strong>ID:</strong> <span id="modalStudentId"></span></p>
+                <p><strong>Name:</strong> <span id="modalStudentName"></span></p>
+                <p><strong>Course:</strong> <span id="modalStudentCourse"></span></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+            <button class="confirm-delete-btn" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<div id="loadingSpinner" class="loading-spinner"></div>
+
+<script>
+    let currentStudentId = null;
+    let currentPage = 1;
+    
+    // Filter elements
+    const departmentFilter = document.getElementById('departmentFilter');
+    const courseFilter = document.getElementById('courseFilter');
+    const yearLevelFilter = document.getElementById('yearLevelFilter');
+    const searchInput = document.getElementById('searchInput');
+    const tableContainer = document.getElementById('studentsTableContainer');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const deleteModal = document.getElementById('deleteModal');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const modalStudentId = document.getElementById('modalStudentId');
+    const modalStudentName = document.getElementById('modalStudentName');
+    const modalStudentCourse = document.getElementById('modalStudentCourse');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    // Filter courses by department
+    departmentFilter.addEventListener('change', function() {
+        const deptId = this.value;
+        document.querySelectorAll('#courseFilter option').forEach(opt => {
+            if (opt.value && opt.dataset.dept !== deptId && deptId) {
+                opt.style.display = 'none';
+            } else {
+                opt.style.display = '';
+            }
+        });
+        loadStudents(1);
+    });
+    
+    courseFilter.addEventListener('change', () => loadStudents(1));
+    yearLevelFilter.addEventListener('change', () => loadStudents(1));
+    
+    let searchTimeout;
+    searchInput.addEventListener('keyup', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => loadStudents(1), 500);
+    });
+    
+    function loadStudents(page = 1) {
+        currentPage = page;
+        loadingSpinner.style.display = 'block';
+        tableContainer.style.opacity = '0.5';
+        
+        const params = new URLSearchParams({
+            page: page,
+            department_id: departmentFilter.value || '',
+            course_id: courseFilter.value || '',
+            year_level_id: yearLevelFilter.value || '',
+            search: searchInput.value || ''
+        });
+        
+        fetch(`{{ url_for('admin.all_students_data') }}?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                loadingSpinner.style.display = 'none';
+                tableContainer.style.opacity = '1';
+                tableContainer.innerHTML = data.html;
+                currentPage = data.current_page;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loadingSpinner.style.display = 'none';
+                tableContainer.style.opacity = '1';
+                alert('Error loading students');
+            });
+    }
+    
+    function openDeleteModal(id, idNum, name, course) {
+        console.log('Opening delete modal for student ID:', id); // DEBUG
+        currentStudentId = id;
+        modalStudentId.textContent = idNum;
+        modalStudentName.textContent = name;
+        modalStudentCourse.textContent = course;
+        deleteModal.style.display = 'flex';  // Changed to 'flex' for centering
+    }
+    
+    function closeDeleteModal() {
+        deleteModal.style.display = 'none';
+        currentStudentId = null;
+    }
+    
+    function confirmDelete() {
+        if (!currentStudentId) {
+            console.error('No student ID selected'); // DEBUG
+            return;
+        }
+        
+        console.log('Attempting to delete student ID:', currentStudentId); // DEBUG
+        
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.innerHTML = 'Deleting...';
+        
+        // DEBUG: Log the URL
+        const url = `/admin/delete-all-student/${currentStudentId}`;
+        console.log('Fetch URL:', url); // DEBUG
+        
+        fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status); // DEBUG
+            console.log('Response headers:', response.headers); // DEBUG
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data); // DEBUG
+            if (data.success) {
+                closeDeleteModal();
+                loadStudents(currentPage);
+                alert('Student deleted successfully');
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error); // DEBUG
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack
+            });
+            alert('Error deleting student. Check console for details.');
+        })
+        .finally(() => {
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.innerHTML = 'Delete';
+        });
+    }
+    
+    closeModalBtn.addEventListener('click', closeDeleteModal);
+    window.addEventListener('click', (e) => {
+        if (e.target === deleteModal) closeDeleteModal();
+    });
+    
+    // Initial load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Page loaded'); // DEBUG
+        loadStudents(1);
+    });
+    </script>
+{% endblock %}

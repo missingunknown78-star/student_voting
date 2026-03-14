@@ -1240,3 +1240,319 @@ body.dark-mode .official-pdf-description {
         justify-content: flex-start;
     }
 }
+
+
+/* ========== COMPACT CANDIDATE DISTRIBUTION SECTION ========== */
+.candidate-distribution-section {
+    margin: 16px 0;
+}
+
+.candidate-distribution-card {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 12px;
+    padding: 16px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.candidate-distribution-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.candidate-distribution-header i {
+    font-size: 1.3rem;
+    background: rgba(255,255,255,0.15);
+    padding: 8px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.candidate-distribution-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: white;
+}
+
+.candidate-distribution-header p {
+    margin: 2px 0 0;
+    opacity: 0.9;
+    font-size: 0.7rem;
+    color: white;
+}
+
+.candidate-info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    padding: 6px 12px;
+    border-radius: 30px;
+    margin-bottom: 12px;
+    font-size: 0.8rem;
+    color: white;
+}
+
+.candidate-info-badge i {
+    font-size: 0.9rem;
+}
+
+.candidate-total-votes {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    text-align: left;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.candidate-total-votes i {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.candidate-total-votes strong {
+    font-size: 1.1rem;
+    color: #ffd700;
+    margin-left: 4px;
+}
+
+/* Department Breakdown - Compact */
+.department-breakdown {
+    margin-top: 8px;
+}
+
+.breakdown-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: white;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.breakdown-title i {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.department-item {
+    margin-bottom: 10px;
+}
+
+.dept-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    color: white;
+}
+
+.dept-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dept-name i {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.dept-votes {
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+/* Progress Bar - Compact */
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffd700, #ffa500);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.distribution-footer {
+    margin-top: 12px;
+    font-size: 0.65rem;
+    opacity: 0.7;
+    text-align: center;
+    color: white;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.distribution-footer i {
+    font-size: 0.7rem;
+}
+
+/* No Data Message - Compact */
+.no-data-message {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    margin: 10px 0;
+    color: white;
+}
+
+.no-data-message i {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+    opacity: 0.5;
+}
+
+.no-data-message p {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* Simple back button */
+.back-button-container {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0 20px;
+}
+
+.simple-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    padding: 10px 30px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.simple-back-btn:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.simple-back-btn i {
+    margin-right: 6px;
+    font-size: 0.8rem;
+}
+
+/* Dark mode support */
+body.dark-mode .simple-back-btn {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .simple-back-btn:hover {
+    background: #3d3d3d;
+}
+
+/* Results being processed style */
+.results-processing-message {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: white;
+    padding: 20px;
+    border-radius: 14px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+}
+
+.results-processing-message i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.results-processing-message h3 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: white;
+}
+
+.results-processing-message p {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    max-width: 300px;
+    margin: 0 auto;
+    color: white;
+}
+
+.results-processing-message .processing-note {
+    margin-top: 15px;
+    font-size: 0.8rem;
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.results-processing-message .processing-note i {
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* Info Message base styles - Make sure this exists */
+.info-message {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+    padding: 20px;
+    border-radius: 14px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.info-message i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.info-message h3 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: white;
+}
+
+.info-message p {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    max-width: 300px;
+    margin: 0 auto;
+    color: white;
+}

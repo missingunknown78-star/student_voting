@@ -78,6 +78,10 @@ class Candidate(db.Model):
     # Relationships
     election = db.relationship('Election', backref='candidates', lazy=True)
 
+    # In your Candidate model, add this line with the other foreign keys:
+    year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
+    year_level = db.relationship('YearLevel', backref='candidates', lazy=True)
+
     @property
     def vote_count(self):
         from student.routes import count_votes_for_candidate
@@ -591,4 +595,112 @@ class PdfResult(db.Model):
             self.file_size /= 1024.0
         return f"{self.file_size:.1f} TB"
 
+
+
+
+
+# Add to admin/models.py - VoteDistribution model for caching department-level vote counts
+
+class VoteDistribution(db.Model):
+    """Cached vote distribution data for faster analytics"""
+    __tablename__ = 'vote_distributions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
+    candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id', ondelete='CASCADE'), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='CASCADE'), nullable=False)
+    
+    # Vote counts
+    vote_count = db.Column(db.Integer, nullable=False, default=0)
+    percentage = db.Column(db.Float, nullable=True)  # Percentage of candidate's total
+    
+    # Position info (denormalized for performance)
+    position_id = db.Column(db.Integer, db.ForeignKey('positions.id'), nullable=False)
+    position_name = db.Column(db.String(100), nullable=True)
+    
+    # Timestamps
+    calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    election = db.relationship('Election', backref=db.backref('vote_distributions', lazy='dynamic', cascade='all, delete-orphan'))
+    candidate = db.relationship('Candidate', backref=db.backref('vote_distributions', lazy='dynamic', cascade='all, delete-orphan'))
+    department = db.relationship('Department', backref=db.backref('vote_distributions', lazy='dynamic'))
+    position = db.relationship('Position', backref='vote_distributions')
+    
+    # Ensure uniqueness
+    __table_args__ = (
+        db.UniqueConstraint('election_id', 'candidate_id', 'department_id', 
+                           name='unique_candidate_dept_distribution'),
+    )
+    
+    def __repr__(self):
+        return f'<VoteDistribution E{self.election_id} C{self.candidate_id} D{self.department_id}: {self.vote_count}>'
+    
+    @classmethod
+    def update_or_create(cls, election_id, candidate_id, department_id, vote_count, position_id, position_name=None):
+        """Update existing or create new distribution record"""
+        distribution = cls.query.filter_by(
+            election_id=election_id,
+            candidate_id=candidate_id,
+            department_id=department_id
+        ).first()
         
+        if distribution:
+            distribution.vote_count = vote_count
+            distribution.updated_at = datetime.utcnow()
+        else:
+            distribution = cls(
+                election_id=election_id,
+                candidate_id=candidate_id,
+                department_id=department_id,
+                vote_count=vote_count,
+                position_id=position_id,
+                position_name=position_name
+            )
+            db.session.add(distribution)
+        
+        return distribution
+    
+    @classmethod
+    def calculate_percentages(cls, election_id):
+        """Recalculate percentages for all records in an election"""
+        from sqlalchemy import func
+        
+        # Get total per candidate
+        candidate_totals = db.session.query(
+            cls.candidate_id,
+            func.sum(cls.vote_count).label('total')
+        ).filter(
+            cls.election_id == election_id
+        ).group_by(cls.candidate_id).all()
+        
+        totals_dict = {c_id: total for c_id, total in candidate_totals}
+        
+        # Update percentages
+        distributions = cls.query.filter_by(election_id=election_id).all()
+        for dist in distributions:
+            total = totals_dict.get(dist.candidate_id, 1)
+            dist.percentage = (dist.vote_count / total * 100) if total > 0 else 0
+        
+        db.session.commit()
+
+
+
+# Add to admin/models.py - for tracking analytics exports
+
+class AnalyticsExport(db.Model):
+    """Track exports of analytics data"""
+    __tablename__ = 'analytics_exports'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=False)
+    election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
+    export_type = db.Column(db.String(50), nullable=False)  # 'pdf', 'excel', 'csv'
+    file_path = db.Column(db.String(255), nullable=True)
+    exported_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45), nullable=True)
+    
+    # Relationships
+    admin = db.relationship('Admin', backref='analytics_exports')
+    election = db.relationship('Election', backref='analytics_exports')

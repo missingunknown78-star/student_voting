@@ -459,13 +459,15 @@ html {
     to { opacity: 0; transform: translateY(-10px); }
 }
 
-/* Page header with button */
+/* ==================== PAGE HEADER WITH BUTTONS ==================== */
 .page-header-with-button {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
     width: 100%;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .header-left {
@@ -482,6 +484,11 @@ html {
 
 .header-right {
     flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap; /* CRITICAL: Prevents wrapping */
 }
 
 .page-header-with-button .page-title {
@@ -489,10 +496,21 @@ html {
     text-align: center;
 }
 
-.request-deletion-btn {
+/* ==================== BUTTON STYLES - FORCED ONE LINE ==================== */
+.request-deletion-btn,
+.manage-all-btn,
+.school-year-indicator {
+    white-space: nowrap !important;
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.request-deletion-btn {
     background: linear-gradient(135deg, #e67e22, #d35400);
     color: white;
     padding: 10px 20px;
@@ -500,9 +518,6 @@ html {
     font-weight: 600;
     font-size: 0.95rem;
     transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
     box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3);
 }
 
@@ -515,6 +530,50 @@ html {
 
 .request-deletion-btn i {
     font-size: 1.1rem;
+    margin-right: 8px;
+}
+
+.manage-all-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
+}
+
+.manage-all-btn:hover {
+    background: linear-gradient(135deg, #5dade2, #3498db);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
+    color: white;
+}
+
+.manage-all-btn i {
+    font-size: 1.1rem;
+    margin-right: 8px;
+}
+
+.school-year-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+    color: white;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.3);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.school-year-indicator i {
+    font-size: 0.9rem;
+    margin-right: 5px;
 }
 
 /* Dark mode support */
@@ -527,80 +586,83 @@ html {
     background: linear-gradient(135deg, #e67e22, #d35400);
 }
 
-/* School Year Indicator - Now positioned in header-right */
-.school-year-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-    color: white;
-    border-radius: 30px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.3);
-    margin-right: 15px;
-    transition: all 0.3s ease;
-    white-space: nowrap;
+:root.dark-mode .manage-all-btn {
+    background: linear-gradient(135deg, #2980b9, #1f618d);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-.school-year-indicator i {
-    font-size: 0.9rem;
+:root.dark-mode .manage-all-btn:hover {
+    background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
-/* Dark mode support */
 :root.dark-mode .school-year-indicator {
     background: linear-gradient(135deg, #66b0ff, #88c0ff);
     box-shadow: 0 4px 10px rgba(102, 176, 255, 0.4);
 }
 
-/* Header right container */
-.header-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 15px;
+/* ==================== RESPONSIVE FIXES ==================== */
+@media (max-width: 1200px) {
+    .header-right {
+        gap: 10px;
+    }
+    
+    .request-deletion-btn,
+    .manage-all-btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .school-year-indicator {
+        padding: 5px 12px;
+        font-size: 0.8rem;
+    }
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
     .page-header-with-button {
         flex-direction: column;
-        gap: 15px;
+        align-items: flex-start;
     }
     
     .header-left,
     .header-center,
     .header-right {
         width: 100%;
-        justify-content: center;
+        justify-content: flex-start;
     }
     
     .header-right {
-        flex-direction: column;
+        justify-content: flex-start;
+        flex-wrap: wrap;
         gap: 10px;
     }
-    
-    .school-year-indicator {
-        margin-right: 0;
-        width: 100%;
-        justify-content: center;
-        white-space: normal;
+}
+
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        gap: 8px;
     }
     
-    .request-deletion-btn {
-        width: 100%;
-        justify-content: center;
+    .request-deletion-btn,
+    .manage-all-btn {
+        padding: 8px 14px;
+        font-size: 0.85rem;
     }
 }
 
 @media (max-width: 480px) {
+    .header-right {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .request-deletion-btn,
+    .manage-all-btn,
     .school-year-indicator {
-        flex-direction: column;
-        text-align: center;
-        padding: 8px;
-        gap: 4px;
+        flex: 0 1 auto;
+        white-space: nowrap;
     }
 }
 

@@ -6,203 +6,45 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/results.css') }}">
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/results-verification.css') }}">
-<style>
-/* Back button at bottom */
-.back-button-container {
-    display: flex;
-    justify-content: center;
-    margin: 30px 0 20px;
-}
-
-.back-to-list {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-color);
-    text-decoration: none;
-    padding: 10px 24px;
-    background: var(--card-bg);
-    border-radius: 30px;
-    border: 1px solid var(--border-color);
-    transition: all 0.3s ease;
-    font-weight: 500;
-    font-size: 0.9rem;
-    min-width: 100px;
-}
-
-.back-to-list:hover {
-    background: var(--light-gray);
-    transform: translateY(-2px);
-    text-decoration: none;
-    color: var(--text-color);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-/* Message Cards */
-.info-message {
-    background: linear-gradient(135deg, #6c757d, #495057);
-    color: white;
-    padding: 20px;
-    border-radius: 14px;
-    margin: 20px 0;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.info-message i {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    opacity: 0.9;
-}
-
-.info-message h3 {
-    font-size: 1.3rem;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: white;
-}
-
-.info-message p {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    max-width: 300px;
-    margin: 0 auto;
-    color: white;
-}
-
-.live-message {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-}
-
-.processing-message {
-    background: linear-gradient(135deg, #ffc107, #e0a800);
-}
-
-.processing-message h3, 
-.processing-message p,
-.processing-message i {
-    color: #212529 !important;
-}
-
-.final-message {
-    background: linear-gradient(135deg, #28a745, #218838);
-}
-
-/* Hide refresh section when not needed */
-.no-refresh .refresh-section {
-    display: none;
-}
-
-/* Status badge styles */
-.status-badge-live {
-    background: rgba(220, 53, 69, 0.2);
-    color: #dc3546 !important;
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.status-badge-processing {
-    background: rgba(255, 193, 7, 0.2);
-    color: #ffc107 !important;
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.status-badge-final {
-    background: rgba(40, 167, 69, 0.2);
-    color: #28a745 !important;
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.status-badge-upcoming {
-    background: rgba(108, 117, 125, 0.2);
-    color: #6c757d !important;
-    padding: 4px 12px;
-    border-radius: 30px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-/* Dynamic bar styles */
-.bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--success), var(--success-light));
-    border-radius: 8px;
-    transition: width 0.5s ease;
-    width: 0%;
-}
-
-/* Dark mode adjustments */
-body.dark-mode .back-to-list {
-    background: var(--dark);
-    border-color: #4a5568;
-    color: #e2e8f0;
-}
-
-body.dark-mode .back-to-list:hover {
-    background: #1a202c;
-    color: #f7fafc;
-}
-
-body.dark-mode .processing-message h3,
-body.dark-mode .processing-message p,
-body.dark-mode .processing-message i {
-    color: #212529 !important;
-}
-</style>
 {% endblock %}
 
 {% block content %}
 {% set now_naive = now.replace(tzinfo=None) if now.tzinfo else now %}
-<div class="results-container {% if election.end_date < now_naive and not results_published %}no-results{% endif %}">
-    <!-- Results Header - All text white -->
-    <div class="results-header">
-        <h1 class="results-title" style="color: white !important;">{{ election.title }}</h1>
-        <div class="results-meta">
-            <!-- Dynamic Status Based on Election State and Publication -->
-            {% if election.end_date < now_naive %}
-                {% if results_published %}
-                    <span class="status-badge-final">
-                        <i class="fa-solid fa-check-circle"></i> Final Results
-                    </span>
-                {% else %}
-                    <span class="status-badge-processing">
-                        <i class="fa-solid fa-hourglass-half"></i> Processing Results
-                    </span>
-                {% endif %}
-            {% elif election.start_date <= now_naive <= election.end_date %}
-                <span class="status-badge-live">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> Live Results
+<!-- Results Header - All text white -->
+<div class="results-header">
+    <h1 class="results-title" style="color: white !important;">{{ election.title }}</h1>
+    <div class="results-meta">
+        <!-- Dynamic Status Based on Election State and Publication -->
+        {% if election.end_date < now_naive %}
+            <!-- ELECTION ENDED -->
+            {% set pdf_results = election.pdf_results|list %}
+            {% if pdf_results and pdf_results|length > 0 %}
+                <!-- HAS PDF - FINAL RESULTS -->
+                <span class="status-badge-final">
+                    <i class="fa-solid fa-check-circle"></i> Results Published
                 </span>
             {% else %}
-                <span class="status-badge-upcoming">
-                    <i class="fa-solid fa-clock"></i> Upcoming
+                <!-- NO PDF - PROCESSING -->
+                <span class="status-badge-processing">
+                    <i class="fa-solid fa-hourglass-half"></i> Processing Results
                 </span>
             {% endif %}
-            
-            <span class="results-date" style="color: white !important;">{{ results_date.strftime('%b %d, %Y %I:%M %p') }}</span>
-        </div>
-        <p class="results-subtitle" style="color: white !important;">{{ election.description }}</p>
+        {% elif election.start_date <= now_naive <= election.end_date %}
+            <!-- ELECTION ACTIVE -->
+            <span class="status-badge-live">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Ongoing Election
+            </span>
+        {% else %}
+            <!-- UPCOMING ELECTION -->
+            <span class="status-badge-upcoming">
+                <i class="fa-solid fa-clock"></i> Upcoming
+            </span>
+        {% endif %}
+        
+        <span class="results-date" style="color: white !important;">{{ results_date.strftime('%b %d, %Y %I:%M %p') }}</span>
     </div>
+    <p class="results-subtitle" style="color: white !important;">{{ election.description }}</p>
+</div>
 
     <!-- Results Summary (Always Visible) -->
     <div class="card summary-card">
@@ -299,9 +141,64 @@ body.dark-mode .processing-message i {
         </div>
     </section>
 
+    <!-- ========== CANDIDATE DISTRIBUTION SECTION ========== -->
+    <!-- Only shown if student is a qualified candidate AND is running in this election AND election has PDF results -->
+    {% if is_qualified_candidate and running_in_this_election and pdf_results %}
+    <div class="candidate-distribution-section">
+        <div class="candidate-distribution-card">
+            <div class="candidate-distribution-header">
+                <i class="fa-solid fa-chart-pie"></i>
+                <div>
+                    <h2>Your Personal Vote Distribution</h2>
+                    <p>See how votes were distributed across departments for your candidacy</p>
+                </div>
+            </div>
+            
+            <div class="candidate-info-badge">
+                <i class="fa-solid fa-user-graduate"></i>
+                <span>You ran for: <strong>{{ my_candidate.position }}</strong></span>
+            </div>
+            
+            <div class="candidate-total-votes">
+                <i class="fa-solid fa-vote-yea"></i> Total votes you received: <strong>{{ my_candidate.total_votes }}</strong>
+            </div>
+            
+            {% if my_candidate.department_breakdown and my_candidate.department_breakdown|length > 0 %}
+            <div class="department-breakdown">
+                <h4 style="margin-bottom: 15px; color: white;">Votes by Department</h4>
+                
+                {% for dept in my_candidate.department_breakdown %}
+                <div class="department-item">
+                    <div class="dept-header">
+                        <span class="dept-name">
+                            <i class="fa-solid fa-building"></i> {{ dept.department_name }}
+                        </span>
+                        <span class="dept-votes">
+                            {{ dept.votes }} vote{% if dept.votes != 1 %}s{% endif %} ({{ '%.2f'|format(dept.percentage) }}%)
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ dept.percentage }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-data-message">
+                <i class="fa-solid fa-chart-simple"></i>
+                <p>No vote distribution data available yet.</p>
+            </div>
+            {% endif %}
+            
+            <div style="margin-top: 20px; font-size: 0.8rem; opacity: 0.7; text-align: center;">
+                <i class="fa-solid fa-info-circle"></i> This data is based on official PDF results uploaded by COMELEC
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Content Based on Election State and Publication -->
-        <!-- Content Based on Election State and Publication -->
-        {% if election.end_date < now_naive %}
+    {% if election.end_date < now_naive %}
         <!-- ELECTION ENDED -->
         {% if results_published %}
             <!-- FINAL RESULTS - PUBLISHED -->
@@ -387,12 +284,10 @@ body.dark-mode .processing-message i {
             {% else %}
                 <!-- PROCESSING - NO PDFS YET -->
                 <div class="info-message processing-message">
-                    <i class="fa-solid fa-hourglass-half"></i>
+                    <i class="fa-solid fa-hourglass-half fa-spin"></i>
                     <h3>Results Are Being Processed</h3>
                     <p>The official results have not been published yet. Please check back later.</p>
-                    <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.8;">
-                        <i class="fa-regular fa-calendar"></i> Election ended: {{ election.end_date.strftime('%B %d, %Y at %I:%M %p') }}
-                    </div>
+                    <i class="fa-regular fa-calendar" style="font-size: 0.7rem;"></i> Election ended: {{ election.end_date.strftime('%B %d, %Y at %I:%M %p') }}
                 </div>
             {% endif %}
             
@@ -472,11 +367,12 @@ body.dark-mode .processing-message i {
     </div>
 
     <!-- Back Button at Bottom (Centered, Text Only) -->
-    <div class="back-button-container">
-        <a href="{{ url_for('student.results') }}" class="back-to-list">
-            Back
-        </a>
-    </div>
+    <!-- Simple Back Button -->
+<div class="back-button-container">
+    <a href="{{ url_for('student.results') }}" class="simple-back-btn">
+        <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+</div>
 </div>
 
 <!-- Loading Overlay for AJAX -->
