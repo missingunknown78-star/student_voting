@@ -604,48 +604,76 @@ class PdfResult(db.Model):
 class VoteDistribution(db.Model):
     """Cached vote distribution data for faster analytics"""
     __tablename__ = 'vote_distributions'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id', ondelete='CASCADE'), nullable=False)
-    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='CASCADE'), nullable=False)
-    
+
+    # --- MODIFIED: Make department_id nullable (can be NULL for course/program_type groupings) ---
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='CASCADE'), nullable=True)
+
+    # --- NEW: Add the columns you created in MySQL ---
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='SET NULL'), nullable=True)
+    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id', ondelete='SET NULL'), nullable=True)
+    grouping_type = db.Column(db.String(20), nullable=True)  # 'department', 'course', 'program_type'
+    grouping_name = db.Column(db.String(200), nullable=True)
+
     # Vote counts
     vote_count = db.Column(db.Integer, nullable=False, default=0)
-    percentage = db.Column(db.Float, nullable=True)  # Percentage of candidate's total
-    
-    # Position info (denormalized for performance)
+    percentage = db.Column(db.Float, nullable=True)
+
+    # Position info
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id'), nullable=False)
     position_name = db.Column(db.String(100), nullable=True)
-    
+
     # Timestamps
     calculated_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     election = db.relationship('Election', backref=db.backref('vote_distributions', lazy='dynamic', cascade='all, delete-orphan'))
     candidate = db.relationship('Candidate', backref=db.backref('vote_distributions', lazy='dynamic', cascade='all, delete-orphan'))
     department = db.relationship('Department', backref=db.backref('vote_distributions', lazy='dynamic'))
+    # --- NEW: Add relationships for new columns ---
+    course = db.relationship('Course', backref='vote_distributions')
+    program_type = db.relationship('ProgramType', backref='vote_distributions')
     position = db.relationship('Position', backref='vote_distributions')
-    
-    # Ensure uniqueness
+
+    # --- MODIFIED: Update the unique constraint to include new columns ---
     __table_args__ = (
-        db.UniqueConstraint('election_id', 'candidate_id', 'department_id', 
-                           name='unique_candidate_dept_distribution'),
+        db.UniqueConstraint('election_id', 'candidate_id', 'department_id',
+                           'course_id', 'program_type_id',
+                           name='unique_candidate_grouping'),
     )
-    
+
     def __repr__(self):
-        return f'<VoteDistribution E{self.election_id} C{self.candidate_id} D{self.department_id}: {self.vote_count}>'
-    
+        # Optional: update repr for clarity
+        group_info = f" Dept:{self.department_id}" if self.department_id else (f" Course:{self.course_id}" if self.course_id else (f" Prog:{self.program_type_id}" if self.program_type_id else ""))
+        return f'<VoteDistribution E{self.election_id} C{self.candidate_id}{group_info}: {self.vote_count}>'
+
+    # --- UPDATE: Modify your helper methods if necessary (e.g., update_or_create) ---
     @classmethod
-    def update_or_create(cls, election_id, candidate_id, department_id, vote_count, position_id, position_name=None):
-        """Update existing or create new distribution record"""
-        distribution = cls.query.filter_by(
+    def update_or_create(cls, election_id, candidate_id, vote_count, position_id,
+                         position_name=None, department_id=None, course_id=None,
+                         program_type_id=None, grouping_type=None, grouping_name=None):
+        """Update existing or create new distribution record with flexible grouping."""
+        # Query based on which grouping ID is provided
+        query = cls.query.filter_by(
             election_id=election_id,
-            candidate_id=candidate_id,
-            department_id=department_id
-        ).first()
-        
+            candidate_id=candidate_id
+        )
+        if department_id is not None:
+            query = query.filter_by(department_id=department_id, course_id=None, program_type_id=None)
+        elif course_id is not None:
+            query = query.filter_by(course_id=course_id, department_id=None, program_type_id=None)
+        elif program_type_id is not None:
+            query = query.filter_by(program_type_id=program_type_id, department_id=None, course_id=None)
+        else:
+            # Should not happen, but fallback
+            return None
+
+        distribution = query.first()
+
         if distribution:
             distribution.vote_count = vote_count
             distribution.updated_at = datetime.utcnow()
@@ -654,37 +682,38 @@ class VoteDistribution(db.Model):
                 election_id=election_id,
                 candidate_id=candidate_id,
                 department_id=department_id,
+                course_id=course_id,
+                program_type_id=program_type_id,
                 vote_count=vote_count,
                 position_id=position_id,
-                position_name=position_name
+                position_name=position_name,
+                grouping_type=grouping_type,
+                grouping_name=grouping_name
             )
             db.session.add(distribution)
-        
+
         return distribution
-    
+
     @classmethod
     def calculate_percentages(cls, election_id):
         """Recalculate percentages for all records in an election"""
         from sqlalchemy import func
-        
-        # Get total per candidate
+
         candidate_totals = db.session.query(
             cls.candidate_id,
             func.sum(cls.vote_count).label('total')
         ).filter(
             cls.election_id == election_id
         ).group_by(cls.candidate_id).all()
-        
+
         totals_dict = {c_id: total for c_id, total in candidate_totals}
-        
-        # Update percentages
+
         distributions = cls.query.filter_by(election_id=election_id).all()
         for dist in distributions:
             total = totals_dict.get(dist.candidate_id, 1)
             dist.percentage = (dist.vote_count / total * 100) if total > 0 else 0
-        
-        db.session.commit()
 
+        db.session.commit()
 
 
 # Add to admin/models.py - for tracking analytics exports

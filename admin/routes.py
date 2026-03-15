@@ -524,6 +524,14 @@ def setup_2fa():
             login_user(admin)
             session.permanent = True
             
+            # ✅ KEEP THIS AUDIT LOG (2FA ENABLED - important security action)
+            username = getattr(admin, 'username', 'Unknown')
+            ip = request.remote_addr
+            log_audit(
+                action='2FA_ENABLED',
+                description=f"Admin user '{username}' enabled two-factor authentication from IP: {ip}"
+            )
+            
             # ===== CONSISTENT FINGERPRINT GENERATION =====
             device_info = AdminTrustedDevice.get_device_info(request)
             
@@ -602,10 +610,10 @@ def disable_2fa():
         admin.totp_secret = None
         db.session.commit()
         
-        # Log the action
+        # ✅ KEEP THIS AUDIT LOG (2FA DISABLED - important security action)
         log_audit(
-            action='2FA_DISABLE',
-            description=f"Admin user '{admin.username}' disabled two-factor authentication"
+            action='2FA_DISABLED',
+            description=f"Admin user '{admin.username}' disabled two-factor authentication from IP: {request.remote_addr}"
         )
         
         return jsonify({'success': True, 'message': '2FA disabled successfully'})
@@ -639,6 +647,8 @@ def verify_device_page():
         # Maybe already verified? Check session
         return render_template('admin_verify_device.html', admin=admin, message="Device already verified?", redirect_after=3)
     
+    # 🚫 REMOVED: VIEW audit log for device verification page
+    
     return render_template('admin_verify_device.html', admin=admin, device=device)
 
 
@@ -663,6 +673,9 @@ def resend_admin_verification():
     
     from admin.utils import send_admin_new_device_email
     send_admin_new_device_email(admin, device)
+    
+    # 🚫 REMOVED: AUDIT log for resending verification (not a data modification)
+    # Email resend is not changing database state
     
     return jsonify({"success": True, "message": "Verification email resent"})
 
@@ -692,6 +705,15 @@ def confirm_admin_device(token):
     device.last_used = datetime.utcnow()
     db.session.commit()
     
+    # ✅ KEEP THIS AUDIT LOG (DEVICE VERIFIED - important security action)
+    admin = device.admin
+    username = getattr(admin, 'username', 'Unknown')
+    ip = request.remote_addr
+    log_audit(
+        action='DEVICE_VERIFIED',
+        description=f"Admin user '{username}' verified new device: {device.device_name} from IP: {ip}"
+    )
+    
     # If this is the device that was pending, we can auto-login
     # Check if this matches pending session
     pending_fp = session.get('pending_device_fp')
@@ -719,8 +741,16 @@ def reject_admin_device(token):
     device = AdminTrustedDevice.query.filter_by(verification_token=token).first()
     
     if device:
+        admin_username = getattr(device.admin, 'username', 'Unknown')
+        
         db.session.delete(device)
         db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG (DEVICE REJECTED - important security action)
+        log_audit(
+            action='DEVICE_REJECTED',
+            description=f"Admin user '{admin_username}' rejected new device via email link from IP: {request.remote_addr}"
+        )
     
     return render_template('admin_device_result.html',
                          success=False,
@@ -754,6 +784,12 @@ def verify_device_status():
             device.update_last_used()
             db.session.commit()
             
+            # ✅ KEEP THIS AUDIT LOG (DEVICE VERIFIED VIA POLLING)
+            log_audit(
+                action='DEVICE_AUTO_VERIFIED',
+                description=f"Admin user '{admin.username}' auto-verified device via polling from IP: {request.remote_addr}"
+            )
+            
             # Clean up session
             session.pop('pending_admin_login', None)
             session.pop('pending_device_fp', None)
@@ -775,9 +811,6 @@ def verify_device_status():
     return jsonify({"status": "pending"})
 
 
-
-
-
 @admin_bp.route('/2fa/setup-data', methods=['GET'])
 def get_2fa_setup_data():
     """AJAX endpoint to get 2FA setup data for inline setup"""
@@ -790,6 +823,12 @@ def get_2fa_setup_data():
     if not admin.totp_secret:
         admin.totp_secret = pyotp.random_base32()
         db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG (2FA SECRET GENERATED - important security action)
+        log_audit(
+            action='2FA_SECRET_GENERATED',
+            description=f"Admin user '{admin.username}' generated 2FA secret from IP: {request.remote_addr}"
+        )
     
     secret = admin.totp_secret
     totp = pyotp.TOTP(secret)
@@ -798,6 +837,8 @@ def get_2fa_setup_data():
         name=admin.email,
         issuer_name="CTU-COMELEC Admin"
     )
+    
+    # 🚫 REMOVED: VIEW audit log for 2FA setup data
     
     return jsonify({
         'success': True,
@@ -898,14 +939,8 @@ def dashboard():
     # Sort school years in descending order (newest first)
     school_years = sorted(list(school_years), reverse=True)
 
-    # ---------- AUDIT LOG: Dashboard viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='DASHBOARD_VIEW',
-        description=f"Admin user '{username}' viewed the dashboard from IP: {ip} | School Year: {school_year or 'All'} | Stats: {total_students} students, {total_elections} elections, {total_votes} votes, {pending_applications} pending applications"
-    )
+    # 🚫 REMOVED: DASHBOARD_VIEW audit log (page view - not a data modification)
+    # Dashboard views should not be logged to keep audit logs focused on important actions
 
     return render_template(
         'admin_dashboard.html',
@@ -922,304 +957,6 @@ def dashboard():
         now=now
     )
 
-
-# Add these imports at the top of your admin/routes.py if not already present
-from datetime import datetime, timedelta
-from sqlalchemy import func
-from flask import jsonify
-import pytz
-
-@admin_bp.route('/api/voting-trends')
-@admin_required
-def get_voting_trends():
-    """API endpoint to get voting trends data for charts"""
-    try:
-        # Get parameters
-        election_id = request.args.get('election_id', 'all')
-        school_year = request.args.get('school_year')
-        
-        # Parse school year to date range
-        start_date = None
-        end_date = None
-        if school_year:
-            try:
-                start_year = int(school_year.split('-')[0])
-                end_year = int(school_year.split('-')[1])
-                start_date = datetime(start_year, 1, 1)
-                end_date = datetime(end_year, 12, 31)
-            except (ValueError, IndexError):
-                start_date = None
-                end_date = None
-        
-        # Get timezone
-        tz = pytz.timezone('Asia/Manila')
-        
-        # Get last 24 hours
-        end_date_chart = datetime.now(tz)
-        start_date_chart = end_date_chart - timedelta(hours=24)
-        
-        # Create a list of all hours in the last 24 hours
-        hours = []
-        current = start_date_chart
-        while current <= end_date_chart:
-            hours.append(current.strftime('%Y-%m-%d %H:00'))
-            current += timedelta(hours=1)
-        
-        # Base query for votes
-        vote_query = Vote.query
-        
-        # Apply school year filter if specified
-        if start_date and end_date:
-            vote_query = vote_query.filter(
-                Vote.cast_timestamp >= start_date,
-                Vote.cast_timestamp <= end_date
-            )
-        
-        if election_id != 'all':
-            # Filter by specific election
-            vote_query = vote_query.filter(Vote.election_id == election_id)
-        
-        # Apply time range filter
-        vote_query = vote_query.filter(
-            Vote.cast_timestamp >= start_date_chart,
-            Vote.cast_timestamp <= end_date_chart
-        )
-        
-        votes = vote_query.all()
-        
-        # Group votes by hour
-        votes_by_hour = {}
-        for vote in votes:
-            if vote.cast_timestamp:
-                hour_key = vote.cast_timestamp.strftime('%Y-%m-%d %H:00')
-                votes_by_hour[hour_key] = votes_by_hour.get(hour_key, 0) + 1
-        
-        # Create data arrays for all hours
-        labels = []
-        data = []
-        for hour in hours:
-            labels.append(hour)
-            data.append(votes_by_hour.get(hour, 0))
-        
-        # Get all elections for the filter buttons (with school year filter)
-        election_query = Election.query.order_by(Election.start_date.desc())
-        
-        if start_date and end_date:
-            election_query = election_query.filter(
-                Election.start_date >= start_date,
-                Election.start_date <= end_date
-            )
-        
-        elections = election_query.all()
-        election_list = []
-        
-        # Add "All Elections" option
-        all_votes_query = Vote.query
-        if start_date and end_date:
-            all_votes_query = all_votes_query.filter(
-                Vote.cast_timestamp >= start_date,
-                Vote.cast_timestamp <= end_date
-            )
-        all_votes_count = all_votes_query.count()
-        
-        election_list.append({
-            'id': 'all',
-            'name': 'All Elections',
-            'scope': 'all',
-            'total_votes': all_votes_count
-        })
-        
-        # Add each election
-        for e in elections:
-            # Determine display name based on scope
-            if e.scope == 'campus':
-                display_name = f" {e.title}"
-            else:
-                # Get department name
-                if e.department_rel:
-                    dept_name = e.department_rel.name
-                else:
-                    dept_name = e.department or 'Department'
-                display_name = f"📚 {dept_name}: {e.title}"
-            
-            # Count votes for this election (with school year filter)
-            vote_count_query = Vote.query.filter_by(election_id=e.id)
-            if start_date and end_date:
-                vote_count_query = vote_count_query.filter(
-                    Vote.cast_timestamp >= start_date,
-                    Vote.cast_timestamp <= end_date
-                )
-            vote_count = vote_count_query.count()
-            
-            # Get status emoji
-            status_emoji = '🟢' if e.status == 'Open' else '🟡' if e.status == 'Upcoming' else '🔴'
-            
-            election_list.append({
-                'id': e.id,
-                'name': display_name,
-                'scope': e.scope,
-                'status': e.status,
-                'status_emoji': status_emoji,
-                'total_votes': vote_count,
-                'start_date': e.start_date.strftime('%Y-%m-%d') if e.start_date else 'N/A',
-                'end_date': e.end_date.strftime('%Y-%m-%d') if e.end_date else 'N/A'
-            })
-        
-        # Format labels for display (e.g., "2 PM", "10 AM")
-        display_labels = []
-        for label in labels:
-            try:
-                dt = datetime.strptime(label, '%Y-%m-%d %H:00')
-                hour = dt.hour
-                if hour == 0:
-                    display_labels.append('12 AM')
-                elif hour < 12:
-                    display_labels.append(f'{hour} AM')
-                elif hour == 12:
-                    display_labels.append('12 PM')
-                else:
-                    display_labels.append(f'{hour-12} PM')
-            except:
-                display_labels.append(label)
-        
-        return jsonify({
-            'success': True,
-            'labels': display_labels,
-            'data': data,
-            'elections': election_list,
-            'current_election': election_id,
-            'current_school_year': school_year
-        })
-        
-    except Exception as e:
-        print(f"Error in voting trends: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'labels': [],
-            'data': [],
-            'elections': []
-        })
-
-
-
-@admin_bp.route('/api/election-stats/<election_id>')
-@admin_required
-def get_election_stats(election_id):
-    """Get detailed stats for a specific election"""
-    try:
-        # Get school year parameter
-        school_year = request.args.get('school_year')
-        
-        # Parse school year to date range
-        start_date = None
-        end_date = None
-        if school_year:
-            try:
-                start_year = int(school_year.split('-')[0])
-                end_year = int(school_year.split('-')[1])
-                start_date = datetime(start_year, 1, 1)
-                end_date = datetime(end_year, 12, 31)
-            except (ValueError, IndexError):
-                start_date = None
-                end_date = None
-        
-        tz = pytz.timezone('Asia/Manila')
-        
-        if election_id == 'all':
-            # All elections combined
-            vote_query = Vote.query
-            if start_date and end_date:
-                vote_query = vote_query.filter(
-                    Vote.cast_timestamp >= start_date,
-                    Vote.cast_timestamp <= end_date
-                )
-            total_votes = vote_query.count()
-            
-            total_eligible = Student.query.count()
-            
-            # Get ongoing elections count (not filtered by school year)
-            ongoing = Election.query.filter(
-                Election.start_date <= datetime.now(tz),
-                Election.end_date >= datetime.now(tz)
-            ).count()
-            
-            # Calculate turnout
-            if total_eligible > 0:
-                turnout = f"{(total_votes/total_eligible*100):.1f}%"
-            else:
-                turnout = "0%"
-            
-            title = 'All Elections'
-            if school_year:
-                title += f' (SY {school_year})'
-            
-            return jsonify({
-                'success': True,
-                'total_votes': total_votes,
-                'total_eligible': total_eligible,
-                'turnout': turnout,
-                'election_title': title,
-                'election_scope': 'Combined',
-                'ongoing_elections': ongoing,
-                'school_year': school_year
-            })
-        
-        else:
-            election = Election.query.get_or_404(int(election_id))
-            
-            # Get eligible students based on election scope
-            if election.scope == 'campus':
-                eligible_students = Student.query.count()
-            else:
-                # Department election - filter by department
-                if election.department_id:
-                    eligible_students = Student.query.filter_by(department_id=election.department_id).count()
-                else:
-                    # Fallback to department name
-                    eligible_students = Student.query.filter_by(department=election.department).count()
-            
-            # Get votes for this election (with school year filter)
-            vote_query = Vote.query.filter_by(election_id=election.id)
-            if start_date and end_date:
-                vote_query = vote_query.filter(
-                    Vote.cast_timestamp >= start_date,
-                    Vote.cast_timestamp <= end_date
-                )
-            total_votes = vote_query.count()
-            
-            # Calculate turnout
-            if eligible_students > 0:
-                turnout = f"{(total_votes/eligible_students*100):.1f}%"
-            else:
-                turnout = "0%"
-            
-            title = election.title
-            if school_year:
-                title += f' (SY {school_year})'
-            
-            return jsonify({
-                'success': True,
-                'total_votes': total_votes,
-                'total_eligible': eligible_students,
-                'turnout': turnout,
-                'election_title': title,
-                'election_scope': 'Campus-wide' if election.scope == 'campus' else 'Departmental',
-                'election_status': election.status,
-                'start_date': election.start_date.strftime('%Y-%m-%d %H:%M') if election.start_date else 'N/A',
-                'end_date': election.end_date.strftime('%Y-%m-%d %H:%M') if election.end_date else 'N/A',
-                'school_year': school_year
-            })
-            
-    except Exception as e:
-        print(f"Error in election stats: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'total_votes': 0,
-            'total_eligible': 0,
-            'turnout': '0%'
-        })
 
 
 # Add this to your admin routes file (where your dashboard route is)
@@ -1287,14 +1024,8 @@ def settings():
         # Get last backup info (you can implement this later)
         last_backup = None
         
-        # Log the settings page view
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='SETTINGS_VIEW',
-            description=f"Admin user '{username}' viewed system settings from IP: {ip}"
-        )
+        # 🚫 REMOVED: SETTINGS_VIEW audit log (page view - not a data modification)
+        # Viewing settings page should not be logged
         
         return render_template(
             'admin_settings.html',
@@ -1306,14 +1037,13 @@ def settings():
             end_date=end_date,
             pytz=pytz,
             last_backup=last_backup,
-            trusted_devices=trusted_devices  # ADD THIS LINE
+            trusted_devices=trusted_devices
         )
         
     except Exception as e:
         flash(f'Error loading settings: {str(e)}', 'error')
         return redirect(url_for('admin.dashboard'))
 
-    
 
 @admin_bp.route('/settings/save', methods=['POST'])
 @admin_required
@@ -1326,13 +1056,16 @@ def save_settings():
         section = data.get('section')
         settings = data.get('settings', {})
         
-        # Log the settings change
+        # ✅ KEEP THIS AUDIT LOG (SETTINGS UPDATE - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
+        # Create a summary of what was changed
+        changed_fields = ', '.join(settings.keys()) if settings else 'No fields'
+        
         log_audit(
             action='SETTINGS_UPDATE',
-            description=f"Admin user '{username}' updated {section} settings from IP: {ip}"
+            description=f"Admin user '{username}' updated {section} settings from IP: {ip} | Fields changed: {changed_fields}"
         )
         
         return jsonify({
@@ -1345,7 +1078,6 @@ def save_settings():
             'success': False,
             'message': str(e)
         }), 500
-
 
 
 
@@ -1369,8 +1101,8 @@ def trusted_devices():
     for device in devices:
         device.is_current = (device.device_fingerprint == current_fingerprint)
     
+    # 🚫 REMOVED: Page view audit log - not a data modification
     return render_template('trusted_devices.html', devices=devices)
-
 
 
 @admin_bp.route('/trusted-devices/add', methods=['POST'])
@@ -1406,6 +1138,12 @@ def add_trusted_device():
         
         db.session.commit()
         
+        # ✅ KEEP THIS AUDIT LOG (Device updated)
+        log_audit(
+            action='DEVICE_UPDATED',
+            description=f"Admin user '{current_user.username}' updated trusted device: {existing_device.device_name} from IP: {request.remote_addr}"
+        )
+        
         # Set the fingerprint in session
         session['admin_device_fingerprint'] = existing_device.device_fingerprint
         
@@ -1435,6 +1173,12 @@ def add_trusted_device():
         db.session.add(device)
         db.session.commit()
         
+        # ✅ KEEP THIS AUDIT LOG (Device added)
+        log_audit(
+            action='DEVICE_ADDED',
+            description=f"Admin user '{current_user.username}' added new trusted device: {device.device_name} from IP: {request.remote_addr}"
+        )
+        
         # Store fingerprint in session
         session['admin_device_fingerprint'] = device.device_fingerprint
         
@@ -1443,7 +1187,6 @@ def add_trusted_device():
             'message': 'Device added to trusted devices!',
             'device_added': True
         })
-
 
 
 @admin_bp.route('/trusted-devices/remove/<int:device_id>', methods=['POST'])
@@ -1520,6 +1263,8 @@ def request_remove_device(device_id):
             send_device_removal_confirmation(current_user, device, removal_token)
             print(f"DEBUG: Email sent successfully")
             
+            # 🚫 REMOVED: Audit log for email sending (no DB change yet)
+            
             return jsonify({
                 'success': True,
                 'message': 'Removal confirmation email sent. Please check your inbox.'
@@ -1558,9 +1303,6 @@ def request_remove_device(device_id):
             'message': 'Server error occurred'
         }), 500
 
-    
-    
-
 
 @admin_bp.route('/trusted-devices/confirm-remove/<token>')
 def confirm_remove_device(token):
@@ -1594,7 +1336,7 @@ def confirm_remove_device(token):
     db.session.delete(device)
     db.session.commit()
     
-    # Log the action
+    # ✅ KEEP THIS AUDIT LOG (Device actually removed - data modification)
     username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
     ip = request.remote_addr
     
@@ -1607,6 +1349,7 @@ def confirm_remove_device(token):
                          success=True,
                          message='Device has been successfully removed from your trusted devices.')
 
+
 @admin_bp.route('/trusted-devices/cancel-remove/<token>')
 def cancel_remove_device(token):
     """Cancel device removal request"""
@@ -1617,10 +1360,17 @@ def cancel_remove_device(token):
         device.verification_token = None
         device.verification_sent_at = None
         db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG (Device removal cancelled)
+        log_audit(
+            action='DEVICE_REMOVAL_CANCELLED',
+            description=f"Admin user cancelled removal for device '{device.device_name}' from IP: {request.remote_addr}"
+        )
     
     return render_template('device_removal_result.html',
                          success=True,
                          message='Device removal request has been cancelled. Your device remains trusted.')
+
 
 @admin_bp.route('/trusted-devices/verify/send', methods=['POST'])
 @login_required
@@ -1641,6 +1391,12 @@ def send_device_verification():
         existing.last_used = datetime.utcnow()
         existing.expires_at = datetime.utcnow() + timedelta(days=30)
         db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG (Device auto-verified)
+        log_audit(
+            action='DEVICE_AUTO_VERIFIED',
+            description=f"Admin user '{current_user.username}' auto-verified existing device: {existing.device_name} from IP: {request.remote_addr}"
+        )
         
         # Store fingerprint in session
         session['admin_device_fingerprint'] = existing.device_fingerprint
@@ -1668,6 +1424,13 @@ def send_device_verification():
         )
         device.generate_fingerprint()
         db.session.add(device)
+        db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG (New device pending verification)
+        log_audit(
+            action='DEVICE_PENDING_VERIFICATION',
+            description=f"Admin user '{current_user.username}' initiated verification for new device: {device.device_name} from IP: {request.remote_addr}"
+        )
     
     # Generate verification token
     token = device.generate_verification_token()
@@ -1677,11 +1440,14 @@ def send_device_verification():
     from admin.utils import send_admin_device_verification_email
     send_admin_device_verification_email(current_user, device, token)
     
+    # 🚫 REMOVED: Audit log for email sending (no DB change)
+    
     return jsonify({
         'success': True,
         'trusted': False,
         'message': 'Verification email sent'
     })
+
 
 @admin_bp.route('/trusted-devices/verify/<token>')
 def verify_admin_device(token):
@@ -1697,6 +1463,13 @@ def verify_admin_device(token):
     if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=15):
         db.session.delete(device)
         db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG (Expired verification)
+        log_audit(
+            action='DEVICE_VERIFICATION_EXPIRED',
+            description=f"Device verification expired for: {device.device_name} from IP: {request.remote_addr}"
+        )
+        
         return render_template('device_verification_result.html',
                              success=False,
                              message='Verification link has expired. Please try again.')
@@ -1708,6 +1481,13 @@ def verify_admin_device(token):
     device.last_used = datetime.utcnow()
     db.session.commit()
     
+    # ✅ KEEP THIS AUDIT LOG (Device verified)
+    admin_username = getattr(device.admin, 'username', 'Unknown')
+    log_audit(
+        action='DEVICE_VERIFIED',
+        description=f"Admin user '{admin_username}' verified new device: {device.device_name} from IP: {request.remote_addr}"
+    )
+    
     # Store fingerprint in session if this is the current device
     if device.ip_address == request.remote_addr:
         session['admin_device_fingerprint'] = device.device_fingerprint
@@ -1715,6 +1495,7 @@ def verify_admin_device(token):
     return render_template('device_verification_result.html',
                          success=True,
                          message='Device verified successfully! You can now use this device without 2FA.')
+
 
 @admin_bp.route('/trusted-devices/check', methods=['POST'])
 def check_device_trust():
@@ -1736,6 +1517,7 @@ def check_device_trust():
         if device and not device.is_expired():
             device.last_used = datetime.utcnow()
             db.session.commit()
+            # 🚫 REMOVED: Audit log for trust check (no data modification)
             return jsonify({'trusted': True})
     
     # Fallback to IP and browser check
@@ -1751,6 +1533,7 @@ def check_device_trust():
         db.session.commit()
         # Update session fingerprint
         session['admin_device_fingerprint'] = device.device_fingerprint
+        # 🚫 REMOVED: Audit log for trust check (no data modification)
         return jsonify({'trusted': True})
     
     return jsonify({'trusted': False})
@@ -1758,6 +1541,7 @@ def check_device_trust():
 
 
 from student.models import TrustedDevice 
+
 # ---------------------- IMPORT STUDENTS ---------------------- #
 @admin_bp.route("/import_students", methods=["GET", "POST"])
 def import_students():
@@ -1793,7 +1577,7 @@ def import_students():
                 temp_file_path, 
                 dtype={"StudentNo": str},
                 usecols=["StudentNo", "LastName", "FirstName"],  # Only read needed columns
-                engine='openpyxl'  # Default Excel engine  # Faster engine if available, otherwise 'openpyxl'
+                engine='openpyxl'  # Default Excel engine
             )
             
             # Clean up temp file
@@ -1978,7 +1762,7 @@ def import_students():
             total_time = time.time() - start_time
             print(f"✅ TOTAL TIME: {total_time:.2f} seconds for {len(excel_data)} students")
             
-            # Audit log
+            # ✅ KEEP THIS AUDIT LOG (IMPORT - major data modification)
             username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
             ip = request.remote_addr
             filename = file.filename if file else 'Unknown'
@@ -2033,61 +1817,13 @@ def import_students():
     # ------------------ TOTAL STUDENTS ------------------
     total_students = CtuStudent.query.count()
 
-    # ---------- AUDIT LOG: Import students page viewed ----------
-    if request.method == "GET" and current_user.is_authenticated:
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='IMPORT_STUDENTS_VIEW',
-            description=f"Admin user '{username}' viewed the import students page from IP: {ip}"
-        )
+    # 🚫 REMOVED: IMPORT_STUDENTS_VIEW audit log (page view - not a data modification)
 
     return render_template(
         "import_students.html",
         students=students,
         total_students=total_students
     )
-
-
-    # ------------------ GET ------------------
-    page = request.args.get("page", 1, type=int)
-    search_query = request.args.get("q", "", type=str)
-
-    students_query = CtuStudent.query
-
-    if search_query:
-        search = f"%{search_query.strip()}%"
-        students_query = students_query.filter(
-            or_(
-                CtuStudent.student_number.ilike(search),
-                CtuStudent.first_name.ilike(search),
-                CtuStudent.last_name.ilike(search)
-            )
-        )
-
-    students = students_query.order_by(CtuStudent.last_name.asc()) \
-        .paginate(page=page, per_page=20, error_out=False)
-
-    # ------------------ TOTAL STUDENTS ------------------
-    total_students = CtuStudent.query.count()
-
-    # ---------- AUDIT LOG: Import students page viewed ----------
-    if request.method == "GET" and current_user.is_authenticated:
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='IMPORT_STUDENTS_VIEW',
-            description=f"Admin user '{username}' viewed the import students page from IP: {ip}"
-        )
-
-    return render_template(
-        "import_students.html",
-        students=students,
-        total_students=total_students
-    )
-
 
 
 # Add this import with your other imports at the top of admin/routes.py
@@ -2099,6 +1835,16 @@ def sync_registered_students():
     """Manual sync endpoint"""
     try:
         result = sync_registered_students_with_ctu()
+        
+        # ✅ KEEP THIS AUDIT LOG (SYNC - data modification)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='SYNC_REGISTERED_STUDENTS',
+            description=f"Admin user '{username}' manually synced registered students from IP: {ip} | Deleted: {result['deleted']}, Kept with votes: {result['kept_with_votes']}"
+        )
+        
         return jsonify({
             'success': True,
             'deleted': result['deleted'],
@@ -2108,7 +1854,6 @@ def sync_registered_students():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-# import_students_table function remains EXACTLY THE SAME - no changes needed
 @admin_bp.route("/import_students_table")
 def import_students_table():
     from flask import request, render_template
@@ -2145,16 +1890,7 @@ def import_students_table():
         else:
             registered_numbers = set()
 
-        # ---------- AUDIT LOG: Import students table AJAX request ----------
-        if current_user.is_authenticated:
-            username = getattr(current_user, 'username', 'Unknown')
-            ip = request.remote_addr
-            search_term = search_query if search_query else 'none'
-            
-            log_audit(
-                action='IMPORT_STUDENTS_TABLE_VIEW',
-                description=f"Admin user '{username}' viewed/refreshed import students table from IP: {ip} | Page: {page}, Search: '{search_term}'"
-            )
+        # 🚫 REMOVED: IMPORT_STUDENTS_TABLE_VIEW audit log (AJAX table refresh - not a data modification)
 
         return render_template(
             "partials/_students_table.html",
@@ -2166,8 +1902,9 @@ def import_students_table():
         import traceback
         traceback.print_exc()
         
-        # ---------- AUDIT LOG: Import students table error ----------
-        if current_user.is_authenticated:
+        # ✅ KEEP THIS AUDIT LOG (Error occurred - but only log once, not on every refresh)
+        # Only log if this is a POST request or first load, not on every AJAX refresh
+        if request.method == "POST" or request.args.get("error_logged") != "true":
             username = getattr(current_user, 'username', 'Unknown')
             ip = request.remote_addr
             
@@ -2182,6 +1919,7 @@ def import_students_table():
             students=None,
             registered_numbers=set()
         )
+    
 
 @admin_bp.route('/students')
 @admin_required
@@ -2227,16 +1965,7 @@ def manage_students():
         "year_levels": e.year_levels  # Include year_levels for display
     } for e in elections]
 
-    # ---------- AUDIT LOG: Manage Students page viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    school_year_info = f" | School Year: {school_year}" if school_year else ""
-    
-    log_audit(
-        action='MANAGE_STUDENTS_VIEW',
-        description=f"Admin user '{username}' viewed the manage students page from IP: {ip}{school_year_info} | Elections available: {len(elections)}"
-    )
+    # 🚫 REMOVED: MANAGE_STUDENTS_VIEW audit log (page view - not a data modification)
 
     # -------------------- Render Template -------------------- #
     return render_template(
@@ -2334,14 +2063,7 @@ def students_data():
     # Log the filter info for debugging
     current_app.logger.info(f"Students data - Election: {election_id}, Total students: {len(students)}")
 
-    # ---------- AUDIT LOG: Student data AJAX request ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='STUDENTS_DATA_VIEW',
-        description=f"Admin user '{username}' fetched student data via AJAX from IP: {ip} | Election: {election_id}, Filter: {filter_type}, Search: '{search}', Page: {page}"
-    )
+    # 🚫 REMOVED: STUDENTS_DATA_VIEW audit log (AJAX data fetch - not a data modification)
 
     return jsonify({
         "students": students,
@@ -2514,7 +2236,7 @@ def export_students_excel():
                 max_length = max(max_length, len(str(cell.value)) + 2)
         ws.column_dimensions[col_letter].width = max_length
 
-    # ---------- AUDIT LOG: Export students Excel ----------
+    # ✅ KEEP THIS AUDIT LOG (EXPORT - creates file, counts as action)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     student_count = len(students)
@@ -2549,7 +2271,7 @@ def delete_student(id):
     db.session.delete(student)
     db.session.commit()
     
-    # ---------- AUDIT LOG: Delete student ----------
+    # ✅ KEEP THIS AUDIT LOG (DELETE - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -2583,6 +2305,8 @@ def all_registered_students():
     departments = Department.query.all()
     courses = Course.query.all()
     year_levels = YearLevel.query.all()
+    
+    # 🚫 REMOVED: Page view audit log (not a data modification)
     
     return render_template(
         'all_registered_students.html',
@@ -2635,6 +2359,8 @@ def all_students_data():
         students=students,
         registered_numbers=registered_numbers
     )
+    
+    # 🚫 REMOVED: AJAX data fetch audit log (not a data modification)
     
     return jsonify({
         'html': html,
@@ -2699,13 +2425,13 @@ def delete_all_student(id):
         db.session.commit()
         print(f"Successfully deleted student ID: {id}")
         
-        # Audit log
+        # ✅ KEEP THIS AUDIT LOG (PERMANENT DELETE - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
         log_audit(
             action='DELETE_STUDENT_PERMANENT',
-            description=f"Admin user '{username}' deleted student: {student_name} (ID: {student_id_number}) from IP: {ip}"
+            description=f"Admin user '{username}' permanently deleted student: {student_name} (ID: {student_id_number}) from IP: {ip} | Removed related records: {len(pending)} pending, {len(qualified)} qualified, {len(requests)} requests, {len(devices)} devices, {len(votes)} votes"
         )
         
         return jsonify({"success": True, "message": "Student deleted successfully"})
@@ -2723,11 +2449,13 @@ def delete_all_student(id):
 
     
 from student.models import DeletionRequest
+
 # Add these routes to your admin routes file
 
 @admin_bp.route('/deletion-requests')
 def account_deletion_requests():
     """Render the account deletion requests page"""
+    # 🚫 REMOVED: Page view audit log (not a data modification)
     return render_template('account_deletion_requests.html')
 
 @admin_bp.route('/deletion-requests/data')
@@ -2779,6 +2507,8 @@ def get_deletion_requests_data():
             'processed_by_name': req.admin.username if req.admin else None
         })
     
+    # 🚫 REMOVED: AJAX data fetch audit log (not a data modification)
+    
     return jsonify({
         'requests': requests_data,
         'total_pages': paginated.pages,
@@ -2793,6 +2523,8 @@ def get_deletion_requests_stats():
     approved = DeletionRequest.query.filter_by(status='approved').count()
     rejected = DeletionRequest.query.filter_by(status='rejected').count()
     
+    # 🚫 REMOVED: Stats fetch audit log (not a data modification)
+    
     return jsonify({
         'total': total,
         'pending': pending,
@@ -2804,6 +2536,8 @@ def get_deletion_requests_stats():
 def get_deletion_request(request_id):
     """Get details of a specific deletion request"""
     req = DeletionRequest.query.get_or_404(request_id)
+    
+    # 🚫 REMOVED: Single request fetch audit log (not a data modification)
     
     return jsonify({
         'id': req.id,
@@ -2829,11 +2563,14 @@ def process_deletion_request(request_id):
     if action not in ['approve', 'reject']:
         return jsonify({'success': False, 'message': 'Invalid action'}), 400
     
+    # Store old status for audit log
+    old_status = req.status
+    
     # Update request
     req.status = 'approved' if action == 'approve' else 'rejected'
     req.admin_notes = admin_notes
     req.processed_date = datetime.utcnow()
-    req.processed_by = current_admin.id  # Assuming you have current_admin
+    req.processed_by = current_user.id  # Fixed: Use current_user instead of current_admin
     
     # If approved, you might want to delete the student account
     if action == 'approve':
@@ -2844,6 +2581,15 @@ def process_deletion_request(request_id):
         pass
     
     db.session.commit()
+    
+    # ✅ KEEP THIS AUDIT LOG (PROCESS DELETION REQUEST - data modification)
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
+    
+    log_audit(
+        action='PROCESS_DELETION_REQUEST',
+        description=f"Admin user '{username}' {action}d deletion request #{request_id} from IP: {ip} | Student: {req.student.first_name} {req.student.last_name}, Status: {old_status} → {req.status}"
+    )
     
     return jsonify({'success': True})
 
@@ -2908,6 +2654,8 @@ def convert_to_candidates():
     courses = Course.query.all()
     year_levels = YearLevel.query.all()
     
+    # 🚫 REMOVED: Page view audit log (not a data modification)
+    
     return render_template('convert_to_candidates.html',
                          students=students,
                          departments=departments,
@@ -2954,10 +2702,13 @@ def qualify_student():
         db.session.add(qualification)
         db.session.commit()
         
-        # Log the action - REMOVED ip_address parameter
+        # ✅ KEEP THIS AUDIT LOG (QUALIFY STUDENT - data modification)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
         log_audit(
             action='QUALIFY_STUDENT',
-            description=f"Qualified student {student.first_name} {student.last_name} as candidate"
+            description=f"Admin user '{username}' qualified student {student.first_name} {student.last_name} (ID: {student.id_number}) as candidate from IP: {ip}"
         )
         
         return jsonify({
@@ -2992,10 +2743,13 @@ def remove_qualification():
         db.session.delete(qualification)
         db.session.commit()
         
-        # Log the action - REMOVED ip_address parameter
+        # ✅ KEEP THIS AUDIT LOG (REMOVE QUALIFICATION - data modification)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
         log_audit(
             action='REMOVE_QUALIFICATION',
-            description=f"Removed candidate qualification for student {student.first_name} {student.last_name}"
+            description=f"Admin user '{username}' removed candidate qualification for student {student.first_name} {student.last_name} (ID: {student.id_number}) from IP: {ip}"
         )
         
         return jsonify({
@@ -3057,6 +2811,8 @@ def pending_candidates():
         'total': PendingCandidate.query.count()
     }
     
+    # 🚫 REMOVED: Page view audit log (not a data modification)
+    
     return render_template('pending_candidates.html',
                          applications=applications,
                          pagination=paginated,
@@ -3086,6 +2842,8 @@ def get_pending_candidate(id):
             if student.year_level_id:
                 year = YearLevel.query.get(student.year_level_id)
                 year_name = year.year_name if year else None
+        
+        # 🚫 REMOVED: Single fetch audit log (not a data modification)
         
         return jsonify({
             'success': True,
@@ -3136,6 +2894,16 @@ def approve_pending(id):
             pending.rejection_reason = f'Candidate with same name already exists in this election: {pending.election.title if pending.election else "Unknown"}'
             pending.reviewed_at = datetime.utcnow()
             db.session.commit()
+            
+            # ✅ KEEP THIS AUDIT LOG (AUTO-REJECT DUPLICATE - data modification)
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='AUTO_REJECT_CANDIDATE',
+                description=f"Admin user '{username}' auto-rejected duplicate candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'} from IP: {ip}"
+            )
+            
             return jsonify({
                 'success': False, 
                 'message': f'A candidate with the name {pending.first_name} {pending.last_name} already exists in this election. Cannot approve.'
@@ -3165,16 +2933,14 @@ def approve_pending(id):
         
         db.session.commit()
         
-        # Log the action
-        try:
-            from admin.routes import log_audit
-            log_audit(
-                action='APPROVE_CANDIDATE',
-                description=f"Approved candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'}",
-                ip_address=request.remote_addr
-            )
-        except:
-            pass
+        # ✅ KEEP THIS AUDIT LOG (APPROVE CANDIDATE - data modification)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='APPROVE_CANDIDATE',
+            description=f"Admin user '{username}' approved candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'} from IP: {ip}"
+        )
         
         return jsonify({
             'success': True, 
@@ -3214,16 +2980,14 @@ def reject_pending(id):
         
         db.session.commit()
         
-        # Log the action
-        try:
-            from admin.routes import log_audit
-            log_audit(
-                action='REJECT_CANDIDATE',
-                description=f"Rejected candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'}. Reason: {reason}",
-                ip_address=request.remote_addr
-            )
-        except:
-            pass
+        # ✅ KEEP THIS AUDIT LOG (REJECT CANDIDATE - data modification)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='REJECT_CANDIDATE',
+            description=f"Admin user '{username}' rejected candidate application for {pending.first_name} {pending.last_name} in election {pending.election.title if pending.election else 'Unknown'} from IP: {ip} | Reason: {reason[:100]}..."
+        )
         
         return jsonify({'success': True, 'message': 'Application rejected'})
         
@@ -3233,7 +2997,7 @@ def reject_pending(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-        # ---------------------- Departments & Courses ---------------------- #
+# ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
 @admin_required
 def manage_departments():
@@ -3259,14 +3023,7 @@ def manage_departments():
     cursor.close()
     connection.close()
     
-    # ---------- AUDIT LOG: Manage Departments page viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='MANAGE_DEPARTMENTS_VIEW',
-        description=f"Admin user '{username}' viewed the departments & courses page from IP: {ip} | Total Departments: {len(departments)}, Total Courses: {len(courses)}"
-    )
+    # 🚫 REMOVED: MANAGE_DEPARTMENTS_VIEW audit log (page view - not a data modification)
 
     return render_template('manage_departments.html', departments=departments, courses=courses)
 
@@ -3288,7 +3045,7 @@ def add_department():
     cursor.close()
     connection.close()
 
-    # ---------- AUDIT LOG: Add department ----------
+    # ✅ KEEP THIS AUDIT LOG (ADD DEPARTMENT - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -3298,7 +3055,7 @@ def add_department():
     )
 
     flash('Department added successfully', 'success')
-    return redirect(url_for('admin.manage_departments'))  # <-- fixed
+    return redirect(url_for('admin.manage_departments'))
 
 
 @admin_bp.route('/departments/delete-multiple', methods=['POST'])
@@ -3325,7 +3082,7 @@ def delete_multiple_departments():
         cursor.close()
         connection.close()
         
-        # ---------- AUDIT LOG: Delete multiple departments ----------
+        # ✅ KEEP THIS AUDIT LOG (DELETE MULTIPLE DEPARTMENTS - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -3336,17 +3093,11 @@ def delete_multiple_departments():
         
         flash(f'{len(ids)} department(s) deleted successfully!', 'success')
     else:
-        # ---------- AUDIT LOG: Attempted delete with no selection ----------
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='DELETE_DEPARTMENTS_NO_SELECTION',
-            description=f"Admin user '{username}' attempted to delete departments but no selection was made from IP: {ip}"
-        )
-        
+        # 🚫 REMOVED: DELETE_DEPARTMENTS_NO_SELECTION audit log (no data modification happened)
+        # Just show a flash message instead
         flash('No departments selected for deletion.', 'warning')
-    return redirect(url_for('admin.manage_departments'))  # <-- fixed
+    
+    return redirect(url_for('admin.manage_departments'))
 
 
 # --- Course routes ---
@@ -3377,7 +3128,7 @@ def add_course():
     cursor.close()
     connection.close()
 
-    # ---------- AUDIT LOG: Add course ----------
+    # ✅ KEEP THIS AUDIT LOG (ADD COURSE - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -3387,7 +3138,7 @@ def add_course():
     )
 
     flash('Course added successfully', 'success')
-    return redirect(url_for('admin.manage_departments'))  # <-- fixed
+    return redirect(url_for('admin.manage_departments'))
 
 
 @admin_bp.route('/courses/delete-multiple', methods=['POST'])
@@ -3419,7 +3170,7 @@ def delete_multiple_courses():
         cursor.close()
         connection.close()
         
-        # ---------- AUDIT LOG: Delete multiple courses ----------
+        # ✅ KEEP THIS AUDIT LOG (DELETE MULTIPLE COURSES - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -3430,21 +3181,14 @@ def delete_multiple_courses():
         
         flash(f'{len(ids)} course(s) deleted successfully!', 'success')
     else:
-        # ---------- AUDIT LOG: Attempted delete with no selection ----------
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='DELETE_COURSES_NO_SELECTION',
-            description=f"Admin user '{username}' attempted to delete courses but no selection was made from IP: {ip}"
-        )
-        
+        # 🚫 REMOVED: DELETE_COURSES_NO_SELECTION audit log (no data modification happened)
+        # Just show a flash message instead
         flash('No courses selected for deletion.', 'warning')
-    return redirect(url_for('admin.manage_departments'))  # <-- fixed
+    
+    return redirect(url_for('admin.manage_departments'))
 
 
 
-# ---------------------- MANAGE CANDIDATES ---------------------- #
 # ---------------------- MANAGE CANDIDATES ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
@@ -3592,7 +3336,9 @@ def manage_candidates():
         db.session.add(new_candidate)
         db.session.commit()
 
-        # Audit log
+        # ✅ KEEP THIS AUDIT LOG (CREATE CANDIDATE - data modification)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
         department_name = new_candidate.department.name if new_candidate.department else 'N/A'
         position_name = new_candidate.position.name if new_candidate.position else 'N/A'
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
@@ -3602,7 +3348,7 @@ def manage_candidates():
         
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Added candidate: {first_name} {last_name} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title} ({scope}){school_year_info}"
+            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title} ({scope}){school_year_info}"
         )
 
         # Return JSON for AJAX requests
@@ -3631,6 +3377,8 @@ def manage_candidates():
     # Filter elections for modals
     campus_elections = [e for e in elections if e.scope == 'campus']
     department_elections = [e for e in elections if e.scope == 'department']
+
+    # 🚫 REMOVED: Page view audit log (not a data modification)
 
     return render_template(
         'manage_candidates.html',
@@ -3748,6 +3496,8 @@ def filter_candidates():
             'photo': url_for('admin.static', filename='images/' + c.photo) if c.photo else None
         })
 
+    # 🚫 REMOVED: AJAX filter endpoint audit log (not a data modification)
+
     return jsonify({
         'candidates': candidates_data,
         'pagination': {
@@ -3761,7 +3511,6 @@ def filter_candidates():
         },
         'current_sy': school_year
     })
-
 
 
 @admin_bp.route('/candidates/edit/<int:id>', methods=['POST'])
@@ -3818,14 +3567,16 @@ def update_candidate(id):
 
     db.session.commit()
     
-    # Audit log
+    # ✅ KEEP THIS AUDIT LOG (UPDATE CANDIDATE - data modification)
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
     new_department = candidate.department.name if candidate.department else 'N/A'
     new_position = candidate.position.name if candidate.position else 'N/A'
     new_party_list = candidate.party_list if candidate.party_list else 'Independent'
     
     log_audit(
         action='UPDATE_CANDIDATE',
-        description=f"Updated candidate: {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
+        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
     )
     
     if is_ajax:
@@ -3858,6 +3609,8 @@ def delete_candidate(id):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
     # Store candidate info for audit log before deletion
+    username = getattr(current_user, 'username', 'Unknown')
+    ip = request.remote_addr
     candidate_name = f"{candidate.first_name} {candidate.last_name}"
     party_list = candidate.party_list if candidate.party_list else 'Independent'
     position_name = candidate.position.name if candidate.position else 'N/A'
@@ -3878,10 +3631,10 @@ def delete_candidate(id):
         db.session.delete(candidate)
         db.session.commit()
         
-        # ---------- AUDIT LOG ----------
+        # ✅ KEEP THIS AUDIT LOG (DELETE CANDIDATE - data modification)
         log_audit(
             action='DELETE_CANDIDATE',
-            description=f"Deleted candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+            description=f"Admin user '{username}' deleted candidate from IP: {ip} | Candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
         )
         
         # Always return JSON for AJAX requests
@@ -3922,14 +3675,8 @@ def manage_positions():
         if position_name:
             existing = Position.query.filter_by(name=position_name).first()
             if existing:
+                # 🚫 REMOVED: ADD_POSITION_DUPLICATE audit log (no data modification)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    # ---------- AUDIT LOG: Attempt to add duplicate position (AJAX) ----------
-                    username = getattr(current_user, 'username', 'Unknown')
-                    ip = request.remote_addr
-                    log_audit(
-                        action='ADD_POSITION_DUPLICATE',
-                        description=f"Admin user '{username}' attempted to add duplicate position: '{position_name}' from IP: {ip}"
-                    )
                     return jsonify({"success": False, "message": f'Position "{position_name}" already exists!'})
                 flash(f'Position "{position_name}" already exists!', 'warning')
             else:
@@ -3937,7 +3684,7 @@ def manage_positions():
                 db.session.add(new_position)
                 db.session.commit()
                 
-                # ---------- AUDIT LOG: Add position ----------
+                # ✅ KEEP THIS AUDIT LOG (ADD POSITION - data modification)
                 username = getattr(current_user, 'username', 'Unknown')
                 ip = request.remote_addr
                 log_audit(
@@ -3958,23 +3705,10 @@ def manage_positions():
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         positions_data = [{"id": p.id, "name": p.name, "color": p.color} for p in positions]
         
-        # ---------- AUDIT LOG: Get positions data via AJAX ----------
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='GET_POSITIONS_DATA',
-            description=f"Admin user '{username}' fetched positions data via AJAX from IP: {ip} | Total positions: {len(positions)}"
-        )
-        
+        # 🚫 REMOVED: GET_POSITIONS_DATA audit log (AJAX data fetch - not a data modification)
         return jsonify(positions_data)
     
-    # ---------- AUDIT LOG: Manage Positions page viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    log_audit(
-        action='MANAGE_POSITIONS_VIEW',
-        description=f"Admin user '{username}' viewed the manage positions page from IP: {ip} | Total positions: {len(positions)}"
-    )
+    # 🚫 REMOVED: MANAGE_POSITIONS_VIEW audit log (page view - not a data modification)
     
     return render_template('manage_positions.html', positions=positions)
 
@@ -3986,13 +3720,7 @@ def get_positions_data():
     positions = Position.query.all()
     positions_data = [{"id": p.id, "name": p.name, "color": p.color} for p in positions]
     
-    # ---------- AUDIT LOG: Get positions data endpoint ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    log_audit(
-        action='GET_POSITIONS_DATA_ENDPOINT',
-        description=f"Admin user '{username}' fetched positions data from API endpoint from IP: {ip} | Total positions: {len(positions)}"
-    )
+    # 🚫 REMOVED: GET_POSITIONS_DATA_ENDPOINT audit log (AJAX data fetch - not a data modification)
     
     return jsonify(positions_data)
 
@@ -4021,20 +3749,14 @@ def update_position(position_id):
     # Check if position name already exists (excluding current position)
     existing = Position.query.filter(Position.name == position_name, Position.id != position_id).first()
     if existing:
-        # ---------- AUDIT LOG: Attempt to update to duplicate position name ----------
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='UPDATE_POSITION_DUPLICATE',
-            description=f"Admin user '{username}' attempted to update position '{old_name}' to duplicate name: '{position_name}' from IP: {ip}"
-        )
+        # 🚫 REMOVED: UPDATE_POSITION_DUPLICATE audit log (no data modification happened)
         return jsonify({"success": False, "message": f'Position "{position_name}" already exists!'})
     
     position.name = position_name
     position.color = position_color
     db.session.commit()
     
-    # ---------- AUDIT LOG: Update position ----------
+    # ✅ KEEP THIS AUDIT LOG (UPDATE POSITION - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     log_audit(
@@ -4055,19 +3777,13 @@ def delete_position(position_id):
     # Check if position is being used by any candidate
     candidates_using = Candidate.query.filter_by(position_id=position_id).first()
     if candidates_using:
-        # ---------- AUDIT LOG: Attempt to delete position in use ----------
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='DELETE_POSITION_IN_USE',
-            description=f"Admin user '{username}' attempted to delete position '{position_name}' (ID: {position_id}) but it is being used by candidates from IP: {ip}"
-        )
+        # 🚫 REMOVED: DELETE_POSITION_IN_USE audit log (no data modification happened)
         return jsonify({"success": False, "message": f'Cannot delete position "{position.name}" because it is being used by candidates.'})
     
     db.session.delete(position)
     db.session.commit()
     
-    # ---------- AUDIT LOG: Delete position ----------
+    # ✅ KEEP THIS AUDIT LOG (DELETE POSITION - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     log_audit(
@@ -4140,12 +3856,24 @@ def configure_election_positions(election_id):
         
         db.session.commit()
         
-        # Audit log
+        # ✅ KEEP THIS AUDIT LOG (CONFIGURE POSITIONS - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
+        
+        # Get position names for better audit description
+        position_names = []
+        for pid in selected_positions:
+            position = Position.query.get(int(pid))
+            if position:
+                position_names.append(position.name)
+        
+        position_summary = ', '.join(position_names[:3])
+        if len(position_names) > 3:
+            position_summary += f" and {len(position_names) - 3} more"
+        
         log_audit(
             action='CONFIGURE_ELECTION_POSITIONS',
-            description=f"Admin user '{username}' configured {len(selected_positions)} positions for election '{election.title}' (ID: {election_id}) from IP: {ip}"
+            description=f"Admin user '{username}' configured {len(selected_positions)} positions for election '{election.title}' (ID: {election_id}) from IP: {ip} | Positions: {position_summary}"
         )
         
         flash('Election positions configured successfully!', 'success')
@@ -4154,6 +3882,8 @@ def configure_election_positions(election_id):
         return redirect(url_for('admin.configure_election_positions', election_id=election_id))
     
     # For GET request, pass ALL needed variables to template
+    # 🚫 REMOVED: Page view audit log (not a data modification)
+    
     return render_template(
         'configure_election_positions.html',
         election=election,
@@ -4260,7 +3990,7 @@ def create_election():
         db.session.add(new_election)
         db.session.commit()
         
-        # ---------- AUDIT LOG ----------
+        # ---------- KEEP THIS AUDIT LOG (DATA MODIFICATION) ----------
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -4271,7 +4001,6 @@ def create_election():
             description=f"Admin user '{username}' created new {scope} election: '{title}' from IP: {ip} | Department: {department_name or 'N/A'}, Target: {year_levels_display}, Start: {start_date.strftime('%Y-%m-%d %H:%M')}, End: {end_date.strftime('%Y-%m-%d %H:%M')}"
         )
         
-        # MODIFIED: Redirect to position configuration instead of back to create page
         flash('Election created successfully! Now configure positions and vote limits.', 'election-success')
         return redirect(url_for('admin.configure_election_positions', election_id=new_election.id))
 
@@ -4289,14 +4018,7 @@ def create_election():
     upcoming_elections = [e for e in elections_all if e.start_date > now]
     active_elections = [e for e in elections_all if e.start_date <= now <= e.end_date]
     
-    # AUDIT LOG
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='CREATE_ELECTION_VIEW',
-        description=f"Admin user '{username}' viewed the create election page from IP: {ip} | Total elections: {len(elections_all)}, Active: {len(active_elections)}, Upcoming: {len(upcoming_elections)}"
-    )
+    # 🚫 REMOVED: CREATE_ELECTION_VIEW audit log (not a data modification)
 
     return render_template(
         'create_election.html',
@@ -4340,7 +4062,7 @@ def announcements():
         db.session.add(new_announcement)
         db.session.commit()
         
-        # ---------- AUDIT LOG: Create announcement ----------
+        # ✅ KEEP THIS AUDIT LOG (CREATE action - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -4362,14 +4084,8 @@ def announcements():
     # GET: fetch announcements to display
     announcements_list = Announcement.query.order_by(Announcement.date.desc()).all()
     
-    # ---------- AUDIT LOG: Announcements page viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='ANNOUNCEMENTS_VIEW',
-        description=f"Admin user '{username}' viewed the announcements page from IP: {ip} | Total announcements: {len(announcements_list)}"
-    )
+    # 🚫 REMOVED: ANNOUNCEMENTS_VIEW audit log (not a data modification)
+    # Viewing the page should not be logged
 
     return render_template(
         'announcements.html', 
@@ -4377,6 +4093,7 @@ def announcements():
         announcements=announcements_list,
         now=now  # Pass current datetime to template
     )
+
 
 # ----------- UPDATE ANNOUNCEMENT -----------
 @admin_bp.route('/update-announcement/<int:announcement_id>', methods=['POST'])
@@ -4394,6 +4111,10 @@ def update_announcement(announcement_id):
     else:
         department_id = int(department_id)
     
+    # Store old values for audit log
+    old_title = announcement.title
+    old_department_id = announcement.department_id
+    
     announcement.title = title
     announcement.content = content
     announcement.date = datetime.strptime(date, '%Y-%m-%d').date()
@@ -4401,18 +4122,30 @@ def update_announcement(announcement_id):
     
     db.session.commit()
     
-    # Audit log
+    # ✅ KEEP THIS AUDIT LOG (UPDATE action - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
+    # Get department names for audit log
+    old_dept_name = "All Departments"
+    if old_department_id:
+        old_dept = Department.query.get(old_department_id)
+        old_dept_name = old_dept.name if old_dept else f"ID: {old_department_id}"
+    
+    new_dept_name = "All Departments"
+    if department_id:
+        new_dept = Department.query.get(department_id)
+        new_dept_name = new_dept.name if new_dept else f"ID: {department_id}"
+    
     log_audit(
         action='UPDATE_ANNOUNCEMENT',
-        description=f"Admin user '{username}' updated announcement: '{title}' (ID: {announcement_id}) from IP: {ip}"
+        description=f"Admin user '{username}' updated announcement: '{old_title}' → '{title}' (ID: {announcement_id}) from IP: {ip} | Department: {old_dept_name} → {new_dept_name}"
     )
     
     # Tag the flash message for announcements page
     flash('announcements_page:Announcement updated successfully!', 'success')
     return redirect(url_for('admin.announcements'))
+
 
 # ----------- DELETE ANNOUNCEMENT -----------
 @admin_bp.route('/delete-announcement/<int:announcement_id>', methods=['POST'])
@@ -4420,22 +4153,30 @@ def update_announcement(announcement_id):
 def delete_announcement(announcement_id):
     announcement = Announcement.query.get_or_404(announcement_id)
     title = announcement.title
+    department_id = announcement.department_id
+    
+    # Get department name for audit log
+    department_name = "All Departments"
+    if department_id:
+        dept = Department.query.get(department_id)
+        department_name = dept.name if dept else f"ID: {department_id}"
     
     db.session.delete(announcement)
     db.session.commit()
     
-    # Audit log
+    # ✅ KEEP THIS AUDIT LOG (DELETE action - data modification)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
     log_audit(
         action='DELETE_ANNOUNCEMENT',
-        description=f"Admin user '{username}' deleted announcement: '{title}' (ID: {announcement_id}) from IP: {ip}"
+        description=f"Admin user '{username}' deleted announcement: '{title}' (ID: {announcement_id}) from IP: {ip} | Was targeted to: {department_name}"
     )
     
     # Tag the flash message for announcements page
     flash('announcements_page:Announcement deleted successfully!', 'success')
     return redirect(url_for('admin.announcements'))
+
 
 from student.models import ContactInfo, HelpPageContent
 
@@ -4465,6 +4206,7 @@ def get_announcement(announcement_id):
             'error': str(e)
         }), 500
 
+
 # ----------- HELP PAGE MANAGEMENT -----------
 @admin_bp.route('/help-settings', methods=['GET', 'POST'])
 @login_required
@@ -4473,6 +4215,11 @@ def help_settings():
     help_content = HelpPageContent.get_content()
     
     if request.method == 'POST':
+        # Store old values for audit log
+        old_email = contact_info.email
+        old_phone = contact_info.phone
+        old_committee_name = contact_info.committee_name
+        
         # Update contact info
         contact_info.email = request.form.get('email')
         contact_info.phone = request.form.get('phone')
@@ -4481,26 +4228,28 @@ def help_settings():
         contact_info.updated_by = current_user.id
         
         # Update help content
+        old_common_issues = help_content.common_issues
         help_content.common_issues = request.form.get('common_issues')
         help_content.updated_by = current_user.id
         
         db.session.commit()
         
-        # Audit log
+        # ✅ KEEP THIS AUDIT LOG (UPDATE action - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         log_audit(
             action='UPDATE_HELP_SETTINGS',
-            description=f"Admin user '{username}' updated help page settings from IP: {ip}"
+            description=f"Admin user '{username}' updated help page settings from IP: {ip} | Email: {old_email} → {contact_info.email}, Committee: {old_committee_name} → {contact_info.committee_name}"
         )
         
         flash('announcements_page:Help page settings updated successfully!', 'success')
         return redirect(url_for('admin.help_settings'))
     
+    # 🚫 REMOVED: VIEW audit log for help settings page
+    
     return render_template('help_settings.html', 
                          contact=contact_info, 
                          help_content=help_content)
-
 
 
 # ----------- GET HELP SETTINGS FOR AJAX -----------
@@ -4509,6 +4258,8 @@ def help_settings():
 def get_help_settings():
     contact_info = ContactInfo.get_settings()
     help_content = HelpPageContent.get_content()
+    
+    # 🚫 REMOVED: VIEW audit log for AJAX endpoint
     
     return jsonify({
         'success': True,
@@ -4524,7 +4275,6 @@ def get_help_settings():
     })
 
 
-
 # ----------- GUIDELINES MANAGEMENT -----------
 @admin_bp.route('/guidelines-settings', methods=['GET', 'POST'])
 @login_required
@@ -4534,6 +4284,10 @@ def guidelines_settings():
     guidelines_content = GuidelinesContent.get_content()
     
     if request.method == 'POST':
+        # Store old values for audit log
+        old_purpose = guidelines_content.purpose
+        old_voting_rules = guidelines_content.voting_rules
+        
         # Update guidelines content
         guidelines_content.purpose = request.form.get('purpose')
         guidelines_content.voting_rules = request.form.get('voting_rules')
@@ -4546,7 +4300,7 @@ def guidelines_settings():
         
         db.session.commit()
         
-        # Audit log
+        # ✅ KEEP THIS AUDIT LOG (UPDATE action - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         log_audit(
@@ -4556,6 +4310,8 @@ def guidelines_settings():
         
         flash('announcements_page:Guidelines updated successfully!', 'success')
         return redirect(url_for('admin.guidelines_settings'))
+    
+    # 🚫 REMOVED: VIEW audit log for guidelines page
     
     return render_template('guidelines_settings.html', content=guidelines_content)
 
@@ -4567,6 +4323,8 @@ def get_guidelines():
     from student.models import GuidelinesContent
     
     guidelines_content = GuidelinesContent.get_content()
+    
+    # 🚫 REMOVED: VIEW audit log for AJAX endpoint
     
     return jsonify({
         'success': True,
@@ -4646,16 +4404,7 @@ def results_page():
     # Get total elections count (unfiltered) for context
     total_elections = Election.query.count()
     
-    # ---------- AUDIT LOG: Results page viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    school_year_info = f" | School Year: {school_year}" if school_year else ""
-    
-    log_audit(
-        action='RESULTS_PAGE_VIEW',
-        description=f"Admin user '{username}' viewed the results page from IP: {ip}{school_year_info} | Displayed elections: {len(elections)} (filtered), Total: {total_elections}, Active: {len(active)}, Completed: {len(completed)}, Upcoming: {len(upcoming)}"
-    )
+    # 🚫 REMOVED: RESULTS_PAGE_VIEW audit log (page view - not a data modification)
     
     return render_template(
         'admin_results.html',
@@ -4667,8 +4416,6 @@ def results_page():
         total_filtered=len(elections),
         total_elections=total_elections
     )
-
-
 
 
 @admin_bp.route('/results/<int:election_id>')
@@ -4832,7 +4579,7 @@ def election_results(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
-    # AUDIT LOG
+    # ✅ KEEP THIS AUDIT LOG (Results view for specific election - but consider if this is too frequent)
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
@@ -4981,11 +4728,12 @@ def upload_pdf_result(election_id):
         db.session.add(pdf_result)
         db.session.commit()
         
-        # Log audit
+        # ✅ KEEP THIS AUDIT LOG (UPLOAD - data modification)
         username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
         log_audit(
             action='PDF_UPLOAD',
-            description=f"Admin '{username}' uploaded PDF result '{original_filename}' for election '{election.title}' (ID: {election_id})"
+            description=f"Admin '{username}' from IP: {ip} uploaded PDF result '{original_filename}' for election '{election.title}' (ID: {election_id}) | Size: {file_size} bytes"
         )
         
         return jsonify({
@@ -4998,6 +4746,7 @@ def upload_pdf_result(election_id):
         db.session.rollback()
         print(f"Error uploading PDF: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @admin_bp.route('/pdf-result/<int:pdf_id>/delete', methods=['POST'])
 @admin_required
@@ -5016,11 +4765,12 @@ def delete_pdf_result(pdf_id):
         db.session.delete(pdf_result)
         db.session.commit()
         
-        # Log audit
+        # ✅ KEEP THIS AUDIT LOG (DELETE - data modification)
         username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
         log_audit(
             action='PDF_DELETE',
-            description=f"Admin '{username}' deleted PDF result '{pdf_result.filename}' for election '{election_title}'"
+            description=f"Admin '{username}' from IP: {ip} deleted PDF result '{pdf_result.filename}' for election '{election_title}' (ID: {pdf_result.election_id})"
         )
         
         return jsonify({'success': True, 'message': 'PDF deleted successfully'})
@@ -5029,6 +4779,7 @@ def delete_pdf_result(pdf_id):
         db.session.rollback()
         print(f"Error deleting PDF: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @admin_bp.route('/pdf-result/<int:pdf_id>/download')
 @admin_required
@@ -5042,12 +4793,8 @@ def download_pdf_result(pdf_id):
             flash('PDF file not found on server.', 'error')
             return redirect(request.referrer or url_for('admin.results_page'))
         
-        # Log audit
-        username = getattr(current_user, 'username', 'Unknown')
-        log_audit(
-            action='PDF_DOWNLOAD',
-            description=f"Admin '{username}' downloaded PDF result '{pdf_result.filename}' for election ID: {pdf_result.election_id}"
-        )
+        # 🚫 REMOVED: PDF_DOWNLOAD audit log (not a data modification)
+        # Downloading doesn't change database state
         
         return send_file(
             file_path,
@@ -5123,7 +4870,7 @@ def tally_election_results(election_id):
         
         tally_timestamp = datetime.utcnow()
         
-        # ===== 1. SAVE TO TallyVote TABLE (official results) =====
+        # ===== ONLY SAVE TO TallyVote TABLE (official results) =====
         TallyVote.query.filter_by(election_id=election_id).delete()
         
         for candidate_id, vote_count in candidate_vote_map.items():
@@ -5135,95 +4882,10 @@ def tally_election_results(election_id):
             )
             db.session.add(tally)
         
-        # ===== 2. POPULATE VoteDistribution TABLE =====
-        # Clear existing distribution data
-        VoteDistribution.query.filter_by(election_id=election_id).delete()
-        
-        # Get all votes with student department info
-        from collections import defaultdict
-        import json
-        
-        votes_with_dept = db.session.query(
-            Vote,
-            Student.department_id
-        ).join(
-            Student, Vote.student_id == Student.id
-        ).filter(
-            Vote.election_id == election_id
-        ).all()
-        
-        # Count votes by candidate and department
-        # IMPORTANT: Use a SET to track unique (vote_id, candidate_id) combinations
-        # This prevents counting multiple hashes from the same vote as separate votes
-        counted_combinations = set()
-        dept_vote_counts = defaultdict(int)
-        
-        for vote, dept_id in votes_with_dept:
-            if not dept_id:
-                continue
-                
-            # Parse finder_hash to get candidate IDs
-            if vote.finder_hash:
-                try:
-                    finder_data = json.loads(vote.finder_hash)
-                    
-                    if isinstance(finder_data, dict) and 'hashes' in finder_data:
-                        for item in finder_data['hashes']:
-                            if isinstance(item, dict) and 'candidate_id' in item:
-                                candidate_id = item['candidate_id']
-                                
-                                # Create unique key for this (vote_id, candidate_id)
-                                vote_candidate_key = (vote.id, candidate_id)
-                                
-                                # Only count if we haven't counted this combination before
-                                if vote_candidate_key not in counted_combinations:
-                                    counted_combinations.add(vote_candidate_key)
-                                    
-                                    # Only count if this candidate was in our tallied results
-                                    if candidate_id in candidate_vote_map:
-                                        dept_vote_counts[(candidate_id, dept_id)] += 1
-                except:
-                    continue
-        
-        # Insert into VoteDistribution
-        distribution_records = 0
-        for (candidate_id, dept_id), count in dept_vote_counts.items():
-            candidate = Candidate.query.get(candidate_id)
-            if candidate:
-                dist = VoteDistribution(
-                    election_id=election_id,
-                    candidate_id=candidate_id,
-                    department_id=dept_id,
-                    vote_count=count,
-                    position_id=candidate.position_id,
-                    position_name=candidate.position.name if candidate.position else None
-                )
-                db.session.add(dist)
-                distribution_records += 1
-        
-        # Calculate percentages for all records
-        db.session.flush()
-        
-        # Calculate percentages using only the tallied candidates
-        from sqlalchemy import func
-        candidate_totals = db.session.query(
-            VoteDistribution.candidate_id,
-            func.sum(VoteDistribution.vote_count).label('total')
-        ).filter(
-            VoteDistribution.election_id == election_id
-        ).group_by(VoteDistribution.candidate_id).all()
-        
-        totals_dict = {c_id: total for c_id, total in candidate_totals}
-        
-        distributions = VoteDistribution.query.filter_by(election_id=election_id).all()
-        for dist in distributions:
-            total = totals_dict.get(dist.candidate_id, 1)
-            dist.percentage = (dist.vote_count / total * 100) if total > 0 else 0
-        
-        # ===== COMMIT ALL CHANGES =====
+        # ===== COMMIT CHANGES =====
         db.session.commit()
         
-        # ---------- AUDIT LOG: Tally election results ----------
+        # ✅ KEEP THIS AUDIT LOG
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         force_text = " (forced)" if force_tally else ""
@@ -5235,7 +4897,7 @@ def tally_election_results(election_id):
         
         return jsonify({
             'success': True,
-            'message': f'Tally completed: {unique_voters} voters, {total_votes_counted} votes for {len(candidates)} candidates. Also populated {distribution_records} department distribution records.',
+            'message': f'Tally completed: {unique_voters} voters, {total_votes_counted} votes for {len(candidates)} candidates.',
             'data': {
                 'unique_voters': unique_voters,
                 'total_votes': total_votes_counted,
@@ -5243,9 +4905,7 @@ def tally_election_results(election_id):
                 'candidates_tallied': len(candidates),
                 'tally_timestamp': tally_timestamp.isoformat(),
                 'election_title': election.title,
-                'results': candidate_results,
-                'distribution_records': distribution_records,
-                'unique_vote_combinations': len(counted_combinations)
+                'results': candidate_results
             }
         })
         
@@ -5254,7 +4914,7 @@ def tally_election_results(election_id):
         import traceback
         traceback.print_exc()
         
-        # ---------- AUDIT LOG: Tally election failed ----------
+        # ✅ KEEP THIS AUDIT LOG
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -5285,7 +4945,7 @@ def clear_tally_results(election_id):
         TallyVote.query.filter_by(election_id=election_id).delete()
         db.session.commit()
         
-        # ---------- AUDIT LOG: Clear tally results ----------
+        # ✅ KEEP THIS AUDIT LOG (CLEAR TALLY - data deletion)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -5307,7 +4967,7 @@ def clear_tally_results(election_id):
     except Exception as e:
         db.session.rollback()
         
-        # ---------- AUDIT LOG: Clear tally failed ----------
+        # ✅ KEEP THIS AUDIT LOG (CLEAR TALLY FAILED - still important)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -5335,14 +4995,7 @@ def get_tally_results(election_id):
     
     tally_records = TallyVote.query.filter_by(election_id=election_id).all()
     if not tally_records:
-        # ---------- AUDIT LOG: Get tally results - none found ----------
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='GET_TALLY_NO_RESULTS',
-            description=f"Admin user '{username}' attempted to fetch tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | No tally records found"
-        )
+        # 🚫 REMOVED: GET_TALLY_NO_RESULTS audit log (GET request - not a data modification)
         
         return jsonify({
             'success': False,
@@ -5367,14 +5020,7 @@ def get_tally_results(election_id):
     
     last_tally = max(tally_records, key=lambda x: x.tally_timestamp)
     
-    # ---------- AUDIT LOG: Get tally results ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='GET_TALLY_RESULTS',
-        description=f"Admin user '{username}' fetched tally results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Candidates tallied: {len(results)}, Total votes: {total_votes}"
-    )
+    # 🚫 REMOVED: GET_TALLY_RESULTS audit log (GET request - not a data modification)
     
     return jsonify({
         'success': True,
@@ -5387,7 +5033,6 @@ def get_tally_results(election_id):
             'results': sorted(results, key=lambda x: x['vote_count'], reverse=True)
         }
     })
-
 
 
 @admin_bp.route('/results/<int:election_id>/pdf')
@@ -5600,13 +5245,8 @@ def election_results_pdf(election_id):
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
         
-        # Log PDF generation
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='ELECTION_RESULTS_PDF_EXPORT',
-            description=f"Admin user '{username}' exported OFFICIAL PDF results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Source: TallyVote table"
-        )
+        # 🚫 REMOVED: ELECTION_RESULTS_PDF_EXPORT audit log (GET request - not a data modification)
+        # PDF export is a download, not a database change
         
         return response
         
@@ -5692,12 +5332,12 @@ def admin_profile():
     total_elections = 12
     total_votes = 340
 
+    # 🚫 REMOVED: Profile page view audit log (not a data modification)
+
     return render_template('admin_profile.html', 
                            admin=admin,
                            total_elections=total_elections,
                            total_votes=total_votes)
-
-
 
 
 @admin_bp.route('/statistics')
@@ -5820,14 +5460,7 @@ def statistics():
         } if c.department else None
     } for c in colleges]
     
-    # ---------- AUDIT LOG: Statistics page viewed ----------
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='STATISTICS_VIEW',
-        description=f"Admin user '{username}' viewed the election statistics page from IP: {ip} | Total past elections: {len(past_elections)}, Average participation: {avg_participation}, Average candidates: {avg_candidates}, Closest margin: {closest_margin}%, Most active month: {most_active_month}, Largest election: '{largest_election}' ({largest_voters} voters)"
-    )
+    # 🚫 REMOVED: STATISTICS_VIEW audit log (page view - not a data modification)
 
     return render_template(
         'statistics.html',
@@ -5852,6 +5485,8 @@ def vote_distribution():  # ← CHANGED: function name matches what template exp
     
     # Get current school year
     current_sy = current_app.config.get('CURRENT_SCHOOL_YEAR', '2024-2025')
+    
+    # 🚫 REMOVED: Vote distribution page view audit log (not a data modification)
     
     return render_template('vote_distribution.html', 
                           elections=elections, 
@@ -5880,6 +5515,10 @@ def get_vote_distribution(election_id):
         .order_by(Position.name, Candidate.last_name)\
         .all()
     
+    # Determine grouping type from first record (assuming consistent)
+    first_record = VoteDistribution.query.filter_by(election_id=election_id).first()
+    grouping_type = first_record.grouping_type if first_record else 'department'
+    
     # Build distribution data FROM vote_distributions TABLE
     distribution_data = []
     for candidate in candidates:
@@ -5898,31 +5537,71 @@ def get_vote_distribution(election_id):
             'position': candidate.position.name if candidate.position else "Unknown",
             'position_id': candidate.position_id,
             'total_votes': total_votes,
-            'department_breakdown': []
+            'breakdown': []  # Changed from department_breakdown to generic 'breakdown'
         }
         
-        # Add department breakdown from vote_distributions
+        # Add breakdown based on what's available
         for dist in dist_records:
-            dept = Department.query.get(dist.department_id)
-            if dept:
-                candidate_data['department_breakdown'].append({
-                    'department_id': dept.id,
-                    'department_name': dept.name,
+            # Determine the name based on which ID is present
+            name = None
+            item_id = None
+            
+            if dist.department_id:
+                dept = Department.query.get(dist.department_id)
+                name = dept.name if dept else None
+                item_id = dist.department_id
+            elif dist.course_id:
+                course = Course.query.get(dist.course_id)
+                name = course.course_name if course else None
+                item_id = dist.course_id
+            elif dist.program_type_id:
+                from student.models import ProgramType
+                prog = ProgramType.query.get(dist.program_type_id)
+                name = prog.name if prog else None
+                item_id = dist.program_type_id
+            else:
+                # Fallback to stored grouping_name
+                name = dist.grouping_name
+                item_id = None
+            
+            if name:
+                candidate_data['breakdown'].append({
+                    'id': item_id,
+                    'name': name,
                     'votes': dist.vote_count,
                     'percentage': dist.percentage or 0
                 })
         
-        # Sort departments by vote count (highest first)
-        candidate_data['department_breakdown'].sort(key=lambda x: x['votes'], reverse=True)
+        # Sort by vote count (highest first)
+        candidate_data['breakdown'].sort(key=lambda x: x['votes'], reverse=True)
         
         distribution_data.append(candidate_data)
     
-    # Calculate stats
+    # Calculate stats - count unique groups based on grouping type
+    if grouping_type == 'department':
+        unique_groups = db.session.query(VoteDistribution.department_id)\
+            .filter_by(election_id=election_id)\
+            .filter(VoteDistribution.department_id.isnot(None))\
+            .distinct().count()
+        group_label = 'Departments with Votes'
+    elif grouping_type == 'course':
+        unique_groups = db.session.query(VoteDistribution.course_id)\
+            .filter_by(election_id=election_id)\
+            .filter(VoteDistribution.course_id.isnot(None))\
+            .distinct().count()
+        group_label = 'Courses with Votes'
+    elif grouping_type == 'program_type':
+        unique_groups = db.session.query(VoteDistribution.program_type_id)\
+            .filter_by(election_id=election_id)\
+            .filter(VoteDistribution.program_type_id.isnot(None))\
+            .distinct().count()
+        group_label = 'Program Types (Day/Night)'
+    else:
+        unique_groups = 0
+        group_label = 'Groups with Votes'
+    
     total_votes = sum(d.vote_count for d in VoteDistribution.query.filter_by(election_id=election_id).all())
     total_candidates = len(candidates)
-    depts_with_votes = db.session.query(VoteDistribution.department_id)\
-        .filter_by(election_id=election_id)\
-        .distinct().count()
     
     # Calculate voter turnout
     total_students = Student.query.count()
@@ -5952,12 +5631,14 @@ def get_vote_distribution(election_id):
         },
         'stats': {
             'total_candidates': total_candidates,
-            'total_departments': depts_with_votes,
+            'total_departments': unique_groups,  # Keep key for backward compatibility
             'total_votes': total_votes,
-            'voter_turnout': turnout
+            'voter_turnout': turnout,
+            'group_label': group_label  # Add label for frontend
         },
         'positions': positions,
-        'all_candidates': distribution_data
+        'all_candidates': distribution_data,
+        'grouping_type': grouping_type  # Tell frontend what type of grouping this is
     })
 
 
@@ -5979,22 +5660,49 @@ def export_vote_distribution(election_id, format):
         output = io.StringIO()
         writer = csv.writer(output)
         
-        # Write header
-        writer.writerow(['Position', 'Candidate', 'Department', 'Votes', 'Percentage'])
+        # Determine grouping type
+        first_record = VoteDistribution.query.filter_by(election_id=election_id).first()
+        grouping_type = first_record.grouping_type if first_record else 'department'
+        
+        # Write header with appropriate column name
+        if grouping_type == 'department':
+            group_header = 'Department'
+        elif grouping_type == 'course':
+            group_header = 'Course'
+        elif grouping_type == 'program_type':
+            group_header = 'Program Type'
+        else:
+            group_header = 'Group'
+            
+        writer.writerow(['Position', 'Candidate', group_header, 'Votes', 'Percentage'])
         
         # Get data from vote_distributions table
         distributions = VoteDistribution.query.filter_by(election_id=election_id)\
             .join(Candidate)\
-            .join(Department)\
             .order_by(VoteDistribution.position_name, Candidate.last_name)\
             .all()
         
-        # Write data
+        # Write data with correct group name
         for dist in distributions:
+            # Get the appropriate group name
+            group_name = None
+            if dist.department_id:
+                dept = Department.query.get(dist.department_id)
+                group_name = dept.name if dept else None
+            elif dist.course_id:
+                course = Course.query.get(dist.course_id)
+                group_name = course.course_name if course else None
+            elif dist.program_type_id:
+                from student.models import ProgramType
+                prog = ProgramType.query.get(dist.program_type_id)
+                group_name = prog.name if prog else None
+            else:
+                group_name = dist.grouping_name
+            
             writer.writerow([
-                dist.position_name or dist.position.name,
+                dist.position_name or (dist.position.name if dist.position else 'Unknown'),
                 f"{dist.candidate.first_name} {dist.candidate.last_name}",
-                dist.department.name,
+                group_name or 'Unknown',
                 dist.vote_count,
                 f"{dist.percentage or 0}%"
             ])
@@ -6002,6 +5710,15 @@ def export_vote_distribution(election_id, format):
         # Create response
         output.seek(0)
         filename = f"vote_distribution_{election.title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        # ✅ KEEP THIS AUDIT LOG
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='EXPORT_VOTE_DISTRIBUTION',
+            description=f"Admin user '{username}' exported vote distribution for election '{election.title}' (ID: {election_id}) as {format.upper()} from IP: {ip} | Records: {len(distributions)} | Grouping: {grouping_type}"
+        )
         
         return send_file(
             io.BytesIO(output.getvalue().encode('utf-8-sig')),
@@ -6019,8 +5736,12 @@ def populate_vote_distribution(election_id):
     """Manually populate vote_distributions table from votes"""
     import json
     from collections import defaultdict
+    import re
     
     try:
+        # ✅ FIRST: Get the election object
+        election = Election.query.get_or_404(election_id)
+        
         # Clear existing distribution data for this election
         VoteDistribution.query.filter_by(election_id=election_id).delete()
         
@@ -6030,64 +5751,233 @@ def populate_vote_distribution(election_id):
         if not votes:
             return jsonify({'success': False, 'message': 'No votes found'}), 404
         
-        # Count votes by candidate and department
+        # ===== DETERMINE GROUPING STRATEGY =====
+        grouping_type = determine_grouping_strategy(election)
+        print(f"📊 Using grouping strategy: {grouping_type}")
+        
+        # Count votes by candidate and grouping entity
         vote_counts = defaultdict(int)
+        counted_combinations = set()
         
         for vote in votes:
             if not vote.finder_hash:
+                print(f"⚠️ Vote {vote.id} has no finder_hash")
                 continue
                 
             try:
                 finder_data = json.loads(vote.finder_hash)
+                print(f"📝 Vote {vote.id} finder_data: {finder_data}")
                 
-                # Get student's department
+                # Get student's details
                 student = Student.query.get(vote.student_id)
-                if not student or not student.department_id:
+                if not student:
+                    print(f"⚠️ Vote {vote.id} has no student record")
                     continue
                 
-                dept_id = student.department_id
+                # Get grouping ID based on strategy
+                grouping_id = get_grouping_id(student, grouping_type)
+                if not grouping_id:
+                    print(f"⚠️ Student {student.id} has no {grouping_type} ID")
+                    continue
                 
-                # Extract candidate IDs
-                if isinstance(finder_data, dict) and 'hashes' in finder_data:
-                    for item in finder_data['hashes']:
+                # Get grouping name for display
+                grouping_name = get_grouping_name(grouping_id, grouping_type)
+                
+                # Extract candidate IDs from finder_hash
+                candidate_ids = []
+                
+                if isinstance(finder_data, dict):
+                    # New format with 'hashes' array
+                    if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_ids.append(item['candidate_id'])
+                    
+                    # Alternative format with 'candidate_ids' array
+                    elif 'candidate_ids' in finder_data and isinstance(finder_data['candidate_ids'], list):
+                        candidate_ids = finder_data['candidate_ids']
+                
+                elif isinstance(finder_data, list):
+                    # Old format: list of hash objects
+                    for item in finder_data:
                         if isinstance(item, dict) and 'candidate_id' in item:
-                            candidate_id = item['candidate_id']
-                            vote_counts[(candidate_id, dept_id)] += 1
+                            candidate_ids.append(item['candidate_id'])
+                
+                print(f"🔍 Vote {vote.id} contains candidate IDs: {candidate_ids}")
+                
+                # Count the votes - ONE VOTE PER CANDIDATE ID
+                for candidate_id in candidate_ids:
+                    # Create unique key to prevent double-counting the same vote
+                    vote_candidate_key = (vote.id, candidate_id)
+                    
+                    if vote_candidate_key not in counted_combinations:
+                        counted_combinations.add(vote_candidate_key)
+                        vote_counts[(candidate_id, grouping_id, grouping_name)] += 1
+                        print(f"✅ Counted vote for candidate {candidate_id} in {grouping_type} {grouping_id}")
                             
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON decode error for vote {vote.id}: {e}")
                 continue
+            except Exception as e:
+                print(f"❌ Error processing vote {vote.id}: {e}")
+                continue
+        
+        # ===== DEBUG: Show what we found =====
+        print(f"📊 Total unique vote-candidate combinations: {len(counted_combinations)}")
+        print(f"📊 Total grouping entries: {len(vote_counts)}")
+        
+        # ===== CHECK IF WE FOUND ANY VOTES =====
+        if not vote_counts:
+            print("⚠️ No vote counts were generated!")
+            # Try one more time with a different extraction method
+            return try_alternative_extraction(election_id, election)
         
         # Insert into VoteDistribution table
         records_created = 0
-        for (candidate_id, dept_id), count in vote_counts.items():
+        for (candidate_id, grouping_id, grouping_name), count in vote_counts.items():
             candidate = Candidate.query.get(candidate_id)
             if candidate:
-                dist = VoteDistribution(
-                    election_id=election_id,
-                    candidate_id=candidate_id,
-                    department_id=dept_id,
-                    vote_count=count,
-                    position_id=candidate.position_id,
-                    position_name=candidate.position.name if candidate.position else None
-                )
+                # Create distribution record based on grouping type
+                dist_kwargs = {
+                    'election_id': election_id,
+                    'candidate_id': candidate_id,
+                    'vote_count': count,
+                    'position_id': candidate.position_id,
+                    'position_name': candidate.position.name if candidate.position else None,
+                    'grouping_type': grouping_type,
+                    'grouping_name': grouping_name
+                }
+                
+                # Add the appropriate ID field based on grouping type
+                if grouping_type == 'department':
+                    dist_kwargs['department_id'] = grouping_id
+                elif grouping_type == 'course':
+                    dist_kwargs['course_id'] = grouping_id
+                elif grouping_type == 'program_type':
+                    dist_kwargs['program_type_id'] = grouping_id
+                
+                dist = VoteDistribution(**dist_kwargs)
                 db.session.add(dist)
                 records_created += 1
+                print(f"✅ Created record for candidate {candidate_id} in {grouping_type} {grouping_id}: {count} votes")
         
         db.session.commit()
+        print(f"✅ Committed {records_created} records to database")
         
         # Calculate percentages
         if records_created > 0:
             VoteDistribution.calculate_percentages(election_id)
+            print(f"✅ Calculated percentages")
+        
+        # ✅ AUDIT LOG
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='POPULATE_VOTE_DISTRIBUTION',
+            description=f"Admin user '{username}' populated vote distribution for election '{election.title}' (ID: {election_id}) from IP: {ip} | Strategy: {grouping_type} | Records created: {records_created}"
+        )
         
         return jsonify({
             'success': True,
-            'message': f'Populated {records_created} distribution records',
-            'records_created': records_created
+            'message': f'Populated {records_created} distribution records using {grouping_type} grouping',
+            'records_created': records_created,
+            'strategy': grouping_type
         })
         
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Error in populate_vote_distribution: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # For the error case
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        try:
+            election = Election.query.get(election_id)
+            election_info = f" for election '{election.title}'" if election else ""
+        except:
+            election_info = ""
+        
+        log_audit(
+            action='POPULATE_VOTE_DISTRIBUTION_FAILED',
+            description=f"Admin user '{username}' failed to populate vote distribution{election_info} (ID: {election_id}) from IP: {ip} | Error: {str(e)[:200]}"
+        )
+        
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def try_alternative_extraction(election_id, election):
+    """Alternative method to extract votes if the first method fails"""
+    print("🔄 Trying alternative extraction method...")
+    
+    from sqlalchemy import text
+    
+    # Try raw SQL to see what's in the finder_hash
+    connection = db.session.connection()
+    result = connection.execute(
+        text("SELECT id, finder_hash FROM votes WHERE election_id = :eid LIMIT 5"),
+        {"eid": election_id}
+    )
+    
+    samples = []
+    for row in result:
+        samples.append({"id": row[0], "hash": row[1]})
+    
+    print(f"📊 Sample votes: {samples}")
+    
+    return jsonify({
+        'success': False,
+        'message': 'No distribution records could be created. Please check the console for debug info.',
+        'samples': samples
+    }), 400
+
+
+def determine_grouping_strategy(election):
+    """Determine how to group vote distribution"""
+    if election.scope == 'department':
+        # Department election - check if multiple courses
+        if election.department_id:
+            courses_count = Course.query.filter_by(department_id=election.department_id).count()
+            if courses_count > 1:
+                return 'course'
+            else:
+                return 'program_type'
+    
+    # Default to department grouping
+    return 'department'
+
+
+def get_grouping_id(student, grouping_type):
+    """Get the appropriate grouping ID based on strategy"""
+    if grouping_type == 'department':
+        return student.department_id
+    elif grouping_type == 'course':
+        return student.course_id
+    elif grouping_type == 'program_type':
+        return student.program_type_id
+    return None
+
+
+def get_grouping_name(grouping_id, grouping_type):
+    """Get the display name for a grouping ID"""
+    if not grouping_id:
+        return None
+    
+    if grouping_type == 'department':
+        dept = Department.query.get(grouping_id)
+        return dept.name if dept else None
+    elif grouping_type == 'course':
+        course = Course.query.get(grouping_id)
+        return course.course_name if course else None
+    elif grouping_type == 'program_type':
+        from student.models import ProgramType
+        prog_type = ProgramType.query.get(grouping_id)
+        return prog_type.name if prog_type else None
+    
+    return None
 
 
 

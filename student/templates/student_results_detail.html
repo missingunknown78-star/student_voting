@@ -143,59 +143,97 @@
 
     <!-- ========== CANDIDATE DISTRIBUTION SECTION ========== -->
     <!-- Only shown if student is a qualified candidate AND is running in this election AND election has PDF results -->
-    {% if is_qualified_candidate and running_in_this_election and pdf_results %}
-    <div class="candidate-distribution-section">
-        <div class="candidate-distribution-card">
-            <div class="candidate-distribution-header">
-                <i class="fa-solid fa-chart-pie"></i>
-                <div>
-                    <h2>Your Personal Vote Distribution</h2>
-                    <p>See how votes were distributed across departments for your candidacy</p>
-                </div>
-            </div>
-            
-            <div class="candidate-info-badge">
-                <i class="fa-solid fa-user-graduate"></i>
-                <span>You ran for: <strong>{{ my_candidate.position }}</strong></span>
-            </div>
-            
-            <div class="candidate-total-votes">
-                <i class="fa-solid fa-vote-yea"></i> Total votes you received: <strong>{{ my_candidate.total_votes }}</strong>
-            </div>
-            
-            {% if my_candidate.department_breakdown and my_candidate.department_breakdown|length > 0 %}
-            <div class="department-breakdown">
-                <h4 style="margin-bottom: 15px; color: white;">Votes by Department</h4>
-                
-                {% for dept in my_candidate.department_breakdown %}
-                <div class="department-item">
-                    <div class="dept-header">
-                        <span class="dept-name">
-                            <i class="fa-solid fa-building"></i> {{ dept.department_name }}
-                        </span>
-                        <span class="dept-votes">
-                            {{ dept.votes }} vote{% if dept.votes != 1 %}s{% endif %} ({{ '%.2f'|format(dept.percentage) }}%)
-                        </span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: {{ dept.percentage }}%"></div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="no-data-message">
-                <i class="fa-solid fa-chart-simple"></i>
-                <p>No vote distribution data available yet.</p>
-            </div>
-            {% endif %}
-            
-            <div style="margin-top: 20px; font-size: 0.8rem; opacity: 0.7; text-align: center;">
-                <i class="fa-solid fa-info-circle"></i> This data is based on official PDF results uploaded by COMELEC
+    <!-- ========== CANDIDATE DISTRIBUTION SECTION ========== -->
+<!-- Only shown if student is a qualified candidate AND is running in this election AND election has PDF results -->
+{% if is_qualified_candidate and running_in_this_election and pdf_results %}
+<div class="candidate-distribution-section">
+    <div class="candidate-distribution-card">
+        <div class="candidate-distribution-header">
+            <i class="fa-solid fa-chart-pie"></i>
+            <div>
+                <h2>Your Personal Vote Distribution</h2>
+                <p>See how votes were distributed across 
+                    {% if my_candidate.grouping_type == 'course' %}
+                        different courses
+                    {% elif my_candidate.grouping_type == 'program_type' %}
+                        Day/Night programs
+                    {% else %}
+                        departments
+                    {% endif %}
+                    for your candidacy
+                </p>
             </div>
         </div>
+        
+        <div class="candidate-info-badge">
+            <i class="fa-solid fa-user-graduate"></i>
+            <span>You ran for: <strong>{{ my_candidate.position }}</strong></span>
+        </div>
+        
+        <div class="candidate-total-votes">
+            <i class="fa-solid fa-vote-yea"></i> Total votes you received: <strong>{{ my_candidate.total_votes }}</strong>
+        </div>
+        
+        {% if my_candidate.breakdown and my_candidate.breakdown|length > 0 %}
+        <div class="department-breakdown">
+            <h4 style="margin-bottom: 15px; color: white;">
+                <i class="fa-solid 
+                    {% if my_candidate.grouping_type == 'course' %}
+                        fa-book
+                    {% elif my_candidate.grouping_type == 'program_type' %}
+                        fa-clock
+                    {% else %}
+                        fa-building
+                    {% endif %}">
+                </i>
+                Votes by 
+                {% if my_candidate.grouping_type == 'course' %}
+                    Course
+                {% elif my_candidate.grouping_type == 'program_type' %}
+                    Program Type (Day/Night)
+                {% else %}
+                    Department
+                {% endif %}
+            </h4>
+            
+            {% for item in my_candidate.breakdown %}
+            <div class="department-item">
+                <div class="dept-header">
+                    <span class="dept-name">
+                        <i class="fa-solid 
+                            {% if my_candidate.grouping_type == 'course' %}
+                                fa-book-open
+                            {% elif my_candidate.grouping_type == 'program_type' %}
+                                {% if 'Day' in item.name %}fa-sun{% else %}fa-moon{% endif %}
+                            {% else %}
+                                fa-building
+                            {% endif %}">
+                        </i> 
+                        {{ item.name }}
+                    </span>
+                    <span class="dept-votes">
+                        {{ item.votes }} vote{% if item.votes != 1 %}s{% endif %} ({{ '%.2f'|format(item.percentage) }}%)
+                    </span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ item.percentage }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-data-message">
+            <i class="fa-solid fa-chart-simple"></i>
+            <p>No vote distribution data available yet.</p>
+        </div>
+        {% endif %}
+        
+        <div style="margin-top: 20px; font-size: 0.8rem; opacity: 0.7; text-align: center;">
+            <i class="fa-solid fa-info-circle"></i> This data is based on official PDF results uploaded by COMELEC
+        </div>
     </div>
-    {% endif %}
+</div>
+{% endif %}
 
     <!-- Content Based on Election State and Publication -->
     {% if election.end_date < now_naive %}

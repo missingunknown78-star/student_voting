@@ -47,6 +47,46 @@
         margin-top: 10px;
         display: inline-block;
     }
+    
+    /* NEW: Styles for different breakdown types */
+    .breakdown-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 10px;
+        background: var(--accent-color-light);
+        color: var(--accent-color);
+    }
+    
+    .breakdown-badge.course {
+        background: #e6f7ff;
+        color: #08979c;
+    }
+    
+    .breakdown-badge.program {
+        background: #fff7e6;
+        color: #d46b00;
+    }
+    
+    .breakdown-badge.department {
+        background: #f6f0ff;
+        color: #531dab;
+    }
+    
+    .grouping-info {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .grouping-info i {
+        font-size: 0.8rem;
+    }
 </style>
 {% endblock %}
 
@@ -67,7 +107,7 @@
                 <i class="fa-solid fa-chart-pie"></i>
                 Vote Distribution Analysis
             </h1>
-            <p>Analyze how votes are distributed across different departments for each candidate</p>
+            <p>Analyze how votes are distributed across different segments for each candidate</p>
             
             <!-- School Year Indicator -->
             {% if current_sy %}
@@ -112,6 +152,9 @@
                 <option value="" disabled selected>-- Choose an election --</option>
                 {% for election in elections %}
                 <option value="{{ election.id }}" 
+                        data-scope="{{ election.scope }}"
+                        data-department="{{ election.department if election.department else '' }}"
+                        data-department-id="{{ election.department_id if election.department_id else '' }}"
                         {% if election.scope == 'campus' %}data-type="SSG"{% else %}data-type="Department"{% endif %}>
                     {{ election.title }} ({{ election.scope|title }}) 
                     {% if election.scope == 'department' and election.department %}
@@ -174,417 +217,474 @@
 </script>
 
 <script>
-let currentElectionId = null;
-let currentData = null;
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    addDebug('Page loaded');
+    let currentElectionId = null;
+    let currentData = null;
+    let currentElectionScope = null;
+    let currentGroupingType = null;
     
-    const electionSelect = document.getElementById('electionSelect');
-    const viewBtn = document.getElementById('viewBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const populateBtn = document.getElementById('populateBtn');
-    const exportBtns = document.querySelectorAll('.export-btn');
-    
-    // Election select change handler
-    electionSelect.addEventListener('change', function() {
-        if (this.value) {
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        addDebug('Page loaded');
+        
+        const electionSelect = document.getElementById('electionSelect');
+        const viewBtn = document.getElementById('viewBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const populateBtn = document.getElementById('populateBtn');
+        const exportBtns = document.querySelectorAll('.export-btn');
+        
+        // Election select change handler
+        electionSelect.addEventListener('change', function() {
+            if (this.value) {
+                viewBtn.disabled = false;
+                refreshBtn.disabled = false;
+                populateBtn.disabled = false;
+                exportBtns.forEach(btn => btn.disabled = false);
+                addDebug(`Election selected: ${this.value} (Scope: ${this.options[this.selectedIndex].dataset.scope})`);
+            } else {
+                viewBtn.disabled = true;
+                refreshBtn.disabled = true;
+                populateBtn.disabled = true;
+                exportBtns.forEach(btn => btn.disabled = true);
+            }
+        });
+        
+        // Check URL parameters for auto-load
+        const urlParams = new URLSearchParams(window.location.search);
+        const electionId = urlParams.get('election');
+        if (electionId) {
+            electionSelect.value = electionId;
             viewBtn.disabled = false;
             refreshBtn.disabled = false;
             populateBtn.disabled = false;
             exportBtns.forEach(btn => btn.disabled = false);
-            addDebug(`Election selected: ${this.value}`);
-        } else {
-            viewBtn.disabled = true;
-            refreshBtn.disabled = true;
-            populateBtn.disabled = true;
-            exportBtns.forEach(btn => btn.disabled = true);
+            loadElectionData();
         }
     });
     
-    // Check URL parameters for auto-load
-    const urlParams = new URLSearchParams(window.location.search);
-    const electionId = urlParams.get('election');
-    if (electionId) {
-        electionSelect.value = electionId;
-        viewBtn.disabled = false;
-        refreshBtn.disabled = false;
-        populateBtn.disabled = false;
-        exportBtns.forEach(btn => btn.disabled = false);
-        loadElectionData();
-    }
-});
-
-async function loadElectionData() {
-    const electionId = document.getElementById('electionSelect').value;
-    if (!electionId) {
-        alert('Please select an election');
-        return;
-    }
-    
-    showLoading();
-    addDebug(`Loading data for election ID: ${electionId}`);
-    
-    try {
-        const response = await fetch(`/admin/api/vote-distribution/${electionId}`);
-        const data = await response.json();
+    async function loadElectionData() {
+        const electionSelect = document.getElementById('electionSelect');
+        const electionId = electionSelect.value;
+        const selectedOption = electionSelect.options[electionSelect.selectedIndex];
         
-        addDebug(`Response status: ${response.status}`);
+        if (!electionId) {
+            alert('Please select an election');
+            return;
+        }
         
-        if (data.success) {
-            currentElectionId = electionId;
-            currentData = data;
+        // Store election scope for later use
+        currentElectionScope = selectedOption.dataset.scope;
+        
+        showLoading();
+        addDebug(`Loading data for election ID: ${electionId} (Scope: ${currentElectionScope})`);
+        
+        try {
+            const response = await fetch(`/admin/api/vote-distribution/${electionId}`);
+            const data = await response.json();
             
-            renderDashboard(data);
-            hideNoDataMessage();
-            addDebug('✅ Data loaded successfully');
+            addDebug(`Response status: ${response.status}`);
+            
+            if (data.success) {
+                currentElectionId = electionId;
+                currentData = data;
+                
+                // Store grouping type from response
+                currentGroupingType = data.grouping_type || 'department';
+                addDebug(`Grouping type: ${currentGroupingType}`);
+                
+                renderDashboard(data);
+                hideNoDataMessage();
+                addDebug('✅ Data loaded successfully');
+            } else {
+                // Handle case where no distribution data exists
+                if (response.status === 404 && data.message === 'No distribution data found. Please populate first.') {
+                    document.getElementById('candidatesContainer').innerHTML = `
+                        <div class="no-data-message">
+                            <i class="fa-solid fa-database"></i>
+                            <p>${data.message}</p>
+                            <p class="small">Click the "Populate Data" button to generate distribution data from votes.</p>
+                        </div>
+                    `;
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to load data'));
+                }
+                addDebug(`❌ API error: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            addDebug(`❌ Network error: ${error.message}`);
+            alert('Failed to connect to server');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    async function populateData() {
+        const electionSelect = document.getElementById('electionSelect');
+        const electionId = electionSelect.value;
+        const selectedOption = electionSelect.options[electionSelect.selectedIndex];
+        
+        if (!electionId) {
+            alert('Please select an election');
+            return;
+        }
+        
+        if (!confirm('This will generate distribution data from votes. Continue?')) {
+            return;
+        }
+        
+        showLoading();
+        addDebug(`Populating data for election ID: ${electionId}`);
+        
+        try {
+            const response = await fetch(`/admin/api/vote-distribution/populate/${electionId}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            addDebug(`Populate response: ${JSON.stringify(data)}`);
+            
+            if (data.success) {
+                alert(`✅ ${data.message}`);
+                await loadElectionData(); // Auto-load the data after populating
+            } else {
+                alert('Error: ' + (data.error || 'Failed to populate data'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            addDebug(`❌ Error: ${error.message}`);
+            alert('Failed to populate data');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    async function refreshData() {
+        if (!currentElectionId) {
+            alert('Please load an election first');
+            return;
+        }
+        
+        showLoading();
+        addDebug(`Refreshing data for election ID: ${currentElectionId}`);
+        
+        try {
+            await loadElectionData();
+            alert('Data refreshed successfully');
+        } catch (error) {
+            console.error('Error:', error);
+            addDebug(`❌ Error: ${error.message}`);
+            alert('Failed to refresh data');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function renderDashboard(data) {
+        addDebug('Rendering dashboard...');
+        
+        renderStatsCards(data.stats, data.election);
+        renderFilterTabs(Object.keys(data.positions));
+        renderCandidates(data.positions);
+        
+        addDebug(`Rendered ${Object.keys(data.positions).length} positions with grouping type: ${data.grouping_type || 'department'}`);
+    }
+    
+    function renderStatsCards(stats, election) {
+        const statsGrid = document.getElementById('statsGrid');
+        statsGrid.style.display = 'grid';
+        
+        statsGrid.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">${stats.total_candidates}</div>
+                    <div class="stat-label">Total Candidates</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fa-solid ${currentGroupingType === 'course' ? 'fa-book' : (currentGroupingType === 'program_type' ? 'fa-clock' : 'fa-building')}"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">${stats.total_departments}</div>
+                    <div class="stat-label">${getGroupingLabel()}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <i class="fa-solid fa-vote-yea"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">${stats.total_votes.toLocaleString()}</div>
+                    <div class="stat-label">Total Votes Cast</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">${stats.voter_turnout}%</div>
+                    <div class="stat-label">Voter Turnout</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function getGroupingLabel() {
+        if (currentGroupingType === 'course') {
+            return 'Courses with Votes';
+        } else if (currentGroupingType === 'program_type') {
+            return 'Program Types (Day/Night)';
         } else {
-            // Handle case where no distribution data exists
-            if (response.status === 404 && data.message === 'No distribution data found. Please populate first.') {
-                document.getElementById('candidatesContainer').innerHTML = `
-                    <div class="no-data-message">
-                        <i class="fa-solid fa-database"></i>
-                        <p>${data.message}</p>
-                        <p class="small">Click the "Populate Data" button to generate distribution data from votes.</p>
+            return 'Departments with Votes';
+        }
+    }
+    
+    function renderFilterTabs(positions) {
+        const filterTabs = document.getElementById('filterTabs');
+        filterTabs.style.display = 'flex';
+        
+        let html = '<button class="filter-tab active" onclick="filterByPosition(\'all\')">All Positions</button>';
+        
+        positions.forEach(position => {
+            const escapedPosition = position.replace(/'/g, "\\'");
+            html += `<button class="filter-tab" onclick="filterByPosition('${escapedPosition}')">${position}</button>`;
+        });
+        
+        filterTabs.innerHTML = html;
+    }
+    
+    function renderCandidates(positions) {
+        const container = document.getElementById('candidatesContainer');
+        let html = '';
+        let hasAnyCandidates = false;
+        
+        for (const [positionName, candidates] of Object.entries(positions)) {
+            if (candidates.length === 0) continue;
+            
+            hasAnyCandidates = true;
+            
+            html += `<h2 class="section-title" id="position-${positionName.replace(/\s+/g, '-')}">`;
+            html += `<i class="fa-solid ${getPositionIcon(positionName)}"></i>`;
+            html += `${positionName} (${candidates.length} candidates)`;
+            html += `<span class="breakdown-badge ${currentGroupingType}">${getBreakdownTypeLabel()}</span>`;
+            html += `</h2>`;
+            
+            html += '<div class="candidate-grid">';
+            
+            candidates.forEach(candidate => {
+                html += renderCandidateCard(candidate);
+            });
+            
+            html += '</div>';
+        }
+        
+        if (!hasAnyCandidates) {
+            html = `
+                <div class="no-data-message">
+                    <i class="fa-solid fa-chart-simple"></i>
+                    <p>No candidates found for this election</p>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    function getBreakdownTypeLabel() {
+        if (currentGroupingType === 'course') {
+            return 'Course Breakdown';
+        } else if (currentGroupingType === 'program_type') {
+            return 'Program Type (Day/Night)';
+        } else {
+            return 'Department Breakdown';
+        }
+    }
+    
+    function renderCandidateCard(candidate) {
+        let html = `
+            <div class="candidate-card" data-position="${candidate.position.replace(/"/g, '&quot;')}">
+                <div class="candidate-header">
+                    <div class="candidate-avatar">${candidate.initials}</div>
+                    <div class="candidate-info">
+                        <div class="candidate-name">${candidate.name}</div>
+                        <div class="candidate-position">
+                            <i class="fa-solid ${getPositionIcon(candidate.position)}"></i>
+                            ${candidate.position}
+                        </div>
+                    </div>
+                </div>
+                <div class="candidate-total">
+                    <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
+                    <span class="total-value">${candidate.total_votes.toLocaleString()}</span>
+                </div>
+        `;
+        
+        if (candidate.breakdown && candidate.breakdown.length > 0) {
+            html += `
+                <div class="department-breakdown">
+                    <div class="breakdown-title">
+                        <i class="fa-solid ${getBreakdownIcon()}"></i>
+                        ${getBreakdownTypeLabel()}
+                    </div>
+                    <div class="department-list">
+            `;
+            
+            candidate.breakdown.forEach(item => {
+                html += `
+                    <div class="department-item">
+                        <div class="dept-header">
+                            <span class="dept-name"><i class="fa-solid ${getItemIcon(item.name)}"></i> ${item.name}</span>
+                            <span class="dept-votes">${item.votes.toLocaleString()} votes (${item.percentage}%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${item.percentage}%"></div>
+                        </div>
                     </div>
                 `;
-            } else {
-                alert('Error: ' + (data.message || 'Failed to load data'));
-            }
-            addDebug(`❌ API error: ${data.message}`);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        addDebug(`❌ Network error: ${error.message}`);
-        alert('Failed to connect to server');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function populateData() {
-    const electionId = document.getElementById('electionSelect').value;
-    if (!electionId) {
-        alert('Please select an election');
-        return;
-    }
-    
-    if (!confirm('This will generate distribution data from votes. Continue?')) {
-        return;
-    }
-    
-    showLoading();
-    addDebug(`Populating data for election ID: ${electionId}`);
-    
-    try {
-        const response = await fetch(`/admin/api/vote-distribution/populate/${electionId}`, {
-            method: 'POST'
-        });
-        const data = await response.json();
-        
-        addDebug(`Populate response: ${JSON.stringify(data)}`);
-        
-        if (data.success) {
-            alert(`✅ ${data.message}`);
-            await loadElectionData(); // Auto-load the data after populating
-        } else {
-            alert('Error: ' + (data.error || 'Failed to populate data'));
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        addDebug(`❌ Error: ${error.message}`);
-        alert('Failed to populate data');
-    } finally {
-        hideLoading();
-    }
-}
-
-async function refreshData() {
-    if (!currentElectionId) {
-        alert('Please load an election first');
-        return;
-    }
-    
-    showLoading();
-    addDebug(`Refreshing data for election ID: ${currentElectionId}`);
-    
-    try {
-        await loadElectionData();
-        alert('Data refreshed successfully');
-    } catch (error) {
-        console.error('Error:', error);
-        addDebug(`❌ Error: ${error.message}`);
-        alert('Failed to refresh data');
-    } finally {
-        hideLoading();
-    }
-}
-
-function renderDashboard(data) {
-    addDebug('Rendering dashboard...');
-    
-    renderStatsCards(data.stats, data.election);
-    renderFilterTabs(Object.keys(data.positions));
-    renderCandidates(data.positions);
-    
-    addDebug(`Rendered ${Object.keys(data.positions).length} positions`);
-}
-
-function renderStatsCards(stats, election) {
-    const statsGrid = document.getElementById('statsGrid');
-    statsGrid.style.display = 'grid';
-    
-    statsGrid.innerHTML = `
-        <div class="stat-card">
-            <div class="stat-icon blue">
-                <i class="fa-solid fa-users"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value">${stats.total_candidates}</div>
-                <div class="stat-label">Total Candidates</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon green">
-                <i class="fa-solid fa-building"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value">${stats.total_departments}</div>
-                <div class="stat-label">Departments with Votes</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon purple">
-                <i class="fa-solid fa-vote-yea"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value">${stats.total_votes.toLocaleString()}</div>
-                <div class="stat-label">Total Votes Cast</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon orange">
-                <i class="fa-solid fa-percent"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value">${stats.voter_turnout}%</div>
-                <div class="stat-label">Voter Turnout</div>
-            </div>
-        </div>
-    `;
-}
-
-function renderFilterTabs(positions) {
-    const filterTabs = document.getElementById('filterTabs');
-    filterTabs.style.display = 'flex';
-    
-    let html = '<button class="filter-tab active" onclick="filterByPosition(\'all\')">All Positions</button>';
-    
-    positions.forEach(position => {
-        const escapedPosition = position.replace(/'/g, "\\'");
-        html += `<button class="filter-tab" onclick="filterByPosition('${escapedPosition}')">${position}</button>`;
-    });
-    
-    filterTabs.innerHTML = html;
-}
-
-function renderCandidates(positions) {
-    const container = document.getElementById('candidatesContainer');
-    let html = '';
-    let hasAnyCandidates = false;
-    
-    for (const [positionName, candidates] of Object.entries(positions)) {
-        if (candidates.length === 0) continue;
-        
-        hasAnyCandidates = true;
-        
-        html += `<h2 class="section-title" id="position-${positionName.replace(/\s+/g, '-')}">`;
-        html += `<i class="fa-solid ${getPositionIcon(positionName)}"></i>`;
-        html += `${positionName} (${candidates.length} candidates)</h2>`;
-        
-        html += '<div class="candidate-grid">';
-        
-        candidates.forEach(candidate => {
-            html += renderCandidateCard(candidate);
-        });
-        
-        html += '</div>';
-    }
-    
-    if (!hasAnyCandidates) {
-        html = `
-            <div class="no-data-message">
-                <i class="fa-solid fa-chart-simple"></i>
-                <p>No candidates found for this election</p>
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-}
-
-function renderCandidateCard(candidate) {
-    let html = `
-        <div class="candidate-card" data-position="${candidate.position.replace(/"/g, '&quot;')}">
-            <div class="candidate-header">
-                <div class="candidate-avatar">${candidate.initials}</div>
-                <div class="candidate-info">
-                    <div class="candidate-name">${candidate.name}</div>
-                    <div class="candidate-position">
-                        <i class="fa-solid ${getPositionIcon(candidate.position)}"></i>
-                        ${candidate.position}
-                    </div>
-                </div>
-            </div>
-            <div class="candidate-total">
-                <span class="total-label"><i class="fa-solid fa-chart-line"></i> Total Votes</span>
-                <span class="total-value">${candidate.total_votes.toLocaleString()}</span>
-            </div>
-    `;
-    
-    if (candidate.department_breakdown && candidate.department_breakdown.length > 0) {
-        html += `
-            <div class="department-breakdown">
-                <div class="breakdown-title">
-                    <i class="fa-solid fa-building"></i>
-                    Department Breakdown
-                </div>
-                <div class="department-list">
-        `;
-        
-        candidate.department_breakdown.forEach(dept => {
+            });
+            
             html += `
-                <div class="department-item">
-                    <div class="dept-header">
-                        <span class="dept-name"><i class="fa-solid ${getDepartmentIcon(dept.department_name)}"></i> ${dept.department_name}</span>
-                        <span class="dept-votes">${dept.votes.toLocaleString()} votes (${dept.percentage}%)</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${dept.percentage}%"></div>
                     </div>
                 </div>
             `;
-        });
-        
-        html += `
-                </div>
-            </div>
-        `;
-    } else {
-        html += `
-            <div class="department-breakdown">
-                <div class="breakdown-title">
-                    <i class="fa-solid fa-building"></i>
-                    Department Breakdown
-                </div>
-                <div class="no-data-message" style="padding: 20px;">
-                    <p class="small">No department data available</p>
-                </div>
-            </div>
-        `;
-    }
-    
-    html += `</div>`;
-    return html;
-}
-
-function filterByPosition(position) {
-    document.querySelectorAll('.filter-tab').forEach(tab => {
-        if (tab.textContent === position || (position === 'all' && tab.textContent === 'All Positions')) {
-            tab.classList.add('active');
         } else {
-            tab.classList.remove('active');
+            html += `
+                <div class="department-breakdown">
+                    <div class="breakdown-title">
+                        <i class="fa-solid ${getBreakdownIcon()}"></i>
+                        ${getBreakdownTypeLabel()}
+                    </div>
+                    <div class="no-data-message" style="padding: 20px;">
+                        <p class="small">No breakdown data available</p>
+                    </div>
+                </div>
+            `;
         }
-    });
+        
+        html += `</div>`;
+        return html;
+    }
     
-    if (position === 'all') {
-        document.querySelectorAll('.section-title').forEach(el => el.style.display = 'flex');
-        document.querySelectorAll('.candidate-grid').forEach(el => el.style.display = 'grid');
-    } else {
-        document.querySelectorAll('.section-title').forEach(el => {
-            el.style.display = el.textContent.includes(position) ? 'flex' : 'none';
+    function getBreakdownIcon() {
+        if (currentGroupingType === 'course') {
+            return 'fa-book';
+        } else if (currentGroupingType === 'program_type') {
+            return 'fa-clock';
+        } else {
+            return 'fa-building';
+        }
+    }
+    
+    function getItemIcon(itemName) {
+        const name = itemName.toLowerCase();
+        if (name.includes('computer') || name.includes('ccs') || name.includes('it') || name.includes('technology')) return 'fa-laptop-code';
+        if (name.includes('engineer')) return 'fa-gears';
+        if (name.includes('business') || name.includes('account')) return 'fa-briefcase';
+        if (name.includes('educ') || name.includes('teach')) return 'fa-book';
+        if (name.includes('arts') || name.includes('science')) return 'fa-flask';
+        if (name.includes('day')) return 'fa-sun';
+        if (name.includes('night')) return 'fa-moon';
+        return 'fa-building';
+    }
+    
+    function filterByPosition(position) {
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            if (tab.textContent === position || (position === 'all' && tab.textContent === 'All Positions')) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
         });
         
-        document.querySelectorAll('.candidate-grid').forEach(el => {
-            const prevSibling = el.previousElementSibling;
-            el.style.display = (prevSibling && prevSibling.classList.contains('section-title') && 
-                               prevSibling.textContent.includes(position)) ? 'grid' : 'none';
-        });
-    }
-}
-
-function getPositionIcon(position) {
-    const icons = {
-        'President': 'fa-crown',
-        'Vice President': 'fa-user-tie',
-        'Secretary': 'fa-file-signature',
-        'Treasurer': 'fa-coins',
-        'Auditor': 'fa-calculator',
-        'PIO': 'fa-bullhorn',
-        'Business Manager': 'fa-briefcase'
-    };
-    
-    for (const [key, icon] of Object.entries(icons)) {
-        if (position.includes(key)) return icon;
-    }
-    return 'fa-user';
-}
-
-function getDepartmentIcon(deptName) {
-    const dept = deptName.toLowerCase();
-    if (dept.includes('computer') || dept.includes('ccs') || dept.includes('it') || dept.includes('technology')) return 'fa-laptop-code';
-    if (dept.includes('engineer')) return 'fa-gears';
-    if (dept.includes('business') || dept.includes('account')) return 'fa-briefcase';
-    if (dept.includes('educ') || dept.includes('teach')) return 'fa-book';
-    if (dept.includes('arts') || dept.includes('science')) return 'fa-flask';
-    return 'fa-building';
-}
-
-async function exportData(format) {
-    if (!currentElectionId) {
-        alert('Please select an election first');
-        return;
+        if (position === 'all') {
+            document.querySelectorAll('.section-title').forEach(el => el.style.display = 'flex');
+            document.querySelectorAll('.candidate-grid').forEach(el => el.style.display = 'grid');
+        } else {
+            document.querySelectorAll('.section-title').forEach(el => {
+                el.style.display = el.textContent.includes(position) ? 'flex' : 'none';
+            });
+            
+            document.querySelectorAll('.candidate-grid').forEach(el => {
+                const prevSibling = el.previousElementSibling;
+                el.style.display = (prevSibling && prevSibling.classList.contains('section-title') && 
+                                   prevSibling.textContent.includes(position)) ? 'grid' : 'none';
+            });
+        }
     }
     
-    showLoading();
-    addDebug(`Exporting data as ${format}`);
+    function getPositionIcon(position) {
+        const icons = {
+            'President': 'fa-crown',
+            'Vice President': 'fa-user-tie',
+            'Secretary': 'fa-file-signature',
+            'Treasurer': 'fa-coins',
+            'Auditor': 'fa-calculator',
+            'PIO': 'fa-bullhorn',
+            'Business Manager': 'fa-briefcase'
+        };
+        
+        for (const [key, icon] of Object.entries(icons)) {
+            if (position.includes(key)) return icon;
+        }
+        return 'fa-user';
+    }
     
-    try {
-        window.location.href = `/admin/api/vote-distribution/export/${currentElectionId}/${format}`;
-        setTimeout(hideLoading, 3000);
-    } catch (error) {
-        console.error('Error:', error);
-        addDebug(`❌ Export error: ${error.message}`);
-        alert('Failed to export data');
-        hideLoading();
+    async function exportData(format) {
+        if (!currentElectionId) {
+            alert('Please select an election first');
+            return;
+        }
+        
+        showLoading();
+        addDebug(`Exporting data as ${format}`);
+        
+        try {
+            window.location.href = `/admin/api/vote-distribution/export/${currentElectionId}/${format}`;
+            setTimeout(hideLoading, 3000);
+        } catch (error) {
+            console.error('Error:', error);
+            addDebug(`❌ Export error: ${error.message}`);
+            alert('Failed to export data');
+            hideLoading();
+        }
     }
-}
-
-function showLoading() {
-    document.getElementById('loadingOverlay').classList.add('active');
-}
-
-function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('active');
-}
-
-function hideNoDataMessage() {
-    document.getElementById('noDataMessage').style.display = 'none';
-}
-
-function addDebug(message) {
-    const debugDiv = document.getElementById('debugInfo');
-    if (debugDiv) {
-        const timestamp = new Date().toLocaleTimeString();
-        debugDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+    
+    function showLoading() {
+        document.getElementById('loadingOverlay').classList.add('active');
     }
-    console.log(`[DEBUG] ${message}`);
-}
-
-function toggleDebug() {
-    const debugDiv = document.getElementById('debugInfo');
-    debugDiv.classList.toggle('visible');
-}
+    
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+    }
+    
+    function hideNoDataMessage() {
+        const noDataMsg = document.getElementById('noDataMessage');
+        if (noDataMsg) {
+            noDataMsg.style.display = 'none';
+            addDebug('No data message hidden');
+        } else {
+            addDebug('⚠️ No data message element not found - skipping');
+        }
+    }
+    
+    function addDebug(message) {
+        const debugDiv = document.getElementById('debugInfo');
+        if (debugDiv) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        }
+        console.log(`[DEBUG] ${message}`);
+    }
+    
+    function toggleDebug() {
+        const debugDiv = document.getElementById('debugInfo');
+        if (debugDiv) {
+            debugDiv.classList.toggle('visible');
+        }
+    }
 </script>
 {% endblock %}

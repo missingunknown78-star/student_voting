@@ -2274,7 +2274,8 @@ def results():
                          current_sy=school_year)
 
 
-from admin.models import PdfResult
+from admin.models import VoteDistribution, PdfResult
+
 @student_bp.route('/results/<int:election_id>')
 @login_required
 def results_detail(election_id):
@@ -2324,9 +2325,7 @@ def results_detail(election_id):
         if my_candidacy:
             running_in_this_election = True
             
-            # Get vote distribution for this candidate from VoteDistribution table
-            from admin.models import VoteDistribution
-            
+            # ===== UPDATED: Get vote distribution with all grouping types =====
             dist_records = VoteDistribution.query.filter_by(
                 election_id=election_id,
                 candidate_id=my_candidacy.id
@@ -2334,24 +2333,43 @@ def results_detail(election_id):
             
             total_votes = sum(d.vote_count for d in dist_records)
             
-            department_breakdown = []
+            # Determine grouping type from first record
+            grouping_type = dist_records[0].grouping_type if dist_records else 'department'
+            
+            # Build breakdown based on grouping type
+            breakdown = []
             for dist in dist_records:
-                dept = Department.query.get(dist.department_id)
-                if dept:
-                    department_breakdown.append({
-                        'department_name': dept.name,
+                # Get the appropriate name based on which ID is present
+                if dist.department_id:
+                    dept = Department.query.get(dist.department_id)
+                    name = dept.name if dept else None
+                elif dist.course_id:
+                    course = Course.query.get(dist.course_id)
+                    name = course.course_name if course else None
+                elif dist.program_type_id:
+                    from student.models import ProgramType
+                    prog = ProgramType.query.get(dist.program_type_id)
+                    name = prog.name if prog else None
+                else:
+                    name = dist.grouping_name
+                
+                if name:
+                    breakdown.append({
+                        'name': name,
                         'votes': dist.vote_count,
-                        'percentage': dist.percentage or 0
+                        'percentage': dist.percentage or 0,
+                        'grouping_type': dist.grouping_type or grouping_type
                     })
             
             # Sort by votes descending
-            department_breakdown.sort(key=lambda x: x['votes'], reverse=True)
+            breakdown.sort(key=lambda x: x['votes'], reverse=True)
             
             my_candidate_data = {
                 'id': my_candidacy.id,
                 'position': my_candidacy.position.name if my_candidacy.position else "Unknown",
                 'total_votes': total_votes,
-                'department_breakdown': department_breakdown
+                'breakdown': breakdown,  # Changed from department_breakdown
+                'grouping_type': grouping_type  # Add grouping type for template
             }
     
     # ===== GET PDF RESULTS =====
@@ -2530,7 +2548,6 @@ def results_detail(election_id):
                          results_date=now,
                          now=now_naive,
                          results_published=election.results_published,
-                         # NEW VARIABLES
                          is_qualified_candidate=is_qualified,
                          running_in_this_election=running_in_this_election,
                          my_candidate=my_candidate_data,
