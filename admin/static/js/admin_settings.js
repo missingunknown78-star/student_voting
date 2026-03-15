@@ -1,4 +1,6 @@
-// Settings navigation
+// admin_settings.js - All settings functionality moved here
+
+// ==================== SETTINGS NAVIGATION ====================
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize settings navigation
     initializeSettingsNav();
@@ -6,12 +8,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize 2FA if on that section
     initialize2FA();
     
+    // Initialize audit logs variables
+    initializeAuditLogs();
+    
     // Check for URL hash
     if (window.location.hash === '#logs') {
         setTimeout(() => {
             const logsNav = document.querySelector('[data-section="logs"]');
             if (logsNav) logsNav.click();
         }, 100);
+    }
+    
+    // Add enter key handler for search
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                loadAuditLogs(1);
+            }
+        });
     }
 });
 
@@ -54,7 +70,7 @@ function initializeSettingsNav() {
     }
 }
 
-// General Settings Functions
+// ==================== GENERAL SETTINGS FUNCTIONS ====================
 function saveSettings(section) {
     const settings = {};
     const sectionElement = document.getElementById(section);
@@ -105,7 +121,7 @@ function resetSettings(section) {
     }
 }
 
-// 2FA Functions
+// ==================== 2FA FUNCTIONS - SIMPLIFIED ====================
 function initialize2FA() {
     // Check if 2FA setup elements exist
     const setupCard = document.getElementById('twofaSetupCard');
@@ -116,80 +132,73 @@ function initialize2FA() {
 
 function show2FASetup() {
     const setupCard = document.getElementById('twofaSetupCard');
+    const loadingState = document.getElementById('loadingState');
+    const setupFormContainer = document.getElementById('setupFormContainer');
+    
     if (setupCard) {
         setupCard.style.display = 'block';
+        
+        if (loadingState) loadingState.style.display = 'block';
+        if (setupFormContainer) setupFormContainer.innerHTML = '';
+        
         setupCard.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-
-function toggleManualEntry() {
-    const manualEntry = document.getElementById('manualEntry');
-    if (manualEntry) {
-        if (manualEntry.style.display === 'none') {
-            manualEntry.style.display = 'block';
-        } else {
-            manualEntry.style.display = 'none';
-        }
-    }
-}
-
-function verify2FA() {
-    const code = document.getElementById('twofaCode');
-    const secret = document.getElementById('totpSecret');
-    const messageDiv = document.getElementById('twofaMessage');
-    
-    if (!code || !secret) return false;
-    
-    if (code.value.length !== 6 || !/^\d+$/.test(code.value)) {
-        if (messageDiv) {
-            messageDiv.innerHTML = '<p class="error-msg">Please enter a valid 6-digit code</p>';
-        }
-        return false;
-    }
-    
-    // Send verification to backend
-    fetch('/admin/2fa/verify', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            secret: secret.value,
-            code: code.value
+        
+        fetch('/admin/2fa/setup-data', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            if (messageDiv) {
-                messageDiv.innerHTML = '<p class="success-msg">2FA enabled successfully!</p>';
+        .then(response => response.json())
+        .then(data => {
+            if (loadingState) loadingState.style.display = 'none';
+            
+            if (data.success) {
+                const setupHTML = generateQRCodeHTML(data);
+                if (setupFormContainer) setupFormContainer.innerHTML = setupHTML;
+                
+                // Refresh theme manager for new content
+                if (window.themeManager) {
+                    window.themeManager.refresh();
+                }
+            } else {
+                if (setupFormContainer) {
+                    setupFormContainer.innerHTML = `<p class="error-msg">Error: ${data.message || 'Failed to load 2FA setup'}</p>`;
+                }
             }
-            
-            // Update status badge
-            update2FAStatus(true);
-            
-            // Hide enable button
-            const enableBtn = document.querySelector('#twofactor .btn-primary');
-            if (enableBtn) enableBtn.style.display = 'none';
-            
-            // Reload page to show backup codes
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            if (messageDiv) {
-                messageDiv.innerHTML = '<p class="error-msg">' + (data.message || 'Invalid code. Please try again.') + '</p>';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (loadingState) loadingState.style.display = 'none';
+            if (setupFormContainer) {
+                setupFormContainer.innerHTML = '<p class="error-msg">Error loading 2FA setup. Please try again.</p>';
             }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        if (messageDiv) {
-            messageDiv.innerHTML = '<p class="error-msg">Error verifying code. Please try again.</p>';
-        }
-    });
+        });
+    }
+}
+
+function generateQRCodeHTML(data) {
+    const totpUri = data.totp_uri;
     
-    return false;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(totpUri)}`;
+    
+    return `
+        <div class="qr-code-container">
+            <h3>Setup Two-Factor Authentication</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                Scan this QR code with your Google Authenticator app or any TOTP authenticator app.
+            </p>
+            
+            <img src="${qrUrl}" alt="2FA QR Code" style="max-width: 250px; border: 2px solid var(--border-color); border-radius: 12px; padding: 10px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin: 20px auto;">
+            
+            <div class="qr-note" style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 0.9rem;">
+                <i class="fa-solid fa-circle-info"></i>
+                <strong>After scanning:</strong> The 2FA will be automatically enabled. You'll be prompted to enter a code from your authenticator app every time you log in.
+            </div>
+            
+
+        </div>
+    `;
 }
 
 function disable2FA() {
@@ -234,36 +243,6 @@ function update2FAStatus(enabled) {
     }
 }
 
-function save2FASettings() {
-    const smsBackup = document.getElementById('smsBackup');
-    const emailBackup = document.getElementById('emailBackup');
-    const backupPhone = document.getElementById('backupPhone');
-    
-    fetch('/admin/2fa/settings', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            sms_backup: smsBackup ? smsBackup.checked : false,
-            email_backup: emailBackup ? emailBackup.checked : false,
-            backup_phone: backupPhone ? backupPhone.value : ''
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('2FA settings saved successfully!', 'success');
-        } else {
-            showNotification('Error saving settings: ' + data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error saving settings. Please try again.', 'error');
-    });
-}
-
 function generateNewBackupCodes() {
     if (confirm('Generating new backup codes will invalidate your old ones. Continue?')) {
         fetch('/admin/2fa/backup-codes', {
@@ -288,7 +267,7 @@ function generateNewBackupCodes() {
     }
 }
 
-// Trusted Devices Functions
+// ==================== TRUSTED DEVICES FUNCTIONS ====================
 function trustCurrentDevice() {
     const button = event.target.closest('button');
     const originalText = button.innerHTML;
@@ -320,7 +299,6 @@ function trustCurrentDevice() {
     });
 }
 
-// FIXED revokeTrustedDevice function
 function revokeTrustedDevice(deviceId, event) {
     console.log('Revoke function called for device:', deviceId);
     
@@ -396,7 +374,6 @@ function revokeTrustedDevice(deviceId, event) {
     });
 }
 
-// Alternative simpler version
 function simpleRevokeDevice(deviceId) {
     console.log('Simple revoke for device:', deviceId);
     
@@ -431,43 +408,87 @@ function simpleRevokeDevice(deviceId) {
     });
 }
 
-// Audit Log Functions
-function applyAuditFilters() {
-    const form = document.getElementById('auditFilterForm');
-    if (!form) return false;
+// ==================== AUDIT LOG FUNCTIONS ====================
+// Current state for audit logs
+let currentPage = 1;
+let currentSearch = '';
+let currentStartDate = '';
+let currentEndDate = '';
+
+function initializeAuditLogs() {
+    // Get initial values from URL or DOM
+    currentSearch = document.getElementById('searchInput')?.value || '';
+    currentStartDate = document.getElementById('startDateInput')?.value || '';
+    currentEndDate = document.getElementById('endDateInput')?.value || '';
     
-    const formData = new FormData(form);
-    const params = new URLSearchParams(formData).toString();
-    
-    window.location.href = window.location.pathname + '?' + params + '#logs';
-    return false;
+    // Get current page from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    currentPage = parseInt(urlParams.get('page')) || 1;
 }
 
-function clearAuditFilters() {
-    const form = document.getElementById('auditFilterForm');
-    if (form) {
-        form.querySelectorAll('input').forEach(input => {
-            if (input.type !== 'button' && input.type !== 'submit') {
-                input.value = '';
-            }
-        });
-    }
+function loadAuditLogs(page = 1) {
+    const search = document.getElementById('searchInput').value;
+    const startDate = document.getElementById('startDateInput').value;
+    const endDate = document.getElementById('endDateInput').value;
     
-    window.location.href = '/admin/audit-logs#logs';
+    currentSearch = search;
+    currentStartDate = startDate;
+    currentEndDate = endDate;
+    currentPage = page;
+    
+    const tableContainer = document.getElementById('auditTableContainer');
+    tableContainer.innerHTML = `
+        <div class="audit-card" style="text-align: center; padding: 40px;">
+            <div class="loading-spinner"></div>
+            <p style="color: var(--text-secondary); margin-top: 15px;">Loading audit logs...</p>
+        </div>
+    `;
+    
+    let url = `/admin/audit-logs-ajax?page=${page}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    
+    fetch(url, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        tableContainer.innerHTML = html;
+        
+        // Refresh theme manager for new content
+        if (window.themeManager) {
+            window.themeManager.refresh();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        tableContainer.innerHTML = `
+            <div class="audit-card" style="text-align: center; padding: 40px;">
+                <p class="error-msg">Error loading audit logs. Please try again.</p>
+                <button class="audit-btn" onclick="loadAuditLogs(${currentPage})">Retry</button>
+            </div>
+        `;
+    });
+    
+    return false;
 }
 
 function loadAuditPage(page) {
-    const form = document.getElementById('auditFilterForm');
-    if (!form) return false;
-    
-    const formData = new FormData(form);
-    const params = new URLSearchParams(formData).toString();
-    
-    window.location.href = '/admin/audit-logs?page=' + page + '&' + params + '#logs';
-    return false;
+    return loadAuditLogs(page);
 }
 
-// Notification System
+function clearAuditFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('startDateInput').value = '';
+    document.getElementById('endDateInput').value = '';
+    
+    loadAuditLogs(1);
+}
+
+// ==================== NOTIFICATION SYSTEM ====================
 function showNotification(message, type = 'info') {
     // Create notification container if it doesn't exist
     let container = document.querySelector('.notification-container');
@@ -568,4 +589,16 @@ function showNotification(message, type = 'info') {
         notification.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => notification.remove(), 300);
     }, 5000);
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+function applyAuditFilters() {
+    const form = document.getElementById('auditFilterForm');
+    if (!form) return false;
+    
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData).toString();
+    
+    window.location.href = window.location.pathname + '?' + params + '#logs';
+    return false;
 }

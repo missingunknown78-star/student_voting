@@ -1,4 +1,4 @@
-{% if students.items %}
+{% if students and students.items %}
 <table class="students-table">
     <thead>
         <tr>
@@ -6,6 +6,7 @@
             <th>Student No</th>
             <th>Last Name</th>
             <th>First Name</th>
+            <th>Year Level</th>
             <th>Status</th>
         </tr>
     </thead>
@@ -16,6 +17,13 @@
             <td>{{ student.student_number }}</td>
             <td>{{ student.last_name }}</td>
             <td>{{ student.first_name }}</td>
+            <td>
+                {% if student.year_level %}
+                    <span class="year-badge">{{ student.year_level }}</span>
+                {% else %}
+                    <span class="text-muted">—</span>
+                {% endif %}
+            </td>
             <td>
                 {% if student.student_number in registered_numbers %}
                     <span class="status-registered">Registered</span>
@@ -37,7 +45,7 @@
         {% if p %}
             <a href="#" class="page-link {% if students.page == p %}active{% endif %}" data-page="{{ p }}">{{ p }}</a>
         {% else %}
-            <span>…</span>
+            <span class="page-ellipsis">…</span>
         {% endif %}
     {% endfor %}
 
@@ -46,6 +54,115 @@
     {% endif %}
 </div>
 
+<style>
+    .year-badge {
+        background: #e8f5e8;
+        color: #27ae60;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .text-muted {
+        color: #999;
+        font-size: 0.85rem;
+    }
+    
+    .status-registered {
+        background: #e8f5e8;
+        color: #27ae60;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .status-not-registered {
+        background: #ffebee;
+        color: #e74c3c;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .students-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    .students-table th {
+        text-align: left;
+        padding: 12px 10px;
+        background: #f8f9fa;
+        color: #555;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .students-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+    }
+    
+    .students-table tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        margin-top: 20px;
+        padding: 10px;
+    }
+    
+    .page-link {
+        padding: 8px 12px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        color: #2563eb;
+        border: 1px solid #dee2e6;
+        cursor: pointer;
+    }
+    
+    .page-link:hover {
+        background: #e9ecef;
+    }
+    
+    .page-link.active {
+        background: #2563eb;
+        color: white;
+        border: 1px solid #2563eb;
+    }
+    
+    .page-ellipsis {
+        padding: 8px 12px;
+        color: #999;
+    }
+</style>
+
 {% else %}
-<p>No students found.</p>
+<div class="no-students">
+    <p>No students found.</p>
+</div>
+
+<style>
+    .no-students {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-style: italic;
+    }
+</style>
 {% endif %}

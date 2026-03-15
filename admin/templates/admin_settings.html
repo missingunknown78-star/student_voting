@@ -89,6 +89,43 @@
         :root:not(.dark-mode) body {
             background-color: #f5f7fb;
         }
+
+        /* QR Code styling */
+        .qr-code-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .qr-code-container img {
+            max-width: 250px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 20px auto;
+        }
+        
+        .qr-code-container p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 15px 0;
+        }
+        
+        .qr-note {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .qr-note i {
+            color: #10b981;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -209,7 +246,7 @@
                     </div>
                 </div>
 
-                <!-- 2FA Setup Container - Hidden by default -->
+                <!-- 2FA Setup Container - Hidden by default - SIMPLIFIED: ONLY QR CODE -->
                 <div class="settings-card" id="twofaSetupCard" style="display: none;">
                     <div class="twofa-setup-container" id="twofaSetupContent">
                         <!-- Loading state -->
@@ -304,10 +341,11 @@
 <!-- Global Theme JS - Load this first -->
 <script src="{{ url_for('admin.static', filename='js/theme-manager.js') }}"></script>
 
-<!-- Link to external JavaScript -->
+<!-- Link to external JavaScript - MOVED ALL JS TO EXTERNAL FILE -->
 <script src="{{ url_for('admin.static', filename='js/admin_settings.js') }}"></script>
 
 <script>
+// Only keep the minimal inline JS needed for theme persistence and back button
 // Handle back button click to ensure theme persists
 function handleBackClick(event) {
     // Let the browser navigate normally
@@ -322,574 +360,6 @@ document.addEventListener('DOMContentLoaded', function() {
         window.themeManager.refresh();
     }
 });
-
-// Current state for audit logs
-let currentPage = {{ logs.page }};
-let currentSearch = '{{ search or '' }}';
-let currentStartDate = '{{ start_date or '' }}';
-let currentEndDate = '{{ end_date or '' }}';
-
-// 2FA Functions
-function show2FASetup() {
-    const setupCard = document.getElementById('twofaSetupCard');
-    const loadingState = document.getElementById('loadingState');
-    const setupFormContainer = document.getElementById('setupFormContainer');
-    
-    if (setupCard) {
-        setupCard.style.display = 'block';
-        
-        if (loadingState) loadingState.style.display = 'block';
-        if (setupFormContainer) setupFormContainer.innerHTML = '';
-        
-        setupCard.scrollIntoView({ behavior: 'smooth' });
-        
-        fetch('/admin/2fa/setup-data', {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (loadingState) loadingState.style.display = 'none';
-            
-            if (data.success) {
-                const setupHTML = generateSetupFormHTML(data);
-                if (setupFormContainer) setupFormContainer.innerHTML = setupHTML;
-                
-                // Refresh theme manager for new content
-                if (window.themeManager) {
-                    window.themeManager.refresh();
-                }
-            } else {
-                if (setupFormContainer) {
-                    setupFormContainer.innerHTML = `<p class="error-msg">Error: ${data.message || 'Failed to load 2FA setup'}</p>`;
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            if (loadingState) loadingState.style.display = 'none';
-            if (setupFormContainer) {
-                setupFormContainer.innerHTML = '<p class="error-msg">Error loading 2FA setup. Please try again.</p>';
-            }
-        });
-    }
-}
-
-function generateSetupFormHTML(data) {
-    const totpUri = data.totp_uri;
-    const secret = data.secret;
-    
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpUri)}`;
-    
-    return `
-        <h3>Setup Two-Factor Authentication</h3>
-        <p class="instructions">
-            Scan the QR code below with your Google Authenticator app or any TOTP app.
-        </p>
-        <img src="${qrUrl}" alt="QR Code" id="qrCodeImage">
-    `;
-}
-
-function disable2FA() {
-    if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
-        fetch('/admin/2fa/disable', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                update2FAStatus(false);
-                showNotification('2FA has been disabled.', 'success');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                showNotification('Error disabling 2FA: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error disabling 2FA. Please try again.', 'error');
-        });
-    }
-}
-
-function update2FAStatus(enabled) {
-    const statusBadge = document.querySelector('#twofactor .badge');
-    if (statusBadge) {
-        if (enabled) {
-            statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Enabled';
-            statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-            statusBadge.style.color = '#10b981';
-            statusBadge.style.borderColor = '#10b981';
-        } else {
-            statusBadge.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Disabled';
-            statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
-            statusBadge.style.color = '#ef4444';
-            statusBadge.style.borderColor = '#ef4444';
-        }
-    }
-}
-
-function generateNewBackupCodes() {
-    if (confirm('Generating new backup codes will invalidate your old ones. Continue?')) {
-        fetch('/admin/2fa/backup-codes', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification('New backup codes generated!', 'success');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                showNotification('Error generating backup codes: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error generating backup codes. Please try again.', 'error');
-        });
-    }
-}
-
-// Audit Log Functions with AJAX
-function loadAuditLogs(page = 1) {
-    const search = document.getElementById('searchInput').value;
-    const startDate = document.getElementById('startDateInput').value;
-    const endDate = document.getElementById('endDateInput').value;
-    
-    currentSearch = search;
-    currentStartDate = startDate;
-    currentEndDate = endDate;
-    currentPage = page;
-    
-    const tableContainer = document.getElementById('auditTableContainer');
-    tableContainer.innerHTML = `
-        <div class="audit-card" style="text-align: center; padding: 40px;">
-            <div class="loading-spinner"></div>
-            <p style="color: var(--text-secondary); margin-top: 15px;">Loading audit logs...</p>
-        </div>
-    `;
-    
-    let url = `/admin/audit-logs-ajax?page=${page}`;
-    if (search) url += `&search=${encodeURIComponent(search)}`;
-    if (startDate) url += `&start_date=${startDate}`;
-    if (endDate) url += `&end_date=${endDate}`;
-    
-    fetch(url, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.text())
-    .then(html => {
-        tableContainer.innerHTML = html;
-        
-        // Refresh theme manager for new content
-        if (window.themeManager) {
-            window.themeManager.refresh();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        tableContainer.innerHTML = `
-            <div class="audit-card" style="text-align: center; padding: 40px;">
-                <p class="error-msg">Error loading audit logs. Please try again.</p>
-                <button class="audit-btn" onclick="loadAuditLogs(${currentPage})">Retry</button>
-            </div>
-        `;
-    });
-    
-    return false;
-}
-
-function loadAuditPage(page) {
-    return loadAuditLogs(page);
-}
-
-function clearAuditFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('startDateInput').value = '';
-    document.getElementById('endDateInput').value = '';
-    
-    loadAuditLogs(1);
-}
-
-// Settings navigation
-document.addEventListener('DOMContentLoaded', function() {
-    initializeSettingsNav();
-    
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                loadAuditLogs(1);
-            }
-        });
-    }
-    
-    if (window.location.hash === '#logs') {
-        setTimeout(() => {
-            const logsNav = document.querySelector('[data-section="logs"]');
-            if (logsNav) logsNav.click();
-        }, 100);
-    }
-});
-
-function initializeSettingsNav() {
-    const navItems = document.querySelectorAll('.settings-nav-item');
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
-            document.querySelectorAll('.settings-section').forEach(section => section.classList.remove('active'));
-            
-            this.classList.add('active');
-            
-            const sectionId = this.getAttribute('data-section');
-            const targetSection = document.getElementById(sectionId);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            }
-            
-            localStorage.setItem('lastSettingsSection', sectionId);
-            history.pushState(null, null, '#' + sectionId);
-        });
-    });
-    
-    const lastSection = localStorage.getItem('lastSettingsSection');
-    if (lastSection) {
-        const targetNav = document.querySelector(`[data-section="${lastSection}"]`);
-        if (targetNav) {
-            targetNav.click();
-        }
-    }
-}
-
-function saveSettings(section) {
-    const settings = {};
-    const sectionElement = document.getElementById(section);
-    const inputs = sectionElement.querySelectorAll('input, select, textarea');
-    
-    inputs.forEach(input => {
-        if (input.type === 'checkbox') {
-            settings[input.id] = input.checked;
-        } else if (input.type === 'radio') {
-            if (input.checked) {
-                settings[input.name] = input.value;
-            }
-        } else {
-            settings[input.id] = input.value;
-        }
-    });
-    
-    fetch('/admin/settings/save', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            section: section,
-            settings: settings
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Settings saved successfully!', 'success');
-        } else {
-            showNotification('Error saving settings: ' + data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error saving settings. Please try again.', 'error');
-    });
-}
-
-function resetSettings(section) {
-    if (confirm('Reset all settings in this section to default values?')) {
-        showNotification('Settings reset to defaults', 'info');
-    }
-}
-
-// Trusted Devices Functions
-function trustCurrentDevice() {
-    const button = event.target.closest('button');
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
-    button.disabled = true;
-    
-    fetch('/admin/trusted-devices/add', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification('Device added to trusted devices successfully!', 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            showNotification('Error: ' + data.message, 'error');
-            button.innerHTML = originalText;
-            button.disabled = false;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error adding device. Please try again.', 'error');
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
-
-function revokeTrustedDevice(deviceId, event) {
-    console.log('Revoke function called for device:', deviceId);
-    
-    // Get the button that was clicked
-    const button = event ? event.target.closest('button') : document.querySelector(`button[onclick*="${deviceId}"]`);
-    
-    if (!button) {
-        console.error('Button not found');
-        showNotification('Error: Could not find the device button', 'error');
-        return;
-    }
-    
-    if (!confirm('Are you sure you want to remove this trusted device? A confirmation email will be sent to your email address.')) {
-        return;
-    }
-    
-    // Show loading state
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
-    button.disabled = true;
-    
-    // Send the request
-    fetch(`/admin/trusted-devices/remove/${deviceId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({})
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        return response.json().then(data => {
-            console.log('Response data:', data);
-            return { status: response.status, data: data };
-        });
-    })
-    .then(({ status, data }) => {
-        if (data.success) {
-            // Show success message using notification system
-            showNotification(data.message || 'Device removal email sent successfully! Please check your email.', 'success');
-            
-            // Update button to show pending state
-            button.innerHTML = '<i class="fa-solid fa-clock"></i> Pending Confirmation';
-            button.style.background = '#f59e0b';
-            button.style.borderColor = '#f59e0b';
-            button.disabled = true;
-            
-            // Add a small note that they need to check email
-            const deviceItem = button.closest('.device-item');
-            if (deviceItem) {
-                const pendingNote = document.createElement('div');
-                pendingNote.className = 'pending-note';
-                pendingNote.innerHTML = '<small style="color: #f59e0b; display: block; margin-top: 5px;"><i class="fa-solid fa-envelope"></i> Check email to confirm removal</small>';
-                deviceItem.querySelector('.device-actions').appendChild(pendingNote);
-            }
-        } else {
-            // Show error message
-            showNotification(data.message || 'Failed to remove device', 'error');
-            
-            // Restore button state
-            button.innerHTML = originalText;
-            button.disabled = false;
-        }
-    })
-    .catch(error => {
-        console.error('Fetch error:', error);
-        showNotification('Network error occurred. Please try again.', 'error');
-        
-        // Restore button state
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
-
-// Alternative simpler version
-function simpleRevokeDevice(deviceId) {
-    console.log('Simple revoke for device:', deviceId);
-    
-    if (!confirm('Remove this device?')) {
-        return;
-    }
-    
-    const button = document.querySelector(`.device-item[data-device-id="${deviceId}"] .btn-icon`);
-    if (!button) return;
-    
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    button.disabled = true;
-    
-    fetch(`/admin/trusted-devices/test-remove/${deviceId}`, {
-        method: 'POST'
-    })
-    .then(response => response.json())
-    .then(data => {
-        showNotification(data.message, data.success ? 'success' : 'error');
-        if (data.success) {
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            button.innerHTML = originalText;
-            button.disabled = false;
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error);
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
-
-// Notification System
-function showNotification(message, type = 'info') {
-    let container = document.querySelector('.notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'notification-container';
-        document.body.appendChild(container);
-        
-        // Add styles for notifications
-        const style = document.createElement('style');
-        style.textContent = `
-            .notification-container {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 9999;
-            }
-            
-            .notification {
-                background: white;
-                border-radius: 8px;
-                padding: 15px 20px;
-                margin-bottom: 10px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                animation: slideIn 0.3s ease;
-                border-left: 4px solid;
-                min-width: 300px;
-            }
-            
-            .notification.success {
-                border-left-color: #10b981;
-            }
-            
-            .notification.error {
-                border-left-color: #ef4444;
-            }
-            
-            .notification.info {
-                border-left-color: #3b82f6;
-            }
-            
-            .notification.warning {
-                border-left-color: #f59e0b;
-            }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-            
-            .dark-mode .notification {
-                background: #1e293b;
-                color: #f1f5f9;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // Create notification
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    
-    // Add icon based on type
-    let icon = 'fa-info-circle';
-    if (type === 'success') icon = 'fa-check-circle';
-    if (type === 'error') icon = 'fa-exclamation-circle';
-    if (type === 'warning') icon = 'fa-exclamation-triangle';
-    
-    notification.innerHTML = `
-        <i class="fa-solid ${icon}"></i>
-        <span>${message}</span>
-    `;
-    
-    container.appendChild(notification);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease forwards';
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
-}
-
-function disable2FA() {
-    if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
-        fetch('/admin/2fa/disable', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                update2FAStatus(false);
-                showNotification('2FA has been disabled.', 'success');
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                showNotification('Error disabling 2FA: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error disabling 2FA. Please try again.', 'error');
-        });
-    }
-}
 </script>
 </body>
 </html>

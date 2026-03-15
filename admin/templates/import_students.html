@@ -124,7 +124,7 @@
         <!-- Total Students Card -->
         <div class="total-students-card-wrapper">
             <div class="total-students-card">
-                <h4>Total Students in CTU List</h4>
+                <h4>CTU Master List</h4>
                 <span class="total-number">{{ total_students or 0 }}</span>
             </div>
         </div>
@@ -165,30 +165,32 @@
     </div>
 
     <!-- Info Modal -->
-    <div class="info-modal-overlay" id="info-modal-overlay">
-        <div class="info-modal">
-            <button class="close-modal-btn" id="close-info-modal">&times;</button>
-            <h4>Import Instructions</h4>
+<div class="info-modal-overlay" id="info-modal-overlay">
+    <div class="info-modal">
+        <button class="close-modal-btn" id="close-info-modal">&times;</button>
+        <h4>Import Instructions</h4>
 
-            <p>Import only Excel files (.xlsx or .xls).</p>
+        <p>Import only Excel files (.xlsx or .xls).</p>
 
-            <p><strong>Make sure the file has the exact header columns:</strong></p>
-            <ul>
-                <li>StudentNo</li>
-                <li>FirstName</li>
-                <li>LastName</li>
-            </ul>
+        <p><strong>Make sure the file has the exact header columns:</strong></p>
+        <ul>
+            <li>StudentNo</li>
+            <li>FirstName</li>
+            <li>LastName</li>
+            <li>YearLevel - Use numbers only (1, 2, 3, or 4)</li>
+        </ul>
+        <p><em>Note: Year level numbers will be automatically converted (e.g., 1 → "1st Year", 2 → "2nd Year", etc.)</em></p>
 
-            <p>Existing students will be updated automatically.</p>
-            <p><strong>⚠️ Important: Students no longer in the new file will be:</strong></p>
-            <ul>
-                <li>Removed from the CTU import list</li>
-                <li>Automatically deleted from registered students IF they have NOT voted</li>
-                <li>Students who have already voted will be kept for audit purposes</li>
-            </ul>
-            <p><strong>Use the official CTU master list only.</strong></p>
-        </div>
+        <p>Existing students will be updated automatically.</p>
+        <p><strong>⚠️ Important: Students no longer in the new file will be:</strong></p>
+        <ul>
+            <li>Removed from the CTU import list</li>
+            <li>Automatically deleted from registered students IF they have NOT voted</li>
+            <li>Students who have already voted will be kept for audit purposes but they can no longer login their account.</li>
+        </ul>
+        <p><strong>Use the official CTU master list only.</strong></p>
     </div>
+</div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

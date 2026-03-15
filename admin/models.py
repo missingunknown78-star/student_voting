@@ -332,6 +332,8 @@ class YearLevel(db.Model):
     # Relationship (future-proof)
     students = db.relationship('Student', backref='year_level', lazy=True)
 
+# In your admin/models.py
+
 class CtuStudent(db.Model):
     __tablename__ = "ctu_students"
 
@@ -341,6 +343,7 @@ class CtuStudent(db.Model):
     last_name = db.Column(db.String(100))
     course = db.Column(db.String(100))
     email = db.Column(db.String(150))
+    year_level = db.Column(db.String(50))  # NEW: Store year level as string (e.g., "1st Year", "2nd Year", etc.)
     is_active = db.Column(db.Boolean, default=True)
 
 

@@ -73,6 +73,26 @@
         color: #999;
         font-style: italic;
     }
+    
+    /* Style for non-editable fields in edit mode */
+    .non-editable-field {
+        background-color: #f5f5f5;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 10px 12px;
+        color: #333;
+        font-size: 0.95rem;
+        width: 100%;
+        cursor: not-allowed;
+        opacity: 0.8;
+    }
+    
+    .field-note {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 4px;
+        font-style: italic;
+    }
 </style>
 {% endblock %}
 
@@ -162,7 +182,7 @@
             </div>
         </div>
 
-        <!-- Edit Mode (Hidden by default) -->
+        <!-- Edit Mode (Hidden by default) - UPDATED: Course and Year Level made non-editable -->
         <div id="profileEditMode" class="profile-info" style="display: none;">
             <form id="editProfileForm" method="POST" action="{{ url_for('student.edit_profile') }}">
                 <div class="info-group">
@@ -189,29 +209,26 @@
                     <p class="info-help">Changing email requires confirmation</p>
                 </div>
 
+                <!-- Course - Made non-editable -->
                 <div class="info-group">
                     <label class="info-label">Course</label>
-                    <select name="course_id" id="courseSelect" required>
-                        <option value="">Select Course</option>
-                        {% for course in courses %}
-                        <option value="{{ course.id }}" 
-                            {% if student.course_id == course.id %}selected{% endif %}>
-                            {{ course.course_name }} ({{ course.course_code }})
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <div class="non-editable-field">
+                        {{ student.course_rel.course_name if student.course_rel else student.course }}
+                    </div>
+                    <p class="field-note">Course information cannot be edited. Please contact the registrar for corrections.</p>
+                    <!-- Hidden field to preserve the value -->
+                    <input type="hidden" name="course_id" value="{{ student.course_id }}">
                 </div>
 
+                <!-- Year Level - Made non-editable -->
                 <div class="info-group">
                     <label class="info-label">Year Level</label>
-                    <select name="year_level_id" required>
-                        <option value="">Select Year Level</option>
-                        {% for year in year_levels %}
-                        <option value="{{ year.id }}" {% if student.year_level_id == year.id %}selected{% endif %}>
-                            {{ year.year_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <div class="non-editable-field">
+                        {{ student.year_level.year_name if student.year_level else 'Not set' }}
+                    </div>
+                    <p class="field-note">Year level cannot be edited. Please contact the registrar for corrections.</p>
+                    <!-- Hidden field to preserve the value -->
+                    <input type="hidden" name="year_level_id" value="{{ student.year_level_id }}">
                 </div>
 
                 <div class="form-actions">

@@ -1572,11 +1572,11 @@ def import_students():
             print(f"📊 STEP 0: File saved in {time.time() - start_time:.2f}s")
             
             # STEP 1: Read Excel with optimized settings
-            # Only read necessary columns, use faster engine
+            # Read necessary columns including YearLevel
             df = pd.read_excel(
                 temp_file_path, 
                 dtype={"StudentNo": str},
-                usecols=["StudentNo", "LastName", "FirstName"],  # Only read needed columns
+                usecols=["StudentNo", "LastName", "FirstName", "YearLevel"],  # Added YearLevel
                 engine='openpyxl'  # Default Excel engine
             )
             
@@ -1590,6 +1590,36 @@ def import_students():
             df['StudentNo'] = df['StudentNo'].str.replace(r'\.0$', '', regex=True)
             df['FirstName'] = df['FirstName'].astype(str).str.strip()
             df['LastName'] = df['LastName'].astype(str).str.strip()
+            
+            # Handle YearLevel - convert numbers to text format
+            if 'YearLevel' in df.columns:
+                # Convert to string first, then clean
+                df['YearLevel'] = df['YearLevel'].astype(str).str.strip()
+                
+                # Define mapping from numbers to text
+                year_mapping = {
+                    '1': '1st Year',
+                    '2': '2nd Year', 
+                    '3': '3rd Year',
+                    '4': '4th Year',
+                    '1.0': '1st Year',
+                    '2.0': '2nd Year',
+                    '3.0': '3rd Year',
+                    '4.0': '4th Year'
+                }
+                
+                # Apply mapping
+                df['YearLevel'] = df['YearLevel'].map(year_mapping).fillna(df['YearLevel'])
+                
+                # Handle any remaining numeric values that might be floats
+                df['YearLevel'] = df['YearLevel'].apply(lambda x: 
+                    f"{int(float(x))}st Year" if str(x).replace('.', '').isdigit() and float(x) == 1 else
+                    f"{int(float(x))}nd Year" if str(x).replace('.', '').isdigit() and float(x) == 2 else
+                    f"{int(float(x))}rd Year" if str(x).replace('.', '').isdigit() and float(x) == 3 else
+                    f"{int(float(x))}th Year" if str(x).replace('.', '').isdigit() and float(x) == 4 else x
+                )
+            else:
+                df['YearLevel'] = None
             
             # Remove rows with invalid student numbers
             df = df[df['StudentNo'].notna() & (df['StudentNo'] != '') & (df['StudentNo'] != 'nan')]
@@ -1608,18 +1638,23 @@ def import_students():
             
             # STEP 3: Get existing CTU students in one query
             existing_result = connection.execute(
-                text("SELECT student_number, id, first_name, last_name FROM ctu_students")
+                text("SELECT student_number, id, first_name, last_name, year_level FROM ctu_students")
             )
             existing_ctu = {}
             for row in existing_result:
-                existing_ctu[row[0]] = {'id': row[1], 'first_name': row[2], 'last_name': row[3]}
+                existing_ctu[row[0]] = {
+                    'id': row[1], 
+                    'first_name': row[2], 
+                    'last_name': row[3],
+                    'year_level': row[4]
+                }
             
             print(f"📊 STEP 3: Fetched {len(existing_ctu)} CTU students in {time.time() - start_time:.2f}s")
             
             # STEP 4: Get registered students and their vote status in ONE query
             registered_result = connection.execute(
                 text("""
-                    SELECT s.id, s.id_number, 
+                    SELECT s.id, s.id_number, s.year_level_id,
                            CASE WHEN v.student_id IS NOT NULL THEN 1 ELSE 0 END as has_voted
                     FROM students s
                     LEFT JOIN votes v ON s.id = v.student_id
@@ -1628,8 +1663,8 @@ def import_students():
             registered_map = {}
             students_with_votes = set()
             for row in registered_result:
-                registered_map[row[1]] = {'id': row[0], 'has_voted': row[2]}
-                if row[2]:
+                registered_map[row[1]] = {'id': row[0], 'year_level_id': row[2], 'has_voted': row[3]}
+                if row[3]:
                     students_with_votes.add(row[0])
             
             print(f"📊 STEP 4: Fetched {len(registered_map)} registered students in {time.time() - start_time:.2f}s")
@@ -1639,25 +1674,33 @@ def import_students():
             to_insert = []
             to_update = []
             
+            # Get year level mapping from database
+            year_levels = {yl.year_name: yl.id for yl in YearLevel.query.all()}
+            
             for student in excel_data:
                 student_no = student['StudentNo']
                 first_name = student['FirstName']
                 last_name = student['LastName']
+                year_level = student.get('YearLevel')
                 
                 if student_no in existing_ctu:
-                    # Only update if name changed (reduce unnecessary updates)
+                    # Check if any field changed
                     existing = existing_ctu[student_no]
-                    if existing['first_name'] != first_name or existing['last_name'] != last_name:
+                    if (existing['first_name'] != first_name or 
+                        existing['last_name'] != last_name or
+                        existing['year_level'] != year_level):
                         to_update.append({
                             'student_number': student_no,
                             'first_name': first_name,
-                            'last_name': last_name
+                            'last_name': last_name,
+                            'year_level': year_level
                         })
                 else:
                     to_insert.append({
                         'student_number': student_no,
                         'first_name': first_name,
-                        'last_name': last_name
+                        'last_name': last_name,
+                        'year_level': year_level
                     })
             
             print(f"📊 STEP 5: Prepared {len(to_insert)} inserts, {len(to_update)} updates in {time.time() - start_time:.2f}s")
@@ -1673,7 +1716,8 @@ def import_students():
                     insert_data = [{
                         'student_number': s['student_number'],
                         'first_name': s['first_name'],
-                        'last_name': s['last_name']
+                        'last_name': s['last_name'],
+                        'year_level': s['year_level']
                     } for s in chunk]
                     
                     # Use SQLAlchemy's bulk insert
@@ -1692,19 +1736,44 @@ def import_students():
                     
                     for student_data in chunk:
                         # Update each student individually but in same transaction
+                        update_data = {
+                            'first_name': student_data['first_name'],
+                            'last_name': student_data['last_name']
+                        }
+                        if student_data['year_level'] is not None:
+                            update_data['year_level'] = student_data['year_level']
+                            
                         db.session.query(CtuStudent)\
                             .filter(CtuStudent.student_number == student_data['student_number'])\
-                            .update({
-                                'first_name': student_data['first_name'],
-                                'last_name': student_data['last_name']
-                            }, synchronize_session=False)
+                            .update(update_data, synchronize_session=False)
                     
                     db.session.flush()
                     print(f"   Updated chunk {i//chunk_size + 1}/{(len(to_update)-1)//chunk_size + 1}")
             
             print(f"📊 STEP 7: Completed updates in {time.time() - start_time:.2f}s")
 
-            # ===== OPTIMIZATION 5: Handle deletions =====
+            # ===== OPTIMIZATION 5: Update year levels in students table =====
+            year_level_updates = 0
+            for student_no, ctu_data in existing_ctu.items():
+                if student_no in excel_student_nos and student_no in registered_map:
+                    # Find the student's year level from Excel
+                    excel_row = next((s for s in excel_data if s['StudentNo'] == student_no), None)
+                    if excel_row and excel_row.get('YearLevel'):
+                        year_level_str = excel_row['YearLevel']
+                        if year_level_str in year_levels:
+                            new_year_level_id = year_levels[year_level_str]
+                            if registered_map[student_no]['year_level_id'] != new_year_level_id:
+                                # Update student's year level
+                                db.session.query(Student)\
+                                    .filter(Student.id == registered_map[student_no]['id'])\
+                                    .update({'year_level_id': new_year_level_id}, synchronize_session=False)
+                                year_level_updates += 1
+            
+            if year_level_updates > 0:
+                db.session.flush()
+                print(f"📊 STEP 7.5: Updated {year_level_updates} students' year levels in {time.time() - start_time:.2f}s")
+
+            # ===== OPTIMIZATION 6: Handle deletions =====
             # Find students to delete (in DB but not in Excel)
             to_delete_ctu = []
             to_delete_registered = []
@@ -1756,7 +1825,7 @@ def import_students():
             
             print(f"📊 STEP 9: Deleted {deleted_from_registration} registered students in {time.time() - start_time:.2f}s")
             
-            # ===== OPTIMIZATION 6: Commit once at the end =====
+            # ===== OPTIMIZATION 7: Commit once at the end =====
             db.session.commit()
             
             total_time = time.time() - start_time
@@ -1769,13 +1838,14 @@ def import_students():
             
             log_audit(
                 action='IMPORT_STUDENTS',
-                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {len(to_insert)}, Updated: {len(to_update)}, Deleted from CTU: {deleted_from_ctu}, Deleted registered: {deleted_from_registration}, Time: {total_time:.2f}s"
+                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {len(to_insert)}, Updated: {len(to_update)}, Year Level Updates: {year_level_updates}, Deleted from CTU: {deleted_from_ctu}, Deleted registered: {deleted_from_registration}, Time: {total_time:.2f}s"
             )
 
             flash(
                 f"✅ Sync complete in {total_time:.1f}s!\n"
                 f"📥 Imported: {len(to_insert)}\n"
                 f"🔄 Updated: {len(to_update)}\n"
+                f"📅 Year Levels Updated: {year_level_updates}\n"
                 f"🗑️ Removed from CTU list: {deleted_from_ctu}\n"
                 f"🚫 Removed registered students: {deleted_from_registration}",
                 "import-success"
@@ -1817,8 +1887,6 @@ def import_students():
     # ------------------ TOTAL STUDENTS ------------------
     total_students = CtuStudent.query.count()
 
-    # 🚫 REMOVED: IMPORT_STUDENTS_VIEW audit log (page view - not a data modification)
-
     return render_template(
         "import_students.html",
         students=students,
@@ -1828,29 +1896,58 @@ def import_students():
 
 # Add this import with your other imports at the top of admin/routes.py
 from admin.utils import sync_registered_students_with_ctu
-
 @admin_bp.route('/sync-registered-students', methods=['POST'])
 @admin_required
 def sync_registered_students():
-    """Manual sync endpoint"""
+    """Manual sync endpoint to update registered students' year levels from CTU list"""
     try:
-        result = sync_registered_students_with_ctu()
+        from sqlalchemy import text
         
-        # ✅ KEEP THIS AUDIT LOG (SYNC - data modification)
+        # Get year level mapping
+        year_levels = {yl.year_name: yl.id for yl in YearLevel.query.all()}
+        
+        # Get all registered students with their ID numbers
+        registered_students = Student.query.filter(Student.id_number.isnot(None)).all()
+        
+        updates = 0
+        kept_with_votes = 0
+        
+        for student in registered_students:
+            # Find this student in CTU list
+            ctu_student = CtuStudent.query.filter_by(student_number=student.id_number).first()
+            
+            if ctu_student and ctu_student.year_level:
+                # Check if student has voted
+                has_voted = Vote.query.filter_by(student_id=student.id).first() is not None
+                
+                if has_voted:
+                    kept_with_votes += 1
+                
+                # Update year level if it exists in our mapping
+                if ctu_student.year_level in year_levels:
+                    new_year_level_id = year_levels[ctu_student.year_level]
+                    if student.year_level_id != new_year_level_id:
+                        student.year_level_id = new_year_level_id
+                        updates += 1
+        
+        db.session.commit()
+        
+        # ✅ KEEP THIS AUDIT LOG
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
         log_audit(
             action='SYNC_REGISTERED_STUDENTS',
-            description=f"Admin user '{username}' manually synced registered students from IP: {ip} | Deleted: {result['deleted']}, Kept with votes: {result['kept_with_votes']}"
+            description=f"Admin user '{username}' manually synced registered students from IP: {ip} | Year Level Updates: {updates}, Students with votes: {kept_with_votes}"
         )
         
         return jsonify({
             'success': True,
-            'deleted': result['deleted'],
-            'kept_with_votes': result['kept_with_votes']
+            'updates': updates,
+            'kept_with_votes': kept_with_votes
         })
     except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
