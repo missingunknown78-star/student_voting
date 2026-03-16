@@ -1,5 +1,11 @@
 // admin_settings.js - All settings functionality moved here
 
+// ==================== CSRF TOKEN HELPER ====================
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // ==================== SETTINGS NAVIGATION ====================
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize settings navigation
@@ -94,6 +100,7 @@ function saveSettings(section) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         },
         body: JSON.stringify({
             section: section,
@@ -195,8 +202,6 @@ function generateQRCodeHTML(data) {
                 <i class="fa-solid fa-circle-info"></i>
                 <strong>After scanning:</strong> The 2FA will be automatically enabled. You'll be prompted to enter a code from your authenticator app every time you log in.
             </div>
-            
-
         </div>
     `;
 }
@@ -207,6 +212,7 @@ function disable2FA() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
             }
         })
         .then(response => response.json())
@@ -249,6 +255,7 @@ function generateNewBackupCodes() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
             }
         })
         .then(response => response.json())
@@ -278,6 +285,7 @@ function trustCurrentDevice() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         }
     })
     .then(response => response.json())
@@ -325,7 +333,8 @@ function revokeTrustedDevice(deviceId, event) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         },
         body: JSON.stringify({})
     })
@@ -389,7 +398,10 @@ function simpleRevokeDevice(deviceId) {
     button.disabled = true;
     
     fetch(`/admin/trusted-devices/test-remove/${deviceId}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+        }
     })
     .then(response => response.json())
     .then(data => {

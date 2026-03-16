@@ -544,7 +544,7 @@
         scrollbar-width: none;
         -ms-overflow-style: none;
     }
-    </style>
+</style>
 {% endblock %}
 
 {% block content %}
@@ -721,6 +721,9 @@
         <h2>Add New Position</h2>
         
         <form id="addPositionForm">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="form-group">
                 <label for="position_name">Position Name <span class="required">*</span></label>
                 <input type="text" id="position_name" name="position_name" required 
@@ -785,6 +788,8 @@
         <h2>Edit Position</h2>
         
         <form id="editPositionForm">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="edit_position_id" name="position_id">
             
             <div class="form-group">
@@ -832,6 +837,9 @@
         <div id="addCandidateNotification" class="modal-notification" style="display: none;"></div>
 
         <form id="addCandidateForm" enctype="multipart/form-data">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="form-group">
                 <label>First Name <span class="required">*</span></label>
                 <input type="text" name="first_name" id="add_first_name" required placeholder=" ">
@@ -939,6 +947,8 @@
         <div id="editCandidateNotification" class="modal-notification" style="display: none;"></div>
 
         <form id="editCandidateForm" enctype="multipart/form-data">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="edit_id" name="id">
 
             <div class="form-group">
@@ -1036,6 +1046,12 @@
 
 <!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // This ensures the theme applies immediately without refresh
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
@@ -1074,8 +1090,6 @@ function applyThemeToMainContent() {
         }
     });
 })();
-
-
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/manage_candidates.js') }}"></script>

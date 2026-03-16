@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify New Device - COMELEC Admin</title>
     
+    <!-- CSRF Token Meta Tag - For JavaScript AJAX calls -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -172,6 +175,12 @@
 <div id="toastReject" class="toast reject">❌ Device rejected. Redirecting to login...</div>
 
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 const btn = document.getElementById('resendBtn');
 const timerText = document.getElementById('timerText');
 const toast = document.getElementById('toast');
@@ -195,11 +204,12 @@ btn.addEventListener('click', (e) => {
         }
     }, 1000);
 
-    // Send email in background
+    // Send email in background with CSRF token
     fetch('/admin/verify-device/resend', { 
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         }
     })
     .then(response => response.json())
@@ -208,34 +218,51 @@ btn.addEventListener('click', (e) => {
             console.log("Verification email resent");
         } else {
             alert(data.message || 'Failed to resend email');
+            // Re-enable button if there's an error
+            clearInterval(countdown);
+            btn.disabled = false;
+            btn.textContent = 'Resend Verification Email';
+            timerText.textContent = '';
         }
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+        console.error(err);
+        alert('Network error. Please try again.');
+        clearInterval(countdown);
+        btn.disabled = false;
+        btn.textContent = 'Resend Verification Email';
+        timerText.textContent = '';
+    });
 });
 
 // Polling for device verification or rejection
 function checkVerification() {
-    fetch("/admin/verify-device/status")
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === "verified") {
-                toast.style.display = "block";
-                btn.disabled = true;
+    fetch("/admin/verify-device/status", {
+        headers: {
+            'X-CSRFToken': getCsrfToken()  // Add CSRF token to status check as well
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === "verified") {
+            toast.style.display = "block";
+            btn.disabled = true;
 
-                // FIXED: Redirect to dashboard, not login
-                setTimeout(() => {
-                    window.location.href = "/admin/dashboard";
-                }, 1500);
-            } else if (data.status === "rejected") {
-                toastReject.style.display = "block";
-                btn.disabled = true;
+            // FIXED: Redirect to dashboard, not login
+            setTimeout(() => {
+                window.location.href = "/admin/dashboard";
+            }, 1500);
+        } else if (data.status === "rejected") {
+            toastReject.style.display = "block";
+            btn.disabled = true;
 
-                // Keep this as login for rejected devices
-                setTimeout(() => {
-                    window.location.href = "/admin/login";
-                }, 2000);
-            }
-        });
+            // Keep this as login for rejected devices
+            setTimeout(() => {
+                window.location.href = "/admin/login";
+            }, 2000);
+        }
+    })
+    .catch(err => console.error('Status check error:', err));
 }
 
 // poll every 3 seconds

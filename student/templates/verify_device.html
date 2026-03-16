@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verify New Device</title>
 
+<!-- CSRF Token Meta Tag - For JavaScript AJAX calls -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <style>
 * {
     box-sizing: border-box;
@@ -95,6 +98,11 @@ button:disabled {
     text-decoration: underline;
 }
 
+/* Hide CSRF token input visually */
+input[name="csrf_token"] {
+    display: none;
+}
+
 /* toast notifications */
 .toast {
     position: fixed;
@@ -158,6 +166,8 @@ button:disabled {
     <div class="divider"></div>
 
     <form method="POST" action="{{ url_for('student.resend_verify_device') }}" id="resendForm">
+        <!-- CSRF Token - CRITICAL for security -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button id="resendBtn" type="submit">Resend Verification Email</button>
     </form>
 
@@ -173,6 +183,12 @@ button:disabled {
 <div id="toastReject" class="toast reject">❌ Device rejected. Redirecting to login...</div>
 
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 const btn = document.getElementById('resendBtn');
 const form = document.getElementById('resendForm');
 const timerText = document.getElementById('timerText');
@@ -195,17 +211,54 @@ form.addEventListener('submit', (e) => {
         }
     }, 1000);
 
+    // Get the CSRF token from the form
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+    // Create form data to submit
+    const formData = new FormData(form);
+    
     // Send email in background without reload
-    fetch(form.action, { method: 'POST' })
-        .then(() => console.log("Verification email resent"))
-        .catch(err => console.error(err));
+    fetch(form.action, { 
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HEADER
+        },
+        body: formData
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Verification email resent:", data);
+        })
+        .catch(err => {
+            console.error(err);
+            // Re-enable button if there's an error
+            clearInterval(countdown);
+            btn.disabled = false;
+            btn.textContent = 'Resend Verification Email';
+            timerText.textContent = 'Failed to send. Please try again.';
+        });
 });
 </script>
 
 <script>
+// CSRF Token Helper Function (for status check)
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // Polling for device verification or rejection
 function checkVerification() {
-    fetch("/student/verify-device/status")
+    fetch("/student/verify-device/status", {
+        headers: {
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HEADER
+        }
+    })
         .then(r => r.json())
         .then(data => {
             if (data.status === "verified") {
@@ -224,7 +277,8 @@ function checkVerification() {
                     window.location.href = "/student/login";
                 }, 2000);
             }
-        });
+        })
+        .catch(err => console.error('Status check error:', err));
 }
 
 // poll every 3 seconds

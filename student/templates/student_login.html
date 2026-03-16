@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Login</title>
 
+<!-- CSRF Token Meta Tag - For JavaScript AJAX calls -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/login.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -106,6 +109,9 @@
 
         <!-- NORMAL LOGIN FORM -->
         <form method="POST">
+            <!-- CSRF Token - CRITICAL for security -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="input-group floating">
                 <input type="email" id="email" name="email" required placeholder=" " />
                 <label for="email">Gmail</label>
@@ -121,7 +127,7 @@
                 <label for="password">Password</label>
             </div>
 
-            <!-- 🔐 DEVICE FINGERPRINT (STEP 1 – ADDED ONLY) -->
+            <!-- 🔐 DEVICE FINGERPRINT -->
             <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
 
             <div class="options">
@@ -139,6 +145,9 @@
                 <h3>Forgot Password</h3>
                 <p>Enter your registered Gmail and Student ID to reset your password:</p>
                 <form id="forgotPasswordForm">
+                    <!-- CSRF Token for modal form -->
+                    <input type="hidden" name="csrf_token" id="modalCsrfToken" value="{{ csrf_token() }}">
+                    
                     <div class="input-group">
                         <label for="forgotEmail">Gmail</label>
                         <input type="email" id="forgotEmail" name="email" placeholder="Enter your Gmail" required>
@@ -168,7 +177,15 @@
     </div>
 </div>
 
-<!-- ================= BIOMETRIC SCRIPT (UNCHANGED) ================= -->
+<script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+</script>
+
+<!-- ================= BIOMETRIC SCRIPT (UPDATED WITH CSRF) ================= -->
 <script>
 (async function() {
     const bioBtn = document.getElementById("bioLoginBtn");
@@ -238,7 +255,10 @@
 
             const verifyRes = await fetch("/student/webauthn/login/verify", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken()  // ADD CSRF TOKEN
+                },
                 body: JSON.stringify(credentialForBackend)
             });
 
@@ -263,7 +283,7 @@
 })();
 </script>
 
-<!-- ================= FORGOT PASSWORD SCRIPT (UNCHANGED) ================= -->
+<!-- ================= FORGOT PASSWORD SCRIPT (UPDATED WITH CSRF) ================= -->
 <script>
 const modal = document.getElementById("forgotPasswordModal");
 const btn = document.getElementById("forgotPasswordLink");
@@ -290,11 +310,15 @@ form.onsubmit = async e => {
 
     const email = document.getElementById("forgotEmail").value;
     const id_number = document.getElementById("forgotID").value;
+    const csrfToken = document.getElementById("modalCsrfToken").value;
 
     try {
         const res = await fetch("{{ url_for('student.forgot_password') }}", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken  // ADD CSRF TOKEN
+            },
             body: JSON.stringify({ email, id_number })
         });
 
@@ -309,7 +333,7 @@ form.onsubmit = async e => {
 };
 </script>
 
-<!-- ================= DEVICE FINGERPRINT SCRIPT (STEP 1 – NEW, ISOLATED) ================= -->
+<!-- ================= DEVICE FINGERPRINT SCRIPT (UNCHANGED) ================= -->
 <script>
 async function generateDeviceFingerprint() {
     const data = {

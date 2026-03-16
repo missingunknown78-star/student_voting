@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ==================== CSRF HELPER FUNCTION ====================
+
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 function getTemplateData() {
@@ -73,7 +80,11 @@ function refreshResults() {
     document.getElementById('last-updated').textContent = 'updating...';
     
     // Fetch fresh results via AJAX
-    fetch(`/student/api/refresh-results/${electionId}`)
+    fetch(`/student/api/refresh-results/${electionId}`, {
+        headers: {
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -178,6 +189,7 @@ function verifyVote() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HERE
         },
         body: JSON.stringify({
             election_id: electionId,

@@ -402,74 +402,82 @@
             width: 15%;
         }
         
-        /* FOOTER */
-        .site-footer {
-            flex-shrink: 0;
-            width: 100%;
-            margin-top: 0.3in;
-            text-align: center;
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        
-        .footer-signatures {
-            margin-bottom: 0.1in;
-        }
-        
-        .footer-text {
-            font-size: 9pt;
-            margin-bottom: 0.05in;
-        }
-        
-        .footer-date {
-            font-size: 9pt;
-            color: #555;
-            margin-bottom: 0.15in;
-        }
-        
-        .signatures {
-            display: flex;
-            justify-content: space-around;
-            margin: 0.2in 0;
-        }
-        
-        .signature {
-            text-align: center;
-            width: 1.8in;
-        }
-        
-        .signature .line {
-            border-top: 1px solid #000;
-            margin-bottom: 0.05in;
-            padding-top: 0.05in;
-        }
-        
-        .signature .name {
-            font-weight: bold;
-            font-size: 10pt;
-        }
-        
-        .signature .title {
-            font-size: 8pt;
-            color: #333;
-        }
-        
-        /* Footer Logo */
-        .footer-logo {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            margin-top: 0.1in;
-        }
-        
-        .footer-logo img {
-            width: 100%;
-            max-width: 7.5in;
-            height: 0.8in;
-            object-fit: cover;
-            display: block;
-            margin: 0 auto;
-        }
+        /* FOOTER - Updated for name above line */
+.site-footer {
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: 0.3in;
+    text-align: center;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.footer-signatures {
+    margin-bottom: 0.1in;
+}
+
+.footer-text {
+    font-size: 9pt;
+    margin-bottom: 0.05in;
+}
+
+.footer-date {
+    font-size: 9pt;
+    color: #555;
+    margin-bottom: 0.15in;
+}
+
+/* Single signature centered with name above line */
+.signature-container {
+    display: flex;
+    justify-content: center;
+    margin: 0.3in 0 0.1in 0;
+}
+
+.signature {
+    text-align: center;
+    width: 3in;
+}
+
+.printed-name {
+    font-weight: bold;
+    font-size: 12pt;
+    text-transform: uppercase;
+    color: #000;
+    margin-bottom: 0.05in;
+    letter-spacing: 0.5px;
+    min-height: 0.25in;
+}
+
+.signature .line {
+    border-top: 2px solid #000;
+    width: 100%;
+    margin: 0.05in 0 0.08in 0;
+}
+
+.signature .title {
+    font-size: 10pt;
+    color: #333;
+    font-style: italic;
+    margin-top: 0.05in;
+}
+
+/* Footer Logo */
+.footer-logo {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 0.1in;
+}
+
+.footer-logo img {
+    width: 100%;
+    max-width: 7.5in;
+    height: 0.8in;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto;
+}
     </style>
 </head>
 <body>
@@ -658,37 +666,29 @@
         {% endif %}
     </div>
     
-    <!-- FOOTER -->
-    <footer class="site-footer">
-        <div class="footer-signatures">
-            <div class="footer-text">Cebu Technological University - Moalboal Campus | Student Government</div>
-            <div class="footer-date">Generated on {{ now.strftime('%B %d, %Y at %I:%M %p') }}</div>
-            
-            <div class="signatures">
-                <div class="signature">
-                    <div class="line"></div>
-                    <div class="name">Election Officer</div>
-                    <div class="title">COMELEC Chairperson</div>
-                </div>
-                <div class="signature">
-                    <div class="line"></div>
-                    <div class="name">SSG President</div>
-                    <div class="title">Student Government</div>
-                </div>
-                <div class="signature">
-                    <div class="line"></div>
-                    <div class="name">Adviser</div>
-                    <div class="title">OSA Director</div>
-                </div>
+    <!-- FOOTER - Single Signature for COMELEC Chairman -->
+    <!-- FOOTER - Single Signature for COMELEC Chairman with name above line -->
+<footer class="site-footer">
+    <div class="footer-signatures">
+        <div class="footer-text">Cebu Technological University - Moalboal Campus | Student Government</div>
+        <div class="footer-date">Generated on {{ now.strftime('%B %d, %Y at %I:%M %p') }}</div>
+        
+        <!-- Single signature for COMELEC Chairman with name ABOVE the line -->
+        <div class="signature-container">
+            <div class="signature">
+                <div class="printed-name">{{ chairman_name if chairman_name else 'COMELEC CHAIRMAN' }}</div>
+                <div class="line"></div>
+                <div class="title">COMELEC Chairperson</div>
             </div>
         </div>
-        
-        <!-- Footer Logo -->
-        <div class="footer-logo">
-            <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png', _external=True) }}" 
-                 alt="CTU Footer"
-                 onerror="this.style.display='none';">
-        </div>
-    </footer>
+    </div>
+    
+    <!-- Footer Logo -->
+    <div class="footer-logo">
+        <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png', _external=True) }}" 
+             alt="CTU Footer"
+             onerror="this.style.display='none';">
+    </div>
+</footer>
 </body>
 </html>

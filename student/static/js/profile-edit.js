@@ -30,6 +30,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let pollInterval = null;
     let resendCooldown = false;
     
+    // CSRF Token Helper Function
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : '';
+    }
+    
     // Toggle edit mode
     function showEditMode() {
         displayMode.style.display = 'none';
@@ -90,13 +96,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return email;
     }
     
-    // Send verification email
+    // Send verification email with CSRF token
     async function sendVerificationEmail() {
         try {
             const response = await fetch('/student/send-email-change-verification', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
                 },
                 body: JSON.stringify({ 
                     old_email: originalEmail,
@@ -183,7 +190,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!changeRequestId) return;
         
         try {
-            const response = await fetch(`/student/email-change-status/${changeRequestId}`);
+            const response = await fetch(`/student/email-change-status/${changeRequestId}`, {
+                headers: {
+                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                }
+            });
             const data = await response.json();
             
             if (data.status === 'confirmed') {
@@ -217,13 +228,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Send OTP to new email
+    // Send OTP to new email with CSRF token
     async function sendOtpToNewEmail() {
         try {
             const response = await fetch('/student/send-otp-to-new-email', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
                 },
                 body: JSON.stringify({ 
                     email: pendingNewEmail,
@@ -304,6 +316,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         fetch(editForm.action, {
             method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            },
             body: formData
         })
         .then(response => response.json())

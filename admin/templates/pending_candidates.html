@@ -258,6 +258,12 @@
 <div id="toast" class="toast" style="display: none;"></div>
 
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 let currentApplicationId = null;
 
 function showToast(message, type = 'success') {
@@ -281,7 +287,8 @@ function viewApplication(id) {
     
     fetch(`/admin/pending-candidate/${id}`, {
         headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         }
     })
     .then(response => {
@@ -374,7 +381,8 @@ document.getElementById('confirmApproveBtn').addEventListener('click', function(
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         }
     })
     .then(response => {
@@ -427,7 +435,8 @@ document.getElementById('confirmRejectBtn').addEventListener('click', function()
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         },
         body: JSON.stringify({ reason: reason })
     })

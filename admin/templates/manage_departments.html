@@ -7,7 +7,7 @@
 
 <style>
     /* -------------------- Buttons -------------------- */
-    .edit-btn, .delete-btn, .select-all-btn {
+    .edit-btn, .delete-btn, .select-all-btn, .inline-edit-btn, .inline-save-btn, .inline-cancel-btn {
         padding: 6px 12px;
         margin-bottom: 10px;
         border: none;
@@ -21,7 +21,61 @@
     .select-all-btn { background-color: #17a2b8; color: #fff; }
     .select-all-btn:hover { background-color: #117a8b; }
     
+    /* Inline edit buttons */
+    .inline-edit-btn {
+        background-color: #f39c12;
+        color: #fff;
+        padding: 4px 8px;
+        margin: 0 5px;
+        font-size: 0.85rem;
+    }
+    .inline-edit-btn:hover {
+        background-color: #e67e22;
+    }
+    
+    .inline-save-btn {
+        background-color: #27ae60;
+        color: #fff;
+        padding: 4px 8px;
+        margin: 0 5px;
+        font-size: 0.85rem;
+    }
+    .inline-save-btn:hover {
+        background-color: #2ecc71;
+    }
+    
+    .inline-cancel-btn {
+        background-color: #95a5a6;
+        color: #fff;
+        padding: 4px 8px;
+        margin: 0 5px;
+        font-size: 0.85rem;
+    }
+    .inline-cancel-btn:hover {
+        background-color: #7f8c8d;
+    }
+    
     .select-col { width: 40px; text-align: center; }
+    
+    /* Edit mode styles */
+    .edit-mode-input {
+        padding: 6px 10px;
+        border: 2px solid var(--button-primary);
+        border-radius: 4px;
+        width: 90%;
+        font-size: 0.95rem;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+    }
+    
+    .edit-mode-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(44, 123, 229, 0.2);
+    }
+    
+    .action-buttons {
+        white-space: nowrap;
+    }
     
     /* ==================== THEME TRANSITION FIXES ==================== */
     /* Force main-content to have transitions */
@@ -57,11 +111,25 @@
         background-color: #17a2b8;
     }
     
+    :root.dark-mode .inline-edit-btn {
+        background-color: #f39c12;
+    }
+    
+    :root.dark-mode .inline-save-btn {
+        background-color: #27ae60;
+    }
+    
+    :root.dark-mode .inline-cancel-btn {
+        background-color: #7f8c8d;
+    }
+    
     /* Fix for form elements in dark mode */
     :root.dark-mode .container .card form input[type="text"],
-    :root.dark-mode .container .card form select {
+    :root.dark-mode .container .card form select,
+    :root.dark-mode .edit-mode-input {
         color: var(--text-color);
         background-color: var(--input-bg);
+        border-color: var(--border-color);
     }
     
     /* Fix for table text in dark mode */
@@ -73,7 +141,7 @@
     :root.dark-mode .select-col input[type="checkbox"] {
         accent-color: var(--button-primary);
     }
-    </style>
+</style>
 {% endblock %}
 
 {% block content %}
@@ -85,6 +153,8 @@
     <div class="card">
         <h3>Add Department</h3>
         <form method="POST" action="{{ url_for('admin.add_department') }}">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="name" placeholder="Department Name" required>
             <button type="submit">Add Department</button>
         </form>
@@ -98,22 +168,34 @@
         <button id="deleteDepartmentsBtn" class="delete-btn" style="display:none;">Delete Selected</button>
 
         <!-- Hidden form for delete -->
-        <form id="deleteDepartmentsForm" method="POST" action="{{ url_for('admin.delete_multiple_departments') }}"></form>
+        <form id="deleteDepartmentsForm" method="POST" action="{{ url_for('admin.delete_multiple_departments') }}">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
 
         <table>
             <thead>
                 <tr>
                     <th class="select-col" style="display:none;">Select</th>
                     <th>Department Name</th>
+                    <th class="actions-col" style="display:none;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for dept in departments %}
-                <tr>
+                <tr data-id="{{ dept.id }}" data-type="department">
                     <td class="select-col" style="display:none;">
                         <input type="checkbox" class="select-dept" value="{{ dept.id }}">
                     </td>
-                    <td>{{ dept.name }}</td>
+                    <td class="name-cell">
+                        <span class="view-mode">{{ dept.name }}</span>
+                        <input type="text" class="edit-mode-input" value="{{ dept.name }}" style="display:none;">
+                    </td>
+                    <td class="actions-col action-buttons" style="display:none;">
+                        <button class="inline-edit-btn" onclick="startEdit(this)">Edit</button>
+                        <button class="inline-save-btn" onclick="saveEdit(this)" style="display:none;">Save</button>
+                        <button class="inline-cancel-btn" onclick="cancelEdit(this)" style="display:none;">Cancel</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -124,6 +206,8 @@
     <div class="card">
         <h3>Add Course</h3>
         <form method="POST" action="{{ url_for('admin.add_course') }}">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <select name="department_id" required>
                 <option value="">Select Department</option>
                 {% for dept in departments %}
@@ -143,7 +227,10 @@
         <button id="deleteCoursesBtn" class="delete-btn" style="display:none;">Delete Selected</button>
 
         <!-- Hidden form for delete -->
-        <form id="deleteCoursesForm" method="POST" action="{{ url_for('admin.delete_multiple_courses') }}"></form>
+        <form id="deleteCoursesForm" method="POST" action="{{ url_for('admin.delete_multiple_courses') }}">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
 
         <table>
             <thead>
@@ -151,16 +238,32 @@
                     <th class="select-col" style="display:none;">Select</th>
                     <th>Course Name</th>
                     <th>Department</th>
+                    <th class="actions-col" style="display:none;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for course in courses %}
-                <tr>
+                <tr data-id="{{ course.id }}" data-type="course">
                     <td class="select-col" style="display:none;">
                         <input type="checkbox" class="select-course" value="{{ course.id }}">
                     </td>
-                    <td>{{ course.course_name }}</td>
-                    <td>{{ course.department_name }}</td>
+                    <td class="name-cell">
+                        <span class="view-mode">{{ course.course_name }}</span>
+                        <input type="text" class="edit-mode-input" value="{{ course.course_name }}" style="display:none;">
+                    </td>
+                    <td class="dept-cell">
+                        <span class="view-mode">{{ course.department_name }}</span>
+                        <select class="edit-mode-input" style="display:none;">
+                            {% for dept in departments %}
+                                <option value="{{ dept.id }}" {% if dept.id == course.department_id %}selected{% endif %}>{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="actions-col action-buttons" style="display:none;">
+                        <button class="inline-edit-btn" onclick="startEdit(this)">Edit</button>
+                        <button class="inline-save-btn" onclick="saveEdit(this)" style="display:none;">Save</button>
+                        <button class="inline-cancel-btn" onclick="cancelEdit(this)" style="display:none;">Cancel</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -171,6 +274,12 @@
 
 <!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // This ensures the theme applies immediately without refresh
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
@@ -260,9 +369,173 @@ window.addEventListener('load', () => {
     applyThemeToMainContent();
 });
 
-// -------------------- Departments --------------------
+// -------------------- Inline Edit Functions --------------------
+function startEdit(button) {
+    const row = button.closest('tr');
+    const viewSpans = row.querySelectorAll('.view-mode');
+    const editInputs = row.querySelectorAll('.edit-mode-input');
+    const editBtn = row.querySelector('.inline-edit-btn');
+    const saveBtn = row.querySelector('.inline-save-btn');
+    const cancelBtn = row.querySelector('.inline-cancel-btn');
+    
+    // Hide view mode, show edit mode
+    viewSpans.forEach(span => span.style.display = 'none');
+    editInputs.forEach(input => input.style.display = 'block');
+    
+    // Toggle buttons
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'inline-block';
+    cancelBtn.style.display = 'inline-block';
+    
+    // Focus on first input
+    if (editInputs.length > 0) {
+        editInputs[0].focus();
+    }
+}
+
+function cancelEdit(button) {
+    const row = button.closest('tr');
+    const viewSpans = row.querySelectorAll('.view-mode');
+    const editInputs = row.querySelectorAll('.edit-mode-input');
+    const editBtn = row.querySelector('.inline-edit-btn');
+    const saveBtn = row.querySelector('.inline-save-btn');
+    const cancelBtn = row.querySelector('.inline-cancel-btn');
+    
+    // Reset input values to original
+    viewSpans.forEach((span, index) => {
+        if (editInputs[index]) {
+            editInputs[index].value = span.textContent.trim();
+        }
+    });
+    
+    // Show view mode, hide edit mode
+    viewSpans.forEach(span => span.style.display = '');
+    editInputs.forEach(input => input.style.display = 'none');
+    
+    // Toggle buttons
+    editBtn.style.display = 'inline-block';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+}
+
+function saveEdit(button) {
+    const row = button.closest('tr');
+    const rowId = row.dataset.id;
+    const rowType = row.dataset.type; // 'department' or 'course'
+    
+    // Add spinning animation to save button
+    button.classList.add('saving');
+    
+    let formData = new FormData();
+    formData.append('csrf_token', getCsrfToken()); // Add CSRF token
+    
+    if (rowType === 'department') {
+        const newName = row.querySelector('.edit-mode-input').value.trim();
+        if (!newName) {
+            alert('Department name cannot be empty');
+            button.classList.remove('saving');
+            return;
+        }
+        formData.append('id', rowId);
+        formData.append('name', newName);
+        
+        // Send AJAX request to update department
+        fetch('/admin/departments/update', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove spinning animation
+            button.classList.remove('saving');
+            
+            if (data.success) {
+                // Update the view mode span
+                row.querySelector('.view-mode').textContent = newName;
+                cancelEdit(button);
+                showFlashMessage('Department updated successfully', 'success');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            // Remove spinning animation on error
+            button.classList.remove('saving');
+            console.error('Error:', error);
+            alert('An error occurred while updating');
+        });
+        
+    } else if (rowType === 'course') {
+        const newName = row.querySelectorAll('.edit-mode-input')[0].value.trim();
+        const newDeptId = row.querySelectorAll('.edit-mode-input')[1].value;
+        
+        if (!newName) {
+            alert('Course name cannot be empty');
+            button.classList.remove('saving');
+            return;
+        }
+        
+        formData.append('id', rowId);
+        formData.append('course_name', newName);
+        formData.append('department_id', newDeptId);
+        
+        // Send AJAX request to update course
+        fetch('/admin/courses/update', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove spinning animation
+            button.classList.remove('saving');
+            
+            if (data.success) {
+                // Update the view mode spans
+                row.querySelectorAll('.view-mode')[0].textContent = newName;
+                row.querySelectorAll('.view-mode')[1].textContent = data.department_name;
+                cancelEdit(button);
+                showFlashMessage('Course updated successfully', 'success');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            // Remove spinning animation on error
+            button.classList.remove('saving');
+            console.error('Error:', error);
+            alert('An error occurred while updating');
+        });
+    }
+    
+    // Reapply theme after update
+    setTimeout(applyThemeToMainContent, 10);
+}
+
+// Helper function to show flash messages
+function showFlashMessage(message, category) {
+    // Check if flash container exists, if not create one
+    let flashContainer = document.querySelector('.flash-container');
+    if (!flashContainer) {
+        flashContainer = document.createElement('div');
+        flashContainer.className = 'flash-container';
+        document.querySelector('.container').insertBefore(flashContainer, document.querySelector('.container').firstChild);
+    }
+    
+    const flashDiv = document.createElement('div');
+    flashDiv.className = `flash-message ${category}`;
+    flashDiv.textContent = message;
+    flashContainer.appendChild(flashDiv);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        flashDiv.remove();
+    }, 3000);
+}
+
+// -------------------- Departments Edit Mode --------------------
 const deptCard = document.querySelector('.card:nth-of-type(2)'); // Departments table
 const deptCols = deptCard.querySelectorAll('.select-col');
+const deptActionCols = deptCard.querySelectorAll('.actions-col');
 const deptCheckboxes = deptCard.querySelectorAll('.select-dept');
 const editDepartmentsBtn = document.getElementById('editDepartmentsBtn');
 const deleteDepartmentsBtn = document.getElementById('deleteDepartmentsBtn');
@@ -273,9 +546,19 @@ let deptEditMode = false;
 editDepartmentsBtn.addEventListener('click', () => {
     deptEditMode = !deptEditMode;
     deptCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
+    deptActionCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
     deleteDepartmentsBtn.style.display = 'none';
     selectAllDepartmentsBtn.style.display = deptEditMode ? 'inline-block' : 'none';
     deptCheckboxes.forEach(cb => cb.checked = false);
+    
+    // If exiting edit mode, cancel any inline edits
+    if (!deptEditMode) {
+        deptCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
+            if (btn.style.display !== 'none') {
+                cancelEdit(btn);
+            }
+        });
+    }
     
     // Reapply theme after state change
     setTimeout(applyThemeToMainContent, 10);
@@ -302,7 +585,13 @@ deptCheckboxes.forEach(cb => {
 deleteDepartmentsBtn.addEventListener('click', () => {
     const ids = Array.from(deptCheckboxes).filter(c => c.checked).map(c => c.value);
     if(ids.length && confirm('Are you sure you want to delete selected departments?')){
-        deleteDepartmentsForm.innerHTML = '';
+        // Add CSRF token to form before submitting
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = getCsrfToken();
+        deleteDepartmentsForm.appendChild(csrfInput);
+        
         ids.forEach(id => {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -314,9 +603,10 @@ deleteDepartmentsBtn.addEventListener('click', () => {
     }
 });
 
-// -------------------- Courses --------------------
+// -------------------- Courses Edit Mode --------------------
 const courseCard = document.querySelector('.card:nth-of-type(4)'); // Courses table
 const courseCols = courseCard.querySelectorAll('.select-col');
+const courseActionCols = courseCard.querySelectorAll('.actions-col');
 const courseCheckboxes = courseCard.querySelectorAll('.select-course');
 const editCoursesBtn = document.getElementById('editCoursesBtn');
 const deleteCoursesBtn = document.getElementById('deleteCoursesBtn');
@@ -327,9 +617,19 @@ let courseEditMode = false;
 editCoursesBtn.addEventListener('click', () => {
     courseEditMode = !courseEditMode;
     courseCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
+    courseActionCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
     deleteCoursesBtn.style.display = 'none';
     selectAllCoursesBtn.style.display = courseEditMode ? 'inline-block' : 'none';
     courseCheckboxes.forEach(cb => cb.checked = false);
+    
+    // If exiting edit mode, cancel any inline edits
+    if (!courseEditMode) {
+        courseCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
+            if (btn.style.display !== 'none') {
+                cancelEdit(btn);
+            }
+        });
+    }
     
     // Reapply theme after state change
     setTimeout(applyThemeToMainContent, 10);
@@ -356,7 +656,13 @@ courseCheckboxes.forEach(cb => {
 deleteCoursesBtn.addEventListener('click', () => {
     const ids = Array.from(courseCheckboxes).filter(c => c.checked).map(c => c.value);
     if(ids.length && confirm('Are you sure you want to delete selected courses?')){
-        deleteCoursesForm.innerHTML = '';
+        // Add CSRF token to form before submitting
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = getCsrfToken();
+        deleteCoursesForm.appendChild(csrfInput);
+        
         ids.forEach(id => {
             const input = document.createElement('input');
             input.type = 'hidden';

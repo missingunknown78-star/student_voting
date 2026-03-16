@@ -1,5 +1,11 @@
 // ==================== QUALIFY STUDENTS JS ====================
 
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // Go to page
 function goToPage(page) {
     const url = new URL(window.location.href);
@@ -46,10 +52,20 @@ function showNotification(message, type = 'success') {
 
 // Qualify single student
 function qualifyStudent(studentId) {
+    // Show loading state on button if event exists
+    if (event && event.target) {
+        const button = event.target.closest('button');
+        if (button) {
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            button.disabled = true;
+        }
+    }
+    
     fetch('/admin/qualify-student', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HERE
         },
         body: JSON.stringify({ student_id: studentId })
     })
@@ -60,10 +76,27 @@ function qualifyStudent(studentId) {
             setTimeout(() => location.reload(), 1500);
         } else {
             showNotification('Error: ' + data.message, 'error');
+            // Reset button if there's an error
+            if (event && event.target) {
+                const button = event.target.closest('button');
+                if (button) {
+                    button.innerHTML = '<i class="fa-solid fa-check"></i> Qualify';
+                    button.disabled = false;
+                }
+            }
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         showNotification('Error qualifying student', 'error');
+        // Reset button on error
+        if (event && event.target) {
+            const button = event.target.closest('button');
+            if (button) {
+                button.innerHTML = '<i class="fa-solid fa-check"></i> Qualify';
+                button.disabled = false;
+            }
+        }
     });
 }
 
@@ -73,10 +106,20 @@ function removeQualification(studentId) {
         return;
     }
     
+    // Show loading state on button if event exists
+    if (event && event.target) {
+        const button = event.target.closest('button');
+        if (button) {
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            button.disabled = true;
+        }
+    }
+    
     fetch('/admin/remove-qualification', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HERE
         },
         body: JSON.stringify({ student_id: studentId })
     })
@@ -87,10 +130,27 @@ function removeQualification(studentId) {
             setTimeout(() => location.reload(), 1500);
         } else {
             showNotification('Error: ' + data.message, 'error');
+            // Reset button if there's an error
+            if (event && event.target) {
+                const button = event.target.closest('button');
+                if (button) {
+                    button.innerHTML = '<i class="fa-solid fa-times"></i> Remove';
+                    button.disabled = false;
+                }
+            }
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         showNotification('Error removing qualification', 'error');
+        // Reset button on error
+        if (event && event.target) {
+            const button = event.target.closest('button');
+            if (button) {
+                button.innerHTML = '<i class="fa-solid fa-times"></i> Remove';
+                button.disabled = false;
+            }
+        }
     });
 }
 

@@ -145,34 +145,6 @@
         margin-left: auto;
     }
     
-    /* Statistics Button */
-    .stats-nav-btn {
-        background: linear-gradient(135deg, #845ef7, #6b3ef0);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        font-weight: 500;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(132, 94, 247, 0.3);
-        text-decoration: none;
-        min-width: 180px;
-        justify-content: center;
-    }
-    
-    .stats-nav-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(132, 94, 247, 0.4);
-    }
-    
-    .stats-nav-btn i {
-        font-size: 1.1rem;
-    }
     
     /* Vote Distribution Button */
     .distribution-nav-btn {
@@ -297,10 +269,6 @@
             {% endif %}
         </div>
         <div class="header-actions">
-            <a href="{{ url_for('admin.statistics') }}" class="stats-nav-btn">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Election Statistics</span>
-            </a>
             <a href="{{ url_for('admin.vote_distribution') }}" class="distribution-nav-btn">
                 <i class="fa-solid fa-chart-pie"></i>
                 <span>Vote Distribution</span>

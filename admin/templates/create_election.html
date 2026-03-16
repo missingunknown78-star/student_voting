@@ -36,6 +36,9 @@
 
         <!-- Desktop-style Form -->
         <form method="POST" class="desktop-form" id="electionForm">
+            <!-- CSRF Token - CRITICAL for security -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <!-- Row 1: Title + Scope and Description -->
             <div class="form-row">
                 <!-- Left column: Title + Scope -->

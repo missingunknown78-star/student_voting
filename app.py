@@ -1,6 +1,6 @@
 from flask import Flask, redirect, url_for
 from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_DB, SECRET_KEY
-from extensions import db, bcrypt, login_manager, mail
+from extensions import db, bcrypt, login_manager, mail, csrf  # Add csrf here
 from datetime import timedelta
 
 
@@ -14,7 +14,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-
+# ---- CSRF Configuration ----
+app.config['WTF_CSRF_ENABLED'] = True  # Enable CSRF protection
+app.config['WTF_CSRF_SECRET_KEY'] = SECRET_KEY  # Can use same SECRET_KEY
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # Token expires after 1 hour (optional)
+app.config['WTF_CSRF_SSL_STRICT'] = False  # Set to True if using HTTPS
 
 # ---- Session Security ----
 app.config['SESSION_PERMANENT'] = True
@@ -33,6 +37,7 @@ db.init_app(app)
 bcrypt.init_app(app)
 login_manager.init_app(app)
 mail.init_app(app)
+csrf.init_app(app)  # Initialize CSRF protection
 
 # ---------------------- Import Models ---------------------- #
 from student.models import Student

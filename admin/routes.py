@@ -228,16 +228,23 @@ def login():
     error = None
 
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
 
-        # METHOD 1: Simple Python-side case-sensitive check (works with ALL databases)
-        # First, get all admins with this username (case-insensitive)
-        admin = Admin.query.filter_by(username=username).first()
+        # 🔐 STRICT CASE-SENSITIVE USERNAME CHECK
+        # Use BINARY comparison in SQL for true case sensitivity
+        # This works with MySQL, PostgreSQL, and SQLite
+        admin = Admin.query.filter(
+            Admin.username == username  # This is case-sensitive in most databases
+        ).first()
         
-        # Then do a case-sensitive comparison in Python
-        if admin and admin.username == username:  # Python string comparison IS case-sensitive
-            # Now verify password
+        # Alternative if your database is case-insensitive:
+        # admin = Admin.query.filter_by(username=username).first()
+        # Then check in Python: if admin and admin.username == username:
+        
+        # Now verify password if admin exists AND usernames match exactly
+        if admin and admin.username == username:  # Double-check in Python
+            # Verify password
             if bcrypt.check_password_hash(admin.password, password) and admin.role == 'Admin':
                 # Reset failed attempts
                 session[f'login_attempts_{ip}'] = 0
@@ -253,7 +260,6 @@ def login():
                 # Redirect to 2FA setup if no totp_secret
                 if not getattr(admin, 'totp_secret', None):
                     session['pre_2fa_admin_id'] = admin.id
-                    # ---------- AUDIT LOG: 2FA not set up ----------
                     log_audit(
                         action='2FA_REQUIRED',
                         description=f"Admin user '{username}' redirected to 2FA setup - TOTP secret not configured"
@@ -261,7 +267,6 @@ def login():
                     return redirect(url_for('admin.setup_2fa'))
                 else:
                     session['pre_2fa_admin_id'] = admin.id
-                    # ---------- AUDIT LOG: 2FA verification required ----------
                     log_audit(
                         action='2FA_VERIFICATION',
                         description=f"Admin user '{username}' redirected to 2FA verification"
@@ -270,17 +275,35 @@ def login():
             else:
                 # Password incorrect
                 admin = None  # Set to None to trigger failed login handling
-        
-        # If we get here, login failed (either no admin found or password incorrect)
+        else:
+            # Username not found or case mismatch
+            admin = None
+
+        # If we get here, login failed
         if not admin:
             # Increment failed attempts
             attempts += 1
             session[f'login_attempts_{ip}'] = attempts
 
+            # Create a more specific error message based on what failed
+            # Check if username exists but case doesn't match
+            username_exists = Admin.query.filter(
+                func.lower(Admin.username) == func.lower(username)
+            ).first()
+            
+            if username_exists and username_exists.username != username:
+                # Username exists but case doesn't match
+                error_msg = f"Invalid username or password."
+                log_msg = f"Case mismatch: Attempted '{username}', actual username is '{username_exists.username}'"
+            else:
+                # No match at all
+                error_msg = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
+                log_msg = f"Username '{username}' not found"
+
             # ---------- AUDIT LOG: Failed login attempt ----------
             log_audit(
                 action='LOGIN_FAILED',
-                description=f"Failed login attempt for username '{username}' from IP: {ip} (Attempt {attempts} of {MAX_ATTEMPTS})"
+                description=f"Failed login attempt from IP: {ip} | {log_msg}"
             )
 
             if attempts >= MAX_ATTEMPTS:
@@ -288,13 +311,12 @@ def login():
                 session[f'login_attempts_{ip}'] = 0
                 error = 'Invalid credentials. Admin login temporarily locked.'
                 
-                # ---------- AUDIT LOG: Account temporarily locked ----------
                 log_audit(
                     action='ACCOUNT_LOCKED',
-                    description=f"Admin login temporarily locked for IP: {ip} due to {MAX_ATTEMPTS} failed attempts. Cooldown: {COOLDOWN_TIME} seconds"
+                    description=f"Admin login temporarily locked for IP: {ip} due to {MAX_ATTEMPTS} failed attempts"
                 )
             else:
-                error = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
+                error = error_msg
 
     return render_template('admin_login.html', error=error)
 
@@ -599,6 +621,8 @@ def setup_2fa():
     )
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
 
+
+from extensions import csrf  # Make sure to import csrf
 
 @admin_bp.route('/2fa/disable', methods=['POST'])
 @login_required
@@ -3285,6 +3309,114 @@ def delete_multiple_courses():
     return redirect(url_for('admin.manage_departments'))
 
 
+# --- Update Department route ---
+@admin_bp.route('/departments/update', methods=['POST'])
+@admin_required
+def update_department():
+    try:
+        dept_id = request.form['id']
+        new_name = request.form['name'].strip()
+        
+        connection = mysql.connector.connect(
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DB
+        )
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get old name for audit log
+        cursor.execute("SELECT name FROM departments WHERE id = %s", (dept_id,))
+        old_name_result = cursor.fetchone()
+        old_name = old_name_result['name'] if old_name_result else 'Unknown'
+        
+        # Update department
+        cursor.execute(
+            "UPDATE departments SET name = %s WHERE id = %s",
+            (new_name, dept_id)
+        )
+        connection.commit()
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='UPDATE_DEPARTMENT',
+            description=f"Admin user '{username}' updated department from '{old_name}' to '{new_name}' (ID: {dept_id}) from IP: {ip}"
+        )
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'success': True, 'message': 'Department updated successfully'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# --- Update Course route ---
+@admin_bp.route('/courses/update', methods=['POST'])
+@admin_required
+def update_course():
+    try:
+        course_id = request.form['id']
+        new_name = request.form['course_name'].strip()
+        new_department_id = request.form['department_id']
+        
+        connection = mysql.connector.connect(
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DB
+        )
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get old data for audit log
+        cursor.execute("""
+            SELECT c.course_name, c.department_id, d.name as dept_name 
+            FROM courses c
+            JOIN departments d ON c.department_id = d.id
+            WHERE c.id = %s
+        """, (course_id,))
+        old_data = cursor.fetchone()
+        
+        # Update course
+        cursor.execute(
+            "UPDATE courses SET course_name = %s, department_id = %s WHERE id = %s",
+            (new_name, new_department_id, course_id)
+        )
+        connection.commit()
+        
+        # Get new department name for response
+        cursor.execute("SELECT name FROM departments WHERE id = %s", (new_department_id,))
+        new_dept = cursor.fetchone()
+        new_dept_name = new_dept['name'] if new_dept else 'Unknown'
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        old_dept_name = old_data['dept_name'] if old_data else 'Unknown'
+        old_course_name = old_data['course_name'] if old_data else 'Unknown'
+        
+        log_audit(
+            action='UPDATE_COURSE',
+            description=f"Admin user '{username}' updated course from '{old_course_name}' (Dept: {old_dept_name}) to '{new_name}' (Dept: {new_dept_name}) (ID: {course_id}) from IP: {ip}"
+        )
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Course updated successfully',
+            'department_name': new_dept_name
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 # ---------------------- MANAGE CANDIDATES ---------------------- #
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
@@ -4765,6 +4897,83 @@ def get_admin_live_vote_counts(election_id):
     return vote_counts
     
 
+
+@admin_bp.route('/results/<int:election_id>/check-new-votes')
+@admin_required
+def check_new_votes(election_id):
+    """Check if there are new votes since last view - tracks per-candidate changes"""
+    try:
+        # Get current total voters (unique students who voted)
+        unique_voters = db.session.query(Vote.student_id).filter_by(
+            election_id=election_id
+        ).distinct().count()
+        
+        # Get candidates for this election
+        candidates = Candidate.query.filter_by(election_id=election_id).all()
+        
+        # Get current vote counts using finder_hash
+        current_vote_counts = get_admin_live_vote_counts(election_id)
+        
+        # Get previous vote counts from session or use defaults
+        # You might want to store this in the user session
+        previous_vote_counts = session.get(f'prev_vote_counts_{election_id}', {})
+        
+        # Calculate which candidates got new votes
+        candidates_with_new_votes = []
+        for candidate in candidates:
+            current = current_vote_counts.get(candidate.id, 0)
+            previous = previous_vote_counts.get(candidate.id, 0)
+            
+            if current > previous:
+                candidates_with_new_votes.append({
+                    'id': candidate.id,
+                    'name': f"{candidate.first_name} {candidate.last_name}",
+                    'new_votes': current - previous,
+                    'position': candidate.position.name if candidate.position else "N/A"
+                })
+        
+        # Store current counts for next comparison
+        session[f'prev_vote_counts_{election_id}'] = current_vote_counts
+        
+        # Build candidate results with percentages for UI update
+        candidate_results = []
+        for candidate in candidates:
+            vote_count = current_vote_counts.get(candidate.id, 0)
+            voter_percentage = round((vote_count / unique_voters * 100), 2) if unique_voters > 0 else 0
+            
+            candidate_results.append({
+                'id': candidate.id,
+                'vote_count': vote_count,
+                'voter_percentage': voter_percentage
+            })
+        
+        # Get total eligible voters
+        election = Election.query.get(election_id)
+        if election.department_id:
+            total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
+        else:
+            total_eligible_voters = Student.query.count()
+        
+        voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
+        students_not_voted = total_eligible_voters - unique_voters
+        
+        # Calculate total new votes
+        total_new_votes = sum([c['new_votes'] for c in candidates_with_new_votes])
+        
+        return jsonify({
+            'success': True,
+            'total_voters': unique_voters,
+            'voter_turnout': voter_turnout,
+            'students_not_voted': students_not_voted,
+            'candidate_results': candidate_results,
+            'candidates_with_new_votes': candidates_with_new_votes,
+            'total_new_votes': total_new_votes
+        })
+        
+    except Exception as e:
+        print(f"Error checking new votes: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
     
 from admin.models import PdfResult
 
@@ -5138,6 +5347,11 @@ def election_results_pdf(election_id):
     """Generate PDF - ONLY AVAILABLE AFTER OFFICIAL TALLY"""
     election = Election.query.get_or_404(election_id)
     
+    # Get chairman name from query parameter
+    chairman_name = request.args.get('chairman', '').strip()
+    if not chairman_name:
+        chairman_name = "COMELEC CHAIRMAN"  # Default fallback
+    
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
     
@@ -5181,6 +5395,7 @@ def election_results_pdf(election_id):
     
     # ===== ONLY GET HERE IF TALLIED =====
     print(f"📊 Generating PDF for election {election_id} using official tally results")
+    print(f"📝 COMELEC Chairman: {chairman_name}")
     
     # Get candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()
@@ -5308,7 +5523,8 @@ def election_results_pdf(election_id):
         now=now,
         is_tallied=is_tallied,
         tally_timestamp=tally_timestamp,
-        position_limits=position_limits
+        position_limits=position_limits,
+        chairman_name=chairman_name  # Pass chairman name to template
     )
     
     try:
@@ -5342,8 +5558,14 @@ def election_results_pdf(election_id):
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
         
-        # 🚫 REMOVED: ELECTION_RESULTS_PDF_EXPORT audit log (GET request - not a data modification)
-        # PDF export is a download, not a database change
+        # ✅ KEEP THIS AUDIT LOG (PDF GENERATION - data access with chairman name)
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='PDF_GENERATED',
+            description=f"Admin user '{username}' from IP: {ip} generated PDF results for election: '{election.title}' (ID: {election_id}) | COMELEC Chairman: {chairman_name}"
+        )
         
         return response
         
@@ -5437,139 +5659,6 @@ def admin_profile():
                            total_votes=total_votes)
 
 
-@admin_bp.route('/statistics')
-@admin_required
-def statistics():
-    import pytz
-    tz = pytz.timezone('Asia/Manila')
-
-    # Get all ended elections
-    all_elections = Election.query.all()
-    past_elections = [e for e in all_elections if e.status == "Ended"]
-    past_elections.sort(key=lambda x: x.end_date, reverse=True)
-
-    election_stats = []
-
-    # Global metrics
-    total_voted_students_all = 0
-    all_margins = []
-    candidate_counts = []
-    month_count = {}
-    largest_election = None
-    largest_voters = 0
-
-    for election in past_elections:
-        votes_per_candidate = {}
-        candidate_roles = {}  # Store the role/position name
-        candidate_roles_with_id = {}  # Store position details with ID and color
-        voter_ids = set()
-        total_votes = 0
-
-        for candidate in election.candidates:
-            full_name = f"{candidate.first_name} {candidate.last_name}"
-            # FIXED: Use PHE-compatible vote counting
-            vote_count = count_votes_for_candidate(candidate.id, election.id)
-            votes_per_candidate[full_name] = vote_count
-            total_votes += vote_count
-
-            # Store role/position as string (JSON serializable)
-            position_name = candidate.position.name if candidate.position else 'Other'
-            candidate_roles[full_name] = position_name
-            
-            # Store position details with ID and color for sorting
-            if candidate.position:
-                candidate_roles_with_id[full_name] = {
-                    'position_id': candidate.position.id,
-                    'name': candidate.position.name,
-                    'color': candidate.position.color or '#adb5bd'
-                }
-            else:
-                candidate_roles_with_id[full_name] = {
-                    'position_id': 999,  # Default high number for 'Other'
-                    'name': 'Other',
-                    'color': '#adb5bd'
-                }
-
-        # Get all unique voters for this election
-        voter_ids = get_all_voters_for_election(election.id)
-        total_voted_students = len(voter_ids)
-        total_voted_students_all += total_voted_students
-
-        # Determine winner (for info)
-        if votes_per_candidate and total_votes > 0:
-            winner = max(votes_per_candidate, key=votes_per_candidate.get)
-            winning_votes = votes_per_candidate[winner]
-            winning_percentage = round((winning_votes / total_votes) * 100, 1)
-        else:
-            winner = "No votes"
-            winning_percentage = 0
-
-        election_stats.append({
-            'title': election.title,
-            'election_type': election.election_type,
-            'department': election.department,
-            'course': getattr(election.course_rel, 'course_name', None) if election.course_rel else None,
-            'start_date': election.start_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
-            'end_date': election.end_date.astimezone(tz).strftime('%Y-%m-%d %H:%M'),
-            'votes': votes_per_candidate,
-            'candidate_roles': candidate_roles,
-            'candidate_roles_with_id': candidate_roles_with_id,  # New: includes position_id and color
-            'winner': winner,
-            'total_voters': total_voted_students,
-            'winning_percentage': winning_percentage
-        })
-
-        candidate_counts.append(len(votes_per_candidate))
-
-        # Margin (top 2 candidates)
-        if len(votes_per_candidate) > 1 and total_votes > 0:
-            sorted_votes = sorted(votes_per_candidate.values(), reverse=True)
-            margin = ((sorted_votes[0] - sorted_votes[1]) / total_votes) * 100
-            all_margins.append(round(margin, 1))
-
-        # Most active month
-        month = election.end_date.strftime('%Y-%m')
-        month_count[month] = month_count.get(month, 0) + 1
-
-        # Largest election
-        if total_voted_students > largest_voters:
-            largest_voters = total_voted_students
-            largest_election = election.title
-
-    # Final KPIs
-    avg_participation = round(total_voted_students_all / len(past_elections), 1) if past_elections else 0
-    closest_margin = round(min(all_margins), 1) if all_margins else 0
-    avg_candidates = round(sum(candidate_counts) / len(candidate_counts), 1) if candidate_counts else 0
-    most_active_month = max(month_count.items(), key=lambda x: x[1])[0] if month_count else '--'
-    largest_election = largest_election or '--'
-
-    # Departments for filter
-    departments = Department.query.order_by(Department.name).all()
-
-    # Courses (colleges) for dependent dropdown
-    colleges = Course.query.all()
-    college_data = [{
-        'id': c.id,
-        'course_name': c.course_name,
-        'department': {
-            'id': c.department.id,
-            'name': c.department.name
-        } if c.department else None
-    } for c in colleges]
-    
-    # 🚫 REMOVED: STATISTICS_VIEW audit log (page view - not a data modification)
-
-    return render_template(
-        'statistics.html',
-        election_stats=election_stats,
-        departments=departments,
-        collegeData=college_data,
-        avg_participation=avg_participation,
-        closest_margin=closest_margin,
-        avg_candidates=avg_candidates,
-        most_active_month=most_active_month,
-        largest_election=largest_election
-    )
 
 
 from admin.models import VoteDistribution
@@ -5742,46 +5831,45 @@ def get_vote_distribution(election_id):
 @admin_bp.route('/api/vote-distribution/export/<int:election_id>/<string:format>')
 @admin_required
 def export_vote_distribution(election_id, format):
-    """Export vote distribution data"""
+    """Export vote distribution data - PDF only"""
     import csv
     import io
     from datetime import datetime
+    from weasyprint import HTML, CSS
+    from weasyprint.text.fonts import FontConfiguration
     
     election = Election.query.get_or_404(election_id)
     
-    if format not in ['csv', 'excel', 'pdf']:
+    if format not in ['pdf']:  # Only PDF allowed now
         return jsonify({'success': False, 'error': 'Invalid format'}), 400
     
-    if format == 'csv':
-        # Create CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # Determine grouping type
+    if format == 'pdf':
+        # Get distribution data
         first_record = VoteDistribution.query.filter_by(election_id=election_id).first()
         grouping_type = first_record.grouping_type if first_record else 'department'
         
-        # Write header with appropriate column name
-        if grouping_type == 'department':
-            group_header = 'Department'
-        elif grouping_type == 'course':
-            group_header = 'Course'
+        # Get grouping label
+        if grouping_type == 'course':
+            group_label = 'Course'
         elif grouping_type == 'program_type':
-            group_header = 'Program Type'
+            group_label = 'Program Type'
         else:
-            group_header = 'Group'
-            
-        writer.writerow(['Position', 'Candidate', group_header, 'Votes', 'Percentage'])
+            group_label = 'Department'
         
-        # Get data from vote_distributions table
+        # Get data for PDF
         distributions = VoteDistribution.query.filter_by(election_id=election_id)\
             .join(Candidate)\
             .order_by(VoteDistribution.position_name, Candidate.last_name)\
             .all()
         
-        # Write data with correct group name
+        # Group by position for better display
+        positions = {}
         for dist in distributions:
-            # Get the appropriate group name
+            pos_name = dist.position_name or (dist.position.name if dist.position else 'Unknown')
+            if pos_name not in positions:
+                positions[pos_name] = []
+            
+            # Get group name
             group_name = None
             if dist.department_id:
                 dept = Department.query.get(dist.department_id)
@@ -5796,33 +5884,111 @@ def export_vote_distribution(election_id, format):
             else:
                 group_name = dist.grouping_name
             
-            writer.writerow([
-                dist.position_name or (dist.position.name if dist.position else 'Unknown'),
-                f"{dist.candidate.first_name} {dist.candidate.last_name}",
-                group_name or 'Unknown',
-                dist.vote_count,
-                f"{dist.percentage or 0}%"
-            ])
+            positions[pos_name].append({
+                'candidate': f"{dist.candidate.first_name} {dist.candidate.last_name}",
+                'group': group_name or 'Unknown',
+                'votes': dist.vote_count,
+                'percentage': dist.percentage or 0
+            })
         
-        # Create response
-        output.seek(0)
-        filename = f"vote_distribution_{election.title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        # Calculate statistics
+        total_votes = sum(d.vote_count for d in distributions)
+        total_candidates = Candidate.query.filter_by(election_id=election_id).count()
         
-        # ✅ KEEP THIS AUDIT LOG
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
+        # Get unique groups
+        if grouping_type == 'department':
+            unique_groups = db.session.query(VoteDistribution.department_id)\
+                .filter_by(election_id=election_id)\
+                .filter(VoteDistribution.department_id.isnot(None))\
+                .distinct().count()
+        elif grouping_type == 'course':
+            unique_groups = db.session.query(VoteDistribution.course_id)\
+                .filter_by(election_id=election_id)\
+                .filter(VoteDistribution.course_id.isnot(None))\
+                .distinct().count()
+        elif grouping_type == 'program_type':
+            unique_groups = db.session.query(VoteDistribution.program_type_id)\
+                .filter_by(election_id=election_id)\
+                .filter(VoteDistribution.program_type_id.isnot(None))\
+                .distinct().count()
+        else:
+            unique_groups = 0
         
-        log_audit(
-            action='EXPORT_VOTE_DISTRIBUTION',
-            description=f"Admin user '{username}' exported vote distribution for election '{election.title}' (ID: {election_id}) as {format.upper()} from IP: {ip} | Records: {len(distributions)} | Grouping: {grouping_type}"
+        # Get voter turnout
+        total_students = Student.query.count()
+        voted_students = db.session.query(Vote.student_id)\
+            .filter_by(election_id=election_id)\
+            .distinct().count()
+        turnout = round((voted_students / total_students * 100), 1) if total_students > 0 else 0
+        
+        tz = pytz.timezone('Asia/Manila')
+        now = datetime.now(tz)
+        
+        # Render PDF template
+        html = render_template(
+            'vote_distribution_pdf.html',
+            election=election,
+            positions=positions,
+            total_votes=total_votes,
+            total_candidates=total_candidates,
+            unique_groups=unique_groups,
+            group_label=group_label,
+            turnout=turnout,
+            now=now,
+            grouping_type=grouping_type
         )
         
-        return send_file(
-            io.BytesIO(output.getvalue().encode('utf-8-sig')),
-            mimetype='text/csv',
-            as_attachment=True,
-            download_name=filename
-        )
+        try:
+            # Generate PDF
+            font_config = FontConfiguration()
+            
+            pdf = HTML(string=html, base_url=request.host_url).write_pdf(
+                stylesheets=[CSS(string='''
+                    @page {
+                        size: letter;
+                        margin: 0.75in;
+                        @bottom-center {
+                            content: "Page " counter(page) " of " counter(pages);
+                            font-family: Arial, sans-serif;
+                            font-size: 9pt;
+                            color: #666;
+                        }
+                    }
+                ''')],
+                font_config=font_config
+            )
+            
+            # Generate filename
+            filename = f"vote_distribution_{election.title}_{now.strftime('%Y%m%d_%H%M')}.pdf"
+            filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+            
+            response = make_response(pdf)
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            # Audit log
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='EXPORT_VOTE_DISTRIBUTION_PDF',
+                description=f"Admin user '{username}' exported vote distribution for election '{election.title}' (ID: {election_id}) as PDF from IP: {ip} | Records: {len(distributions)} | Grouping: {grouping_type}"
+            )
+            
+            return response
+            
+        except Exception as e:
+            current_app.logger.error(f"PDF Generation Error: {str(e)}")
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'error': 'PDF generation failed. Please try again or contact support.',
+                    'details': str(e)
+                }), 500
+            else:
+                flash(f'PDF generation failed: {str(e)}', 'danger')
+                return redirect(url_for('admin.vote_distribution'))
     
     return jsonify({'success': False, 'error': 'Format not implemented yet'}), 400
 

@@ -109,73 +109,74 @@
         </div>
     </div>
     
-<!-- Export Actions - Split into two columns -->
-<div class="export-actions-container">
-    <!-- Left side: Upload PDF Form -->
-    <div class="upload-pdf-section">
-        <form id="uploadPdfForm" enctype="multipart/form-data" class="upload-pdf-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
-            <div class="file-upload-wrapper">
-                <label for="pdfFile" class="file-upload-label">
-                    <i class="fa-solid fa-cloud-upload-alt"></i>
-                    <span class="upload-text">Choose PDF File</span>
-                </label>
-                <input type="file" id="pdfFile" name="pdf_file" accept=".pdf" class="file-upload-input">
-                <div class="file-name-display" id="fileNameDisplay">No file chosen</div>
-            </div>
-            <button type="submit" class="upload-btn" id="uploadPdfBtn">
-                <i class="fa-solid fa-upload"></i> Upload Result PDF
-            </button>
-        </form>
-        
-        <!-- Display existing PDFs if any -->
-        {% if election.pdf_results and election.pdf_results|length > 0 %}
-        <div class="existing-pdfs">
-            <div class="existing-pdfs-header">
-                <i class="fa-solid fa-file-pdf"></i>
-                <span>Uploaded PDF Results ({{ election.pdf_results|length }})</span>
-            </div>
-            <div class="pdf-list">
-                {% for pdf in election.pdf_results|sort(attribute='uploaded_at', reverse=true) %}
-                <div class="pdf-item" id="pdf-item-{{ pdf.id }}">
-                    <div class="pdf-info">
-                        <i class="fa-solid fa-file-pdf pdf-icon"></i>
-                        <div class="pdf-details">
-                            <div class="pdf-name">{{ pdf.filename }}</div>
-                            <div class="pdf-meta">
-                                <span class="pdf-size">{{ pdf.formatted_size }}</span>
-                                <span class="pdf-date">{{ pdf.uploaded_at.strftime('%b %d, %Y %I:%M %p') }}</span>
-                                {% if pdf.uploader %}
-                                <span class="pdf-uploader">by {{ pdf.uploader.username }}</span>
+    <!-- Export Actions - Split into two columns -->
+    <div class="export-actions-container">
+        <!-- Left side: Upload PDF Form -->
+        <div class="upload-pdf-section">
+            <form id="uploadPdfForm" enctype="multipart/form-data" class="upload-pdf-form">
+                <!-- CSRF Token - CRITICAL for file upload -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="file-upload-wrapper">
+                    <label for="pdfFile" class="file-upload-label">
+                        <i class="fa-solid fa-cloud-upload-alt"></i>
+                        <span class="upload-text">Choose PDF File</span>
+                    </label>
+                    <input type="file" id="pdfFile" name="pdf_file" accept=".pdf" class="file-upload-input">
+                    <div class="file-name-display" id="fileNameDisplay">No file chosen</div>
+                </div>
+                <button type="submit" class="upload-btn" id="uploadPdfBtn">
+                    <i class="fa-solid fa-upload"></i> Upload Result PDF
+                </button>
+            </form>
+            
+            <!-- Display existing PDFs if any -->
+            {% if election.pdf_results and election.pdf_results|length > 0 %}
+            <div class="existing-pdfs">
+                <div class="existing-pdfs-header">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Uploaded PDF Results ({{ election.pdf_results|length }})</span>
+                </div>
+                <div class="pdf-list">
+                    {% for pdf in election.pdf_results|sort(attribute='uploaded_at', reverse=true) %}
+                    <div class="pdf-item" id="pdf-item-{{ pdf.id }}">
+                        <div class="pdf-info">
+                            <i class="fa-solid fa-file-pdf pdf-icon"></i>
+                            <div class="pdf-details">
+                                <div class="pdf-name">{{ pdf.filename }}</div>
+                                <div class="pdf-meta">
+                                    <span class="pdf-size">{{ pdf.formatted_size }}</span>
+                                    <span class="pdf-date">{{ pdf.uploaded_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                                    {% if pdf.uploader %}
+                                    <span class="pdf-uploader">by {{ pdf.uploader.username }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if pdf.description %}
+                                <div class="pdf-description">{{ pdf.description }}</div>
                                 {% endif %}
                             </div>
-                            {% if pdf.description %}
-                            <div class="pdf-description">{{ pdf.description }}</div>
-                            {% endif %}
+                        </div>
+                        <div class="pdf-actions">
+                            <a href="{{ url_for('admin.download_pdf_result', pdf_id=pdf.id) }}" class="pdf-download-btn" title="Download PDF">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                            <button type="button" class="pdf-delete-btn" onclick="deletePdfResult({{ pdf.id }})" title="Delete PDF">
+                                <i class="fa-solid fa-trash-alt"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="pdf-actions">
-                        <a href="{{ url_for('admin.download_pdf_result', pdf_id=pdf.id) }}" class="pdf-download-btn" title="Download PDF">
-                            <i class="fa-solid fa-download"></i>
-                        </a>
-                        <button type="button" class="pdf-delete-btn" onclick="deletePdfResult({{ pdf.id }})" title="Delete PDF">
-                            <i class="fa-solid fa-trash-alt"></i>
-                        </button>
-                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
+            {% endif %}
         </div>
-        {% endif %}
+        
+        <!-- Right side: Export PDF button -->
+        <div class="export-pdf-section">
+            <button class="export-btn" id="exportPdfBtn">
+                <i class="fa-solid fa-file-pdf"></i> Export Results (PDF) - Letter Size
+            </button>
+        </div>
     </div>
-    
-    <!-- Right side: Export PDF button -->
-    <div class="export-pdf-section">
-        <button class="export-btn" id="exportPdfBtn">
-            <i class="fa-solid fa-file-pdf"></i> Export Results (PDF) - Letter Size
-        </button>
-    </div>
-</div>
     
     <!-- =========================================== -->
     <!-- STATE 1: LIVE RESULTS (is_tallied == false) -->
@@ -193,7 +194,6 @@
             <i class="fa-solid fa-exclamation-circle"></i>
             <p>
                 <strong>Note:</strong> Percentages are based on encrypted votes from the Vote table and may change until official tally.
-                Exact vote counts are not shown to prevent premature conclusions.
             </p>
         </div>
         
@@ -208,17 +208,25 @@
             </div>
             
             {% for candidate in candidate_results %}
-            <div class="candidate-row">
+            <div class="candidate-row" 
+                 data-candidate-id="{{ candidate.id }}"
+                 data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                 data-candidate-position="{{ candidate.position }}"
+                 data-vote-count="{{ candidate.vote_count }}">
                 <div>{{ loop.index }}</div>
                 <div class="candidate-info">
-                    {% if candidate.photo %}
-                    <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
-                         alt="{{ candidate.first_name }}" class="candidate-photo">
-                    {% else %}
-                    <div class="default-avatar">
-                        <i class="fa-solid fa-user"></i>
+                    <div class="candidate-photo-container">
+                        {% if candidate.photo %}
+                        <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
+                             alt="{{ candidate.first_name }}" class="candidate-photo">
+                        {% else %}
+                        <div class="default-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        {% endif %}
+                        <!-- Vote badge container - will be populated by JavaScript -->
+                        <div class="vote-badge-container" id="vote-badge-{{ candidate.id }}"></div>
                     </div>
-                    {% endif %}
                     <div class="candidate-text">
                         <div class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</div>
                     </div>
@@ -420,17 +428,23 @@
                 {% endif %}
             {% endfor %}
             
-            <div class="candidate-row {% if is_winner %}winner{% endif %}">
+            <div class="candidate-row {% if is_winner %}winner{% endif %}" 
+                 data-candidate-id="{{ candidate.id }}"
+                 data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                 data-candidate-position="{{ candidate.position }}"
+                 data-vote-count="{{ candidate.vote_count }}">
                 <div>{{ loop.index }}</div>
                 <div class="candidate-info">
-                    {% if candidate.photo %}
-                    <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
-                         alt="{{ candidate.first_name }}" class="candidate-photo">
-                    {% else %}
-                    <div class="default-avatar">
-                        <i class="fa-solid fa-user"></i>
+                    <div class="candidate-photo-container">
+                        {% if candidate.photo %}
+                        <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
+                             alt="{{ candidate.first_name }}" class="candidate-photo">
+                        {% else %}
+                        <div class="default-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                     <div class="candidate-text">
                         <div class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</div>
                     </div>
@@ -470,6 +484,38 @@
     </div>
     
     {% endif %} <!-- End of is_tallied conditional -->
+
+    <!-- COMELEC Chairman Name Modal -->
+    <div class="modal-overlay" id="comelecModal" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-gavel"></i> COMELEC Chairman Signature</h3>
+                <button type="button" class="modal-close" onclick="closeComelecModal()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">Please enter the name of the COMELEC Chairman for the official election results PDF.</p>
+                <div class="form-group">
+                    <label for="chairmanName">
+                        <i class="fa-solid fa-user-tie"></i> Chairman Name:
+                    </label>
+                    <input type="text" id="chairmanName" class="modal-input" 
+                           placeholder="e.g., Juan Dela Cruz" 
+                           value="{{ current_user.full_name if current_user.full_name else '' }}">
+                    <small class="input-hint">This name will appear on the official results document</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn cancel" onclick="closeComelecModal()">
+                    <i class="fa-solid fa-ban"></i> Cancel
+                </button>
+                <button type="button" class="modal-btn confirm" onclick="submitChairmanName()">
+                    <i class="fa-solid fa-check"></i> Generate PDF
+                </button>
+            </div>
+        </div>
+    </div>
     
 </div>
 
@@ -496,7 +542,7 @@
     "electionId": {{ election.id }},
     "isTallied": {{ 'true' if is_tallied else 'false' }},
     "status": "{{ status }}",
-    "csrfToken": "{{ csrf_token() if csrf_token else '' }}",
+    "csrfToken": "{{ csrf_token() }}",
     "electionTitle": "{{ election.title }}",
     "generatedDate": "{{ now.strftime('%B %d, %Y at %I:%M %p') }}"
 }

@@ -1,6 +1,12 @@
 /* PHOTO LIGHTBOX */
 // manage_candidates.js - Updated with school year support and platform field
 
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Manage Candidates JS loaded");
     
@@ -327,8 +333,12 @@ function loadCourses(mode, departmentId) {
         loadingOption.disabled = true;
         courseSelect.appendChild(loadingOption);
         
-        // Fetch courses for the selected department
-        fetch(`/admin/courses/by_department/${departmentId}`)
+        // Fetch courses for the selected department with CSRF token
+        fetch(`/admin/courses/by_department/${departmentId}`, {
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -543,7 +553,8 @@ function filterCandidates(page = null, keepPage = false) {
     return fetch(url, {
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()
         }
     })
     .then(res => {
@@ -840,7 +851,8 @@ if (addCandidateForm) {
             method: 'POST',
             body: formData,
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(res => {
@@ -928,7 +940,8 @@ if (editCandidateForm) {
             method: 'POST',
             body: formData,
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(res => {
@@ -1011,7 +1024,8 @@ function deleteCandidate(candidateId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getCsrfToken()
         }
     })
     .then(res => {

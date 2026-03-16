@@ -957,6 +957,7 @@ def reject_device(token):
 
 # ------------------- FORGOT PASSWORD -------------------
 import secrets
+
 @student_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
     data = request.get_json()
@@ -995,25 +996,37 @@ def forgot_password():
         print("Failed to send email:", e)
         return jsonify({"message": "Failed to send email. Try again later."}), 500
 
+
 @student_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+    """
+    Reset password route
+    - GET: Shows the reset password form (with CSRF token)
+    - POST: Processes the password reset (automatically validates CSRF token)
+    """
     student = Student.query.filter_by(reset_token=token).first()
     if not student:
         flash("Invalid or expired token", "danger")
         return redirect(url_for('student.login'))
 
     if request.method == 'POST':
+        # CSRF token is automatically validated by Flask-WTF here!
+        # If invalid, request would be rejected with 400 error
+        
         new_password = request.form.get('password', '').strip()
         if not new_password:
             flash("Password cannot be empty", "danger")
             return render_template('student_reset_password.html', token=token)
 
+        # Update password
         student.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
         student.reset_token = None
         db.session.commit()
+        
         flash("Password successfully reset! You can now login.", "success")
         return redirect(url_for('student.login'))
 
+    # GET request - show the form with CSRF token
     return render_template('student_reset_password.html', token=token)
 
 
@@ -3933,10 +3946,10 @@ def support():
 
 # ===================== WEBAUTHN / BIOMETRIC ROUTES =====================
 
-# student/routes.py
-# ==================== WEBAUTHN / BIOMETRIC ROUTES ====================
-# ─── Registration ──────────────────────────
+from extensions import csrf
+
 @student_bp.route("/webauthn/register/options")
+@csrf.exempt  # Exempt WebAuthn routes
 def webauthn_register_options():
     username = request.args.get("username")
     if not username:
@@ -3974,6 +3987,7 @@ def webauthn_register_options():
 
 
 @student_bp.route("/webauthn/register/verify", methods=["POST"])
+@csrf.exempt  # Exempt WebAuthn routes
 def webauthn_register_verify():
     data = request.get_json()
     username = data.get("username")
@@ -4005,7 +4019,10 @@ def webauthn_register_verify():
 
 
 
+from extensions import csrf  # Import csrf from extensions
+
 @student_bp.route("/webauthn/login/options")
+@csrf.exempt  # Exempt WebAuthn routes from CSRF protection
 def webauthn_login_options():
     """
     Phase 2: True one-click passkey login
@@ -4035,9 +4052,10 @@ def webauthn_login_options():
 
 
 from base64 import b64decode
-
 from flask_login import login_user
+
 @student_bp.route("/webauthn/login/verify", methods=["POST"])
+@csrf.exempt  # Exempt WebAuthn routes from CSRF protection
 def webauthn_login_verify():
     """
     Phase 2: True one-click passkey login

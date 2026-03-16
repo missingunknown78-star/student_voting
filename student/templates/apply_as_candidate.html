@@ -212,6 +212,9 @@
             <div id="candidateApplicationNotification" class="modal-notification"></div>
             
             <form id="candidateApplicationForm" enctype="multipart/form-data">
+                <!-- CSRF Token - CRITICAL for security -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="form-group full-width">
                     <label>Your Name</label>
                     <p id="applicantName">{{ student.first_name }} {{ student.last_name }}</p>
@@ -289,7 +292,7 @@
                 <div class="button-group">
                     <button type="submit" class="bulk-candidate-btn" id="applySubmitBtn">
                         <span class="button-text">Submit Application</span>
-                        <span class="loading-spinner"></span>
+                        <span class="loading-spinner" style="display: none;"></span>
                     </button>
                     <button type="button" class="reset-btn" onclick="closeCandidateModal()">Cancel</button>
                 </div>
@@ -297,4 +300,107 @@
         </div>
     </div>
 </div>
+
+<!-- Add this script to ensure CSRF token is included in AJAX requests -->
+<script>
+// CSRF Token Helper Function (if not already in base.js)
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
+// Override the form submission to include CSRF token in headers
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('candidateApplicationForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const submitBtn = document.getElementById('applySubmitBtn');
+            const buttonText = submitBtn.querySelector('.button-text');
+            const spinner = submitBtn.querySelector('.loading-spinner');
+            
+            buttonText.style.opacity = '0.7';
+            spinner.style.display = 'inline-block';
+            submitBtn.disabled = true;
+            
+            const formData = new FormData(this);
+            const csrfToken = getCsrfToken();
+            
+            fetch("{{ url_for('student.apply_as_candidate') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken  // Add CSRF token to headers
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    const notification = document.getElementById('candidateApplicationNotification');
+                    notification.className = 'modal-notification success';
+                    notification.innerHTML = `<i class="fa-solid fa-check-circle"></i> ${data.message}`;
+                    notification.style.display = 'flex';
+                    
+                    // Close modal after 2 seconds and reload
+                    setTimeout(() => {
+                        closeCandidateModal();
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // Show error message
+                    const notification = document.getElementById('candidateApplicationNotification');
+                    notification.className = 'modal-notification error';
+                    notification.innerHTML = `<i class="fa-solid fa-exclamation-circle"></i> ${data.message}`;
+                    notification.style.display = 'flex';
+                    
+                    // Reset button state
+                    buttonText.style.opacity = '1';
+                    spinner.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const notification = document.getElementById('candidateApplicationNotification');
+                notification.className = 'modal-notification error';
+                notification.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> An error occurred. Please try again.';
+                notification.style.display = 'flex';
+                
+                // Reset button state
+                buttonText.style.opacity = '1';
+                spinner.style.display = 'none';
+                submitBtn.disabled = false;
+            });
+        });
+    }
+});
+
+function closeCandidateModal() {
+    document.getElementById('candidateApplicationModal').style.display = 'none';
+    document.getElementById('candidateApplicationForm').reset();
+    document.getElementById('candidateApplicationNotification').style.display = 'none';
+}
+
+function filterElectionsForApply() {
+    // Your existing filter function
+    const scope = document.getElementById('apply_scope').value;
+    const electionSelect = document.getElementById('apply_election');
+    const options = electionSelect.options;
+    
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option.value) {
+            const optionScope = option.getAttribute('data-scope');
+            if (optionScope === scope) {
+                option.style.display = 'block';
+            } else {
+                option.style.display = 'none';
+            }
+        }
+    }
+}
+</script>
 {% endblock %}

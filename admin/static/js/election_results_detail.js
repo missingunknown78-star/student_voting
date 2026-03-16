@@ -2,6 +2,227 @@
 const templateData = JSON.parse(document.getElementById('template-data').textContent);
 const csrfToken = templateData.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
+// ==================== VOTE BADGE TRACKING ====================
+let previousCandidateVotes = {}; // Store per-candidate vote counts
+let previousTotalVoters = 0;
+let newVotesCheckInterval = null;
+let activeBadges = {}; // Track active badges and their timeouts
+
+// Store vote counts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Store initial per-candidate vote counts from data attributes
+    const candidateRows = document.querySelectorAll('.candidate-row');
+    candidateRows.forEach((row, index) => {
+        const candidateId = row.dataset.candidateId;
+        const candidateName = row.dataset.candidateName;
+        const candidatePosition = row.dataset.candidatePosition;
+        const voteCount = parseInt(row.dataset.voteCount) || 0;
+        
+        if (candidateId) {
+            previousCandidateVotes[candidateId] = {
+                id: candidateId,
+                name: candidateName,
+                position: candidatePosition,
+                votes: voteCount,
+                index: index,
+                row: row
+            };
+        }
+    });
+    
+    console.log('Initial candidate votes:', previousCandidateVotes);
+    
+    // Store total voters
+    const totalVotersElement = document.querySelector('.summary-card.voters .summary-number');
+    if (totalVotersElement) {
+        previousTotalVoters = parseInt(totalVotersElement.textContent) || 0;
+    }
+    
+    // Check for new votes every 10 seconds only if not tallied
+    if (!templateData.isTallied) {
+        // Clear any existing interval
+        if (newVotesCheckInterval) {
+            clearInterval(newVotesCheckInterval);
+        }
+        // Check immediately
+        checkForNewVotes();
+        // Then set interval
+        newVotesCheckInterval = setInterval(checkForNewVotes, 10000); // Check every 10 seconds
+    }
+});
+
+function checkForNewVotes() {
+    const electionId = templateData.electionId;
+    
+    console.log('Checking for new votes...');
+    
+    fetch(`/admin/results/${electionId}/check-new-votes`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken  // Add CSRF token even for GET (optional but good practice)
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Received data:', data);
+        
+        if (data.success) {
+            const currentTotalVoters = data.total_voters;
+            const newVotes = currentTotalVoters - previousTotalVoters;
+            
+            if (newVotes > 0) {
+                // Find which candidates got new votes
+                const candidatesWithNewVotes = [];
+                
+                if (data.candidate_results) {
+                    data.candidate_results.forEach(currentCandidate => {
+                        const prevCandidate = previousCandidateVotes[currentCandidate.id];
+                        
+                        if (prevCandidate) {
+                            const newVotesForCandidate = currentCandidate.vote_count - prevCandidate.votes;
+                            
+                            if (newVotesForCandidate > 0) {
+                                candidatesWithNewVotes.push({
+                                    id: currentCandidate.id,
+                                    name: prevCandidate.name,
+                                    position: prevCandidate.position,
+                                    new_votes: newVotesForCandidate
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                console.log('Candidates with new votes:', candidatesWithNewVotes);
+                
+                // Show vote badges on candidate profiles
+                showVoteBadges(candidatesWithNewVotes);
+                
+                // Update the stored counts
+                previousTotalVoters = currentTotalVoters;
+                
+                // Update the display without page reload
+                updateLiveResults(data);
+                
+                // Update stored candidate votes
+                updateStoredCandidateVotes(data.candidate_results);
+            }
+        }
+    })
+    .catch(error => console.error('Error checking for new votes:', error));
+}
+
+function showVoteBadges(candidatesWithNewVotes) {
+    candidatesWithNewVotes.forEach(candidate => {
+        const badgeContainer = document.getElementById(`vote-badge-${candidate.id}`);
+        
+        if (badgeContainer) {
+            // Clear any existing badge and its timeout
+            if (activeBadges[candidate.id]) {
+                clearTimeout(activeBadges[candidate.id].timeout);
+                badgeContainer.innerHTML = '';
+            }
+            
+            // Create new badge
+            const badge = document.createElement('div');
+            badge.className = 'vote-badge';
+            badge.innerHTML = `+${candidate.new_votes}`;
+            
+            // Add to container
+            badgeContainer.appendChild(badge);
+            
+            // Trigger animation
+            setTimeout(() => {
+                badge.classList.add('show');
+            }, 10);
+            
+            // Set timeout to remove after 20 seconds
+            const timeout = setTimeout(() => {
+                badge.classList.remove('show');
+                badge.classList.add('hide');
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (badgeContainer) {
+                        badgeContainer.innerHTML = '';
+                    }
+                    delete activeBadges[candidate.id];
+                }, 300);
+            }, 20000); // 20 seconds
+            
+            // Store active badge and timeout
+            activeBadges[candidate.id] = {
+                element: badge,
+                timeout: timeout
+            };
+        }
+    });
+}
+
+function updateLiveResults(data) {
+    // Update total voters in summary
+    const totalVotersElement = document.querySelector('.summary-card.voters .summary-number');
+    if (totalVotersElement) {
+        totalVotersElement.textContent = data.total_voters;
+    }
+    
+    // Update turnout percentage
+    const turnoutElement = document.querySelector('.summary-card.turnout .summary-number');
+    if (turnoutElement) {
+        turnoutElement.textContent = data.voter_turnout + '%';
+    }
+    
+    // Update turnout bar
+    const turnoutBar = document.querySelector('.turnout-bar');
+    if (turnoutBar) {
+        turnoutBar.style.width = data.voter_turnout + '%';
+    }
+    
+    // Update voted count
+    const votedElement = document.querySelector('.turnout-stat.voted .number');
+    if (votedElement) {
+        votedElement.textContent = data.total_voters;
+    }
+    
+    // Update not voted count
+    const notVotedElement = document.querySelector('.turnout-stat.absent .number');
+    if (notVotedElement) {
+        notVotedElement.textContent = data.students_not_voted;
+    }
+    
+    // Update candidate percentages and data attributes
+    if (data.candidate_results) {
+        const rows = document.querySelectorAll('.candidate-row');
+        data.candidate_results.forEach((candidate, index) => {
+            if (rows[index]) {
+                // Update the data-vote-count attribute
+                rows[index].dataset.voteCount = candidate.vote_count;
+                
+                // Update percentage display
+                const percentageSpan = rows[index].querySelector('.vote-percentage');
+                if (percentageSpan) {
+                    percentageSpan.textContent = candidate.voter_percentage + '%';
+                }
+                
+                // Update progress bar
+                const voteBar = rows[index].querySelector('.vote-bar');
+                if (voteBar) {
+                    voteBar.style.width = candidate.voter_percentage + '%';
+                }
+            }
+        });
+    }
+}
+
+function updateStoredCandidateVotes(candidateResults) {
+    candidateResults.forEach(currentCandidate => {
+        if (previousCandidateVotes[currentCandidate.id]) {
+            previousCandidateVotes[currentCandidate.id].votes = currentCandidate.vote_count;
+        }
+    });
+}
+
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tally button
@@ -16,80 +237,85 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshBtn.addEventListener('click', refreshResults);
     }
 
-    // Initialize PDF export button with direct download
+    // Initialize PDF export button with modal
     const pdfBtn = document.getElementById('exportPdfBtn');
     if (pdfBtn) {
-        pdfBtn.addEventListener('click', function(e) {
+        // Remove any existing listeners and add our modal listener
+        pdfBtn.replaceWith(pdfBtn.cloneNode(true));
+        const newPdfBtn = document.getElementById('exportPdfBtn');
+        newPdfBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            exportToPDF();
+            showComelecModal();
         });
     }
 
-    // Initialize notification styles
-    initializeNotificationStyles();
+    // Initialize vote badge styles
+    initializeBadgeStyles();
+
+    // Initialize file input for PDF upload
+    const fileInput = document.getElementById('pdfFile');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileInputChange);
+    }
+
+    // Initialize upload form
+    const uploadForm = document.getElementById('uploadPdfForm');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', uploadPdfResult);
+    }
 });
 
-// In your election_results_detail.js
-function exportToPDF() {
-    const electionId = templateData.electionId;
-    const isTallied = templateData.isTallied; // Make sure this is passed from template
-    
-    // Check if tallied first
-    if (!isTallied) {
-        showNotification('error', '❌ PDF results are only available after official tally. Please tally the votes first.');
-        return;
-    }
-    
-    const pdfBtn = document.getElementById('exportPdfBtn');
-    const originalText = pdfBtn.innerHTML;
-    
-    // Show loading state
-    pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...';
-    pdfBtn.disabled = true;
-    
-    // Show loading overlay
-    const overlay = document.getElementById('pdfLoadingOverlay');
-    if (overlay) overlay.style.display = 'flex';
-    
-    // Fetch PDF
-    fetch(`/admin/results/${electionId}/pdf`, {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 403) {
-                throw new Error('PDF not available until election is tallied');
+function initializeBadgeStyles() {
+    if (!document.querySelector('#badge-styles')) {
+        const style = document.createElement('style');
+        style.id = 'badge-styles';
+        style.textContent = `
+            .candidate-photo-container {
+                position: relative;
+                display: inline-block;
             }
-            throw new Error('Network response was not ok');
-        }
-        return response.blob();
-    })
-    .then(blob => {
-        // Download PDF (same as before)
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${templateData.electionTitle.replace(/[^a-z0-9]/gi, '_')}_Official_Results.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setTimeout(() => window.URL.revokeObjectURL(url), 100);
-        
-        showNotification('success', '✅ Official results PDF downloaded successfully!');
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('error', error.message || '❌ Failed to generate PDF.');
-    })
-    .finally(() => {
-        pdfBtn.innerHTML = originalText;
-        pdfBtn.disabled = false;
-        if (overlay) overlay.style.display = 'none';
-    });
+            
+            .vote-badge-container {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                z-index: 10;
+                pointer-events: none;
+            }
+            
+            .vote-badge {
+                color: #f59e0b;
+                font-weight: 700;
+                font-size: 18px;
+                padding: 2px 4px;
+                min-width: 20px;
+                text-align: center;
+                transform: scale(0);
+                opacity: 0;
+                transition: transform 0.2s ease, opacity 0.2s ease;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                font-family: 'Arial', sans-serif;
+                letter-spacing: -0.5px;
+            }
+            
+            .vote-badge.show {
+                transform: scale(1);
+                opacity: 1;
+            }
+            
+            .vote-badge.hide {
+                transform: scale(0);
+                opacity: 0;
+            }
+            
+            /* Dark mode support */
+            :root.dark-mode .vote-badge {
+                color: #fbbf24;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 // Tally Votes Function
@@ -118,7 +344,7 @@ async function tallyVotes() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE
             },
             body: JSON.stringify({ force: true })
         });
@@ -157,7 +383,132 @@ function refreshResults() {
     window.location.reload();
 }
 
-// Notification Function
+// ==================== COMELEC CHAIRMAN MODAL FUNCTIONS ====================
+
+function showComelecModal() {
+    const modal = document.getElementById('comelecModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Clear any previous value
+        document.getElementById('chairmanName').value = '';
+        // Focus on input
+        setTimeout(() => {
+            document.getElementById('chairmanName').focus();
+        }, 100);
+    }
+}
+
+function closeComelecModal() {
+    const modal = document.getElementById('comelecModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function submitChairmanName() {
+    const chairmanName = document.getElementById('chairmanName').value.trim();
+    
+    if (!chairmanName) {
+        showNotification('error', '❌ Please enter the COMELEC Chairman\'s name');
+        document.getElementById('chairmanName').focus();
+        return;
+    }
+    
+    // Close modal
+    closeComelecModal();
+    
+    // Generate PDF with chairman name
+    exportToPDFWithChairman(chairmanName);
+}
+
+function exportToPDFWithChairman(chairmanName) {
+    const electionId = templateData.electionId;
+    const isTallied = templateData.isTallied;
+    
+    // Check if tallied first
+    if (!isTallied) {
+        showNotification('error', '❌ PDF results are only available after official tally. Please tally the votes first.');
+        return;
+    }
+    
+    const pdfBtn = document.getElementById('exportPdfBtn');
+    const originalText = pdfBtn.innerHTML;
+    
+    // Show loading state
+    pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...';
+    pdfBtn.disabled = true;
+    
+    // Show loading overlay
+    const overlay = document.getElementById('pdfLoadingOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    
+    // Include chairman name in the request
+    const url = `/admin/results/${electionId}/pdf?chairman=${encodeURIComponent(chairmanName)}`;
+    
+    // Fetch PDF
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken  // Add CSRF token (optional but good practice)
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 403) {
+                throw new Error('PDF not available until election is tallied');
+            }
+            throw new Error('Network response was not ok');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Download PDF
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Create filename with chairman name
+        const safeTitle = templateData.electionTitle.replace(/[^a-z0-9]/gi, '_');
+        const safeChairman = chairmanName.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+        link.download = `${safeTitle}_${safeChairman}_Official_Results.pdf`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
+        
+        showNotification('success', '✅ Official results PDF downloaded successfully!');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', error.message || '❌ Failed to generate PDF.');
+    })
+    .finally(() => {
+        pdfBtn.innerHTML = originalText;
+        pdfBtn.disabled = false;
+        if (overlay) overlay.style.display = 'none';
+    });
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('comelecModal');
+    if (event.target === modal) {
+        closeComelecModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeComelecModal();
+    }
+});
+
+// ==================== NOTIFICATION FUNCTIONS ====================
+
 function showNotification(type, message) {
     const existing = document.querySelector('.custom-notification');
     if (existing) existing.remove();
@@ -186,148 +537,26 @@ function showNotification(type, message) {
     }, 5000);
 }
 
-// Initialize notification styles
-function initializeNotificationStyles() {
-    if (!document.querySelector('#notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notification-styles';
-        style.textContent = `
-            .custom-notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                z-index: 10000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                animation: slideIn 0.3s ease;
-                max-width: 500px;
-                min-width: 300px;
-            }
-            .custom-notification.success {
-                background: #d4edda;
-                color: #155724;
-                border-left: 4px solid #28a745;
-            }
-            .custom-notification.error {
-                background: #f8d7da;
-                color: #721c24;
-                border-left: 4px solid #dc3545;
-            }
-            .custom-notification.info {
-                background: #d1ecf1;
-                color: #0c5460;
-                border-left: 4px solid #17a2b8;
-            }
-            .custom-notification button {
-                background: none;
-                border: none;
-                color: inherit;
-                cursor: pointer;
-                padding: 0;
-                margin-left: auto;
-                opacity: 0.7;
-            }
-            .custom-notification button:hover {
-                opacity: 1;
-            }
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0%); opacity: 1; }
-            }
-            
-            /* PDF Loading Overlay */
-            .pdf-loading-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                z-index: 9999;
-                justify-content: center;
-                align-items: center;
-            }
-            
-            .pdf-loading-content {
-                background: white;
-                padding: 30px 40px;
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                animation: fadeIn 0.3s ease;
-            }
-            
-            .pdf-loading-spinner {
-                border: 4px solid #f3f3f3;
-                border-top: 4px solid #3498db;
-                border-right: 4px solid #3498db;
-                border-radius: 50%;
-                width: 50px;
-                height: 50px;
-                animation: spin 1s linear infinite;
-                margin: 0 auto 20px;
-            }
-            
-            .pdf-loading-content p {
-                color: #2c3e50;
-                font-size: 16px;
-                margin: 0;
-                font-weight: 500;
-            }
-            
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-20px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-        `;
-        document.head.appendChild(style);
+// ==================== PDF UPLOAD FUNCTIONS ====================
+
+function handleFileInputChange(e) {
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    if (this.files.length > 0) {
+        const file = this.files[0];
+        if (file.type === 'application/pdf') {
+            fileNameDisplay.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981;"></i> ${file.name} (${formatFileSize(file.size)})`;
+            fileNameDisplay.style.color = '#10b981';
+        } else {
+            fileNameDisplay.innerHTML = '❌ Please select a valid PDF file';
+            fileNameDisplay.style.color = '#ef4444';
+            this.value = ''; // Clear the input
+        }
+    } else {
+        fileNameDisplay.innerHTML = 'No file chosen';
+        fileNameDisplay.style.color = 'var(--text-secondary)';
     }
 }
 
-
-// ==================== PDF UPLOAD FUNCTIONALITY ====================
-
-// Handle file input change
-document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('pdfFile');
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            const fileNameDisplay = document.getElementById('fileNameDisplay');
-            if (this.files.length > 0) {
-                const file = this.files[0];
-                if (file.type === 'application/pdf') {
-                    fileNameDisplay.innerHTML = `<i class="fa-solid fa-check" style="color: #10b981;"></i> ${file.name} (${formatFileSize(file.size)})`;
-                    fileNameDisplay.style.color = '#10b981';
-                } else {
-                    fileNameDisplay.innerHTML = '❌ Please select a valid PDF file';
-                    fileNameDisplay.style.color = '#ef4444';
-                    this.value = ''; // Clear the input
-                }
-            } else {
-                fileNameDisplay.innerHTML = 'No file chosen';
-                fileNameDisplay.style.color = 'var(--text-secondary)';
-            }
-        });
-    }
-
-    // Handle form submission
-    const uploadForm = document.getElementById('uploadPdfForm');
-    if (uploadForm) {
-        uploadForm.addEventListener('submit', uploadPdfResult);
-    }
-});
-
-// Format file size
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -336,7 +565,6 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// Upload PDF function
 async function uploadPdfResult(e) {
     e.preventDefault();
     
@@ -362,22 +590,20 @@ async function uploadPdfResult(e) {
         return;
     }
     
-    // Optional: Add description prompt - MOVED THIS BEFORE FormData creation
+    // Optional: Add description prompt
     const description = prompt('Enter a description for this PDF (optional):', '');
     
     // Check if user cancelled the prompt
     if (description === null) {
-        // User clicked Cancel - stop the upload
         showNotification('info', '📄 Upload cancelled.');
         return;
     }
     
-    // Create form data ONLY after user confirms
+    // Create form data
     const formData = new FormData();
     formData.append('pdf_file', file);
     formData.append('csrf_token', csrfToken);
     
-    // Only append description if user entered something (not empty)
     if (description.trim() !== '') {
         formData.append('description', description.trim());
     }
@@ -389,6 +615,9 @@ async function uploadPdfResult(e) {
     try {
         const response = await fetch(`/admin/results/${electionId}/upload-pdf`, {
             method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE (FormData sets its own Content-Type)
+            },
             body: formData
         });
         
@@ -418,7 +647,6 @@ async function uploadPdfResult(e) {
     }
 }
 
-// Delete PDF function
 async function deletePdfResult(pdfId) {
     if (!confirm('⚠️ Are you sure you want to delete this PDF? This action cannot be undone.')) {
         return;
@@ -436,7 +664,7 @@ async function deletePdfResult(pdfId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE
             },
             body: JSON.stringify({})
         });
@@ -478,3 +706,17 @@ async function deletePdfResult(pdfId) {
 
 // Make delete function globally available
 window.deletePdfResult = deletePdfResult;
+
+// Clean up interval when page unloads
+window.addEventListener('beforeunload', function() {
+    if (newVotesCheckInterval) {
+        clearInterval(newVotesCheckInterval);
+    }
+    
+    // Clear all active badge timeouts
+    Object.values(activeBadges).forEach(badge => {
+        if (badge.timeout) {
+            clearTimeout(badge.timeout);
+        }
+    });
+});

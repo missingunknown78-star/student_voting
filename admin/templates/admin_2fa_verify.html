@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin 2FA Verification</title>
+    
+    <!-- CSRF Token Meta Tag - For JavaScript if needed -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <style>
         /* ========================================================================== 
            ADMIN 2FA VERIFICATION - STYLE
@@ -212,6 +216,9 @@
         </div>
 
         <form method="POST" class="login-form">
+            <!-- CSRF Token - CRITICAL for security -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="input-group">
                 <input type="text" name="code" required maxlength="6" pattern="[0-9]{6}" inputmode="numeric">
                 <label>Authentication Code</label>
@@ -227,6 +234,13 @@
                 <div id="successMessage" class="success-msg">{{ success }}</div>
             {% endif %}
         </form>
+        
+        <!-- Optional: Back to Login Link -->
+        <p style="text-align: center; margin-top: 20px; color: rgba(255,255,255,0.7);">
+            <a href="{{ url_for('admin.login') }}" style="color: #ffcc00; text-decoration: none; font-size: 13px;">
+                ← Back to Login
+            </a>
+        </p>
     </div>
 
     <script>
@@ -252,6 +266,19 @@
                         successMsg.style.display = 'none';
                     }, 500); // Wait for fade animation to complete
                 }, 5000); // Show for 5 seconds
+            }
+            
+            // Optional: Auto-submit when 6 digits are entered
+            const codeInput = document.querySelector('input[name="code"]');
+            if (codeInput) {
+                codeInput.addEventListener('input', function() {
+                    if (this.value.length === 6) {
+                        // Small delay to allow user to see they've entered 6 digits
+                        setTimeout(() => {
+                            this.form.submit();
+                        }, 300);
+                    }
+                });
             }
         });
     </script>

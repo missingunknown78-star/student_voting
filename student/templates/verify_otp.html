@@ -5,8 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Verify OTP</title>
 
+<!-- CSRF Token Meta Tag - For any potential future AJAX calls -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/otp.css') }}">
 <!-- NO INLINE STYLES HERE - All styles come from otp.css -->
+
+<style>
+/* Hide CSRF token input visually */
+input[name="csrf_token"] {
+    display: none;
+}
+</style>
 </head>
 <body>
 
@@ -24,6 +34,9 @@
         {% endwith %}
 
         <form method="POST" id="otpForm">
+            <!-- CSRF Token - CRITICAL for security -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="otp-container" id="otpContainer">
                 {% for i in range(6) %}
                 <input type="text" 
@@ -52,84 +65,59 @@
 </div>
 
 <script>
-    (function() {
-        const inputs = document.querySelectorAll('.otp-container input');
-        const fullOtpInput = document.getElementById('fullOtp');
-        const otpForm = document.getElementById('otpForm');
-        const otpError = document.getElementById('otpError');
-        
-        // Move focus and validate individual input
-        inputs.forEach((input, index) => {
-            // Handle input event for single character entry
-            input.addEventListener('input', (e) => {
-                const value = e.target.value;
-                
-                // Only allow digits
-                if (value && !/^\d$/.test(value)) {
-                    e.target.value = '';
-                    return;
-                }
-                
-                // Auto-advance to next input if this one is filled
-                if (value && index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                }
-            });
-        
-            // Handle backspace to go to previous input
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                    inputs[index - 1].focus();
-                }
-            });
+// CSRF Token Helper Function (if needed for future AJAX)
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
+(function() {
+    const inputs = document.querySelectorAll('.otp-container input');
+    const fullOtpInput = document.getElementById('fullOtp');
+    const otpForm = document.getElementById('otpForm');
+    const otpError = document.getElementById('otpError');
+    
+    // Move focus and validate individual input
+    inputs.forEach((input, index) => {
+        // Handle input event for single character entry
+        input.addEventListener('input', (e) => {
+            const value = e.target.value;
             
-            // Handle keyup for better cursor positioning
-            input.addEventListener('keyup', (e) => {
-                // If we're at the last input and it's filled, keep focus there
-                if (index === inputs.length - 1 && e.target.value) {
-                    e.target.focus();
-                }
-            });
-        
-            // Handle paste event properly
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                
-                // Get pasted data
-                const pasteData = (e.clipboardData || window.clipboardData).getData('text');
-                
-                // Extract only digits from the pasted text
-                const digits = pasteData.replace(/\D/g, '');
-                
-                if (digits.length === 0) return;
-                
-                // Fill the inputs with digits
-                for (let i = 0; i < inputs.length; i++) {
-                    if (i < digits.length) {
-                        inputs[i].value = digits[i];
-                    } else {
-                        inputs[i].value = '';
-                    }
-                }
-                
-                // Focus the next empty input, or the last input if all are filled
-                const nextEmptyIndex = digits.length;
-                if (nextEmptyIndex < inputs.length) {
-                    inputs[nextEmptyIndex].focus();
-                } else {
-                    inputs[inputs.length - 1].focus();
-                }
-            });
+            // Only allow digits
+            if (value && !/^\d$/.test(value)) {
+                e.target.value = '';
+                return;
+            }
+            
+            // Auto-advance to next input if this one is filled
+            if (value && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+        });
+    
+        // Handle backspace to go to previous input
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+            }
         });
         
-        // Also add paste handler to the container
-        document.getElementById('otpContainer').addEventListener('paste', (e) => {
+        // Handle keyup for better cursor positioning
+        input.addEventListener('keyup', (e) => {
+            // If we're at the last input and it's filled, keep focus there
+            if (index === inputs.length - 1 && e.target.value) {
+                e.target.focus();
+            }
+        });
+    
+        // Handle paste event properly
+        input.addEventListener('paste', (e) => {
             e.preventDefault();
             
             // Get pasted data
             const pasteData = (e.clipboardData || window.clipboardData).getData('text');
             
-            // Extract only digits
+            // Extract only digits from the pasted text
             const digits = pasteData.replace(/\D/g, '');
             
             if (digits.length === 0) return;
@@ -151,30 +139,61 @@
                 inputs[inputs.length - 1].focus();
             }
         });
+    });
+    
+    // Also add paste handler to the container
+    document.getElementById('otpContainer').addEventListener('paste', (e) => {
+        e.preventDefault();
         
-        // Combine all inputs before submit
-        otpForm.addEventListener('submit', (e) => {
-            let otp = '';
-            inputs.forEach(i => otp += i.value);
-            
-            if (otp.length !== inputs.length) {
-                e.preventDefault();
-                otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
-            } else if (!/^\d+$/.test(otp)) {
-                e.preventDefault();
-                otpError.textContent = 'OTP must contain only numbers';
+        // Get pasted data
+        const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+        
+        // Extract only digits
+        const digits = pasteData.replace(/\D/g, '');
+        
+        if (digits.length === 0) return;
+        
+        // Fill the inputs with digits
+        for (let i = 0; i < inputs.length; i++) {
+            if (i < digits.length) {
+                inputs[i].value = digits[i];
             } else {
-                fullOtpInput.value = otp;
+                inputs[i].value = '';
             }
-        });
+        }
         
-        // Clear error when user starts typing
-        inputs.forEach(input => {
-            input.addEventListener('input', () => {
-                otpError.textContent = '';
-            });
+        // Focus the next empty input, or the last input if all are filled
+        const nextEmptyIndex = digits.length;
+        if (nextEmptyIndex < inputs.length) {
+            inputs[nextEmptyIndex].focus();
+        } else {
+            inputs[inputs.length - 1].focus();
+        }
+    });
+    
+    // Combine all inputs before submit
+    otpForm.addEventListener('submit', (e) => {
+        let otp = '';
+        inputs.forEach(i => otp += i.value);
+        
+        if (otp.length !== inputs.length) {
+            e.preventDefault();
+            otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
+        } else if (!/^\d+$/.test(otp)) {
+            e.preventDefault();
+            otpError.textContent = 'OTP must contain only numbers';
+        } else {
+            fullOtpInput.value = otp;
+        }
+    });
+    
+    // Clear error when user starts typing
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            otpError.textContent = '';
         });
-    })();
+    });
+})();
 </script>
 </body>
 </html>

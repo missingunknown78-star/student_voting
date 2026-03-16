@@ -240,320 +240,332 @@
 
 <!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
-// This ensures the theme applies immediately without refresh
-function applyThemeToMainContent() {
-    const mainContent = document.querySelector('.main-content');
-    if (!mainContent) return;
-    
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    if (isDark) {
-        mainContent.classList.add('dark-mode');
-    } else {
-        mainContent.classList.remove('dark-mode');
+    // =============== CSRF TOKEN HELPER ===============
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : '';
     }
     
-    mainContent.classList.add('theme-applied');
-}
-
-// Apply theme immediately
-(function() {
-    applyThemeToMainContent();
-    
-    // Apply multiple times to ensure it catches
-    setTimeout(applyThemeToMainContent, 10);
-    setTimeout(applyThemeToMainContent, 50);
-    setTimeout(applyThemeToMainContent, 100);
-    
-    // Listen for theme toggle clicks
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            setTimeout(applyThemeToMainContent, 50);
+    // This ensures the theme applies immediately without refresh
+    function applyThemeToMainContent() {
+        const mainContent = document.querySelector('.main-content');
+        if (!mainContent) return;
+        
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+        
+        if (isDark) {
+            mainContent.classList.add('dark-mode');
+        } else {
+            mainContent.classList.remove('dark-mode');
         }
-    });
+        
+        mainContent.classList.add('theme-applied');
+    }
     
-    // Listen for storage events (when theme changes in another tab)
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
-    });
-    
-    // Observe changes to html class (where dark-mode is applied)
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
+    // Apply theme immediately
+    (function() {
+        applyThemeToMainContent();
+        
+        // Apply multiple times to ensure it catches
+        setTimeout(applyThemeToMainContent, 10);
+        setTimeout(applyThemeToMainContent, 50);
+        setTimeout(applyThemeToMainContent, 100);
+        
+        // Listen for theme toggle clicks
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+                setTimeout(applyThemeToMainContent, 50);
+            }
+        });
+        
+        // Listen for storage events (when theme changes in another tab)
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'theme') {
                 applyThemeToMainContent();
             }
         });
+        
+        // Observe changes to html class (where dark-mode is applied)
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    applyThemeToMainContent();
+                }
+            });
+        });
+        
+        observer.observe(document.documentElement, { attributes: true });
+    })();
+    
+    let currentPage = 1;
+    let currentRequestId = null;
+    let currentAction = null;
+    
+    // Load requests on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadRequests(1);
+        loadStats();
+        applyThemeToMainContent(); // Apply theme again when DOM is loaded
     });
     
-    observer.observe(document.documentElement, { attributes: true });
-})();
-
-let currentPage = 1;
-let currentRequestId = null;
-let currentAction = null;
-
-// Load requests on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadRequests(1);
-    loadStats();
-    applyThemeToMainContent(); // Apply theme again when DOM is loaded
-});
-
-// Load requests with filters
-function loadRequests(page = 1) {
-    currentPage = page;
+    // Load requests with filters
+    function loadRequests(page = 1) {
+        currentPage = page;
+        
+        const status = document.getElementById('statusFilter').value;
+        const search = document.getElementById('searchInput').value;
+        const date = document.getElementById('dateFilter').value;
+        
+        // Show loading
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('requestsTable').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        let url = `/admin/deletion-requests/data?page=${page}`;
+        if (status !== 'all') url += `&status=${status}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (date) url += `&date=${date}`;
+        
+        // GET request - no CSRF token needed
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+                
+                const tbody = document.getElementById('requestsBody');
+                const pagination = document.getElementById('pagination');
+                
+                tbody.innerHTML = '';
+                pagination.innerHTML = '';
+                
+                if (data.requests.length === 0) {
+                    document.getElementById('requestsTable').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+                
+                document.getElementById('requestsTable').style.display = 'table';
+                document.getElementById('emptyState').style.display = 'none';
+                
+                // Populate table
+                data.requests.forEach(req => {
+                    const requestDate = new Date(req.request_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    const reasonPreview = req.reason.length > 50 ? req.reason.substring(0, 50) + '...' : req.reason;
+                    
+                    tbody.innerHTML += `
+                    <tr>
+                        <td class="student-name">${req.student_name}</td>
+                        <td class="reason-cell" title="${req.reason}">${reasonPreview}</td>
+                        <td>${requestDate}</td>
+                        <td><span class="status-badge ${req.status}">${req.status}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                ${req.status === 'pending' ? `
+                                    <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
+                                        <i class="fa-solid fa-check"></i>
+                                    </button>
+                                    <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
+                                        <i class="fa-solid fa-times"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+                
+                // Pagination
+                if (data.total_pages > 1) {
+                    for (let i = 1; i <= data.total_pages; i++) {
+                        pagination.innerHTML += `<button class="page-btn ${i === data.current_page ? 'active' : ''}" onclick="loadRequests(${i})">${i}</button>`;
+                    }
+                }
+                
+                // Apply theme after content load
+                setTimeout(applyThemeToMainContent, 50);
+            })
+            .catch(error => {
+                console.error('Error loading requests:', error);
+                document.getElementById('loadingSpinner').style.display = 'none';
+                alert('Error loading requests. Please try again.');
+            });
+    }
     
-    const status = document.getElementById('statusFilter').value;
-    const search = document.getElementById('searchInput').value;
-    const date = document.getElementById('dateFilter').value;
+    // Load statistics
+    function loadStats() {
+        // GET request - no CSRF token needed
+        fetch('/admin/deletion-requests/stats')
+            .then(res => res.json())
+            .then(data => {
+                const statsContainer = document.getElementById('statsContainer');
+                statsContainer.innerHTML = `
+                    <div class="stat-card total">
+                        <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                        <div class="stat-number">${data.total}</div>
+                        <div class="stat-label">Total Requests</div>
+                    </div>
+                    <div class="stat-card pending">
+                        <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <div class="stat-number">${data.pending}</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-card approved">
+                        <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
+                        <div class="stat-number">${data.approved}</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                    <div class="stat-card rejected">
+                        <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
+                        <div class="stat-number">${data.rejected}</div>
+                        <div class="stat-label">Rejected</div>
+                    </div>
+                `;
+            })
+            .catch(error => console.error('Error loading stats:', error));
+    }
     
-    // Show loading
-    document.getElementById('loadingSpinner').style.display = 'block';
-    document.getElementById('requestsTable').style.display = 'none';
-    document.getElementById('emptyState').style.display = 'none';
+    // View details
+    function viewDetails(id) {
+        // GET request - no CSRF token needed
+        fetch(`/admin/deletion-requests/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                const modalDetails = document.getElementById('modalDetails');
+                const requestDate = new Date(data.request_date).toLocaleString();
+                const processedDate = data.processed_date ? new Date(data.processed_date).toLocaleString() : '-';
+                
+                modalDetails.innerHTML = `
+                    <div class="detail-group">
+                        <label>Student:</label>
+                        <p>${data.student_name}</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Reason for Deletion:</label>
+                        <p class="reason-full">${data.reason}</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Request Date:</label>
+                        <p>${requestDate}</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Status:</label>
+                        <p><span class="status-badge ${data.status}">${data.status}</span></p>
+                    </div>
+                    ${data.admin_notes ? `
+                    <div class="detail-group">
+                        <label>Admin Notes:</label>
+                        <p>${data.admin_notes}</p>
+                    </div>
+                    ` : ''}
+                    ${data.processed_by_name ? `
+                    <div class="detail-group">
+                        <label>Processed By:</label>
+                        <p>${data.processed_by_name}</p>
+                    </div>
+                    ` : ''}
+                    ${data.processed_date ? `
+                    <div class="detail-group">
+                        <label>Processed Date:</label>
+                        <p>${processedDate}</p>
+                    </div>
+                    ` : ''}
+                `;
+                
+                openModal('viewModal');
+            })
+            .catch(error => console.error('Error loading details:', error));
+    }
     
-    let url = `/admin/deletion-requests/data?page=${page}`;
-    if (status !== 'all') url += `&status=${status}`;
-    if (search) url += `&search=${encodeURIComponent(search)}`;
-    if (date) url += `&date=${date}`;
+    // Open process modal
+    function openProcessModal(id, action) {
+        currentRequestId = id;
+        currentAction = action;
+        
+        // GET request - no CSRF token needed
+        fetch(`/admin/deletion-requests/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('processModalTitle').innerHTML = action === 'approve' ? 
+                    '<i class="fa-solid fa-check-circle"></i> Approve Deletion Request' : 
+                    '<i class="fa-solid fa-times-circle"></i> Reject Deletion Request';
+                
+                document.getElementById('processStudentName').textContent = data.student_name;
+                document.getElementById('processReason').textContent = data.reason;
+                document.getElementById('adminNotes').value = '';
+                
+                openModal('processModal');
+            })
+            .catch(error => console.error('Error loading request:', error));
+    }
     
-    fetch(url)
+    // Process request (approve/reject) - THIS IS A POST REQUEST - NEEDS CSRF
+    function processRequest() {
+        if (!currentRequestId || !currentAction) return;
+        
+        const notes = document.getElementById('adminNotes').value;
+        const csrfToken = getCsrfToken(); // Get CSRF token from meta tag
+        
+        fetch(`/admin/deletion-requests/${currentRequestId}/process`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken  // Add CSRF token header
+            },
+            body: JSON.stringify({
+                action: currentAction,
+                admin_notes: notes
+            })
+        })
         .then(res => res.json())
         .then(data => {
-            document.getElementById('loadingSpinner').style.display = 'none';
-            
-            const tbody = document.getElementById('requestsBody');
-            const pagination = document.getElementById('pagination');
-            
-            tbody.innerHTML = '';
-            pagination.innerHTML = '';
-            
-            if (data.requests.length === 0) {
-                document.getElementById('requestsTable').style.display = 'none';
-                document.getElementById('emptyState').style.display = 'block';
-                return;
+            if (data.success) {
+                closeModal('processModal');
+                loadRequests(currentPage);
+                loadStats();
+                alert(`Request ${currentAction}ed successfully!`);
+            } else {
+                alert('Error processing request: ' + data.message);
             }
-            
-            document.getElementById('requestsTable').style.display = 'table';
-            document.getElementById('emptyState').style.display = 'none';
-            
-            // Populate table
-            data.requests.forEach(req => {
-                const requestDate = new Date(req.request_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                const reasonPreview = req.reason.length > 50 ? req.reason.substring(0, 50) + '...' : req.reason;
-                
-                tbody.innerHTML += `
-                <tr>
-                    <td class="student-name">${req.student_name}</td>
-                    <td class="reason-cell" title="${req.reason}">${reasonPreview}</td>
-                    <td>${requestDate}</td>
-                    <td><span class="status-badge ${req.status}">${req.status}</span></td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                            ${req.status === 'pending' ? `
-                                <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
-                                    <i class="fa-solid fa-check"></i>
-                                </button>
-                                <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
-                                    <i class="fa-solid fa-times"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                    </td>
-                </tr>`;
-            });
-            
-            // Pagination
-            if (data.total_pages > 1) {
-                for (let i = 1; i <= data.total_pages; i++) {
-                    pagination.innerHTML += `<button class="page-btn ${i === data.current_page ? 'active' : ''}" onclick="loadRequests(${i})">${i}</button>`;
-                }
-            }
-            
-            // Apply theme after content load
-            setTimeout(applyThemeToMainContent, 50);
         })
         .catch(error => {
-            console.error('Error loading requests:', error);
-            document.getElementById('loadingSpinner').style.display = 'none';
-            alert('Error loading requests. Please try again.');
+            console.error('Error:', error);
+            alert('Error processing request. Please try again.');
         });
-}
-
-// Load statistics
-function loadStats() {
-    fetch('/admin/deletion-requests/stats')
-        .then(res => res.json())
-        .then(data => {
-            const statsContainer = document.getElementById('statsContainer');
-            statsContainer.innerHTML = `
-                <div class="stat-card total">
-                    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
-                    <div class="stat-number">${data.total}</div>
-                    <div class="stat-label">Total Requests</div>
-                </div>
-                <div class="stat-card pending">
-                    <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
-                    <div class="stat-number">${data.pending}</div>
-                    <div class="stat-label">Pending</div>
-                </div>
-                <div class="stat-card approved">
-                    <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
-                    <div class="stat-number">${data.approved}</div>
-                    <div class="stat-label">Approved</div>
-                </div>
-                <div class="stat-card rejected">
-                    <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
-                    <div class="stat-number">${data.rejected}</div>
-                    <div class="stat-label">Rejected</div>
-                </div>
-            `;
-        })
-        .catch(error => console.error('Error loading stats:', error));
-}
-
-// View details
-function viewDetails(id) {
-    fetch(`/admin/deletion-requests/${id}`)
-        .then(res => res.json())
-        .then(data => {
-            const modalDetails = document.getElementById('modalDetails');
-            const requestDate = new Date(data.request_date).toLocaleString();
-            const processedDate = data.processed_date ? new Date(data.processed_date).toLocaleString() : '-';
-            
-            modalDetails.innerHTML = `
-                <div class="detail-group">
-                    <label>Student:</label>
-                    <p>${data.student_name}</p>
-                </div>
-                <div class="detail-group">
-                    <label>Reason for Deletion:</label>
-                    <p class="reason-full">${data.reason}</p>
-                </div>
-                <div class="detail-group">
-                    <label>Request Date:</label>
-                    <p>${requestDate}</p>
-                </div>
-                <div class="detail-group">
-                    <label>Status:</label>
-                    <p><span class="status-badge ${data.status}">${data.status}</span></p>
-                </div>
-                ${data.admin_notes ? `
-                <div class="detail-group">
-                    <label>Admin Notes:</label>
-                    <p>${data.admin_notes}</p>
-                </div>
-                ` : ''}
-                ${data.processed_by_name ? `
-                <div class="detail-group">
-                    <label>Processed By:</label>
-                    <p>${data.processed_by_name}</p>
-                </div>
-                ` : ''}
-                ${data.processed_date ? `
-                <div class="detail-group">
-                    <label>Processed Date:</label>
-                    <p>${processedDate}</p>
-                </div>
-                ` : ''}
-            `;
-            
-            openModal('viewModal');
-        })
-        .catch(error => console.error('Error loading details:', error));
-}
-
-// Open process modal
-function openProcessModal(id, action) {
-    currentRequestId = id;
-    currentAction = action;
+    }
     
-    fetch(`/admin/deletion-requests/${id}`)
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('processModalTitle').innerHTML = action === 'approve' ? 
-                '<i class="fa-solid fa-check-circle"></i> Approve Deletion Request' : 
-                '<i class="fa-solid fa-times-circle"></i> Reject Deletion Request';
-            
-            document.getElementById('processStudentName').textContent = data.student_name;
-            document.getElementById('processReason').textContent = data.reason;
-            document.getElementById('adminNotes').value = '';
-            
-            openModal('processModal');
-        })
-        .catch(error => console.error('Error loading request:', error));
-}
-
-// Process request (approve/reject)
-function processRequest() {
-    if (!currentRequestId || !currentAction) return;
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('statusFilter').value = 'all';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('dateFilter').value = '';
+        loadRequests(1);
+    }
     
-    const notes = document.getElementById('adminNotes').value;
+    // Modal functions
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
     
-    fetch(`/admin/deletion-requests/${currentRequestId}/process`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: currentAction,
-            admin_notes: notes
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            closeModal('processModal');
-            loadRequests(currentPage);
-            loadStats();
-            alert(`Request ${currentAction}ed successfully!`);
-        } else {
-            alert('Error processing request: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error processing request. Please try again.');
-    });
-}
-
-// Reset filters
-function resetFilters() {
-    document.getElementById('statusFilter').value = 'all';
-    document.getElementById('searchInput').value = '';
-    document.getElementById('dateFilter').value = '';
-    loadRequests(1);
-}
-
-// Modal functions
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-    document.body.style.overflow = '';
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
         document.body.style.overflow = '';
     }
-}
-</script>
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+    </script>
 {% endblock %}

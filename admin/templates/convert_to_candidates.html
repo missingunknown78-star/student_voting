@@ -143,4 +143,20 @@
 
 <!-- Load JavaScript -->
 <script src="{{ url_for('admin.static', filename='js/convert_to_candidates.js') }}"></script>
+
+<!-- Add CSRF Helper Function -->
+<script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
+// Override the goToPage function to preserve filters
+function goToPage(pageNum) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', pageNum);
+    window.location.href = url.toString();
+}
+</script>
 {% endblock %}

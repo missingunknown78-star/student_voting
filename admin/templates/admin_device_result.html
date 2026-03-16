@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Device Verification - COMELEC Admin</title>
+    
+    <!-- CSRF Token Meta Tag - For any potential AJAX calls -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <style>
         body {
             margin: 0;
@@ -52,6 +56,11 @@
             text-decoration: none;
             border-radius: 10px;
             font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,85,0,0.3);
         }
         .loading {
             display: inline-block;
@@ -62,6 +71,7 @@
             border-top-color: #ff5500;
             animation: spin 1s ease-in-out infinite;
             margin-right: 10px;
+            vertical-align: middle;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
@@ -70,6 +80,9 @@
             margin-top: 20px;
             font-size: 0.9rem;
             color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>

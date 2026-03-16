@@ -571,3 +571,55 @@ body {
         display: none;
     }
 }
+
+
+
+/* ==================== SAVE BUTTON SPINNING ANIMATION ==================== */
+.inline-save-btn.saving {
+    position: relative;
+    padding-left: 30px !important;
+    pointer-events: none;
+    opacity: 0.8;
+    background-color: #219a52 !important; /* Slightly darker green when saving */
+}
+
+.inline-save-btn.saving::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: save-spin 0.8s linear infinite;
+}
+
+@keyframes save-spin {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Dark mode support for saving state */
+:root.dark-mode .inline-save-btn.saving {
+    background-color: #2ecc71 !important;
+    opacity: 0.9;
+}
+
+:root.dark-mode .inline-save-btn.saving::before {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+}
+
+/* Optional: Add a slight scale animation for the button when saving */
+.inline-save-btn.saving {
+    animation: save-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes save-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}

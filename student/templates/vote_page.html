@@ -4,7 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Vote - {{ election.title }}</title>
+    
+    <!-- CSRF Token Meta Tag - For JavaScript if needed -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
+    
+    <style>
+        /* Hide CSRF token input visually */
+        input[name="csrf_token"] {
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -61,6 +72,9 @@
           class="candidates-form" 
           id="voteForm"
           onsubmit="return validateVote()">
+
+        <!-- CSRF Token - CRITICAL for vote security -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Hidden inputs for PHE -->
         <input type="hidden" name="cast_timestamp" id="cast-timestamp">
@@ -181,6 +195,12 @@
 
 <script src="{{ url_for('student.static', filename='js/vote_page.js') }}"></script>
 <script>
+    // CSRF Token Helper Function
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : '';
+    }
+
     // Pass Flask variables to JavaScript
     window.electionEndDate = "{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}";
     

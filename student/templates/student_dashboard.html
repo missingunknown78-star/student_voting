@@ -214,6 +214,8 @@
     <h3>Do you want to trust this device?</h3>
     <p>You can enable "Trust this device" so you won't be asked for verification on this device again.</p>
     <form method="POST" action="{{ url_for('student.trust_current_device') }}">
+        <!-- CSRF Token - CRITICAL for security -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-success" style="margin-right:10px;">Yes, trust this device</button>
         <button type="button" class="btn btn-secondary" onclick="closeTrustModal()">No</button>
     </form>
@@ -224,6 +226,12 @@
 
 {% block extra_js %}
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // ==================== FINGERPRINT (WEB AUTHN) ====================
 function bufferToBase64URL(buffer) {
     let binary = '';
@@ -273,7 +281,10 @@ async function registerFingerprint() {
 
         const verifyRes = await fetch("/student/webauthn/register/verify", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCsrfToken()  // ADD CSRF TOKEN
+            },
             body: JSON.stringify({
                 id: credential.id,
                 rawId: bufferToBase64URL(credential.rawId),
@@ -328,7 +339,10 @@ if (navigator.geolocation) {
 
             fetch('/student/update-location', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                },
                 body: JSON.stringify({ latitude, longitude })
             })
             .then(res => res.json())

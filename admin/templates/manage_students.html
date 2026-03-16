@@ -475,6 +475,12 @@
 
 <!-- ================= JAVASCRIPT ================= -->
 <script>
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // === DATA ===
 const departments = JSON.parse(document.getElementById("departments-data").textContent);
 const courses = JSON.parse(document.getElementById("courses-data").textContent);
@@ -631,7 +637,11 @@ function loadStudents(page = 1) {
     if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
     if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
 
-    fetch(url)
+    fetch(url, {
+        headers: {
+            'X-CSRFToken': getCsrfToken()  // Add CSRF token for consistency
+        }
+    })
         .then(res => res.json())
         .then(data => {
             // Hide loading spinner
@@ -746,6 +756,9 @@ function exportExcel() {
     let url = `/admin/students/export-excel?search=${encodeURIComponent(search)}`;
     if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
     if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
+    
+    // Add CSRF token as query parameter for GET request (optional but good practice)
+    url += `&csrf_token=${encodeURIComponent(getCsrfToken())}`;
 
     window.location.href = url;
 }

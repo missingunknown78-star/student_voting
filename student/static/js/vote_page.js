@@ -1,5 +1,11 @@
 // vote_page.js - Handles voting page interactions
 
+// CSRF Token Helper Function
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
 // Set cast timestamp in Manila time and show loading when form is submitted
 document.addEventListener('DOMContentLoaded', function() {
     const voteForm = document.getElementById('voteForm');
