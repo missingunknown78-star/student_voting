@@ -7,12 +7,14 @@
         /* LETTER SIZE BOND PAPER SETTINGS */
         @page {
             size: letter;
-            margin: 0.5in;
-            @bottom-center {
-                content: "Page " counter(page) " of " counter(pages);
-                font-family: Arial, sans-serif;
-                font-size: 8pt;
-                color: #666;
+            margin: 0.5in 0.5in 1.5in 0.5in; /* Increased bottom margin for footer */
+
+            /* This is where the magic happens - footer in page margin */
+            @bottom-left {
+                content: element(page-footer);
+                vertical-align: bottom;
+                width: 100%;
+                text-align: center;
             }
         }
         
@@ -20,35 +22,19 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        }
-        
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
         }
         
         body {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             line-height: 1.3;
             color: #000;
             background: white;
             font-size: 11pt;
             max-width: 7.5in;
             margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
         }
         
-        /* Content wrapper to push footer down */
-        .content-wrapper {
-            flex: 1 0 auto;
-            width: 100%;
-        }
-        
-        /* Full-Width Header */
+        /* Header */
         .header-container {
             width: 100%;
             margin-bottom: 0.3in;
@@ -95,7 +81,7 @@
             color: #000;
         }
         
-        /* Compact Summary Cards - Color Coded */
+        /* Summary Cards */
         .summary-section {
             display: flex;
             justify-content: space-between;
@@ -110,7 +96,6 @@
             text-align: center;
         }
         
-        /* Voters Card - Blue Theme */
         .summary-box.voters {
             background: #e3f2fd;
         }
@@ -121,7 +106,6 @@
             color: #01579b;
         }
         
-        /* Turnout Card - Green Theme */
         .summary-box.turnout {
             background: #e8f5e9;
         }
@@ -132,7 +116,6 @@
             color: #1b5e20;
         }
         
-        /* Candidates Card - Purple Theme */
         .summary-box.candidates {
             background: #f3e5f5;
         }
@@ -143,7 +126,6 @@
             color: #4a148c;
         }
         
-        /* Status Card - Orange Theme */
         .summary-box.status {
             background: #fff3e0;
         }
@@ -165,7 +147,7 @@
             font-weight: bold;
         }
         
-        /* Compact Turnout Stats - Color Coded */
+        /* Turnout Stats */
         .turnout-stats {
             display: flex;
             justify-content: space-between;
@@ -180,7 +162,6 @@
             text-align: center;
         }
         
-        /* Registered - Blue Theme */
         .turnout-stat.registered {
             background: #e3f2fd;
         }
@@ -189,7 +170,6 @@
             color: #01579b;
         }
         
-        /* Voted - Green Theme */
         .turnout-stat.voted {
             background: #e8f5e9;
         }
@@ -198,7 +178,6 @@
             color: #1b5e20;
         }
         
-        /* Absent - Orange Theme */
         .turnout-stat.absent {
             background: #fff3e0;
         }
@@ -228,17 +207,7 @@
             color: #444;
         }
         
-        /* Section Titles - Default (no shading) */
-        .section-title {
-            font-size: 14pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin: 0.25in 0 0.1in 0;
-            padding-bottom: 0.05in;
-            border-bottom: 2px solid #000;
-        }
-        
-        /* Shaded title for winners - Green Theme */
+        /* Section Titles */
         .winners-title-container {
             width: 100%;
             margin: 0.25in 0 0.1in 0;
@@ -257,7 +226,6 @@
             text-align: center;
         }
         
-        /* Shaded title for detailed results - Blue Theme */
         .detailed-title-container {
             width: 100%;
             margin: 0.25in 0 0.1in 0;
@@ -276,7 +244,7 @@
             text-align: center;
         }
         
-        /* Professional Tables - Allow page breaks */
+        /* Tables */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -295,10 +263,6 @@
             display: table-header-group;
         }
         
-        tfoot {
-            display: table-footer-group;
-        }
-        
         th {
             background: #e0e0e0;
             color: #000;
@@ -315,13 +279,11 @@
             vertical-align: top;
         }
         
-        /* Winner badge - just text, no background */
         .winner-badge {
             font-weight: bold;
             color: #1b5e20;
         }
         
-        /* Position header for multiple winners */
         .position-header {
             font-weight: bold;
             background-color: #f0f0f0;
@@ -333,7 +295,6 @@
             font-weight: bold;
         }
         
-        /* Rank number styling */
         .rank-number {
             text-align: right;
             padding-right: 0.1in;
@@ -346,18 +307,7 @@
             page-break-before: always;
         }
         
-        /* Ensure tables don't get cut off awkwardly */
-        .position-container {
-            margin-bottom: 0.2in;
-            page-break-inside: avoid;
-        }
-        
-        /* For long tables that need to break */
-        .long-table-container {
-            page-break-inside: auto;
-        }
-        
-        /* FIXED COLUMN WIDTHS FOR DETAILED RESULTS TABLES - Ensures all tables have same column widths */
+        /* Detailed results table fixed widths */
         .detailed-results-table {
             width: 100%;
             border-collapse: collapse;
@@ -365,7 +315,7 @@
             font-size: 11pt;
             border: 1px solid #333;
             page-break-inside: auto;
-            table-layout: fixed; /* This ensures fixed column widths */
+            table-layout: fixed;
         }
         
         .detailed-results-table th,
@@ -376,7 +326,6 @@
             overflow: hidden;
         }
         
-        /* Fixed column widths for all detailed results tables */
         .detailed-results-table th:nth-child(1),
         .detailed-results-table td:nth-child(1) {
             width: 10%;
@@ -402,293 +351,267 @@
             width: 15%;
         }
         
-        /* FOOTER - Updated for name above line */
-.site-footer {
-    flex-shrink: 0;
-    width: 100%;
-    margin-top: 0.3in;
-    text-align: center;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-.footer-signatures {
-    margin-bottom: 0.1in;
-}
-
-.footer-text {
-    font-size: 9pt;
-    margin-bottom: 0.05in;
-}
-
-.footer-date {
-    font-size: 9pt;
-    color: #555;
-    margin-bottom: 0.15in;
-}
-
-/* Single signature centered with name above line */
-.signature-container {
-    display: flex;
-    justify-content: center;
-    margin: 0.3in 0 0.1in 0;
-}
-
-.signature {
-    text-align: center;
-    width: 3in;
-}
-
-.printed-name {
-    font-weight: bold;
-    font-size: 12pt;
-    text-transform: uppercase;
-    color: #000;
-    margin-bottom: 0.05in;
-    letter-spacing: 0.5px;
-    min-height: 0.25in;
-}
-
-.signature .line {
-    border-top: 2px solid #000;
-    width: 100%;
-    margin: 0.05in 0 0.08in 0;
-}
-
-.signature .title {
-    font-size: 10pt;
-    color: #333;
-    font-style: italic;
-    margin-top: 0.05in;
-}
-
-/* Footer Logo */
-.footer-logo {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    margin-top: 0.1in;
-}
-
-.footer-logo img {
-    width: 100%;
-    max-width: 7.5in;
-    height: 0.8in;
-    object-fit: cover;
-    display: block;
-    margin: 0 auto;
-}
+        /* ===== RUNNING ELEMENT FOOTER - NOT PART OF BODY FLOW ===== */
+        .page-footer {
+            position: running(page-footer);
+            width: 100%;
+            text-align: center;
+        }
+        
+        .footer-signatures {
+            margin-bottom: 0;
+        }
+        
+        .signature-container {
+            display: flex;
+            justify-content: center;
+            margin: 0 0 0.1in 0;  /* Reduced from 0.2in to 0.1in */
+        }
+        
+        .signature {
+            text-align: center;
+            width: 3in;
+        }
+        
+        .printed-name {
+            font-weight: bold;
+            font-size: 12pt;
+            text-transform: uppercase;
+            color: #000;
+            margin-bottom: 0.02in;  /* Reduced from 0.05in to 0.02in */
+            letter-spacing: 0.5px;
+        }
+        
+        .line {
+            border-top: 2px solid #000;
+            width: 100%;
+            margin: 0.02in 0 0.04in 0;  /* Reduced from 0.05in 0 0.08in 0 */
+        }
+        
+        .title {
+            font-size: 10pt;
+            color: #333;
+            font-style: italic;
+            margin-top: 0.02in;  /* Reduced from 0.05in to 0.02in */
+        }
+        
+        .footer-logo {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 0.05in;  /* Reduced from 0.1in to 0.05in */
+        }
+        
+        .footer-logo img {
+            width: 100%;
+            max-width: 7.5in;
+            height: 0.8in;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
-    <!-- Main Content Wrapper -->
-    <div class="content-wrapper">
-        <!-- Header -->
-        <div class="header-container">
-            <div class="logo-container">
-                <img src="{{ url_for('admin.static', filename='images/CTU HEADER.png', _external=True) }}" 
-                     alt="CTU Logo"
-                     onerror="this.style.display='none';">
-            </div>
-            
-            <div class="header-text">
-                <div class="govt">CTU – Moalboal Campus Election</div>
-                <div class="date">{{ now.strftime('%B %d, %Y') }}</div>
-                <div class="election-title">{{ election.title }} ELECTION</div>
-            </div>
+    <!-- MAIN CONTENT - ALL YOUR DATA PAGES -->
+    
+    <!-- Header -->
+    <div class="header-container">
+        <div class="logo-container">
+            <img src="{{ url_for('admin.static', filename='images/CTU HEADER.png', _external=True) }}" 
+                 alt="CTU Logo"
+                 onerror="this.style.display='none';">
         </div>
         
-        <!-- Summary Cards -->
-        <div class="summary-section">
-            <div class="summary-box voters">
-                <div class="label">TOTAL VOTERS</div>
-                <div class="value">{{ total_voters }}</div>
-            </div>
-            <div class="summary-box turnout">
-                <div class="label">TURNOUT RATE</div>
-                <div class="value">{{ voter_turnout }}%</div>
-            </div>
-            <div class="summary-box candidates">
-                <div class="label">CANDIDATES</div>
-                <div class="value">{{ candidate_results|length }}</div>
-            </div>
-            <div class="summary-box status">
-                <div class="label">STATUS</div>
-                <div class="value">{{ status }}</div>
-            </div>
+        <div class="header-text">
+            <div class="govt">CTU – Moalboal Campus Election</div>
+            <div class="date">{{ now.strftime('%B %d, %Y') }}</div>
+            <div class="election-title">{{ election.title }} ELECTION</div>
         </div>
-        
-        <!-- Turnout Stats -->
-        <div class="turnout-stats">
-            <div class="turnout-stat registered">
-                <div class="number">{{ total_eligible_voters }}</div>
-                <div class="label">REGISTERED</div>
-            </div>
-            <div class="turnout-stat voted">
-                <div class="number">{{ total_voters }}</div>
-                <div class="label">VOTED</div>
-            </div>
-            <div class="turnout-stat absent">
-                <div class="number">{{ students_not_voted }}</div>
-                <div class="label">ABSENT</div>
-            </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="summary-section">
+        <div class="summary-box voters">
+            <div class="label">TOTAL VOTERS</div>
+            <div class="value">{{ total_voters }}</div>
         </div>
-        
-        <!-- Encryption Note -->
-        <div class="encryption-note">
-            Privacy Protected Results: These results are calculated using Paillier Homomorphic Encryption. 
-            Individual votes remain private while ensuring accurate totals.
+        <div class="summary-box turnout">
+            <div class="label">TURNOUT RATE</div>
+            <div class="value">{{ voter_turnout }}%</div>
         </div>
-        
-        <!-- WINNERS SECTION -->
-        <div class="winners-title-container">
-            <div class="winners-title">🏆 OFFICIAL ELECTION WINNERS</div>
+        <div class="summary-box candidates">
+            <div class="label">CANDIDATES</div>
+            <div class="value">{{ candidate_results|length }}</div>
         </div>
-        
-        {% if is_tallied and winners_by_position %}
-            <table>
-                <thead>
-                    <tr>
-                        <th width="35%">Position</th>
-                        <th width="40%">Winner(s)</th>
-                        <th width="15%">Votes</th>
-                        <th width="10%">%</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for position_name, winners in winners_by_position.items() %}
-                        {% if winners %}
-                            {% if winners|length == 1 %}
-                                <!-- Single winner -->
-                                {% set winner = winners[0] %}
-                                <tr>
-                                    <td><strong>{{ position_name }}</strong></td>
-                                    <td>{{ winner.first_name }} {{ winner.last_name }}</td>
-                                    <td>{{ winner.vote_count }}</td>
-                                    <td>{{ winner.voter_percentage }}%</td>
-                                </tr>
-                            {% else %}
-                                <!-- Multiple winners header -->
-                                <tr class="position-header">
-                                    <td colspan="4"><strong>{{ position_name }} WINNERS ({{ winners|length }})</strong></td>
-                                </tr>
-                                <!-- Each winner with rank number -->
-                                {% for winner in winners %}
-                                <tr>
-                                    <td class="rank-number">#{{ loop.index }}</td>
-                                    <td>{{ winner.first_name }} {{ winner.last_name }}</td>
-                                    <td>{{ winner.vote_count }}</td>
-                                    <td>{{ winner.voter_percentage }}%</td>
-                                </tr>
-                                {% endfor %}
-                            {% endif %}
+        <div class="summary-box status">
+            <div class="label">STATUS</div>
+            <div class="value">{{ status }}</div>
+        </div>
+    </div>
+    
+    <!-- Turnout Stats -->
+    <div class="turnout-stats">
+        <div class="turnout-stat registered">
+            <div class="number">{{ total_eligible_voters }}</div>
+            <div class="label">REGISTERED</div>
+        </div>
+        <div class="turnout-stat voted">
+            <div class="number">{{ total_voters }}</div>
+            <div class="label">VOTED</div>
+        </div>
+        <div class="turnout-stat absent">
+            <div class="number">{{ students_not_voted }}</div>
+            <div class="label">ABSENT</div>
+        </div>
+    </div>
+    
+    <!-- Encryption Note -->
+    <div class="encryption-note">
+        Privacy Protected Results: These results are calculated using Paillier Homomorphic Encryption. 
+        Individual votes remain private while ensuring accurate totals.
+    </div>
+    
+    <!-- WINNERS SECTION -->
+    <div class="winners-title-container">
+        <div class="winners-title">🏆 OFFICIAL ELECTION WINNERS</div>
+    </div>
+    
+    {% if is_tallied and winners_by_position %}
+        <table>
+            <thead>
+                <tr>
+                    <th width="35%">Position</th>
+                    <th width="40%">Winner(s)</th>
+                    <th width="15%">Votes</th>
+                    <th width="10%">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for position_name, winners in winners_by_position.items() %}
+                    {% if winners %}
+                        {% if winners|length == 1 %}
+                            {% set winner = winners[0] %}
+                            <tr>
+                                <td><strong>{{ position_name }}</strong></td>
+                                <td>{{ winner.first_name }} {{ winner.last_name }}</td>
+                                <td>{{ winner.vote_count }}</td>
+                                <td>{{ winner.voter_percentage }}%</td>
+                            </tr>
+                        {% else %}
+                            <tr class="position-header">
+                                <td colspan="4"><strong>{{ position_name }} WINNERS ({{ winners|length }})</strong></td>
+                            </tr>
+                            {% for winner in winners %}
+                            <tr>
+                                <td class="rank-number">#{{ loop.index }}</td>
+                                <td>{{ winner.first_name }} {{ winner.last_name }}</td>
+                                <td>{{ winner.vote_count }}</td>
+                                <td>{{ winner.voter_percentage }}%</td>
+                            </tr>
+                            {% endfor %}
                         {% endif %}
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p style="text-align: center; margin: 0.2in 0;">No winners determined yet.</p>
-        {% endif %}
-        
-        <!-- Page Break -->
-        <div class="page-break"></div>
-        
-        <!-- DETAILED RESULTS SECTION -->
-        <div class="detailed-title-container">
-            <div class="detailed-title">📊 DETAILED RESULTS BY POSITION</div>
-        </div>
-        
-        {% if candidate_results %}
-            {% set position_groups = {} %}
-            {% for candidate in candidate_results %}
-                {% set pos_name = candidate.position %}
-                {% if pos_name not in position_groups %}
-                    {% set _ = position_groups.update({pos_name: {
-                        'id': candidate.position_id,
-                        'candidates': []
-                    }}) %}
-                {% endif %}
-                {% set _ = position_groups[pos_name]['candidates'].append(candidate) %}
-            {% endfor %}
-            
-            {% set sorted_positions = position_groups.items()|sort(attribute='1.id') %}
-            
-            {% for position_name, group in sorted_positions %}
-                {% set candidates_in_pos = group.candidates|sort(attribute='vote_count', reverse=true) %}
-                {% set max_winners = winners_by_position[position_name]|length if is_tallied and position_name in winners_by_position else 1 %}
-                {% set total_candidates = candidates_in_pos|length %}
-                
-                <!-- Position container - will break naturally if too long -->
-                <div class="position-container">
-                    <div style="font-size: 12pt; font-weight: bold; margin: 0.1in 0 0.05in 0;">
-                        {{ position_name }}{% if is_tallied and max_winners > 1 %} ({{ max_winners }} WINNERS){% endif %}
-                    </div>
-                    
-                    <!-- Table with fixed column widths for consistency across all positions -->
-                    <div class="long-table-container">
-                        <table class="detailed-results-table">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Candidate</th>
-                                    <th>Votes</th>
-                                    <th>Percentage</th>
-                                    {% if is_tallied %}
-                                    <th>Result</th>
-                                    {% endif %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for candidate in candidates_in_pos %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td>{{ candidate.first_name }} {{ candidate.last_name }}</td>
-                                    <td>{{ candidate.vote_count }}</td>
-                                    <td>{{ candidate.voter_percentage }}%</td>
-                                    {% if is_tallied %}
-                                    <td>
-                                        {% if candidate.vote_count > 0 and loop.index <= max_winners %}
-                                            <span class="winner-badge">WINNER</span>
-                                        {% else %}
-                                            —
-                                        {% endif %}
-                                    </td>
-                                    {% endif %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p style="text-align: center; margin: 0.2in 0;">No results available.</p>
-        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; margin: 0.2in 0;">No winners determined yet.</p>
+    {% endif %}
+    
+    <!-- Page Break - Force next page for detailed results -->
+    <div class="page-break"></div>
+    
+    <!-- DETAILED RESULTS SECTION -->
+    <div class="detailed-title-container">
+        <div class="detailed-title">📊 DETAILED RESULTS BY POSITION</div>
     </div>
     
-    <!-- FOOTER - Single Signature for COMELEC Chairman -->
-    <!-- FOOTER - Single Signature for COMELEC Chairman with name above line -->
-<footer class="site-footer">
-    <div class="footer-signatures">
-        <div class="footer-text">Cebu Technological University - Moalboal Campus | Student Government</div>
-        <div class="footer-date">Generated on {{ now.strftime('%B %d, %Y at %I:%M %p') }}</div>
+    {% if candidate_results %}
+        {% set position_groups = {} %}
+        {% for candidate in candidate_results %}
+            {% set pos_name = candidate.position %}
+            {% if pos_name not in position_groups %}
+                {% set _ = position_groups.update({pos_name: {
+                    'id': candidate.position_id,
+                    'candidates': []
+                }}) %}
+            {% endif %}
+            {% set _ = position_groups[pos_name]['candidates'].append(candidate) %}
+        {% endfor %}
         
-        <!-- Single signature for COMELEC Chairman with name ABOVE the line -->
-        <div class="signature-container">
-            <div class="signature">
-                <div class="printed-name">{{ chairman_name if chairman_name else 'COMELEC CHAIRMAN' }}</div>
-                <div class="line"></div>
-                <div class="title">COMELEC Chairperson</div>
+        {% set sorted_positions = position_groups.items()|sort(attribute='1.id') %}
+        
+        {% for position_name, group in sorted_positions %}
+            {% set candidates_in_pos = group.candidates|sort(attribute='vote_count', reverse=true) %}
+            {% set max_winners = winners_by_position[position_name]|length if is_tallied and position_name in winners_by_position else 1 %}
+            
+            <div class="position-container">
+                <div style="font-size: 12pt; font-weight: bold; margin: 0.1in 0 0.05in 0;">
+                    {{ position_name }}{% if is_tallied and max_winners > 1 %} ({{ max_winners }} WINNERS){% endif %}
+                </div>
+                
+                <div class="long-table-container">
+                    <table class="detailed-results-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Candidate</th>
+                                <th>Votes</th>
+                                <th>Percentage</th>
+                                {% if is_tallied %}
+                                <th>Result</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for candidate in candidates_in_pos %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ candidate.first_name }} {{ candidate.last_name }}</td>
+                                <td>{{ candidate.vote_count }}</td>
+                                <td>{{ candidate.voter_percentage }}%</td>
+                                {% if is_tallied %}
+                                <td>
+                                    {% if candidate.vote_count > 0 and loop.index <= max_winners %}
+                                        <span class="winner-badge">WINNER</span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="text-align: center; margin: 0.2in 0;">No results available.</p>
+    {% endif %}
+    
+    <!-- ===== FOOTER AS RUNNING ELEMENT - NOT PART OF BODY FLOW ===== -->
+    <!-- This div is hidden from the body flow and pulled into page margin -->
+    <div class="page-footer">
+        <div class="footer-signatures">
+            
+            <!-- Single signature for COMELEC Chairman -->
+            <div class="signature-container">
+                <div class="signature">
+                    <div class="printed-name">{{ chairman_name if chairman_name else 'COMELEC CHAIRMAN' }}</div>
+                    <div class="line"></div>
+                    <div class="title">COMELEC Chairperson</div>
+                </div>
             </div>
         </div>
+        
+        <!-- Footer Logo -->
+        <div class="footer-logo">
+            <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png', _external=True) }}" 
+                 alt="CTU Footer"
+                 onerror="this.style.display='none';">
+        </div>
     </div>
-    
-    <!-- Footer Logo -->
-    <div class="footer-logo">
-        <img src="{{ url_for('admin.static', filename='images/CTU FOOTER.png', _external=True) }}" 
-             alt="CTU Footer"
-             onerror="this.style.display='none';">
-    </div>
-</footer>
 </body>
 </html>

@@ -98,11 +98,6 @@ button:disabled {
     text-decoration: underline;
 }
 
-/* Hide CSRF token input visually */
-input[name="csrf_token"] {
-    display: none;
-}
-
 /* toast notifications */
 .toast {
     position: fixed;
@@ -120,18 +115,12 @@ input[name="csrf_token"] {
 }
 
 .toast.reject {
-    background: #e53935; /* red for rejected */
+    background: #e53935;
 }
 
 @keyframes slideIn {
     from { transform: translateX(50px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
-}
-
-@media (max-width: 360px) {
-    .card {
-        padding: 22px 18px;
-    }
 }
 </style>
 </head>
@@ -165,13 +154,11 @@ input[name="csrf_token"] {
 
     <div class="divider"></div>
 
-    <form method="POST" action="{{ url_for('student.resend_verify_device') }}" id="resendForm">
-        <!-- CSRF Token - CRITICAL for security -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button id="resendBtn" type="submit">Resend Verification Email</button>
-    </form>
+    <button id="resendBtn" onclick="resendVerification()">Resend Verification Email</button>
 
     <div id="timerText" class="timer"></div>
+    <div id="messageText" class="timer" style="color: #10b981; margin-top: 5px;"></div>
+    <div id="errorText" class="timer" style="color: #ef4444; margin-top: 5px; font-weight: bold;"></div>
 
     <a class="back-link" href="{{ url_for('student.login') }}">
         Back to Login
@@ -189,13 +176,17 @@ function getCsrfToken() {
     return metaTag ? metaTag.getAttribute('content') : '';
 }
 
-const btn = document.getElementById('resendBtn');
-const form = document.getElementById('resendForm');
-const timerText = document.getElementById('timerText');
-
-// 30s resend cooldown
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
+function resendVerification() {
+    const btn = document.getElementById('resendBtn');
+    const timerText = document.getElementById('timerText');
+    const messageText = document.getElementById('messageText');
+    const errorText = document.getElementById('errorText');
+    
+    // Clear previous messages
+    messageText.textContent = '';
+    errorText.textContent = '';
+    
+    // Disable button and start cooldown
     btn.disabled = true;
     let seconds = 30;
 
@@ -211,74 +202,91 @@ form.addEventListener('submit', (e) => {
         }
     }, 1000);
 
-    // Get the CSRF token from the form
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    
-    // Create form data to submit
-    const formData = new FormData(form);
-    
-    // Send email in background without reload
-    fetch(form.action, { 
+    // Get the correct URL using Flask's url_for
+    const url = "{{ url_for('student.resend_verify_device') }}";
+
+    // Send AJAX request
+    fetch(url, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HEADER
-        },
-        body: formData
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
     })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+    .then(async response => {
+        const text = await response.text();
+        
+        try {
+            // Try to parse as JSON
+            const data = JSON.parse(text);
+            return { ok: response.ok, data };
+        } catch (e) {
+            // If not JSON, throw error
+            throw new Error('Server returned an invalid response. Please try again.');
+        }
+    })
+    .then(({ ok, data }) => {
+        if (ok && data.success) {
+            // Show success message
+            messageText.textContent = '✅ ' + data.message;
+            messageText.style.color = '#10b981';
+            errorText.textContent = '';
+            
+            // Check if redirect needed
+            if (data.redirect) {
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 2000);
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Verification email resent:", data);
-        })
-        .catch(err => {
-            console.error(err);
-            // Re-enable button if there's an error
-            clearInterval(countdown);
-            btn.disabled = false;
-            btn.textContent = 'Resend Verification Email';
-            timerText.textContent = 'Failed to send. Please try again.';
-        });
-});
-</script>
-
-<script>
-// CSRF Token Helper Function (for status check)
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
+        } else {
+            throw new Error(data.message || 'Failed to send email');
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        errorText.textContent = '❌ ' + err.message;
+        
+        // Re-enable button if there's an error
+        clearInterval(countdown);
+        btn.disabled = false;
+        btn.textContent = 'Resend Verification Email';
+        timerText.textContent = '';
+    });
 }
 
 // Polling for device verification or rejection
 function checkVerification() {
-    fetch("/student/verify-device/status", {
+    const statusUrl = "{{ url_for('student.verify_device_status') }}";
+    
+    fetch(statusUrl, {
         headers: {
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HEADER
+            'X-CSRFToken': getCsrfToken()
         }
     })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === "verified") {
-                const toast = document.getElementById("toast");
-                toast.style.display = "block";
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "verified") {
+            const toast = document.getElementById("toast");
+            toast.style.display = "block";
 
-                setTimeout(() => {
-                    window.location.href = "/student/dashboard";
-                }, 1500);
-            } else if (data.status === "rejected") {
-                const toastReject = document.getElementById("toastReject");
-                toastReject.style.display = "block";
-                btn.disabled = true;
+            setTimeout(() => {
+                window.location.href = "{{ url_for('student.dashboard') }}";
+            }, 1500);
+        } else if (data.status === "rejected") {
+            const toastReject = document.getElementById("toastReject");
+            toastReject.style.display = "block";
+            document.getElementById('resendBtn').disabled = true;
 
-                setTimeout(() => {
-                    window.location.href = "/student/login";
-                }, 2000);
-            }
-        })
-        .catch(err => console.error('Status check error:', err));
+            setTimeout(() => {
+                window.location.href = "{{ url_for('student.login') }}";
+            }, 2000);
+        }
+    })
+    .catch(err => {
+        console.error('Status check error:', err);
+    });
 }
 
 // poll every 3 seconds

@@ -11,6 +11,57 @@
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
+
+<style>
+    /* Spinner styles - UPDATED FOR VERTICAL CENTERING */
+    .btn-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+        vertical-align: middle; /* THIS FIXES VERTICAL ALIGNMENT */
+        position: relative;
+        top: -1px; /* Fine-tune adjustment */
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .register-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 48px; /* Fixed height for consistency */
+        line-height: 1;
+    }
+    
+    .register-btn.loading {
+        opacity: 0.9;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .register-btn .btn-text {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        line-height: 1;
+    }
+    
+    /* Ensure button content is always centered */
+    .register-btn span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+    }
+</style>
 </head>
 
 <body>
@@ -42,7 +93,7 @@
             <div class="input-group floating">
                 <input type="text" name="first_name" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('first_name', '') }}">
-                <label>First Name</label>
+                <label>First Name <span class="required-asterisk">*</span></label>
             </div>
 
             <!-- MIDDLE NAME -->
@@ -56,7 +107,7 @@
             <div class="input-group floating">
                 <input type="text" name="last_name" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('last_name', '') }}">
-                <label>Last Name</label>
+                <label>Last Name <span class="required-asterisk">*</span></label>
             </div>
 
             <!-- SUFFIX -->
@@ -68,7 +119,7 @@
 
             <!-- COURSE -->
             <div class="input-group">
-                <label>Department / Course</label>
+                <label>Department / Course <span class="required-asterisk">*</span></label>
                 <select name="course" required>
                     <option value="">-- Select Course --</option>
                     {% for dept, courses in courses_by_department.items() %}
@@ -84,9 +135,9 @@
                 </select>
             </div>
 
-            <!-- YEAR LEVEL 1–4 -->
+            <!-- YEAR LEVEL -->
             <div class="input-group">
-                <label>Year Level</label>
+                <label>Year Level <span class="required-asterisk">*</span></label>
                 <select name="year_level" required>
                     <option value="">-- Select Year Level --</option>
                     {% for year in range(1,5) %}
@@ -98,9 +149,9 @@
                 </select>
             </div>
 
-            <!-- PROGRAM TYPE (DAY/NIGHT) - NEW DROPDOWN -->
+            <!-- PROGRAM TYPE -->
             <div class="input-group">
-                <label>Program Type</label>
+                <label>Program Type <span class="required-asterisk">*</span></label>
                 <select name="program_type" required>
                     <option value="">-- Select Program Type --</option>
                     {% for program_type in program_types %}
@@ -115,7 +166,7 @@
 
             <!-- BIRTH DATE -->
             <div class="input-group">
-                <label>Birth Date</label>
+                <label>Birth Date <span class="required-asterisk">*</span></label>
                 <input type="date" name="birth_date" required
                        value="{{ session.get('registration_data', {}).get('birth_date', '') }}">
             </div>
@@ -124,30 +175,32 @@
             <div class="input-group floating">
                 <input type="email" name="email" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('email', '') }}">
-                <label>Email</label>
+                <label>Email <span class="required-asterisk">*</span></label>
             </div>
 
             <!-- USERNAME -->
             <div class="input-group floating">
                 <input type="text" name="username" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('username', '') }}">
-                <label>Username</label>
+                <label>Username <span class="required-asterisk">*</span></label>
             </div>
 
             <!-- PASSWORD -->
             <div class="input-group floating">
                 <input type="password" name="password" required minlength="8" placeholder=" ">
-                <label>Password</label>
+                <label>Password <span class="required-asterisk">*</span></label>
             </div>
 
             <!-- ID NUMBER -->
             <div class="input-group floating">
                 <input type="text" name="id_number" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('id_number', '') }}">
-                <label>ID Number</label>
+                <label>ID Number <span class="required-asterisk">*</span></label>
             </div>
 
-            <button type="submit" class="register-btn">Register</button>
+            <button type="submit" class="register-btn" id="registerBtn">
+                <span class="btn-text">Register</span>
+            </button>
         </form>
 
         <p class="login-text">
@@ -166,47 +219,103 @@ function getCsrfToken() {
 }
 </script>
 
-<!-- ================= AJAX VALIDATION (UPDATED WITH CSRF) ================= -->
+<!-- ================= AJAX VALIDATION WITH SPINNER BUTTON ================= -->
 <script>
 document.getElementById('registrationForm').addEventListener('submit', async function (e) {
     e.preventDefault();
+
+    const registerBtn = document.getElementById('registerBtn');
+    const btnText = registerBtn.querySelector('.btn-text');
+    const originalText = btnText.textContent;
 
     // Remove old errors
     document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
     document.querySelectorAll('.field-error-text').forEach(el => el.remove());
 
+    // Show spinner and disable button
+    registerBtn.classList.add('loading');
+    registerBtn.disabled = true;
+    btnText.innerHTML = '<span class="btn-spinner"></span> Validating...';
+
     const form = this;
     const formData = new FormData(form);
     const csrfToken = getCsrfToken();
 
-    const response = await fetch("{{ url_for('student.ajax_validate_register') }}", {
-        method: "POST",
-        headers: {
-            'X-CSRFToken': csrfToken  // ADD CSRF TOKEN
-        },
-        body: formData
-    });
+    try {
+        const response = await fetch("{{ url_for('student.ajax_validate_register') }}", {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        });
 
-    const errors = await response.json();
+        const errors = await response.json();
 
-    if (Object.keys(errors).length > 0) {
-        for (const field in errors) {
-            const input = form.querySelector(`[name="${field}"]`);
-            if (!input) continue;
+        if (Object.keys(errors).length > 0) {
+            // Reset button state
+            registerBtn.classList.remove('loading');
+            registerBtn.disabled = false;
+            btnText.textContent = originalText;
 
-            const wrapper = input.closest('.input-group');
-            wrapper.classList.add('input-error');
+            // Show errors
+            for (const field in errors) {
+                const input = form.querySelector(`[name="${field}"]`);
+                if (!input) continue;
 
-            const error = document.createElement('div');
-            error.className = 'field-error-text';
-            error.textContent = errors[field];
-            wrapper.appendChild(error);
+                const wrapper = input.closest('.input-group');
+                wrapper.classList.add('input-error');
+
+                const error = document.createElement('div');
+                error.className = 'field-error-text';
+                error.textContent = errors[field];
+                wrapper.appendChild(error);
+            }
+            return; // ❌ stop submit
         }
-        return; // ❌ stop submit
-    }
 
-    // ✅ No validation errors → submit normally
-    form.submit();
+        // ✅ No validation errors → change spinner text and submit
+        btnText.innerHTML = '<span class="btn-spinner"></span> Submitting...';
+        
+        // Small delay to show the submitting state (optional)
+        setTimeout(() => {
+            form.submit();
+        }, 300);
+
+    } catch (error) {
+        // Handle any fetch errors
+        console.error('Validation error:', error);
+        
+        // Reset button state
+        registerBtn.classList.remove('loading');
+        registerBtn.disabled = false;
+        btnText.textContent = originalText;
+        
+        // Show error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger';
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        form.insertBefore(errorDiv, form.firstChild);
+    }
+});
+</script>
+
+<!-- Optional: Add this to prevent double submission on regular form submit -->
+<script>
+// Also handle regular form submission (if JavaScript fails)
+document.getElementById('registrationForm').addEventListener('submit', function(e) {
+    const registerBtn = document.getElementById('registerBtn');
+    
+    // If button is already disabled, prevent double submission
+    if (registerBtn.disabled) {
+        e.preventDefault();
+        return;
+    }
+    
+    // For non-AJAX fallback, still show spinner
+    registerBtn.classList.add('loading');
+    registerBtn.disabled = true;
+    registerBtn.querySelector('.btn-text').innerHTML = '<span class="btn-spinner"></span> Submitting...';
 });
 </script>
 

@@ -218,7 +218,7 @@
                     <div class="non-editable-field">
                         {{ student.course_rel.course_name if student.course_rel else student.course }}
                     </div>
-                    <p class="field-note">Course information cannot be edited. Please contact the registrar for corrections.</p>
+                    <p class="field-note">Course information cannot be edited.</p>
                     <!-- Hidden field to preserve the value -->
                     <input type="hidden" name="course_id" value="{{ student.course_id }}">
                 </div>
@@ -229,7 +229,7 @@
                     <div class="non-editable-field">
                         {{ student.year_level.year_name if student.year_level else 'Not set' }}
                     </div>
-                    <p class="field-note">Year level cannot be edited. Please contact the registrar for corrections.</p>
+                    <p class="field-note">Year level cannot be edited.</p>
                     <!-- Hidden field to preserve the value -->
                     <input type="hidden" name="year_level_id" value="{{ student.year_level_id }}">
                 </div>

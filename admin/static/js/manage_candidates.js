@@ -1,5 +1,6 @@
 /* PHOTO LIGHTBOX */
 // manage_candidates.js - Updated with school year support and platform field
+// All notifications now float above the modal
 
 // CSRF Token Helper Function
 function getCsrfToken() {
@@ -116,7 +117,7 @@ function attachEditButtonListeners() {
     });
 }
 
-// Handle edit button click
+// Handle edit button click - ADD YEAR LEVEL HANDLING
 function handleEditClick(e) {
     e.preventDefault();
     
@@ -129,6 +130,11 @@ function handleEditClick(e) {
     document.getElementById('edit_first').value = btn.dataset.first;
     document.getElementById('edit_last').value = btn.dataset.last;
     document.getElementById('edit_party_list').value = btn.dataset.party || '';
+    
+    // Set year level if available
+    if (btn.dataset.year_level_id) {
+        document.getElementById('edit_year_level').value = btn.dataset.year_level_id;
+    }
     
     // Set platform if available
     if (btn.dataset.platform) {
@@ -214,7 +220,12 @@ function handleEditClick(e) {
     // Set the election value after filtering
     document.getElementById('edit_election').value = btn.dataset.election;
 
-    document.getElementById('editCandidateNotification').style.display = 'none';
+    // Hide any existing notifications in edit modal
+    const editNotification = document.getElementById('editCandidateNotification');
+    if (editNotification) {
+        editNotification.style.display = 'none';
+    }
+    
     document.getElementById('editCandidateModal').style.display = 'flex';
 }
 
@@ -257,8 +268,12 @@ document.getElementById('openAddCandidate').onclick = e => {
     
     // Reset form and clear any notifications
     document.getElementById('addCandidateForm').reset();
-    document.getElementById('addCandidateNotification').style.display = 'none';
-    document.getElementById('addCandidateNotification').className = 'modal-notification';
+    
+    // Hide any existing notifications
+    const addNotification = document.getElementById('addCandidateNotification');
+    if (addNotification) {
+        addNotification.style.display = 'none';
+    }
     
     // Clear course dropdown
     const addCourse = document.getElementById('add_course');
@@ -284,7 +299,10 @@ function closeAddCandidateModal() {
     document.getElementById('addCandidateForm').reset();
     
     // Clear any notification
-    document.getElementById('addCandidateNotification').style.display = 'none';
+    const addNotification = document.getElementById('addCandidateNotification');
+    if (addNotification) {
+        addNotification.style.display = 'none';
+    }
 }
 
 /* EDIT MODAL - REMOVED OLD EVENT LISTENERS, using new handleEditClick function */
@@ -307,7 +325,12 @@ function resetEditButtonState() {
 function closeEditModal() {
     document.getElementById('editCandidateModal').style.display = 'none';
     document.getElementById('editCandidateForm').reset();
-    document.getElementById('editCandidateNotification').style.display = 'none';
+    
+    // Clear any notification
+    const editNotification = document.getElementById('editCandidateNotification');
+    if (editNotification) {
+        editNotification.style.display = 'none';
+    }
     
     // Reset the edit button state
     resetEditButtonState();
@@ -333,7 +356,7 @@ function loadCourses(mode, departmentId) {
         loadingOption.disabled = true;
         courseSelect.appendChild(loadingOption);
         
-        // Fetch courses for the selected department with CSRF token
+        // FIXED: Use the correct endpoint with slashes, not hyphens
         fetch(`/admin/courses/by_department/${departmentId}`, {
             headers: {
                 'X-CSRFToken': getCsrfToken()
@@ -353,7 +376,6 @@ function loadCourses(mode, departmentId) {
                     data.courses.forEach(course => {
                         const option = document.createElement('option');
                         option.value = course.id;
-                        // FIXED: Use course_name and course_code instead of name and code
                         option.textContent = course.course_name + (course.course_code ? ` (${course.course_code})` : '');
                         courseSelect.appendChild(option);
                     });
@@ -569,7 +591,7 @@ function filterCandidates(page = null, keepPage = false) {
     })
     .catch(err => {
         console.error('Error:', err);
-        showGlobalNotification('Error filtering candidates', 'error');
+        showFloatingNotification('Error filtering candidates', 'error');
     })
     .finally(() => {
         // Hide loading states
@@ -641,17 +663,19 @@ function updateTable(candidates, pagination) {
                 <td>
                     <div class="action-buttons">
                         <a href="#" class="edit-btn openEditModal" 
-                           data-id="${c.id}" 
-                           data-first="${escapeHtml(c.first_name) || ''}" 
-                           data-last="${escapeHtml(c.last_name) || ''}" 
-                           data-party="${escapeHtml(c.party_list) || ''}"
-                           data-platform="${escapeHtml(c.platform) || ''}"
-                           data-position="${c.position_id || ''}" 
-                           data-election="${c.election_id || ''}" 
-                           data-department="${escapeHtml(c.department) || ''}"
-                           data-department_id="${c.department_id || ''}"
-                           data-course_id="${c.course_id || ''}"
-                           data-scope="${c.scope || 'campus'}">Edit</a>
+                        data-id="${c.id}" 
+                        data-first="${escapeHtml(c.first_name) || ''}" 
+                        data-last="${escapeHtml(c.last_name) || ''}" 
+                        data-party="${escapeHtml(c.party_list) || ''}"
+                        data-platform="${escapeHtml(c.platform) || ''}"
+                        data-year_level_id="${c.year_level_id || ''}"
+                        data-year_level_name="${escapeHtml(c.year_level) || ''}"
+                        data-position="${c.position_id || ''}" 
+                        data-election="${c.election_id || ''}" 
+                        data-department="${escapeHtml(c.department) || ''}"
+                        data-department_id="${c.department_id || ''}"
+                        data-course_id="${c.course_id || ''}"
+                        data-scope="${c.scope || 'campus'}">Edit</a>
                         <a href="#" class="delete-btn delete-candidate" data-id="${c.id}">Delete</a>
                     </div>
                 </td>
@@ -815,34 +839,133 @@ function initFilterListeners() {
     updateFilterDepartment();
 }
 
-/* ---------- FUNCTION TO SHOW NOTIFICATION INSIDE MODAL ---------- */
-function showModalNotification(modalId, message, type) {
-    const notification = document.getElementById(modalId + 'Notification');
-    if (!notification) return;
+/* ---------- FLOATING NOTIFICATION FUNCTION (ABOVE MODAL) ---------- */
+function showFloatingNotification(message, type) {
+    // Remove any existing floating notifications
+    const existingNotification = document.querySelector('.floating-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
     
-    notification.className = 'modal-notification ' + type;
-    notification.innerHTML = '<i class="fa ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i>' + message;
-    notification.style.display = 'flex';
+    // Create floating notification element
+    const notification = document.createElement('div');
+    notification.className = `floating-notification ${type}`;
     
-    // Auto hide after 5 seconds
-    setTimeout(function() {
-        notification.style.display = 'none';
-    }, 5000);
+    // Add icon based on type
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fa ${icon}"></i>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    // Style the notification
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100000;
+        min-width: 300px;
+        max-width: 450px;
+        animation: slideDown 0.3s ease-out;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        pointer-events: all;
+    `;
+    
+    // Style the content based on type
+    const colors = type === 'success' 
+        ? { bg: 'linear-gradient(135deg, #00c851, #00a844)', border: '#007e33' }
+        : { bg: 'linear-gradient(135deg, #ff4444, #cc0000)', border: '#a70000' };
+    
+    notification.querySelector('.notification-content').style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        background: ${colors.bg};
+        color: white;
+        font-size: 0.95rem;
+        font-weight: 500;
+        border-left: 5px solid ${colors.border};
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    `;
+    
+    // Style the close button
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.style.cssText = `
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 1.2rem;
+        margin-left: auto;
+        padding: 0 8px;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+    closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+    
+    // Style the icon
+    notification.querySelector('i:first-child').style.cssText = `
+        font-size: 1.4rem;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    `;
+    
+    // Style the message
+    notification.querySelector('.notification-message').style.cssText = `
+        flex: 1;
+        line-height: 1.4;
+        word-break: break-word;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto hide after 4 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideUp 0.3s ease-out forwards';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }
+    }, 4000);
 }
 
-/* ---------- AJAX SUBMIT FOR ADD CANDIDATE ---------- */
+/* ---------- AJAX SUBMIT FOR ADD CANDIDATE WITH STUDENT VALIDATION ---------- */
 const addCandidateForm = document.getElementById('addCandidateForm');
 const addSubmitBtn = document.getElementById('addCandidateSubmitBtn');
 
 if (addCandidateForm) {
-    addCandidateForm.addEventListener('submit', function(e) {
+    addCandidateForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        // Validate student first using the function from student_validation.js
+        if (typeof validateBeforeSubmit === 'function') {
+            const isValid = await validateBeforeSubmit();
+            if (!isValid) {
+                return; // Stop form submission
+            }
+        }
 
         // Show loading state
         addSubmitBtn.disabled = true;
         const buttonText = addSubmitBtn.querySelector('.button-text');
         const spinner = addSubmitBtn.querySelector('.loading-spinner');
-        if (buttonText) buttonText.style.opacity = '0.7';
+        if (buttonText) {
+            buttonText.innerHTML = 'Adding...';
+            buttonText.style.opacity = '0.7';
+        }
         if (spinner) spinner.style.display = 'inline-block';
 
         const formData = new FormData(this);
@@ -870,8 +993,8 @@ if (addCandidateForm) {
         })
         .then(data => {
             if(data.success) {
-                // Show success message INSIDE the modal - MODAL STAYS OPEN
-                showModalNotification('addCandidate', data.message || 'Candidate added successfully!', 'success');
+                // Show floating success notification
+                showFloatingNotification('✓ Candidate added successfully!', 'success');
                 
                 // Refresh the table with current filters but keep page
                 filterCandidates(null, true);
@@ -898,23 +1021,27 @@ if (addCandidateForm) {
                 }
 
             } else {
-                showModalNotification('addCandidate', data.message || 'Failed to add candidate.', 'error');
+                // Show floating error notification
+                showFloatingNotification('✗ ' + (data.message || 'Failed to add candidate.'), 'error');
             }
         })
         .catch(err => {
             console.error('Error:', err);
-            showModalNotification('addCandidate', err.message || 'Error adding candidate', 'error');
+            showFloatingNotification('✗ ' + (err.message || 'Error adding candidate'), 'error');
         })
         .finally(() => {
             // Hide loading state
             addSubmitBtn.disabled = false;
-            if (buttonText) buttonText.style.opacity = '1';
+            if (buttonText) {
+                buttonText.innerHTML = 'Add Candidate';
+                buttonText.style.opacity = '1';
+            }
             if (spinner) spinner.style.display = 'none';
         });
     });
 }
 
-/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - FIXED VERSION ---------- */
+/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - WITH FLOATING NOTIFICATIONS ---------- */
 const editCandidateForm = document.getElementById('editCandidateForm');
 const editSubmitBtn = document.getElementById('editCandidateSubmitBtn');
 
@@ -959,18 +1086,19 @@ if (editCandidateForm) {
         })
         .then(data => {
             if(data.success) {
-                // Show success notification
-                showGlobalNotification(data.message || 'Candidate updated successfully!', 'success');
+                // Show floating success notification
+                showFloatingNotification('✓ Candidate updated successfully!', 'success');
                 
                 // Refresh the table with current filters but keep page
                 filterCandidates(null, true);
                 
-                // CLOSE THE EDIT MODAL - this will also reset the button state via closeEditModal
+                // CLOSE THE EDIT MODAL
                 closeEditModal();
 
             } else {
-                // Show error inside modal if failed
-                showModalNotification('editCandidate', data.message || 'Failed to update candidate.', 'error');
+                // Show floating error notification and keep modal open
+                showFloatingNotification('✗ ' + (data.message || 'Failed to update candidate.'), 'error');
+                
                 // Reset button state but keep modal open
                 editSubmitBtn.disabled = false;
                 if (buttonText) {
@@ -982,7 +1110,8 @@ if (editCandidateForm) {
         })
         .catch(err => {
             console.error('Error:', err);
-            showModalNotification('editCandidate', err.message || 'Error updating candidate', 'error');
+            showFloatingNotification('✗ ' + (err.message || 'Error updating candidate'), 'error');
+            
             // Reset button state but keep modal open
             editSubmitBtn.disabled = false;
             if (buttonText) {
@@ -1046,7 +1175,7 @@ function deleteCandidate(candidateId) {
     })
     .then(data => {
         if (data.success) {
-            showGlobalNotification('Candidate deleted successfully!', 'success');
+            showFloatingNotification('✓ Candidate deleted successfully!', 'success');
             // Refresh the table with current filters and keep page
             return filterCandidates(currentPage, true);
         } else {
@@ -1059,10 +1188,10 @@ function deleteCandidate(candidateId) {
         // Check if the row still exists - if not, deletion was successful despite error
         const row = document.getElementById(`candidate-${candidateId}`);
         if (!row) {
-            showGlobalNotification('Candidate deleted successfully!', 'success');
+            showFloatingNotification('✓ Candidate deleted successfully!', 'success');
             filterCandidates(currentPage, true);
         } else {
-            showGlobalNotification(err.message || 'Error deleting candidate. Please try again.', 'error');
+            showFloatingNotification('✗ ' + (err.message || 'Error deleting candidate'), 'error');
             // Re-enable the delete button
             if (deleteBtn) {
                 deleteBtn.style.pointerEvents = 'auto';
@@ -1070,52 +1199,6 @@ function deleteCandidate(candidateId) {
             }
         }
     });
-}
-
-/* ---------- GLOBAL NOTIFICATION FUNCTION ---------- */
-function showGlobalNotification(message, type = 'info') {
-    // Remove any existing notifications
-    const existingNotifications = document.querySelectorAll('.global-notification');
-    existingNotifications.forEach(notif => notif.remove());
-
-    const notification = document.createElement('div');
-    notification.className = `global-notification ${type}`;
-    notification.innerHTML = `
-        <i class="fa ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-        <span>${message}</span>
-    `;
-    
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 10px;
-        color: white;
-        font-weight: 500;
-        z-index: 100000;
-        animation: slideIn 0.3s ease-out;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: ${type === 'success' ? 'linear-gradient(135deg, #00c851, #00a844)' : 
-                    type === 'error' ? 'linear-gradient(135deg, #ff4444, #cc0000)' : 
-                    'linear-gradient(135deg, #4361ee, #3b82f6)'};
-    `;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.style.animation = 'slideOut 0.3s ease-out forwards';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
-        }
-    }, 5000);
 }
 
 /* Animation keyframes - FIXED VERSION */
@@ -1128,24 +1211,50 @@ function showGlobalNotification(message, type = 'info') {
     const style = document.createElement('style');
     style.id = 'notification-animation-styles';
     style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, -20px);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
         }
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
+        
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+            to {
+                transform: translate(-50%, -20px);
+                opacity: 0;
+            }
         }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        @keyframes slideDown {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        
+        .floating-notification {
+            pointer-events: all;
+        }
+        
+        .floating-notification .notification-content {
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Dark mode adjustments */
+        @media (prefers-color-scheme: dark) {
+            .floating-notification .notification-content {
+                box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            }
         }
     `;
     document.head.appendChild(style);
 })();
 
-// Make sure filterCandidates returns a promise for chaining
+// Make functions available globally
 window.filterCandidates = filterCandidates;
+window.showFloatingNotification = showFloatingNotification;

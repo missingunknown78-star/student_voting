@@ -21,6 +21,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const MAX_CHARS = 5000;
     const MIN_CHARS_FOR_SUBMIT = 10; // At least 10 characters to enable submit
 
+    // Helper function to get CSRF token
+    function getCsrfToken() {
+        // Try to get from meta tag first
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+            return metaTag.getAttribute('content');
+        }
+        
+        // Try to get from hidden input in the form
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        if (csrfInput) {
+            return csrfInput.value;
+        }
+        
+        // Try to get from cookie (if you're using Flask-WTF's CSRFProtect)
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrf_token') {
+                return value;
+            }
+        }
+        
+        console.warn('CSRF token not found');
+        return '';
+    }
+
     // Format number with commas
     function formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -159,10 +186,13 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.innerHTML = '<span class="button-icon"><span class="spinner"></span> <span>Submitting...</span></span>';
 
         try {
+            const csrfToken = getCsrfToken();
+            
             const response = await fetch('/student/request-deletion', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken  // Add CSRF token header
                 },
                 body: JSON.stringify({
                     reason: reason
@@ -184,10 +214,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Add status message
                 const statusMsg = document.createElement('p');
-                statusMsg.style.cssText = 'text-align: center; color: #f59e0b; font-size: 0.8rem; margin-top: 10px; padding: 8px; background: #fff3e0; border-radius: 6px;';
-                statusMsg.textContent = 'Your deletion request is pending admin approval.';
+                statusMsg.style.cssText = 'text-align: center; color: #f59e0b; font-size: 0.85rem; margin-top: 10px; padding: 8px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #f59e0b;';
+                statusMsg.innerHTML = '<i class="fa-solid fa-clock"></i> Your deletion request is pending admin approval. You will be notified via email once processed.';
                 
                 if (deletionBtn && deletionBtn.parentElement && deletionBtn.parentElement.parentElement) {
+                    // Remove any existing status message first
+                    const existingMsg = deletionBtn.parentElement.parentElement.querySelector('p');
+                    if (existingMsg) existingMsg.remove();
+                    
                     deletionBtn.parentElement.parentElement.appendChild(statusMsg);
                 }
                 
@@ -211,8 +245,8 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmModal.innerHTML = `
             <div class="confirm-content">
                 <div class="confirm-icon">⚠️</div>
-                <h4 class="confirm-title">Confirm Deletion</h4>
-                <p class="confirm-message">Are you absolutely sure you want to request account deletion? This action cannot be undone.</p>
+                <h4 class="confirm-title">Confirm Account Deletion</h4>
+                <p class="confirm-message">Are you absolutely sure you want to request account deletion? This action cannot be undone and all your personal data will be permanently removed after admin approval.</p>
                 <div class="confirm-buttons">
                     <button id="confirmYes" class="btn-confirm-yes">Yes, Proceed</button>
                     <button id="confirmNo" class="btn-confirm-no">Cancel</button>
@@ -220,6 +254,137 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
+        // Style the confirmation modal
+        const style = document.createElement('style');
+        style.textContent = `
+            .confirm-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10001;
+                animation: fadeIn 0.3s ease;
+            }
+            
+            .confirm-content {
+                background: white;
+                border-radius: 16px;
+                padding: 30px;
+                max-width: 400px;
+                width: 90%;
+                text-align: center;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+                animation: slideUp 0.3s ease;
+            }
+            
+            .confirm-icon {
+                font-size: 48px;
+                margin-bottom: 20px;
+            }
+            
+            .confirm-title {
+                font-size: 1.3rem;
+                color: #333;
+                margin-bottom: 15px;
+                font-weight: 600;
+            }
+            
+            .confirm-message {
+                color: #666;
+                margin-bottom: 25px;
+                line-height: 1.5;
+                font-size: 0.95rem;
+            }
+            
+            .confirm-buttons {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .btn-confirm-yes {
+                background: #e53935;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.3s;
+                flex: 1;
+            }
+            
+            .btn-confirm-yes:hover {
+                background: #c62828;
+            }
+            
+            .btn-confirm-no {
+                background: #6c757d;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.3s;
+                flex: 1;
+            }
+            
+            .btn-confirm-no:hover {
+                background: #5a6268;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            @keyframes slideUp {
+                from {
+                    transform: translateY(20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            
+            .spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-radius: 50%;
+                border-top-color: #fff;
+                animation: spin 1s ease-in-out infinite;
+                margin-right: 8px;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            :root.dark-mode .confirm-content {
+                background: #2d2d2d;
+                color: #f0f0f0;
+            }
+            
+            :root.dark-mode .confirm-title {
+                color: #f0f0f0;
+            }
+            
+            :root.dark-mode .confirm-message {
+                color: #b0b0b0;
+            }
+        `;
+        
+        document.head.appendChild(style);
         document.body.appendChild(confirmModal);
         
         document.getElementById('confirmYes').addEventListener('click', async function() {
@@ -229,6 +394,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('confirmNo').addEventListener('click', function() {
             confirmModal.remove();
+        });
+        
+        // Close when clicking outside
+        confirmModal.addEventListener('click', function(e) {
+            if (e.target === confirmModal) {
+                confirmModal.remove();
+            }
         });
     }
 
@@ -256,4 +428,12 @@ document.addEventListener('DOMContentLoaded', function() {
             deletionModal.scrollTop = 0;
         }
     });
+
+    // Add CSRF meta tag if it doesn't exist
+    if (!document.querySelector('meta[name="csrf-token"]')) {
+        const meta = document.createElement('meta');
+        meta.name = 'csrf-token';
+        meta.content = '{{ csrf_token() }}'; // This will be rendered by Jinja
+        document.head.appendChild(meta);
+    }
 });

@@ -1,21 +1,15 @@
-<!-- Position Results - Grouped and Sorted by Position ID -->
+<!-- results_partial.html - Clean version with correct percentage calculations -->
 {% if positions_data %}
     {% for position in positions_data %}
-    <div class="position-results">
-        <h2 class="position-title">
-            <span class="position-icon">
-                {% if 'president' in position.name|lower %}👑
-                {% elif 'vice' in position.name|lower %}👔
-                {% elif 'secretary' in position.name|lower %}📝
-                {% elif 'treasurer' in position.name|lower %}💰
-                {% elif 'auditor' in position.name|lower %}🔍
-                {% elif 'pio' in position.name|lower %}📢
-                {% elif 'representative' in position.name|lower %}👥
-                {% else %}⭐{% endif %}
-            </span>
-            {{ position.name }}
-            <span class="total-votes-badge">{{ position.total_votes }} total votes</span>
-        </h2>
+    <div class="position-results" data-position-id="{{ position.id }}">
+        <div class="position-title-wrapper">
+            <h2 class="position-title">
+                {{ position.name }}
+                {% if position.is_multi_winner %}
+                <span class="multi-winner-badge">({{ position.max_votes }} Winners)</span>
+                {% endif %}
+            </h2>
+        </div>
         
         {% if position.description %}
         <p class="position-description">{{ position.description }}</p>

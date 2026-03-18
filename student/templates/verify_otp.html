@@ -9,12 +9,102 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/otp.css') }}">
-<!-- NO INLINE STYLES HERE - All styles come from otp.css -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 /* Hide CSRF token input visually */
 input[name="csrf_token"] {
     display: none;
+}
+
+/* Spinner styles - matching registration form */
+.btn-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+/* Small spinner for resend link */
+.resend-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(74, 144, 226, 0.3);
+    border-radius: 50%;
+    border-top-color: #4a90e2;
+    animation: spin 0.8s ease-in-out infinite;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.register-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px;
+    line-height: 1;
+    transition: all 0.3s ease;
+}
+
+.register-btn.loading {
+    opacity: 0.9;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.register-btn .btn-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    line-height: 1;
+}
+
+.register-btn span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+
+/* Disabled state for OTP inputs */
+.otp-container input:disabled {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Resend link with spinner */
+.resend-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.resend-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: #4a90e2;
+    transition: all 0.3s ease;
+}
+
+.resend-link.loading {
+    pointer-events: none;
+    opacity: 0.7;
 }
 </style>
 </head>
@@ -54,18 +144,22 @@ input[name="csrf_token"] {
             <!-- Hidden input to hold full OTP for backend -->
             <input type="hidden" name="otp" id="fullOtp">
 
-            <button type="submit" class="register-btn">Verify OTP</button>
+            <button type="submit" class="register-btn" id="verifyBtn">
+                <span class="btn-text">Verify OTP</span>
+            </button>
         </form>
 
         <p class="resend-text">
             Didn't receive an OTP? 
-            <a href="{{ url_for('student.resend_otp') }}">Resend</a>
+            <a href="{{ url_for('student.resend_otp') }}" class="resend-link" id="resendLink">
+                Resend
+            </a>
         </p>
     </div>
 </div>
 
 <script>
-// CSRF Token Helper Function (if needed for future AJAX)
+// CSRF Token Helper Function
 function getCsrfToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     return metaTag ? metaTag.getAttribute('content') : '';
@@ -76,6 +170,11 @@ function getCsrfToken() {
     const fullOtpInput = document.getElementById('fullOtp');
     const otpForm = document.getElementById('otpForm');
     const otpError = document.getElementById('otpError');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const btnText = verifyBtn.querySelector('.btn-text');
+    const originalBtnText = btnText.textContent;
+    const resendLink = document.getElementById('resendLink');
+    const originalResendText = resendLink.textContent;
     
     // Move focus and validate individual input
     inputs.forEach((input, index) => {
@@ -171,29 +270,97 @@ function getCsrfToken() {
         }
     });
     
-    // Combine all inputs before submit
-    otpForm.addEventListener('submit', (e) => {
-        let otp = '';
-        inputs.forEach(i => otp += i.value);
-        
-        if (otp.length !== inputs.length) {
-            e.preventDefault();
-            otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
-        } else if (!/^\d+$/.test(otp)) {
-            e.preventDefault();
-            otpError.textContent = 'OTP must contain only numbers';
-        } else {
-            fullOtpInput.value = otp;
-        }
-    });
-    
     // Clear error when user starts typing
     inputs.forEach(input => {
         input.addEventListener('input', () => {
             otpError.textContent = '';
         });
     });
+    
+    // Handle form submission with spinner
+    otpForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        let otp = '';
+        inputs.forEach(i => otp += i.value);
+        
+        // Validate OTP
+        if (otp.length !== inputs.length) {
+            otpError.textContent = `Please enter the ${inputs.length}-digit OTP`;
+            return;
+        } else if (!/^\d+$/.test(otp)) {
+            otpError.textContent = 'OTP must contain only numbers';
+            return;
+        }
+        
+        // Set the full OTP value
+        fullOtpInput.value = otp;
+        
+        // Show spinner and disable everything
+        verifyBtn.classList.add('loading');
+        verifyBtn.disabled = true;
+        btnText.innerHTML = '<span class="btn-spinner"></span> Verifying...';
+        
+        // Disable all OTP inputs
+        inputs.forEach(input => {
+            input.disabled = true;
+        });
+        
+        // Disable resend link
+        if (resendLink) {
+            resendLink.classList.add('loading');
+            resendLink.style.pointerEvents = 'none';
+        }
+        
+        // Submit the form after a small delay to show spinner
+        setTimeout(() => {
+            otpForm.submit();
+        }, 300);
+    });
+    
+    // Handle resend link click with spinner
+    if (resendLink) {
+        resendLink.addEventListener('click', function(e) {
+            // Prevent default to show spinner first
+            e.preventDefault();
+            
+            // If already loading, prevent double click
+            if (resendLink.classList.contains('loading')) {
+                return;
+            }
+            
+            // Show spinner on resend link
+            resendLink.classList.add('loading');
+            resendLink.innerHTML = 'Resend <span class="resend-spinner"></span>';
+            
+            // Disable verify button and OTP inputs during resend
+            verifyBtn.classList.add('loading');
+            verifyBtn.disabled = true;
+            inputs.forEach(input => {
+                input.disabled = true;
+            });
+            
+            // Get the href URL
+            const href = resendLink.getAttribute('href');
+            
+            // Redirect after a small delay to show spinner
+            setTimeout(() => {
+                window.location.href = href;
+            }, 500);
+        });
+    }
 })();
+
+// Prevent double submission if JavaScript fails
+document.getElementById('otpForm').addEventListener('submit', function(e) {
+    const verifyBtn = document.getElementById('verifyBtn');
+    
+    // If button is already disabled, prevent double submission
+    if (verifyBtn.disabled) {
+        e.preventDefault();
+        return;
+    }
+});
 </script>
 </body>
 </html>

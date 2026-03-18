@@ -30,7 +30,7 @@ class Student(db.Model, UserMixin):
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
-    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id'), nullable=True)  # NEW FIELD
+    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id'), nullable=True)
     
     birth_date = db.Column(db.Date)
     id_number = db.Column(db.String(50), unique=True)
@@ -43,12 +43,29 @@ class Student(db.Model, UserMixin):
     
     # 🔐 Forgot Password Token
     reset_token = db.Column(db.String(100), nullable=True)
+    
+    # 📝 Account Deletion Tracking
+    deletion_requested = db.Column(db.Boolean, default=False)
+    deletion_request_date = db.Column(db.DateTime, nullable=True)
+    deletion_processed = db.Column(db.Boolean, default=False)
+    deletion_processed_date = db.Column(db.DateTime, nullable=True)
+    
     user_type = "student"
     
-    # Relationships
+    # Relationships - FIXED: Removed the conflicting backref
     department = db.relationship('Department', backref='students')
     course_rel = db.relationship('Course', backref='students')
-    # program_type relationship is handled by backref in ProgramType model
+    program_type = db.relationship('ProgramType', backref='program_type_rel')  # FIXED: matches the backref in ProgramType
+    
+    @property
+    def full_name(self):
+        parts = [self.first_name or '']
+        if self.middle_name:
+            parts.append(self.middle_name)
+        parts.append(self.last_name or '')
+        if self.suffix:
+            parts.append(self.suffix)
+        return ' '.join(filter(None, parts))
 
 
 
@@ -56,7 +73,7 @@ class Vote(db.Model):
     __tablename__ = "votes"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True)  # CHANGED: Now nullable=True
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
     encrypted_vote = db.Column(db.Text, nullable=False)  # Or db.LONGTEXT
     
@@ -66,6 +83,10 @@ class Vote(db.Model):
     # INSTEAD OF plain text candidate_ids_at_time, use a hash
     candidate_list_hash = db.Column(db.String(64), nullable=True)  # SHA256 hash
     
+    # NEW FIELDS FOR ANONYMIZATION
+    anonymized_at = db.Column(db.DateTime, nullable=True)
+    original_student_id = db.Column(db.Integer, nullable=True)  # Store original ID for audit if needed
+    
     cast_timestamp = db.Column(db.DateTime, nullable=True)
     recorded_timestamp = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -73,8 +94,6 @@ class Vote(db.Model):
     # Relationships
     student = db.relationship("Student", backref="student_votes")
     election = db.relationship("Election", backref="election_votes")
-    
-
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -247,6 +266,11 @@ class Vote(db.Model):
             
         except:
             return []
+    
+    @property
+    def is_anonymized(self):
+        """Check if this vote has been anonymized"""
+        return self.student_id is None and self.anonymized_at is not None
 
 
 class TrustedDevice(db.Model):
@@ -271,7 +295,7 @@ class DeletionRequest(db.Model):
     __tablename__ = 'deletion_requests'
     
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=True)  # Make sure nullable=True
     reason = db.Column(db.Text, nullable=False)
     request_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.Enum('pending', 'approved', 'rejected', 'cancelled'), default='pending')
@@ -281,10 +305,13 @@ class DeletionRequest(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    student = db.relationship('Student', backref=db.backref('deletion_requests', lazy=True))
+    # Relationships - FIXED: Added viewonly=True
+    student = db.relationship(
+        'Student', 
+        backref=db.backref('deletion_requests', lazy=True),
+        viewonly=True  # This tells SQLAlchemy to NEVER update this relationship automatically
+    )
     admin = db.relationship('Admin', foreign_keys=[processed_by])
-
 
     
 
@@ -413,6 +440,8 @@ class PendingCandidate(db.Model):
     platform = db.Column(db.Text, nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
+    # ✅ ADD THIS LINE - Year Level field
+    year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id'), nullable=False)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'), nullable=False)
     scope = db.Column(db.String(50), nullable=False)
@@ -427,6 +456,8 @@ class PendingCandidate(db.Model):
     student = db.relationship('Student', backref=db.backref('pending_candidacy', uselist=False))
     department = db.relationship('Department')
     course = db.relationship('Course')
+    # ✅ ADD THIS RELATIONSHIP
+    year_level = db.relationship('YearLevel')
     position = db.relationship('Position')
     election = db.relationship('Election')
     reviewer = db.relationship('Admin', foreign_keys=[reviewed_by])

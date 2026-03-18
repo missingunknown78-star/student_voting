@@ -36,7 +36,7 @@ from admin.models import AdminTrustedDevice
 from flask import make_response
 from datetime import datetime
 import pytz
-from admin.models import YearLevel
+from admin.models import YearLevel, DeletionRequestAudit
 from student.models import PendingCandidate
 # Add this near your other imports
 
@@ -208,9 +208,183 @@ COOLDOWN_TIME = 300       # cooldown in seconds (5 minutes)
 MAX_2FA_ATTEMPTS = 5      # max allowed failed 2FA attempts
 TWO_FA_COOLDOWN = 300     # cooldown for 2FA in seconds
 
-# ------------------- Admin Login Route ------------------- #
+from admin.models import AccessCode
+from datetime import datetime
+import time
+
+# Add these constants at the top with your other imports
+ACCESS_ATTEMPTS_LIMIT = 5
+ACCESS_COOLDOWN = 300  # 5 minutes in seconds
+
+from admin.models import AccessCode
+from datetime import datetime
+import time
+from flask import abort
+
+# Add these constants at the top with your other imports
+ACCESS_ATTEMPTS_LIMIT = 5
+ACCESS_COOLDOWN = 300  # 5 minutes in seconds
+
+# ------------------- Dynamic Admin Access Code Entry ------------------- #
+@admin_bp.route('/<path:secret_path>', methods=['GET', 'POST'])
+def dynamic_access(secret_path):
+    """Dynamic URL access code entry - path comes from database"""
+    
+    # Verify if the path matches the active secret path
+    if not AccessCode.verify_path(secret_path):
+        # If path doesn't match, return 404 to hide existence
+        abort(404)
+    
+    ip = request.remote_addr
+    
+    # Check if already authenticated
+    if session.get('access_granted'):
+        return redirect(url_for('admin.login'))
+    
+    # Check cooldown for failed attempts
+    attempts_key = f'access_attempts_{ip}'
+    cooldown_key = f'access_cooldown_{ip}'
+    
+    attempts = session.get(attempts_key, 0)
+    cooldown = session.get(cooldown_key, 0)
+    
+    if time.time() < cooldown:
+        remaining = int(cooldown - time.time())
+        error = f'Too many failed attempts. Try again in {remaining} seconds.'
+        return render_template('access_code.html', error=error)
+    
+    if request.method == 'POST':
+        entered_code = request.form.get('access_code', '').strip()
+        
+        # Verify code against database
+        if AccessCode.verify_code(entered_code):
+            # Success - reset attempts and grant access
+            session[attempts_key] = 0
+            session[cooldown_key] = 0
+            session['access_granted'] = True
+            session['access_time'] = datetime.now().isoformat()
+            
+            # Log successful access
+            log_audit(
+                action='ACCESS_CODE_SUCCESS',
+                description=f"Admin access code entered successfully from IP: {ip}"
+            )
+            
+            return redirect(url_for('admin.login'))
+        else:
+            # Failed attempt
+            attempts += 1
+            session[attempts_key] = attempts
+            
+            # Log failed attempt
+            log_audit(
+                action='ACCESS_CODE_FAILED',
+                description=f"Failed access code attempt from IP: {ip} - Attempt {attempts}"
+            )
+            
+            if attempts >= ACCESS_ATTEMPTS_LIMIT:
+                session[cooldown_key] = time.time() + ACCESS_COOLDOWN
+                session[attempts_key] = 0
+                error = 'Too many failed attempts. Access temporarily locked.'
+                
+                log_audit(
+                    action='ACCESS_LOCKED',
+                    description=f"Access locked for IP: {ip} due to {ACCESS_ATTEMPTS_LIMIT} failed attempts"
+                )
+            else:
+                error = f'Invalid access code. Attempt {attempts} of {ACCESS_ATTEMPTS_LIMIT}.'
+            
+            return render_template('access_code.html', error=error)
+    
+    return render_template('access_code.html')
+
+# ------------------- AJAX Verify Route ------------------- #
+@admin_bp.route('/verify-access-code', methods=['POST'])
+def verify_access_code_ajax():
+    """AJAX endpoint for auto-verifying access code"""
+    
+    # 🔴 ADD THIS CSRF VALIDATION
+    from flask_wtf.csrf import validate_csrf
+    from flask_wtf.csrf import CSRFError
+    
+    try:
+        validate_csrf(request.form.get('csrf_token'))
+    except CSRFError:
+        return jsonify({
+            'success': False, 
+            'message': 'Security token expired. Please refresh the page.'
+        }), 400
+    
+    ip = request.remote_addr
+    
+    # Rest of your code remains exactly the same...
+    attempts_key = f'access_attempts_{ip}'
+    cooldown_key = f'access_cooldown_{ip}'
+    
+    attempts = session.get(attempts_key, 0)
+    cooldown = session.get(cooldown_key, 0)
+    
+    if time.time() < cooldown:
+        remaining = int(cooldown - time.time())
+        return jsonify({
+            'success': False,
+            'message': f'Too many attempts. Try again in {remaining} seconds.'
+        })
+    
+    entered_code = request.form.get('access_code', '').strip()
+    
+    # Verify code against database
+    if AccessCode.verify_code(entered_code):
+        # Success
+        session[attempts_key] = 0
+        session[cooldown_key] = 0
+        session['access_granted'] = True
+        session['access_time'] = datetime.now().isoformat()
+        
+        log_audit(
+            action='ACCESS_CODE_SUCCESS',
+            description=f"Admin access code entered successfully from IP: {ip}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'redirect': url_for('admin.login')
+        })
+    else:
+        # Failed attempt
+        attempts += 1
+        session[attempts_key] = attempts
+        
+        log_audit(
+            action='ACCESS_CODE_FAILED',
+            description=f"Failed access code attempt from IP: {ip} - Attempt {attempts}"
+        )
+        
+        if attempts >= ACCESS_ATTEMPTS_LIMIT:
+            session[cooldown_key] = time.time() + ACCESS_COOLDOWN
+            session[attempts_key] = 0
+            return jsonify({
+                'success': False,
+                'message': 'Too many failed attempts. Access temporarily locked.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'Invalid code. {ACCESS_ATTEMPTS_LIMIT - attempts} attempts remaining.'
+            })
+
+# ------------------- Modified Admin Login Route ------------------- #
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    """Second layer: Actual login page - only accessible after access code"""
+    
+    # 🚫 CHECK ACCESS CODE FIRST
+    if not session.get('access_granted'):
+        # Get current secret path from database
+        secret_path = AccessCode.get_secret_path()
+        # Redirect to the dynamic path
+        return redirect(url_for('admin.dynamic_access', secret_path=secret_path))
+    
     ip = request.remote_addr
     attempts = session.get(f'login_attempts_{ip}', 0)
     cooldown = session.get(f'login_cooldown_{ip}', 0)
@@ -231,20 +405,11 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
 
-        # 🔐 STRICT CASE-SENSITIVE USERNAME CHECK
-        # Use BINARY comparison in SQL for true case sensitivity
-        # This works with MySQL, PostgreSQL, and SQLite
         admin = Admin.query.filter(
-            Admin.username == username  # This is case-sensitive in most databases
+            Admin.username == username
         ).first()
         
-        # Alternative if your database is case-insensitive:
-        # admin = Admin.query.filter_by(username=username).first()
-        # Then check in Python: if admin and admin.username == username:
-        
-        # Now verify password if admin exists AND usernames match exactly
-        if admin and admin.username == username:  # Double-check in Python
-            # Verify password
+        if admin and admin.username == username:
             if bcrypt.check_password_hash(admin.password, password) and admin.role == 'Admin':
                 # Reset failed attempts
                 session[f'login_attempts_{ip}'] = 0
@@ -273,34 +438,26 @@ def login():
                     )
                     return redirect(url_for('admin.verify_2fa'))
             else:
-                # Password incorrect
-                admin = None  # Set to None to trigger failed login handling
+                admin = None
         else:
-            # Username not found or case mismatch
             admin = None
 
         # If we get here, login failed
         if not admin:
-            # Increment failed attempts
             attempts += 1
             session[f'login_attempts_{ip}'] = attempts
 
-            # Create a more specific error message based on what failed
-            # Check if username exists but case doesn't match
             username_exists = Admin.query.filter(
                 func.lower(Admin.username) == func.lower(username)
             ).first()
             
             if username_exists and username_exists.username != username:
-                # Username exists but case doesn't match
                 error_msg = f"Invalid username or password."
                 log_msg = f"Case mismatch: Attempted '{username}', actual username is '{username_exists.username}'"
             else:
-                # No match at all
                 error_msg = f'Invalid username or password. Attempt {attempts} of {MAX_ATTEMPTS}.'
                 log_msg = f"Username '{username}' not found"
 
-            # ---------- AUDIT LOG: Failed login attempt ----------
             log_audit(
                 action='LOGIN_FAILED',
                 description=f"Failed login attempt from IP: {ip} | {log_msg}"
@@ -319,6 +476,8 @@ def login():
                 error = error_msg
 
     return render_template('admin_login.html', error=error)
+
+
 
 
 
@@ -929,9 +1088,12 @@ def dashboard():
     total_elections = election_query.count()
     total_votes = vote_query.count()
 
-    # ===== NEW: Get pending applications count =====
+    # ===== Get pending applications count =====
     from student.models import PendingCandidate
     pending_applications = PendingCandidate.query.filter_by(status='pending').count()
+    
+    # ===== Get pending deletion requests count =====
+    pending_deletion_requests = DeletionRequest.query.filter_by(status='pending').count()
     # ===============================================
 
     # ================================
@@ -963,9 +1125,6 @@ def dashboard():
     # Sort school years in descending order (newest first)
     school_years = sorted(list(school_years), reverse=True)
 
-    # 🚫 REMOVED: DASHBOARD_VIEW audit log (page view - not a data modification)
-    # Dashboard views should not be logged to keep audit logs focused on important actions
-
     return render_template(
         'admin_dashboard.html',
         admin=current_user,
@@ -973,7 +1132,8 @@ def dashboard():
         total_elections=total_elections,
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
-        pending_applications=pending_applications,  # NEW: Pass to template
+        pending_applications=pending_applications,
+        pending_deletion_requests=pending_deletion_requests,  # ← THIS WAS MISSING!
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
         school_years=school_years,
@@ -2581,70 +2741,247 @@ def account_deletion_requests():
 
 @admin_bp.route('/deletion-requests/data')
 def get_deletion_requests_data():
-    """Get paginated deletion requests data for AJAX"""
+    """Get paginated deletion requests data including both pending and processed requests"""
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'all')
     search = request.args.get('search', '')
     date = request.args.get('date', '')
     
     per_page = 10
-    query = DeletionRequest.query
     
-    # Apply filters
-    if status != 'all':
-        query = query.filter(DeletionRequest.status == status)
-    
-    if search:
-        query = query.join(Student).filter(
-            db.or_(
-                Student.first_name.ilike(f'%{search}%'),
-                Student.last_name.ilike(f'%{search}%'),
-                Student.id_number.ilike(f'%{search}%')
+    # Handle different status filters
+    if status == 'pending':
+        # Only from deletion_requests table (should only have pending)
+        query = DeletionRequest.query.filter_by(status='pending')
+        
+        if search:
+            query = query.join(Student).filter(
+                db.or_(
+                    Student.first_name.ilike(f'%{search}%'),
+                    Student.last_name.ilike(f'%{search}%')
+                )
             )
-        )
-    
-    if date:
-        date_obj = datetime.strptime(date, '%Y-%m-%d')
-        query = query.filter(
-            db.func.date(DeletionRequest.request_date) == date_obj.date()
-        )
-    
-    # Order by most recent first
-    query = query.order_by(DeletionRequest.request_date.desc())
-    
-    # Paginate
-    paginated = query.paginate(page=page, per_page=per_page)
-    
-    # Format data for response
-    requests_data = []
-    for req in paginated.items:
-        requests_data.append({
-            'id': req.id,
-            'student_name': f"{req.student.first_name} {req.student.last_name}",
-            'student_id_number': req.student.id_number,
-            'reason': req.reason,
-            'request_date': req.request_date.isoformat(),
-            'status': req.status,
-            'processed_by_name': req.admin.username if req.admin else None
+        if date:
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            query = query.filter(
+                db.func.date(DeletionRequest.request_date) == date_obj.date()
+            )
+        
+        paginated = query.order_by(DeletionRequest.request_date.desc()).paginate(page=page, per_page=per_page)
+        
+        requests_data = []
+        for req in paginated.items:
+            requests_data.append({
+                'id': req.id,
+                'student_name': f"{req.student.first_name} {req.student.last_name}",
+                'reason': req.reason,
+                'request_date': req.request_date.isoformat(),
+                'status': req.status,
+                'from_audit': False
+            })
+        
+        return jsonify({
+            'requests': requests_data,
+            'total_pages': paginated.pages,
+            'current_page': page
         })
     
-    # 🚫 REMOVED: AJAX data fetch audit log (not a data modification)
+    elif status == 'approved':
+        # Only from audit table with status approved
+        query = DeletionRequestAudit.query.filter_by(status='approved')
+        
+        if search:
+            query = query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
+        if date:
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            query = query.filter(
+                db.func.date(DeletionRequestAudit.request_date) == date_obj.date()
+            )
+        
+        paginated = query.order_by(DeletionRequestAudit.processed_date.desc()).paginate(page=page, per_page=per_page)
+        
+        requests_data = []
+        for audit in paginated.items:
+            requests_data.append({
+                'id': audit.id,
+                'student_name': audit.student_name,
+                'reason': audit.reason,
+                'request_date': audit.request_date.isoformat(),
+                'status': audit.status,
+                'processed_date': audit.processed_date.isoformat(),
+                'processed_by': audit.processed_by_username,
+                'votes_anonymized': audit.votes_anonymized,
+                'from_audit': True
+            })
+        
+        return jsonify({
+            'requests': requests_data,
+            'total_pages': paginated.pages,
+            'current_page': page
+        })
     
-    return jsonify({
-        'requests': requests_data,
-        'total_pages': paginated.pages,
-        'current_page': page
-    })
+    elif status == 'rejected':
+        # Only from audit table with status rejected
+        query = DeletionRequestAudit.query.filter_by(status='rejected')
+        
+        if search:
+            query = query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
+        if date:
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            query = query.filter(
+                db.func.date(DeletionRequestAudit.request_date) == date_obj.date()
+            )
+        
+        paginated = query.order_by(DeletionRequestAudit.processed_date.desc()).paginate(page=page, per_page=per_page)
+        
+        requests_data = []
+        for audit in paginated.items:
+            requests_data.append({
+                'id': audit.id,
+                'student_name': audit.student_name,
+                'reason': audit.reason,
+                'request_date': audit.request_date.isoformat(),
+                'status': audit.status,
+                'processed_date': audit.processed_date.isoformat(),
+                'processed_by': audit.processed_by_username,
+                'votes_anonymized': audit.votes_anonymized,
+                'from_audit': True
+            })
+        
+        return jsonify({
+            'requests': requests_data,
+            'total_pages': paginated.pages,
+            'current_page': page
+        })
+    
+    else:  # status == 'all' - combine BOTH tables (pending + approved + rejected)
+        all_requests = []
+        
+        # 1. Get pending requests from deletion_requests table
+        pending_query = DeletionRequest.query.filter_by(status='pending')
+        
+        if search:
+            pending_query = pending_query.join(Student).filter(
+                db.or_(
+                    Student.first_name.ilike(f'%{search}%'),
+                    Student.last_name.ilike(f'%{search}%')
+                )
+            )
+        if date:
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            pending_query = pending_query.filter(
+                db.func.date(DeletionRequest.request_date) == date_obj.date()
+            )
+        
+        pending_requests = pending_query.all()
+        
+        # Format pending requests
+        for req in pending_requests:
+            all_requests.append({
+                'id': req.id,
+                'student_name': f"{req.student.first_name} {req.student.last_name}",
+                'reason': req.reason,
+                'request_date': req.request_date,
+                'status': req.status,
+                'from_audit': False,
+                'sort_date': req.request_date
+            })
+        
+        # 2. Get approved requests from audit table
+        approved_query = DeletionRequestAudit.query.filter_by(status='approved')
+        
+        if search:
+            approved_query = approved_query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
+        if date:
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            approved_query = approved_query.filter(
+                db.func.date(DeletionRequestAudit.request_date) == date_obj.date()
+            )
+        
+        approved_requests = approved_query.all()
+        
+        # Format approved requests
+        for audit in approved_requests:
+            all_requests.append({
+                'id': audit.id,
+                'student_name': audit.student_name,
+                'reason': audit.reason,
+                'request_date': audit.request_date,
+                'status': audit.status,
+                'processed_date': audit.processed_date,
+                'processed_by': audit.processed_by_username,
+                'votes_anonymized': audit.votes_anonymized,
+                'from_audit': True,
+                'sort_date': audit.request_date
+            })
+        
+        # 3. Get rejected requests from audit table
+        rejected_query = DeletionRequestAudit.query.filter_by(status='rejected')
+        
+        if search:
+            rejected_query = rejected_query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
+        if date:
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            rejected_query = rejected_query.filter(
+                db.func.date(DeletionRequestAudit.request_date) == date_obj.date()
+            )
+        
+        rejected_requests = rejected_query.all()
+        
+        # Format rejected requests
+        for audit in rejected_requests:
+            all_requests.append({
+                'id': audit.id,
+                'student_name': audit.student_name,
+                'reason': audit.reason,
+                'request_date': audit.request_date,
+                'status': audit.status,
+                'processed_date': audit.processed_date,
+                'processed_by': audit.processed_by_username,
+                'votes_anonymized': audit.votes_anonymized,
+                'from_audit': True,
+                'sort_date': audit.request_date
+            })
+        
+        # Sort all requests by date (newest first)
+        all_requests.sort(key=lambda x: x['sort_date'], reverse=True)
+        
+        # Paginate manually
+        total_items = len(all_requests)
+        total_pages = (total_items + per_page - 1) // per_page
+        
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_items = all_requests[start:end]
+        
+        # Remove sort_date and convert datetime to string for JSON
+        for item in paginated_items:
+            del item['sort_date']
+            if isinstance(item['request_date'], datetime):
+                item['request_date'] = item['request_date'].isoformat()
+            if 'processed_date' in item and item['processed_date'] and isinstance(item['processed_date'], datetime):
+                item['processed_date'] = item['processed_date'].isoformat()
+        
+        return jsonify({
+            'requests': paginated_items,
+            'total_pages': total_pages,
+            'current_page': page
+        })
+
 
 @admin_bp.route('/deletion-requests/stats')
 def get_deletion_requests_stats():
-    """Get statistics for deletion requests"""
-    total = DeletionRequest.query.count()
-    pending = DeletionRequest.query.filter_by(status='pending').count()
-    approved = DeletionRequest.query.filter_by(status='approved').count()
-    rejected = DeletionRequest.query.filter_by(status='rejected').count()
+    """Get statistics for deletion requests including audit logs"""
     
-    # 🚫 REMOVED: Stats fetch audit log (not a data modification)
+    # Current pending requests
+    pending = DeletionRequest.query.filter_by(status='pending').count()
+    
+    # From audit table
+    approved = DeletionRequestAudit.query.filter_by(status='approved').count()
+    rejected = DeletionRequestAudit.query.filter_by(status='rejected').count()
+    
+    # Total including both tables
+    total = pending + approved + rejected
     
     return jsonify({
         'total': total,
@@ -2673,46 +3010,141 @@ def get_deletion_request(request_id):
     })
 
 @admin_bp.route('/deletion-requests/<int:request_id>/process', methods=['POST'])
+@admin_required
 def process_deletion_request(request_id):
-    """Approve or reject a deletion request"""
-    req = DeletionRequest.query.get_or_404(request_id)
-    data = request.get_json()
+    """Approve or reject a deletion request - WITH AUDIT LOGGING"""
     
-    action = data.get('action')
-    admin_notes = data.get('admin_notes', '')
+    print(f"\n🔥 PROCESSING DELETION REQUEST #{request_id}")
     
-    if action not in ['approve', 'reject']:
-        return jsonify({'success': False, 'message': 'Invalid action'}), 400
-    
-    # Store old status for audit log
-    old_status = req.status
-    
-    # Update request
-    req.status = 'approved' if action == 'approve' else 'rejected'
-    req.admin_notes = admin_notes
-    req.processed_date = datetime.utcnow()
-    req.processed_by = current_user.id  # Fixed: Use current_user instead of current_admin
-    
-    # If approved, you might want to delete the student account
-    if action == 'approve':
-        # Option 1: Actually delete the student
-        # db.session.delete(req.student)
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        admin_notes = data.get('admin_notes', '')
         
-        # Option 2: Just mark as approved and handle separately
-        pass
-    
-    db.session.commit()
-    
-    # ✅ KEEP THIS AUDIT LOG (PROCESS DELETION REQUEST - data modification)
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
-    
-    log_audit(
-        action='PROCESS_DELETION_REQUEST',
-        description=f"Admin user '{username}' {action}d deletion request #{request_id} from IP: {ip} | Student: {req.student.first_name} {req.student.last_name}, Status: {old_status} → {req.status}"
-    )
-    
-    return jsonify({'success': True})
+        if action not in ['approve', 'reject']:
+            return jsonify({'success': False, 'message': 'Invalid action'}), 400
+        
+        req = DeletionRequest.query.get_or_404(request_id)
+        student = req.student
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Student not found'}), 404
+            
+        student_name = f"{student.first_name} {student.last_name}"
+        student_id = student.id
+        student_id_number = student.id_number
+        
+        # Store data for audit log BEFORE any deletion
+        audit_data = {
+            'original_request_id': req.id,
+            'student_id': student_id,
+            'student_name': student_name,
+            'student_id_number': student_id_number,
+            'reason': req.reason,
+            'request_date': req.request_date,
+            'processed_date': datetime.utcnow(),
+            'processed_by': current_user.id,
+            'processed_by_username': current_user.username,
+            'admin_notes': admin_notes,
+            'action_taken': action
+        }
+        
+        vote_count = 0
+        
+        if action == 'approve':
+            print(f"✅ APPROVING - Cleaning up all records for student ID: {student_id}")
+            
+            # ========== STEP 1: Handle ALL related tables ==========
+            
+            # 1. Votes - anonymize them
+            votes = Vote.query.filter_by(student_id=student_id).all()
+            vote_count = len(votes)
+            print(f"📊 Anonymizing {vote_count} votes")
+            for vote in votes:
+                vote.original_student_id = student_id
+                vote.anonymized_at = datetime.utcnow()
+                vote.student_id = None
+            
+            # 2. Pending Candidates - delete them
+            pending = PendingCandidate.query.filter_by(student_id=student_id).all()
+            print(f"📊 Deleting {len(pending)} pending candidates")
+            for p in pending:
+                db.session.delete(p)
+            
+            # 3. Qualified Candidates - delete them
+            qualified = QualifiedCandidate.query.filter_by(student_id=student_id).all()
+            print(f"📊 Deleting {len(qualified)} qualified candidates")
+            for q in qualified:
+                db.session.delete(q)
+            
+            # 4. Trusted Devices - delete them
+            devices = TrustedDevice.query.filter_by(student_id=student_id).all()
+            print(f"📊 Deleting {len(devices)} trusted devices")
+            for d in devices:
+                db.session.delete(d)
+            
+            # 5. Other tables (set to NULL)
+            guidelines = GuidelinesContent.query.filter_by(updated_by=student_id).all()
+            for g in guidelines:
+                g.updated_by = None
+            
+            contacts = ContactInfo.query.filter_by(updated_by=student_id).all()
+            for c in contacts:
+                c.updated_by = None
+            
+            help_contents = HelpPageContent.query.filter_by(updated_by=student_id).all()
+            for h in help_contents:
+                h.updated_by = None
+            
+            # ========== STEP 2: Create audit log entry ==========
+            audit_entry = DeletionRequestAudit(
+                **audit_data,
+                status='approved',
+                votes_anonymized=vote_count
+            )
+            db.session.add(audit_entry)
+            print(f"📝 Created audit log entry")
+            
+            # ========== STEP 3: Delete the current deletion request ==========
+            print(f"📊 Deleting current deletion request")
+            db.session.delete(req)
+            
+            # ========== STEP 4: Delete the student ==========
+            print(f"🗑️ Deleting student record")
+            db.session.delete(student)
+            
+            # ========== STEP 5: Commit everything ==========
+            db.session.commit()
+            print(f"✅ Student {student_name} deleted successfully!")
+            
+        else:  # reject
+            print(f"🚫 REJECTING - Creating audit log")
+            
+            # Create audit log for rejection
+            audit_entry = DeletionRequestAudit(
+                **audit_data,
+                status='rejected',
+                votes_anonymized=0
+            )
+            db.session.add(audit_entry)
+            
+            # ========== STEP 3: Delete the current deletion request ==========
+            print(f"📊 Deleting current deletion request")
+            db.session.delete(req)
+            
+            # ========== STEP 4: Commit ==========
+            db.session.commit()
+            print(f"✅ Request rejected, audit log created")
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 
 from student.models import QualifiedCandidate
@@ -3438,9 +3870,10 @@ def manage_candidates():
             start_date = None
             end_date = None
     
-    # Get positions, departments (these are not filtered by school year)
+    # Get positions, departments, year levels (these are not filtered by school year)
     positions = Position.query.all()
     departments = Department.query.order_by(Department.name).all()
+    year_levels = YearLevel.query.all()  # ADD THIS
     
     # Filter elections by school year if set
     election_query = Election.query.order_by(Election.start_date.desc())
@@ -3493,12 +3926,13 @@ def manage_candidates():
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         party_list = request.form.get('party_list')
-        platform = request.form.get('platform')  # NEW: Add platform field
+        platform = request.form.get('platform')
         department_id_form = request.form.get('department_id', type=int)
-        course_id = request.form.get('course_id', type=int)  # NEW: Add course_id field
+        course_id = request.form.get('course_id', type=int)
         position_id = request.form.get('position_id')
         election_id = request.form.get('election_id')
-        scope = request.form.get('scope')  # Get scope from form
+        scope = request.form.get('scope')
+        year_level_id = request.form.get('year_level_id', type=int)  # ADD THIS
 
         # Get election to verify
         election = Election.query.get(election_id)
@@ -3548,17 +3982,18 @@ def manage_candidates():
             photo_filename = f"{name}_{int(time.time())}{ext}"
             photo_file.save(os.path.join(photo_folder, photo_filename))
 
-        # Create candidate with new fields
+        # Create candidate with new fields including year_level
         new_candidate = Candidate(
             first_name=first_name,
             last_name=last_name,
             party_list=party_list if party_list else None,
-            platform=platform if platform else None,  # NEW: Add platform
+            platform=platform if platform else None,
             department_id=department_id_form,
-            course_id=course_id,  # NEW: Add course_id
+            course_id=course_id,
             position_id=position_id,
             election_id=election_id,
-            scope=scope,  # Save scope directly
+            scope=scope,
+            year_level_id=year_level_id,  # ADD THIS
             photo=photo_filename
         )
 
@@ -3572,12 +4007,13 @@ def manage_candidates():
         position_name = new_candidate.position.name if new_candidate.position else 'N/A'
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
         party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
+        year_level_name = new_candidate.year_level.year_name if new_candidate.year_level else 'N/A'  # ADD THIS
         
         school_year_info = f" | School Year: {school_year}" if school_year else ""
         
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Election: {election_title} ({scope}){school_year_info}"
+            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Election: {election_title} ({scope}){school_year_info}"
         )
 
         # Return JSON for AJAX requests
@@ -3593,6 +4029,8 @@ def manage_candidates():
                 'department': new_candidate.department.name if new_candidate.department else '',
                 'department_id': new_candidate.department_id,
                 'course_id': new_candidate.course_id,
+                'year_level_id': new_candidate.year_level_id,  # ADD THIS
+                'year_level': new_candidate.year_level.year_name if new_candidate.year_level else '',  # ADD THIS
                 'position': new_candidate.position.name,
                 'position_id': new_candidate.position_id,
                 'election_id': new_candidate.election_id,
@@ -3615,6 +4053,7 @@ def manage_candidates():
         candidates_pagination=candidates_pagination,
         positions=positions,
         departments=departments,
+        year_levels=year_levels,  # ADD THIS
         elections=elections,
         campus_elections=campus_elections,
         department_elections=department_elections,
@@ -3695,7 +4134,7 @@ def filter_candidates():
                 Candidate.first_name.ilike(search_term),
                 Candidate.last_name.ilike(search_term),
                 Candidate.party_list.ilike(search_term),
-                Candidate.platform.ilike(search_term),  # NEW: Add platform to search
+                Candidate.platform.ilike(search_term),
                 Position.name.ilike(search_term),
                 Election.title.ilike(search_term)
             )
@@ -3713,10 +4152,12 @@ def filter_candidates():
             'first_name': c.first_name,
             'last_name': c.last_name,
             'party_list': c.party_list,
-            'platform': c.platform,  # NEW: Add platform to response
+            'platform': c.platform,
             'department': c.department.name if c.department else '',
             'department_id': c.department_id,
-            'course_id': c.course_id,  # NEW: Add course_id to response
+            'course_id': c.course_id,
+            'year_level_id': c.year_level_id,  # ADD THIS
+            'year_level': c.year_level.year_name if c.year_level else '',  # ADD THIS
             'position': c.position.name if c.position else '',
             'position_id': c.position_id,
             'election_id': c.election_id,
@@ -3752,9 +4193,10 @@ def update_candidate(id):
     old_first_name = candidate.first_name
     old_last_name = candidate.last_name
     old_party_list = candidate.party_list
-    old_platform = candidate.platform  # NEW
+    old_platform = candidate.platform
     old_position = candidate.position.name if candidate.position else 'N/A'
     old_department = candidate.department.name if candidate.department else 'N/A'
+    old_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'  # ADD THIS
     old_scope = candidate.scope
 
     # Get form data
@@ -3764,20 +4206,22 @@ def update_candidate(id):
     party_list = request.form.get('party_list')
     candidate.party_list = party_list if party_list else None
     
-    platform = request.form.get('platform')  # NEW
-    candidate.platform = platform if platform else None  # NEW
+    platform = request.form.get('platform')
+    candidate.platform = platform if platform else None
     
     candidate.position_id = request.form.get('position_id')
     candidate.election_id = request.form.get('election_id')
     
     scope = request.form.get('scope')
-    candidate.scope = scope  # Update scope
+    candidate.scope = scope
     
     department_id = request.form.get('department_id', type=int)
-    course_id = request.form.get('course_id', type=int)  # NEW
+    course_id = request.form.get('course_id', type=int)
+    year_level_id = request.form.get('year_level_id', type=int)  # ADD THIS
     
     candidate.department_id = department_id if department_id else None
-    candidate.course_id = course_id if course_id else None  # NEW
+    candidate.course_id = course_id if course_id else None
+    candidate.year_level_id = year_level_id if year_level_id else None  # ADD THIS
     
     # Get election to verify
     election = Election.query.get(candidate.election_id)
@@ -3802,10 +4246,11 @@ def update_candidate(id):
     new_department = candidate.department.name if candidate.department else 'N/A'
     new_position = candidate.position.name if candidate.position else 'N/A'
     new_party_list = candidate.party_list if candidate.party_list else 'Independent'
+    new_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'  # ADD THIS
     
     log_audit(
         action='UPDATE_CANDIDATE',
-        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department}"
+        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department} | Year Level: {old_year_level} → {new_year_level}"
     )
     
     if is_ajax:
@@ -3816,10 +4261,12 @@ def update_candidate(id):
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
             'party_list': candidate.party_list,
-            'platform': candidate.platform,  # NEW
+            'platform': candidate.platform,
             'department': candidate.department.name if candidate.department else '',
             'department_id': candidate.department_id,
-            'course_id': candidate.course_id,  # NEW
+            'course_id': candidate.course_id,
+            'year_level_id': candidate.year_level_id,  # ADD THIS
+            'year_level': candidate.year_level.year_name if candidate.year_level else '',  # ADD THIS
             'position': candidate.position.name if candidate.position else '',
             'position_id': candidate.position_id,
             'election_id': candidate.election_id,
@@ -3844,11 +4291,11 @@ def delete_candidate(id):
     party_list = candidate.party_list if candidate.party_list else 'Independent'
     position_name = candidate.position.name if candidate.position else 'N/A'
     department_name = candidate.department.name if candidate.department else 'N/A'
+    year_level_name = candidate.year_level.year_name if candidate.year_level else 'N/A'  # ADD THIS
     election_title = candidate.election.title if candidate.election else 'N/A'
     
     try:
         # FIRST: Manually delete related tally_votes records
-        # This fixes the foreign key constraint error
         from admin.models import TallyVote
         
         # Delete all tally votes for this candidate
@@ -3863,7 +4310,7 @@ def delete_candidate(id):
         # ✅ KEEP THIS AUDIT LOG (DELETE CANDIDATE - data modification)
         log_audit(
             action='DELETE_CANDIDATE',
-            description=f"Admin user '{username}' deleted candidate from IP: {ip} | Candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Election: {election_title}"
+            description=f"Admin user '{username}' deleted candidate from IP: {ip} | Candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Election: {election_title}"
         )
         
         # Always return JSON for AJAX requests
@@ -3878,7 +4325,7 @@ def delete_candidate(id):
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting candidate: {str(e)}")  # For debugging
+        print(f"Error deleting candidate: {str(e)}")
         import traceback
         traceback.print_exc()
         
@@ -3889,6 +4336,101 @@ def delete_candidate(id):
             }), 500
         flash(f'Error deleting candidate: {str(e)}', 'error')
         return redirect(url_for('admin.manage_candidates'))
+
+
+@admin_bp.route('/courses/by_department/<int:department_id>')
+@admin_required
+def get_courses_by_department(department_id):
+    """Get all courses for a specific department"""
+    try:
+        courses = Course.query.filter_by(department_id=department_id).order_by(Course.course_name).all()
+        
+        courses_data = [{
+            'id': c.id,
+            'course_name': c.course_name,
+            'course_code': c.course_code
+        } for c in courses]
+        
+        return jsonify({
+            'success': True,
+            'courses': courses_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/validate-student', methods=['GET'])
+@admin_required
+def validate_student():
+    """Validate if a student exists in the student table before adding as candidate"""
+    first_name = request.args.get('first_name', '').strip()
+    last_name = request.args.get('last_name', '').strip()
+    course_id = request.args.get('course_id', type=int)
+    
+    if not first_name or not last_name:
+        return jsonify({
+            'exists': False,
+            'message': 'Please provide both first name and last name.'
+        })
+    
+    # Build query to find matching students
+    query = Student.query.filter(
+        Student.first_name.ilike(first_name),
+        Student.last_name.ilike(last_name)
+    )
+    
+    # If course_id is provided, filter by course
+    if course_id:
+        query = query.filter(Student.course_id == course_id)
+    
+    students = query.all()
+    
+    if students:
+        # Student exists
+        student = students[0]  # Take the first match
+        return jsonify({
+            'exists': True,
+            'message': f'Student found: {student.first_name} {student.last_name}',
+            'student': {
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'course_id': student.course_id,
+                'course_name': student.course_rel.course_name if student.course_rel else None,
+                'department_id': student.department_id,
+                'department_name': student.department.name if student.department else None,
+                'year_level_id': student.year_level_id,
+                'year_level': student.year_level.year_name if student.year_level else None
+            }
+        })
+    else:
+        # Student not found - try to find similar names for suggestions
+        from sqlalchemy import or_
+        
+        # Find similar students (either first name or last name matches partially)
+        similar = Student.query.filter(
+            or_(
+                Student.first_name.ilike(f'%{first_name}%'),
+                Student.last_name.ilike(f'%{last_name}%')
+            )
+        ).limit(5).all()
+        
+        suggestions = []
+        for s in similar:
+            suggestions.append({
+                'first_name': s.first_name,
+                'last_name': s.last_name,
+                'course_name': s.course_rel.course_name if s.course_rel else None
+            })
+        
+        return jsonify({
+            'exists': False,
+            'message': f'No student found with name "{first_name} {last_name}". The student must register first.',
+            'suggestions': suggestions
+        })
+
         
 # ---------------------- Manage Positions ---------------------- #
 @admin_bp.route('/manage_positions', methods=['GET', 'POST'])
@@ -4545,6 +5087,8 @@ def guidelines_settings():
     return render_template('guidelines_settings.html', content=guidelines_content)
 
 
+
+from student.models import GuidelinesContent
 # ----------- GET GUIDELINES FOR AJAX -----------
 @admin_bp.route('/get-guidelines')
 @login_required
@@ -5539,12 +6083,7 @@ def election_results_pdf(election_id):
                 @page {
                     size: letter;
                     margin: 0.75in;
-                    @bottom-center {
-                        content: "Page " counter(page) " of " counter(pages);
-                        font-family: Arial, sans-serif;
-                        font-size: 9pt;
-                        color: #666;
-                    }
+                    /* Page numbers removed - now handled by template */
                 }
             ''')],
             font_config=font_config
@@ -6396,20 +6935,27 @@ def audit_logs_ajax():
 
 
     
-# ---------------------- Logout ---------------------- #
+# ------------------- Modified Logout Route ------------------- #
 @admin_bp.route('/logout')
-@admin_required
+@login_required
 def logout():
-    # ---------- AUDIT LOG: Logout ----------
-    if current_user.is_authenticated:
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='LOGOUT',
-            description=f"Admin user '{username}' logged out from IP: {ip}"
-        )
-    
+    """Logout admin and clear all sessions"""
+    username = current_user.username
     logout_user()
-    flash('Admin has been logged out.', 'info')
-    return redirect(url_for('admin.login'))
+    
+    # Clear ALL admin-related sessions
+    session.pop('access_granted', None)
+    session.pop('access_time', None)
+    session.pop('pre_2fa_admin_id', None)
+    
+    # Get current secret path
+    secret_path = AccessCode.get_secret_path()
+    
+    log_audit(
+        action='LOGOUT',
+        description=f"Admin user '{username}' logged out"
+    )
+    
+    flash('You have been logged out successfully.', 'success')
+    # Redirect to the dynamic access path
+    return redirect(url_for('admin.dynamic_access', secret_path=secret_path))

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Page</title>
+    
+    <!-- CSRF Token Meta Tag -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/access_code.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="access-container">
+    <!-- Minimal Header -->
+    <div class="header">
+        <img src="{{ url_for('admin.static', filename='images/school_logo.png') }}" 
+             alt="School Logo" 
+             class="school-logo">
+        <h2 class="school-name">CTU-COMELEC</h2>
+    </div>
+
+    <!-- Access Code Form -->
+    <form action="{{ url_for('admin.dynamic_access', secret_path=request.view_args.get('secret_path', '')) }}" method="POST" class="access-form" autocomplete="off" id="accessForm">
+        
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="input-container">
+            <input 
+                type="password" 
+                name="access_code"
+                id="access_code"
+                placeholder="Enter Access Code"
+                autocomplete="off"
+                required
+                autofocus
+                maxlength="20"
+            >
+            <div class="underline"></div>
+        </div>
+
+        <!-- Hidden submit button (for enter key) -->
+        <button type="submit" style="display: none;"></button>
+
+        <!-- Error Message -->
+        {% if error %}
+            <p class="error-msg">
+                <i class="fas fa-exclamation-circle"></i>
+                {{ error }}
+            </p>
+        {% endif %}
+
+        <!-- Loading Indicator (hidden by default) -->
+        <div class="loading-indicator" id="loadingIndicator">
+            <div class="spinner"></div>
+            <span>Verifying...</span>
+        </div>
+
+    </form>
+
+    <p class="hint">
+        <i class="fas fa-key"></i>
+        Enter access code to continue
+    </p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const accessInput = document.getElementById('access_code');
+    const form = document.getElementById('accessForm');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    let errorMsg = document.querySelector('.error-msg');
+    
+    let typingTimer;
+    const doneTypingInterval = 10000; // 10 seconds
+    
+    // Auto-verify when user stops typing for 10 seconds
+    accessInput.addEventListener('input', function() {
+        // Hide any previous error message
+        if (errorMsg) {
+            errorMsg.style.display = 'none';
+        }
+        
+        // Clear previous timer
+        clearTimeout(typingTimer);
+        
+        // Only verify if there's something typed
+        if (this.value.length > 0) {
+            // Set new timer for 10 seconds
+            typingTimer = setTimeout(() => {
+                verifyCode(this.value);
+            }, doneTypingInterval);
+        }
+    });
+    
+    // Also verify on Enter key (immediate)
+    accessInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(typingTimer);
+            verifyCode(this.value);
+        }
+    });
+    
+    function verifyCode(code) {
+        // Don't verify empty code
+        if (!code || code.trim() === '') {
+            return;
+        }
+        
+        // Show loading
+        loadingIndicator.style.display = 'flex';
+        accessInput.disabled = true;
+        
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('access_code', code);
+        formData.append('csrf_token', csrfToken);
+        
+        // Send AJAX request
+        fetch('{{ url_for("admin.verify_access_code_ajax") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Success - redirect to login
+                window.location.href = data.redirect;
+            } else {
+                // Failed - show error and reset
+                resetInput(data.message || 'Invalid access code');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resetInput('An error occurred. Please try again.');
+        });
+    }
+    
+    function resetInput(message) {
+        loadingIndicator.style.display = 'none';
+        accessInput.disabled = false;
+        accessInput.value = '';
+        accessInput.focus();
+        showError(message);
+    }
+    
+    function showError(message) {
+        // Remove existing error message
+        const oldError = document.querySelector('.error-msg');
+        if (oldError) oldError.remove();
+        
+        // Create new error message
+        const errorDiv = document.createElement('p');
+        errorDiv.className = 'error-msg';
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        
+        // Insert after form
+        form.parentNode.insertBefore(errorDiv, form.nextSibling);
+        
+        // Update errorMsg reference
+        errorMsg = errorDiv;
+    }
+});
+</script>
+
+</body>
+</html>

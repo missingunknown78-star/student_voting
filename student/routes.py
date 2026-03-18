@@ -286,12 +286,12 @@ from admin.models import CtuStudent  # the table where admin imported students
 from sqlalchemy import func  # needed for case-insensitive comparison
 
 # ==================== REGISTER ====================
-# ==================== REGISTER ====================
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
     from admin.models import Department, Course, CtuStudent
-    from student.models import Student, ProgramType  # Import ProgramType from student.models
+    from student.models import Student, ProgramType
     from sqlalchemy import func
+    import json
 
     # ✅ Clear form session only if not coming from failed POST
     if request.method == 'GET':
@@ -342,11 +342,13 @@ def register():
             session['registration_data'].update({
                 "course": course_obj.course_name,
                 "course_id": course_obj.id,
-                "department_id": course_obj.department_id
+                "department_id": course_obj.department_id,
+                "course_name": course_obj.course_name  # For email template
             })
 
         # ---------------- PROGRAM TYPE VALIDATION ----------------
         program_type_id = request.form.get('program_type')
+        program_type_name = "Not specified"
         if program_type_id:
             program_type_obj = ProgramType.query.get(program_type_id)
             if not program_type_obj:
@@ -354,6 +356,8 @@ def register():
                 session['error_fields'].append('program_type')
             else:
                 session['registration_data']['program_type_id'] = program_type_obj.id
+                program_type_name = program_type_obj.name
+                session['registration_data']['program_type_name'] = program_type_name
         else:
             flash("Please select a program type (Day/Night).", "danger")
             session['error_fields'].append('program_type')
@@ -380,21 +384,78 @@ def register():
         session['otp'] = otp
 
         try:
-            # Send OTP email
+            # Import the EmailTemplates (you'll need to read the JS file)
+            js_file_path = os.path.join(current_app.root_path, 'student', 'static', 'js', 'email_templates.js')
+            
+            # Simple approach: Read the JS file and extract the template function
+            # OR better: Use a Python template file instead
+            # For now, we'll use a simplified version
+            
+            # Send OTP email with simplified HTML
             msg = Message(
-                subject="CTU Registration OTP",
+                subject="🔐 CTU Moalboal - Email Verification Code",
                 recipients=[email]
             )
+            
+            # Prepare data for template
+            template_data = {
+                'first_name': registration_data['first_name'],
+                'last_name': registration_data['last_name'],
+                'program_type_name': program_type_name,
+                'year_level': year_level,
+                'course_name': course_obj.course_name,
+                'id_number': id_number
+            }
+            
+            # Use a simplified HTML template (or you could use Jinja2 template)
             msg.html = f"""
-            <div style="font-family: Arial; text-align:center;">
-                <h2>CTU Moalboal Campus</h2>
-                <p>Hello <strong>{registration_data['first_name']}</strong></p>
-                <h3>Your OTP: {otp}</h3>
-            </div>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                </style>
+            </head>
+            <body style="margin:0; padding:0; font-family: 'Inter', Arial; background: #f0f4f8;">
+                <table width="100%" style="padding:40px 20px;">
+                    <tr><td align="center">
+                        <table width="560" style="background:#fff; border-radius:24px; box-shadow:0 20px 40px rgba(0,0,0,0.08);">
+                            <tr><td style="background:linear-gradient(135deg,#667eea,#764ba2); padding:35px; text-align:center;">
+                                <div style="width:80px; height:80px; background:rgba(255,255,255,0.2); border-radius:50%; margin:0 auto 15px; display:flex; align-items:center; justify-content:center;">
+                                    <span style="color:white; font-size:40px; font-weight:700;">CTU</span>
+                                </div>
+                                <h1 style="color:white; margin:0; font-size:24px;">Cebu Technological University</h1>
+                                <p style="color:rgba(255,255,255,0.9); margin:8px 0 0;">Moalboal Campus</p>
+                            </td></tr>
+                            <tr><td style="padding:40px 30px;">
+                                <h2 style="color:#1a2639; margin:0 0 10px;">Hello, <span style="color:#667eea;">{template_data['first_name']} {template_data['last_name']}</span>!</h2>
+                                <p style="color:#4a5568; margin:0 0 25px;">Please verify your email to complete registration.</p>
+                                <div style="background:linear-gradient(135deg,#f8faff,#f0f4ff); border-radius:16px; padding:25px; text-align:center;">
+                                    <p style="color:#4a5568; margin:0 0 10px; font-size:14px;">Your Verification Code</p>
+                                    <div style="background:white; padding:20px 30px; border-radius:12px; display:inline-block;">
+                                        <span style="font-size:42px; font-weight:700; letter-spacing:8px; color:#1a2639;">{otp}</span>
+                                    </div>
+                                    <p style="color:#718096; margin:15px 0 0;">Expires in <strong style="color:#667eea;">10 minutes</strong></p>
+                                </div>
+                                <div style="margin-top:20px; font-size:13px; color:#718096;">
+                                    <p>Program: {template_data['program_type_name']} | Year: {template_data['year_level']}</p>
+                                    <p>Course: {template_data['course_name']}</p>
+                                    <p>ID: {template_data['id_number']}</p>
+                                </div>
+                            </td></tr>
+                            <tr><td style="padding:30px; border-top:1px solid #e9ecef; text-align:center; color:#94a3b8; font-size:12px;">
+                                <p>CTU Moalboal Campus Student Portal</p>
+                            </td></tr>
+                        </table>
+                    </td></tr>
+                </table>
+            </body>
+            </html>
             """
             mail.send(msg)
 
-            flash("OTP has been sent to your email.", "info")
+            flash("📧 OTP has been sent to your email. Please check your inbox (and spam folder).", "info")
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
@@ -407,7 +468,6 @@ def register():
         for dept in departments
     }
     
-    # Get all program types (Day/Night) from student.models
     program_types = ProgramType.query.order_by(ProgramType.name).all()
 
     return render_template(
@@ -447,8 +507,6 @@ def ajax_validate_register():
             errors['program_type'] = 'Invalid program type selected'
 
     return jsonify(errors)
-
-
 
 # ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])
@@ -492,8 +550,7 @@ def verify_otp():
         else:
             flash('Invalid OTP.', 'danger')
 
-    return render_template('verify_otp.html')
-
+    return render_template('verify_otp.html', email=session.get('registration_data', {}).get('email', ''))
 
 # ==================== RESEND OTP ====================
 @student_bp.route('/resend-otp', methods=['GET'])
@@ -508,20 +565,121 @@ def resend_otp():
     session['otp'] = otp
 
     try:
+        # Import the EmailTemplates from JS file
+        import json
+        import os
+        
+        # Read the email_templates.js file
+        js_file_path = os.path.join(current_app.root_path, 'student', 'static', 'js', 'email_templates.js')
+        
+        # Since we can't directly execute JS in Python, we'll use the template directly
+        # Or better: create a separate Python template file
+        
         msg = Message(
-            subject="CTU Registration OTP",
+            subject="🔄 CTU Moalboal - New Verification Code",
             recipients=[registration_data['email']]
         )
+        
+        # Get course name and program type name
+        from admin.models import Course
+        from student.models import ProgramType
+        
+        course = Course.query.get(registration_data.get('course_id'))
+        program_type = ProgramType.query.get(registration_data.get('program_type_id'))
+        
+        # Prepare data for template
+        template_data = {
+            'first_name': registration_data.get('first_name', ''),
+            'last_name': registration_data.get('last_name', ''),
+            'program_type_name': program_type.name if program_type else 'Not specified',
+            'year_level': registration_data.get('year_level', ''),
+            'course_name': course.course_name if course else 'Not specified',
+            'id_number': registration_data.get('id_number', '')
+        }
+        
+        # Use the template from email_templates.js (copied here for Python)
         msg.html = f"""
-        <div style="font-family: Arial, sans-serif; text-align: center;">
-            <h2>Cebu Technological University Moalboal Campus</h2>
-            <p>Hello <strong>{registration_data['first_name']}</strong>,</p>
-            <p>Your <strong>OTP code</strong> is:</p>
-            <h3>{otp}</h3>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            </style>
+        </head>
+        <body style="margin:0; padding:0; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background-color: #f0f4f8;">
+            <!-- Main Container -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <!-- Email Card -->
+                        <table width="560" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #e9ecef;">
+                            
+                            <!-- Header -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Cebu Technological University</h1>
+                                    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Moalboal Campus</p>
+                                    <div style="margin-top: 15px;">
+                                        <span style="color: white; font-size: 16px; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px;">New Verification Code</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Body -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <p style="color: #4a5568; margin: 0 0 20px; font-size: 16px;">Hello <strong style="color: #f59e0b;">{template_data['first_name']}</strong>,</p>
+                                    <p style="color: #4a5568; margin: 0 0 25px; font-size: 15px; line-height: 1.6;">You requested a new verification code. Use the code below to complete your registration:</p>
+                                    
+                                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 30px; text-align: center; border: 1px solid #fbbf24;">
+                                        <span style="font-size: 48px; font-weight: 700; letter-spacing: 8px; color: #92400e; font-family: 'Courier New', monospace;">{otp}</span>
+                                        <p style="color: #92400e; margin: 15px 0 0; font-size: 14px;">⏰ This code expires in 10 minutes</p>
+                                    </div>
+                                    
+                                    <!-- Optional: Show registration summary -->
+                                    <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e9ecef;">
+                                        <p style="color: #4a5568; margin: 0 0 10px; font-size: 14px; font-weight: 600;">Registration Details:</p>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 3px 0; color: #718096; font-size: 13px;">Program:</td>
+                                                <td style="padding: 3px 0; color: #1a2639; font-size: 13px;">{template_data['program_type_name']}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 3px 0; color: #718096; font-size: 13px;">Year Level:</td>
+                                                <td style="padding: 3px 0; color: #1a2639; font-size: 13px;">{template_data['year_level']}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 3px 0; color: #718096; font-size: 13px;">Course:</td>
+                                                <td style="padding: 3px 0; color: #1a2639; font-size: 13px;">{template_data['course_name']}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 3px 0; color: #718096; font-size: 13px;">Student ID:</td>
+                                                <td style="padding: 3px 0; color: #1a2639; font-size: 13px; font-family: monospace;">{template_data['id_number']}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    
+                                    <p style="color: #718096; margin: 25px 0 0; font-size: 13px; font-style: italic;">If you didn't request this, please ignore this email or contact support.</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 30px; border-top: 1px solid #e9ecef; background: #f8fafc;">
+                                    <p style="color: #94a3b8; margin: 0; font-size: 12px; text-align: center;">CTU Moalboal Campus Student Portal</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
         """
         mail.send(msg)
-        flash("A new OTP has been sent to your email.", "info")
+        flash("✅ A new verification code has been sent to your email.", "success")
     except Exception as e:
         flash(f"Failed to send OTP email. Error: {str(e)}", "danger")
 
@@ -530,6 +688,7 @@ def resend_otp():
 
 
 # ==================== LOGIN (merged traditional + WebAuthn page) ====================
+# ==================== LOGIN (merged traditional + WebAuthn page) ====================
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -537,7 +696,12 @@ def login():
         id_number = request.form.get('id_number', '').strip()
         password = request.form.get('password', '').strip()
         device_fp = request.form.get('device_fingerprint')
-        print("DEVICE FINGERPRINT:", device_fp)
+        
+        print("=" * 50)
+        print("🔐 LOGIN ATTEMPT")
+        print(f"📧 Email: {email}")
+        print(f"🆔 ID: {id_number}")
+        print(f"🔑 Device FP from form: {device_fp[:32] if device_fp else 'None'}...")
 
         student = Student.query.filter(
             func.lower(Student.email) == email,
@@ -545,6 +709,7 @@ def login():
         ).first()
 
         if not student:
+            print("❌ Student not found")
             flash("Mismatched Credentials", "danger")
             return render_template('student_login.html')
 
@@ -554,69 +719,134 @@ def login():
         
         if not ctu_student:
             # Student has been removed from CTU master list (graduated, stopped, or dropped)
+            print("❌ Student not in CTU master list")
             flash("Your account is no longer active. Please contact the admin for assistance.", "danger")
             return render_template('student_login.html')
         # ====================================================================================
 
-        if bcrypt.check_password_hash(student.password, password):
+        if not bcrypt.check_password_hash(student.password, password):
+            print("❌ Incorrect password")
+            flash('Incorrect password', 'danger')
+            return render_template('student_login.html')
 
-            # 🔐 ================= DEVICE TRUST CHECK =================
-
-            # Check if THIS EXACT device is trusted
-            trusted_device = TrustedDevice.query.filter_by(
-                student_id=student.id,
-                device_fingerprint=device_fp,
-                trusted=True
-            ).first()
-
-            # Check if ANY trusted device exists
-            any_trusted_device = TrustedDevice.query.filter_by(
-                student_id=student.id,
-                trusted=True
-            ).first()
-
-            if not trusted_device:
-                # New / untrusted device
-                if any_trusted_device:
-                    # There are already trusted devices → trigger email verification
-                    from student.utils import send_new_device_email
-
-                    # 1️⃣ Save new device in DB as untrusted
-                    new_device = TrustedDevice(
-                        student_id=student.id,
-                        device_fingerprint=device_fp,
-                        ip_address=request.remote_addr,
-                        browser=request.headers.get('User-Agent'),
-                        device_name=request.headers.get('User-Agent')[:100],
-                        trusted=False
-                    )
-                    db.session.add(new_device)
-                    db.session.commit()
-
-                    # 2️⃣ Send verification email
-                    send_new_device_email(student, new_device)
-
-                    # 3️⃣ Store info in session for resend / verify page
-                    session['pending_login_student'] = student.id
-                    session['pending_device_fp'] = device_fp
-
-                    return redirect(url_for('student.verify_device'))
-                else:
-                    # FIRST login, no trusted devices yet → normal login
-                    login_user(student)
-                    flash('Login successful!', 'success')
-                    return redirect(url_for('student.dashboard', trust_prompt=True))
-
-            # 🔐 =======================================================
-
-            # ✅ Trusted device → proceed with normal login
+        # ================= FIXED: GENERATE CONSISTENT FINGERPRINT =================
+        # Always generate a fingerprint, even if none was sent
+        if not device_fp or device_fp == '':
+            print("⚠️ No device fingerprint received, generating from request data")
+            # Use the same method as in utils.py
+            raw_data = (
+                request.headers.get('User-Agent', '') +
+                request.headers.get('Accept-Language', '') +
+                request.remote_addr
+            )
+            device_fp = hashlib.sha256(raw_data.encode()).hexdigest()
+            print(f"🔑 Generated fingerprint: {device_fp[:32]}...")
+        
+        # 🔐 ================= FIXED DEVICE TRUST CHECK =================
+        print(f"🔍 CHECKING DEVICE: {device_fp[:32]}...")
+        
+        # Check if THIS EXACT device is trusted (CASE 1: Already trusted)
+        trusted_device = TrustedDevice.query.filter_by(
+            student_id=student.id,
+            device_fingerprint=device_fp,
+            trusted=True
+        ).first()
+        
+        print(f"📱 Trusted device found: {trusted_device is not None}")
+        
+        if trusted_device:
+            # ✅ TRUSTED DEVICE FOUND! Proceed with normal login
+            print(f"✅ Trusted device match found! Logging in...")
+            
+            # Update last login time
+            trusted_device.last_login = datetime.utcnow()
+            trusted_device.ip_address = request.remote_addr
+            trusted_device.browser = request.headers.get('User-Agent')
+            db.session.commit()
+            
             login_user(student)
             flash('Login successful!', 'success')
             return redirect(url_for('student.dashboard'))
-
+        
+        # If we get here, this is not a trusted device
+        print(f"⚠️ Device not trusted: {device_fp[:32]}...")
+        
+        # Check if this device exists but is untrusted (CASE 2: Known but untrusted)
+        existing_device = TrustedDevice.query.filter_by(
+            student_id=student.id,
+            device_fingerprint=device_fp
+        ).first()
+        
+        if existing_device:
+            print(f"📱 Device exists but is NOT trusted (ID: {existing_device.id})")
         else:
-            flash('Incorrect password', 'danger')
-            return render_template('student_login.html')
+            print(f"📱 New device - never seen before")
+        
+        # Check if student has ANY trusted devices (CASE 3: Has other trusted devices)
+        any_trusted_device = TrustedDevice.query.filter_by(
+            student_id=student.id,
+            trusted=True
+        ).first()
+        
+        if any_trusted_device:
+            # Student has other trusted devices, but this one is new/untrusted
+            print(f"⚠️ Student has {TrustedDevice.query.filter_by(student_id=student.id, trusted=True).count()} trusted device(s) elsewhere, need verification")
+            
+            from student.utils import send_new_device_email
+            
+            # Save or update device as untrusted
+            if existing_device:
+                # Update existing untrusted device
+                existing_device.ip_address = request.remote_addr
+                existing_device.browser = request.headers.get('User-Agent')
+                existing_device.last_login = datetime.utcnow()
+                existing_device.verification_token = None  # Clear old token
+                new_device = existing_device
+            else:
+                # Create new untrusted device record
+                new_device = TrustedDevice(
+                    student_id=student.id,
+                    device_fingerprint=device_fp,
+                    ip_address=request.remote_addr,
+                    browser=request.headers.get('User-Agent'),
+                    device_name=request.headers.get('User-Agent')[:100],
+                    trusted=False,
+                    last_login=datetime.utcnow()
+                )
+                db.session.add(new_device)
+            
+            db.session.commit()
+            
+            # Send verification email
+            send_new_device_email(student, new_device)
+            
+            # Store in session for verification page
+            session['pending_login_student'] = student.id
+            session['pending_device_fp'] = device_fp
+            
+            flash('New device detected! Please check your email to verify this device.', 'info')
+            return redirect(url_for('student.verify_device'))
+        else:
+            # CASE 4: FIRST EVER LOGIN - no trusted devices at all
+            print(f"🎉 First login for this student - auto-trust this device")
+            
+            # Create trusted device record
+            new_device = TrustedDevice(
+                student_id=student.id,
+                device_fingerprint=device_fp,
+                ip_address=request.remote_addr,
+                browser=request.headers.get('User-Agent'),
+                device_name=request.headers.get('User-Agent')[:100],
+                trusted=True,
+                last_login=datetime.utcnow()
+            )
+            db.session.add(new_device)
+            db.session.commit()
+            
+            # Login normally
+            login_user(student)
+            flash('Login successful! This device has been trusted.', 'success')
+            return redirect(url_for('student.dashboard', trust_prompt=True))
 
     return render_template('student_login.html')
 
@@ -691,14 +921,34 @@ def verify_device():
 
 @student_bp.route('/verify-device/resend', methods=['POST'])
 def resend_verify_device():
+    print("\n" + "="*50)
+    print("📨 RESEND VERIFICATION EMAIL ROUTE HIT")
+    print(f"📋 Headers: {dict(request.headers)}")
+    print(f"📋 Method: {request.method}")
+    print(f"📋 Content-Type: {request.content_type}")
+    
     student_id = session.get('pending_login_student')
     fingerprint = session.get('pending_device_fp')
+    
+    print(f"👤 Student ID from session: {student_id}")
+    print(f"🔑 Fingerprint from session: {fingerprint[:32] if fingerprint else 'None'}...")
 
     if not student_id or not fingerprint:
-        flash("No pending verification to resend.", "danger")
-        return redirect(url_for('student.login'))
+        print("❌ No pending verification in session")
+        return jsonify({
+            'success': False, 
+            'message': 'No pending verification to resend.'
+        }), 400
 
     student = Student.query.get(student_id)
+    if not student:
+        print(f"❌ Student not found for ID: {student_id}")
+        return jsonify({
+            'success': False, 
+            'message': 'Student not found.'
+        }), 404
+
+    print(f"✅ Student found: {student.email}")
 
     device = TrustedDevice.query.filter_by(
         student_id=student.id,
@@ -707,14 +957,37 @@ def resend_verify_device():
     ).first()
 
     if not device:
-        flash("Device already verified or missing.", "info")
-        return redirect(url_for('student.login'))
+        print(f"❌ Device not found or already trusted for fingerprint: {fingerprint[:32]}...")
+        return jsonify({
+            'success': False, 
+            'message': 'Device already verified or missing.'
+        }), 404
 
-    from student.utils import send_new_device_email
-    send_new_device_email(student, device)
+    print(f"📱 Device found (ID: {device.id}), trusted={device.trusted}")
 
-    flash("Verification email resent. Please check your inbox.", "success")
-    return redirect(url_for('student.verify_device'))
+    try:
+        from student.utils import send_new_device_email
+        print("📧 Attempting to send email...")
+        
+        send_new_device_email(student, device)
+        
+        print("✅ Email sent successfully!")
+        
+        # ✅ ALWAYS RETURN JSON FOR THIS ROUTE
+        return jsonify({
+            'success': True,
+            'message': 'Verification email resent. Please check your inbox.'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error sending email: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'success': False,
+            'message': f'Failed to send email: {str(e)}'
+        }), 500
 
 
 
@@ -2381,8 +2654,8 @@ def results_detail(election_id):
                 'id': my_candidacy.id,
                 'position': my_candidacy.position.name if my_candidacy.position else "Unknown",
                 'total_votes': total_votes,
-                'breakdown': breakdown,  # Changed from department_breakdown
-                'grouping_type': grouping_type  # Add grouping type for template
+                'breakdown': breakdown,
+                'grouping_type': grouping_type
             }
     
     # ===== GET PDF RESULTS =====
@@ -2402,7 +2675,7 @@ def results_detail(election_id):
     # Calculate voter turnout
     voter_turnout = (unique_voters / total_voters * 100) if total_voters > 0 else 0
     
-    # ===== GET VOTE COUNTS USING FINDER HASHES (NO DECRYPTION!) =====
+    # ===== GET VOTE COUNTS USING FINDER HASHES =====
     vote_counts = {}
     
     # Try to use cache first for ended elections
@@ -2421,10 +2694,8 @@ def results_detail(election_id):
     if not vote_counts:
         print("📊 Counting votes using finder_hashes...")
         
-        # Get ALL votes for this election (only fetch finder_hash)
-        votes = Vote.query.filter_by(election_id=election_id)\
-                          .with_entities(Vote.finder_hash)\
-                          .all()
+        # Get ALL votes for this election
+        votes = Vote.query.filter_by(election_id=election_id).all()
         
         # Process each vote's finder_hash
         for vote in votes:
@@ -2450,7 +2721,6 @@ def results_detail(election_id):
                             vote_counts[cid] = vote_counts.get(cid, 0) + 1
                             
             except Exception as e:
-                # Skip invalid JSON
                 continue
         
         # Cache the results for ended elections
@@ -2482,18 +2752,30 @@ def results_detail(election_id):
      .filter(Candidate.election_id == election_id)\
      .all()
     
+    # ===== GET POSITION CONFIGURATIONS (max_votes per position) =====
+    position_configs = {}
+    election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+    for ep in election_positions:
+        position_configs[ep.position_id] = {
+            'max_votes': ep.max_votes or 1,
+            'is_multi_winner': ep.max_votes and ep.max_votes > 1
+        }
+    
     # ===== GROUP CANDIDATES BY POSITION =====
     positions_dict = {}
     
     for c in candidates_query:
         pos_name = c.position_name
+        pos_id = c.position_id
         
         if pos_name not in positions_dict:
             positions_dict[pos_name] = {
-                'id': c.position_id,
+                'id': pos_id,
                 'name': pos_name,
                 'description': c.position_description,
-                'candidates': []
+                'candidates': [],
+                'max_votes': position_configs.get(pos_id, {}).get('max_votes', 1),
+                'is_multi_winner': position_configs.get(pos_id, {}).get('is_multi_winner', False)
             }
         
         vote_count = vote_counts.get(c.id, 0)
@@ -2510,7 +2792,7 @@ def results_detail(election_id):
             'is_winner': False
         })
     
-    # ===== CALCULATE PERCENTAGES AND DETERMINE WINNERS =====
+    # ===== CALCULATE PERCENTAGES BASED ON POSITION TYPE =====
     positions_data = []
     
     for pos_name, pos_data in positions_dict.items():
@@ -2520,30 +2802,49 @@ def results_detail(election_id):
         # Sort candidates by vote count (highest first)
         candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
         
-        # Calculate percentages
-        if position_total > 0:
+        # Calculate percentages based on position type
+        if pos_data['is_multi_winner']:
+            # For multi-winner positions: percentage = votes / number of voters who voted
             for candidate in candidates_list:
-                candidate['vote_percentage'] = round(
-                    (candidate['vote_count'] / position_total * 100), 1
-                )
+                if unique_voters > 0:
+                    candidate['vote_percentage'] = round(
+                        (candidate['vote_count'] / unique_voters * 100), 1
+                    )
+                else:
+                    candidate['vote_percentage'] = 0
         else:
+            # For single-winner positions: percentage = votes / total votes for this position
             for candidate in candidates_list:
-                candidate['vote_percentage'] = 0
+                if position_total > 0:
+                    candidate['vote_percentage'] = round(
+                        (candidate['vote_count'] / position_total * 100), 1
+                    )
+                else:
+                    candidate['vote_percentage'] = 0
         
         # Determine winners (only for ended elections)
         if election.end_date < now_naive and candidates_list:
-            # Get max vote count
-            max_votes = candidates_list[0]['vote_count'] if candidates_list else 0
-            for candidate in candidates_list:
-                if candidate['vote_count'] == max_votes and max_votes > 0:
-                    candidate['is_winner'] = True
+            if pos_data['is_multi_winner']:
+                # For multi-winner, top N candidates win
+                max_votes = pos_data['max_votes']
+                for i, candidate in enumerate(candidates_list):
+                    if i < max_votes and candidate['vote_count'] > 0:
+                        candidate['is_winner'] = True
+            else:
+                # For single-winner, only the top candidate wins
+                max_votes = candidates_list[0]['vote_count'] if candidates_list else 0
+                for candidate in candidates_list:
+                    if candidate['vote_count'] == max_votes and max_votes > 0:
+                        candidate['is_winner'] = True
         
         positions_data.append({
             'id': pos_data['id'],
             'name': pos_name,
             'description': pos_data['description'],
             'candidates': candidates_list,
-            'total_votes': position_total
+            'total_votes': position_total,
+            'max_votes': pos_data['max_votes'],
+            'is_multi_winner': pos_data['is_multi_winner']
         })
     
     # Sort positions by ID
@@ -3749,10 +4050,19 @@ def apply_as_candidate_page():
     
     positions = Position.query.all()
     
+    # Get student's year level information
+    student_year_level = None
+    if current_user.year_level:
+        student_year_level = {
+            'id': current_user.year_level.id,
+            'name': current_user.year_level.year_name
+        }
+    
     return render_template('apply_as_candidate.html',
         student=current_user,
+        student_year_level=student_year_level,  # ADD THIS
         is_qualified=is_qualified,
-        all_applications=all_applications,  # Pass all applications from PendingCandidate
+        all_applications=all_applications,
         has_pending_application=has_pending_application,
         has_approved_application=has_approved_application,
         has_rejected_application=has_rejected_application,
@@ -3773,6 +4083,7 @@ def apply_as_candidate():
         scope = request.form.get('scope')
         election_id = request.form.get('election_id')
         position_id = request.form.get('position_id')
+        year_level_id = request.form.get('year_level_id')  # ADD THIS - from hidden field
         
         # Validate required fields
         if not all([scope, election_id, position_id]):
@@ -3792,26 +4103,11 @@ def apply_as_candidate():
         if existing_pending:
             return jsonify({'success': False, 'message': 'You already have a pending application for this election'}), 400
         
-        # Check if already has a rejected application for THIS SPECIFIC ELECTION
-        # Optional: You can allow reapplication even if rejected, or block it
-        existing_rejected = PendingCandidate.query.filter_by(
-            student_id=current_user.id,
-            election_id=election_id,
-            status='rejected'
-        ).first()
-        
-        # If you want to allow reapplication even after rejection, remove this check
-        # If you want to block reapplication, uncomment the lines below
-        """
-        if existing_rejected:
-            return jsonify({'success': False, 'message': 'Your previous application for this election was rejected. Please contact COMELEC for more information.'}), 400
-        """
-        
         # Check if already a candidate in THIS SPECIFIC ELECTION
         existing_candidate = Candidate.query.filter_by(
             first_name=current_user.first_name,
             last_name=current_user.last_name,
-            election_id=election_id  # Add election_id filter
+            election_id=election_id
         ).first()
         
         if existing_candidate:
@@ -3834,7 +4130,7 @@ def apply_as_candidate():
             os.makedirs(photo_folder, exist_ok=True)
             photo_file.save(os.path.join(photo_folder, photo_filename))
         
-        # Create pending candidate record
+        # Create pending candidate record with year level
         pending = PendingCandidate(
             student_id=current_user.id,
             first_name=current_user.first_name,
@@ -3843,6 +4139,7 @@ def apply_as_candidate():
             platform=platform if platform else None,
             department_id=current_user.department_id,
             course_id=current_user.course_id,
+            year_level_id=year_level_id,  # ADD THIS
             position_id=position_id,
             election_id=election_id,
             scope=scope,

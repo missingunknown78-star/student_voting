@@ -215,9 +215,24 @@
                 <!-- CSRF Token - CRITICAL for security -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
+                <!-- Hidden field for year level - auto-populated from student record -->
+                <input type="hidden" name="year_level_id" id="apply_year_level_id" value="{{ student.year_level_id or '' }}">
+                
                 <div class="form-group full-width">
                     <label>Your Name</label>
                     <p id="applicantName">{{ student.first_name }} {{ student.last_name }}</p>
+                </div>
+
+                <!-- Display Year Level (read-only) - Optional but good for user feedback -->
+                <div class="form-group full-width">
+                    <label>Your Year Level</label>
+                    <p class="readonly-field" id="applicantYearLevel">
+                        {% if student.year_level %}
+                            {{ student.year_level.year_name }}
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                    </p>
                 </div>
 
                 <!-- Party List Field -->
@@ -301,91 +316,22 @@
     </div>
 </div>
 
-<!-- Add this script to ensure CSRF token is included in AJAX requests -->
+<!-- Add this CSS for the readonly field -->
+<style>
+.readonly-field {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: #333;
+    font-size: 0.95rem;
+    margin: 5px 0 10px 0;
+}
+</style>
+
+<!-- Keep only the filter function since it's not in the external JS -->
 <script>
-// CSRF Token Helper Function (if not already in base.js)
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
-
-// Override the form submission to include CSRF token in headers
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('candidateApplicationForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Show loading state
-            const submitBtn = document.getElementById('applySubmitBtn');
-            const buttonText = submitBtn.querySelector('.button-text');
-            const spinner = submitBtn.querySelector('.loading-spinner');
-            
-            buttonText.style.opacity = '0.7';
-            spinner.style.display = 'inline-block';
-            submitBtn.disabled = true;
-            
-            const formData = new FormData(this);
-            const csrfToken = getCsrfToken();
-            
-            fetch("{{ url_for('student.apply_as_candidate') }}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken  // Add CSRF token to headers
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    const notification = document.getElementById('candidateApplicationNotification');
-                    notification.className = 'modal-notification success';
-                    notification.innerHTML = `<i class="fa-solid fa-check-circle"></i> ${data.message}`;
-                    notification.style.display = 'flex';
-                    
-                    // Close modal after 2 seconds and reload
-                    setTimeout(() => {
-                        closeCandidateModal();
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    // Show error message
-                    const notification = document.getElementById('candidateApplicationNotification');
-                    notification.className = 'modal-notification error';
-                    notification.innerHTML = `<i class="fa-solid fa-exclamation-circle"></i> ${data.message}`;
-                    notification.style.display = 'flex';
-                    
-                    // Reset button state
-                    buttonText.style.opacity = '1';
-                    spinner.style.display = 'none';
-                    submitBtn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                const notification = document.getElementById('candidateApplicationNotification');
-                notification.className = 'modal-notification error';
-                notification.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> An error occurred. Please try again.';
-                notification.style.display = 'flex';
-                
-                // Reset button state
-                buttonText.style.opacity = '1';
-                spinner.style.display = 'none';
-                submitBtn.disabled = false;
-            });
-        });
-    }
-});
-
-function closeCandidateModal() {
-    document.getElementById('candidateApplicationModal').style.display = 'none';
-    document.getElementById('candidateApplicationForm').reset();
-    document.getElementById('candidateApplicationNotification').style.display = 'none';
-}
-
 function filterElectionsForApply() {
-    // Your existing filter function
     const scope = document.getElementById('apply_scope').value;
     const electionSelect = document.getElementById('apply_election');
     const options = electionSelect.options;

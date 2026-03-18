@@ -1,3 +1,4 @@
+# student/utils.py
 import hashlib
 from flask import request
 from student.models import TrustedDevice
@@ -5,8 +6,12 @@ from flask_mail import Message
 from extensions import mail, db
 from flask import url_for
 import secrets
+from datetime import datetime
 
 def generate_device_fingerprint():
+    """
+    Generate a consistent device fingerprint from request data
+    """
     raw_data = (
         request.headers.get('User-Agent', '') +
         request.headers.get('Accept-Language', '') +
@@ -25,11 +30,9 @@ def is_device_trusted(student_id):
     ).first()
 
 
-
-# student/utils.py (or student/email.py)
-
 def generate_verification_token():
     return secrets.token_urlsafe(32)
+
 
 def send_new_device_email(student, trusted_device):
     from datetime import datetime
@@ -55,6 +58,12 @@ def send_new_device_email(student, trusted_device):
                     Hello {student.first_name},<br>
                     We detected a login from a new device. Was this you?
                 </p>
+                
+                <p style="color: #6b7280; font-size: 14px; margin: 15px 0;">
+                    <strong>Device details:</strong><br>
+                    IP: {trusted_device.ip_address}<br>
+                    Browser: {trusted_device.browser[:50]}...
+                </p>
 
                 <!-- Buttons container -->
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 25px auto;">
@@ -63,31 +72,32 @@ def send_new_device_email(student, trusted_device):
                             <a href="{confirm_url}" style="
                                 display: inline-block;
                                 padding: 12px 25px;
-                                background-color: #4a90e2;
+                                background-color: #10b981;
                                 color: #ffffff;
                                 text-decoration: none;
                                 border-radius: 6px;
                                 font-weight: 600;
                                 box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-                            ">Yes, it’s me</a>
+                            ">✅ Yes, it's me</a>
                         </td>
                         <td style="padding: 5px;">
                             <a href="{deny_url}" style="
                                 display: inline-block;
                                 padding: 12px 25px;
-                                background-color: #e74c3c;
+                                background-color: #ef4444;
                                 color: #ffffff;
                                 text-decoration: none;
                                 border-radius: 6px;
                                 font-weight: 600;
                                 box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-                            ">No, it’s not me</a>
+                            ">❌ No, it's not me</a>
                         </td>
                     </tr>
                 </table>
 
                 <p style="color: #6b7280; font-size: 14px; line-height: 1.4;">
-                    If this wasn’t you, please ignore this email or click "No, it’s not me".
+                    This link will expire in 15 minutes.<br>
+                    If this wasn't you, click "No, it's not me" to secure your account.
                 </p>
             </div>
         </div>
@@ -95,6 +105,6 @@ def send_new_device_email(student, trusted_device):
     )
     try:
         mail.send(msg)
+        print(f"📧 Verification email sent to {student.email}")
     except Exception as e:
-        print("Failed to send device verification email:", e)
-
+        print(f"❌ Failed to send device verification email: {e}")

@@ -292,3 +292,18 @@ h2 {
 .input-group:has(select[name="program_type"]) {
     margin-bottom: 20px;
 }
+
+/* Add this at the end of your existing CSS file */
+
+/* Required field asterisk */
+.required-asterisk {
+    color: #e74c3c;
+    font-weight: bold;
+    margin-left: 3px;
+    font-size: 16px;
+}
+
+/* Optional - make the asterisk more visible */
+.input-group label .required-asterisk {
+    display: inline-block;
+}

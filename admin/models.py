@@ -56,31 +56,31 @@ class Candidate(db.Model):
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     party_list = db.Column(db.String(200), nullable=True)
-    platform = db.Column(db.Text, nullable=True)  # NEW: Platform field
+    platform = db.Column(db.Text, nullable=True)  # Platform field
     
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     department = db.relationship('Department', backref='candidates', lazy=True)
     
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)  # NEW: Course field
-    course = db.relationship('Course', backref='candidates', lazy=True)  # NEW: Course relationship
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
+    course = db.relationship('Course', backref='candidates', lazy=True)
     
-    # NEW: Program Type field (Day/Night)
+    # Program Type field (Day/Night)
     program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id'), nullable=True)
-    program_type = db.relationship('ProgramType', backref='candidates', lazy=True)  # NEW: Program Type relationship
+    program_type = db.relationship('ProgramType', backref='candidates', lazy=True)
+
+    # ✅ ADD THIS LINE - Year Level field
+    year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
+    year_level = db.relationship('YearLevel', backref='candidates', lazy=True)
 
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id'))
     
-    # NEW: Add scope field
+    # Scope field
     scope = db.Column(db.String(50), nullable=False)  # 'campus' or 'department'
     
     # Relationships
     election = db.relationship('Election', backref='candidates', lazy=True)
-
-    # In your Candidate model, add this line with the other foreign keys:
-    year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
-    year_level = db.relationship('YearLevel', backref='candidates', lazy=True)
 
     @property
     def vote_count(self):
@@ -92,7 +92,7 @@ class Candidate(db.Model):
         """Backward compatibility"""
         return 'SSG' if self.scope == 'campus' else 'Department'
     
-    # NEW: Helper to get max votes for this candidate's position in this election
+    # Helper to get max votes for this candidate's position in this election
     @property
     def max_votes_for_position(self):
         """Get the maximum votes allowed for this position in this election"""
@@ -104,7 +104,7 @@ class Candidate(db.Model):
             return ep.max_votes if ep else 1
         return 1
     
-    # NEW: Helper to check if candidate matches student's program type
+    # Helper to check if candidate matches student's program type
     def matches_student_program_type(self, student_program_type_id):
         """Check if candidate's program type matches student's program type"""
         # If candidate has no program type restriction, they match anyone
@@ -113,13 +113,13 @@ class Candidate(db.Model):
         # Otherwise, must match exactly
         return self.program_type_id == student_program_type_id
     
-    # NEW: Helper to get program type name
+    # Helper to get program type name
     @property
     def program_type_name(self):
         """Get the program type name (Day/Night) or None"""
         return self.program_type.name if self.program_type else None
     
-    # NEW: Helper to check if candidate is restricted to a specific program type
+    # Helper to check if candidate is restricted to a specific program type
     @property
     def is_program_type_restricted(self):
         """Check if candidate is restricted to a specific program type"""
@@ -736,3 +736,83 @@ class AnalyticsExport(db.Model):
     # Relationships
     admin = db.relationship('Admin', backref='analytics_exports')
     election = db.relationship('Election', backref='analytics_exports')
+
+
+
+
+class DeletionRequestAudit(db.Model):
+    """Audit log for processed deletion requests"""
+    __tablename__ = 'deletion_request_audit'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    original_request_id = db.Column(db.Integer, nullable=True)  # Original ID from deletion_requests
+    student_id = db.Column(db.Integer, nullable=False)
+    student_name = db.Column(db.String(255), nullable=False)
+    student_id_number = db.Column(db.String(50), nullable=True)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False)  # 'approved', 'rejected', 'cancelled'
+    action_taken = db.Column(db.String(50), nullable=False)  # 'approved', 'rejected'
+    admin_notes = db.Column(db.Text, nullable=True)
+    request_date = db.Column(db.DateTime, nullable=False)
+    processed_date = db.Column(db.DateTime, nullable=False)
+    processed_by = db.Column(db.Integer, nullable=True)
+    processed_by_username = db.Column(db.String(100), nullable=True)
+    votes_anonymized = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<DeletionRequestAudit {self.id}: {self.student_name} - {self.status}>'
+    
+
+
+
+
+class AccessCode(db.Model):
+    """Model for storing admin access codes"""
+    __tablename__ = 'access_codes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(100), nullable=False)
+    secret_path = db.Column(db.String(100), nullable=False, default='access')  # New field for dynamic URL
+    description = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=True)  # Optional expiration
+    
+    # Relationships
+    creator = db.relationship('Admin', foreign_keys=[created_by], backref='created_access_codes')
+    updater = db.relationship('Admin', foreign_keys=[updated_by], backref='updated_access_codes')
+    
+    def __repr__(self):
+        return f'<AccessCode {self.code[:5]}...>'
+    
+    @classmethod
+    def get_active_code(cls):
+        """Get the currently active access code"""
+        return cls.query.filter_by(is_active=True).first()
+    
+    @classmethod
+    def get_secret_path(cls):
+        """Get the current secret path"""
+        active = cls.get_active_code()
+        return active.secret_path if active else 'access'
+    
+    @classmethod
+    def verify_code(cls, entered_code):
+        """Verify if entered code matches the active code"""
+        active_code = cls.get_active_code()
+        if active_code and active_code.code == entered_code:
+            # Check if expired
+            if active_code.expires_at and active_code.expires_at < datetime.utcnow():
+                return False
+            return True
+        return False
+    
+    @classmethod
+    def verify_path(cls, path):
+        """Verify if the path matches the active secret path"""
+        active = cls.get_active_code()
+        return active and active.secret_path == path

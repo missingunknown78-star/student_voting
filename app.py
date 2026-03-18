@@ -66,7 +66,7 @@ def index():
 from admin.routes import admin_bp
 from student.routes import student_bp
 
-app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(admin_bp, url_prefix='/ctumoalboal-comelec')
 app.register_blueprint(student_bp, url_prefix='/student')
 
 # ---------------------- Run App (LOCAL ONLY) ---------------------- #
