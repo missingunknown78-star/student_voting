@@ -2,7 +2,11 @@ from flask import Flask, redirect, url_for
 from settings import MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_DB, SECRET_KEY
 from extensions import db, bcrypt, login_manager, mail, csrf  # Add csrf here
 from datetime import timedelta
+from dotenv import load_dotenv   # NEW LINE 1
+import os                        # NEW LINE 2
 
+# Load environment variables from .env file
+load_dotenv()                    # NEW LINE 3
 
 # ---------------------- Initialize Flask app ---------------------- #
 app = Flask(__name__)
@@ -25,12 +29,12 @@ app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 
 # ---------------------- Mail Configuration ---------------------- #
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 465
-app.config['MAIL_USE_SSL'] = True
-app.config['MAIL_USERNAME'] = 'ctucomelecprototype@gmail.com'
-app.config['MAIL_PASSWORD'] = 'gnro zcog eqpo ggcc'  # ⚠️ move to env variable later
-app.config['MAIL_DEFAULT_SENDER'] = 'ctucomelecprototype@gmail.com'
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
 # ---------------------- Initialize Extensions ---------------------- #
 db.init_app(app)

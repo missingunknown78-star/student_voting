@@ -32,7 +32,7 @@ import csv
 from admin.models import AuditLog, Setting
 from admin.utils import log_audit
 import pandas as pd
-from admin.models import AdminTrustedDevice
+from admin.models import AdminTrustedDevice, TwoFADisableToken
 from flask import make_response
 from datetime import datetime
 import pytz
@@ -783,25 +783,173 @@ def setup_2fa():
 
 from extensions import csrf  # Make sure to import csrf
 
+# ==================== 2FA DISABLE WITH EMAIL CONFIRMATION ====================
+
 @admin_bp.route('/2fa/disable', methods=['POST'])
 @login_required
-def disable_2fa():
-    """Disable 2FA for the current admin"""
+def request_disable_2fa():
+    """Step 1: Request to disable 2FA - sends confirmation email"""
     try:
         admin = current_user
-        # Remove the TOTP secret from database
-        admin.totp_secret = None
+        
+        # Check if 2FA is actually enabled
+        if not admin.totp_secret:
+            return jsonify({'success': False, 'message': '2FA is not enabled'}), 400
+        
+        # Delete any existing unused tokens for this admin
+        TwoFADisableToken.query.filter_by(
+            admin_id=admin.id, 
+            used=False
+        ).delete()
         db.session.commit()
         
-        # ✅ KEEP THIS AUDIT LOG (2FA DISABLED - important security action)
-        log_audit(
-            action='2FA_DISABLED',
-            description=f"Admin user '{admin.username}' disabled two-factor authentication from IP: {request.remote_addr}"
-        )
+        # Create new token
+        token = TwoFADisableToken(admin_id=admin.id)
+        db.session.add(token)
+        db.session.commit()
         
-        return jsonify({'success': True, 'message': '2FA disabled successfully'})
+        # Send email
+        from admin.utils import send_2fa_disable_confirmation
+        email_sent = send_2fa_disable_confirmation(admin, token)
+        
+        if email_sent:
+            # Log this request
+            log_audit(
+                action='2FA_DISABLE_REQUESTED',
+                description=f"Admin user '{admin.username}' requested to disable 2FA from IP: {request.remote_addr}"
+            )
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Confirmation email sent. Please check your email to confirm disabling 2FA.'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': 'Failed to send confirmation email. Please try again.'
+            }), 500
+            
     except Exception as e:
+        db.session.rollback()
+        print(f"Error in request_disable_2fa: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/2fa/disable/confirm/<token>')
+@login_required
+def confirm_disable_2fa(token):
+    """Step 2: User clicks YES in email - actually disable 2FA"""
+    try:
+        # Find the token
+        disable_token = TwoFADisableToken.query.filter_by(token=token, used=False).first()
+        
+        # Variables for template
+        success = False
+        message = ""
+        title = ""
+        
+        if not disable_token:
+            title = "Invalid Link"
+            message = "This confirmation link is invalid or has already been used. Please request a new one."
+        elif disable_token.admin_id != current_user.id:
+            title = "Invalid Link"
+            message = "This confirmation link is for a different user account."
+        else:
+            from datetime import datetime
+            if datetime.utcnow() > disable_token.expires_at:
+                title = "Link Expired"
+                message = "This confirmation link has expired. Please request a new one from your settings."
+            else:
+                # Get the admin
+                admin = Admin.query.get(disable_token.admin_id)
+                
+                # Disable 2FA
+                admin.totp_secret = None
+                disable_token.used = True
+                
+                # 🔥 SET SESSION FLAG for refresh
+                session['2fa_status_changed'] = True
+                session['2fa_new_status'] = 'disabled'
+                
+                db.session.commit()
+                
+                # Log this action
+                log_audit(
+                    action='2FA_DISABLED',
+                    description=f"Admin user '{admin.username}' disabled two-factor authentication via email confirmation from IP: {request.remote_addr}"
+                )
+                
+                title = "2FA Disabled Successfully"
+                message = "Two-Factor Authentication has been disabled on your account."
+                success = True
+        
+        # Render result page
+        return render_template('admin_2fa_disable_result.html',
+                             success=success,
+                             title=title,
+                             message=message)
+        
+    except Exception as e:
+        print(f"Error in confirm_disable_2fa: {str(e)}")
+        return render_template('admin_2fa_disable_result.html',
+                             success=False,
+                             title="Error",
+                             message="An error occurred. Please try again or contact support.")
+
+
+@admin_bp.route('/2fa/disable/cancel/<token>')
+@login_required
+def cancel_disable_2fa(token):
+    """Step 3: User clicks NO in email - cancel the request"""
+    try:
+        # Find the token
+        disable_token = TwoFADisableToken.query.filter_by(token=token, used=False).first()
+        
+        if disable_token:
+            # Mark as used so it can't be used later
+            disable_token.used = True
+            
+            # 🔥 SET SESSION FLAG for refresh (even for cancel)
+            session['2fa_status_changed'] = True
+            session['2fa_new_status'] = 'still enabled (cancelled)'
+            
+            db.session.commit()
+            
+            # Log this cancellation
+            log_audit(
+                action='2FA_DISABLE_CANCELLED',
+                description=f"Admin user '{current_user.username}' cancelled 2FA disable request from IP: {request.remote_addr}"
+            )
+        
+        # Render cancellation result
+        return render_template('admin_2fa_disable_result.html',
+                             success=True,
+                             title="Request Cancelled",
+                             message="Your 2FA disable request has been cancelled. Your account remains protected with Two-Factor Authentication.")
+        
+    except Exception as e:
+        print(f"Error in cancel_disable_2fa: {str(e)}")
+        return render_template('admin_2fa_disable_result.html',
+                             success=False,
+                             title="Error",
+                             message="An error occurred while cancelling the request.")
+
+
+
+
+@admin_bp.route('/2fa/check-status-changed')
+@login_required
+def check_2fa_status_changed():
+    """Check if 2FA status changed from email confirmation"""
+    changed = session.pop('2fa_status_changed', False)
+    new_status = session.pop('2fa_new_status', None)
+    
+    print(f"2FA status check: changed={changed}, new_status={new_status}")  # Debug log
+    
+    return jsonify({
+        'changed': changed,
+        'new_status': new_status
+    })
 
         
 @admin_bp.route('/verify-device')

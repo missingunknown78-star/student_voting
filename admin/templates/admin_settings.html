@@ -429,7 +429,7 @@
 <script src="{{ url_for('admin.static', filename='js/admin_settings.js') }}"></script>
 
 <script>
-// Only keep the minimal inline JS needed for theme persistence and back button
+// ==================== THEME & BACK BUTTON ====================
 // Handle back button click to ensure theme persists
 function handleBackClick(event) {
     // Let the browser navigate normally
@@ -449,6 +449,114 @@ document.addEventListener('DOMContentLoaded', function() {
         window.accessCodeManager.init();
     }
 });
+
+// ==================== 2FA AUTO-REFRESH ====================
+// Check if 2FA status changed from email confirmation
+(function() {
+    console.log('2FA status checker initialized');
+    
+    function check2FAStatus() {
+        console.log('Checking if 2FA status changed...');
+        
+        fetch('/ctumoalboal-comelec/2fa/check-status-changed', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('2FA check data:', data);
+            
+            if (data.changed) {
+                console.log('2FA status changed to:', data.new_status);
+                
+                // Show notification if function exists
+                if (typeof showNotification === 'function') {
+                    showNotification('2FA has been ' + data.new_status + '! Refreshing page...', 'success');
+                } else {
+                    // Fallback notification
+                    const notification = document.createElement('div');
+                    notification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #10b981, #059669);
+                        color: white;
+                        padding: 15px 25px;
+                        border-radius: 50px;
+                        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                        z-index: 9999;
+                        font-weight: 600;
+                        animation: slideIn 0.3s ease;
+                    `;
+                    notification.innerHTML = '<i class="fa-solid fa-rotate"></i> 2FA status changed! Refreshing...';
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => {
+                        notification.style.animation = 'slideOut 0.3s ease forwards';
+                        setTimeout(() => notification.remove(), 300);
+                    }, 1500);
+                }
+                
+                // Refresh after 2 seconds
+                setTimeout(function() {
+                    console.log('Refreshing page now...');
+                    window.location.reload();
+                }, 2000);
+            } else {
+                console.log('No 2FA status change detected');
+            }
+        })
+        .catch(error => {
+            console.error('Error checking 2FA status:', error);
+        });
+    }
+    
+    // Check when page loads (with small delay to ensure everything is loaded)
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(check2FAStatus, 500);
+    });
+    
+    // Check when page becomes visible (user switches back to this tab)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('Tab became visible, checking 2FA status...');
+            check2FAStatus();
+        }
+    });
+    
+    // Add animation styles if they don't exist
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+})();
 </script>
 </body>
 </html>

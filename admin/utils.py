@@ -635,3 +635,122 @@ def send_admin_new_device_email(admin, device):
         print(f"✅ New device verification email sent to {admin.email}")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
+
+
+
+
+def send_2fa_disable_confirmation(admin, token):
+    """Send email to confirm 2FA disabling"""
+    from flask import url_for
+    
+    confirm_url = url_for('admin.confirm_disable_2fa', token=token.token, _external=True)
+    cancel_url = url_for('admin.cancel_disable_2fa', token=token.token, _external=True)
+    
+    msg = Message(
+        subject="🔐 Confirm 2FA Disable Request - COMELEC Admin",
+        recipients=[admin.email],
+        html=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
+            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Confirm 2FA Disable Request</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                        We received a request to <strong>disable Two-Factor Authentication (2FA)</strong> on your COMELEC Admin account.
+                    </p>
+                    
+                    <div style="background: #fee2e2; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #fecaca;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: #ef4444; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px; color: white;">⚠️</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <p style="margin: 0 0 5px 0; color: #991b1b; font-weight: 600;">Security Alert</p>
+                                <p style="margin: 0; color: #b91c1c; font-size: 14px;">IP Address: {request.remote_addr}</p>
+                                <p style="margin: 0; color: #b91c1c; font-size: 14px;">Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                        <strong>⚠️ Disabling 2FA makes your account less secure.</strong> Only proceed if you're sure.
+                    </p>
+                    
+                    <!-- Two Buttons -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 25px auto;">
+                        <tr>
+                            <td style="padding: 5px;">
+                                <a href="{confirm_url}" style="
+                                    display: inline-block;
+                                    padding: 14px 30px;
+                                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                                    color: #ffffff;
+                                    text-decoration: none;
+                                    border-radius: 40px;
+                                    font-weight: 600;
+                                    font-size: 16px;
+                                    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+                                ">✅ Yes, Disable 2FA</a>
+                            </td>
+                            <td style="padding: 5px;">
+                                <a href="{cancel_url}" style="
+                                    display: inline-block;
+                                    padding: 14px 30px;
+                                    background: linear-gradient(135deg, #6b7280, #4b5563);
+                                    color: #ffffff;
+                                    text-decoration: none;
+                                    border-radius: 40px;
+                                    font-weight: 600;
+                                    font-size: 16px;
+                                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                                ">❌ No, Keep 2FA</a>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <!-- Cancel Link (text only) -->
+                    <div style="text-align: center; margin: 20px 0;">
+                        <p style="color: #6b7280; font-size: 14px;">
+                            <a href="{cancel_url}" style="color: #6b7280;">✖️ Or click here to cancel</a>
+                        </p>
+                    </div>
+                    
+                    <!-- Security Notice -->
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">
+                            <strong>⚠️ Security Notice:</strong> This link will expire in <strong>15 minutes</strong>. 
+                            If you didn't request this, click "No, Keep 2FA" immediately and change your password.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
+                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    try:
+        mail.send(msg)
+        print(f"✅ 2FA disable confirmation email sent to {admin.email}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
+        return False

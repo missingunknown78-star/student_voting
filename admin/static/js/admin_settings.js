@@ -208,8 +208,17 @@ function generateQRCodeHTML(data) {
     `;
 }
 
+// ==================== 2FA FUNCTIONS - UPDATED WITH EMAIL CONFIRMATION ====================
+
 function disable2FA() {
-    if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
+    // Show a different confirmation message now
+    if (confirm('Are you sure you want to disable Two-Factor Authentication? A confirmation email will be sent to your email address.')) {
+        
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending email...';
+        button.disabled = true;
+        
         // FIXED: Added /ctumoalboal-comelec prefix
         fetch('/ctumoalboal-comelec/2fa/disable', {
             method: 'POST',
@@ -221,16 +230,27 @@ function disable2FA() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                update2FAStatus(false);
-                showNotification('2FA has been disabled.', 'success');
-                setTimeout(() => location.reload(), 1500);
+                // Show success message - tell them to check email
+                showNotification(data.message || 'Confirmation email sent! Please check your email.', 'success');
+                
+                // Optionally disable the button temporarily to prevent multiple requests
+                button.innerHTML = '<i class="fa-solid fa-envelope"></i> Email Sent';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 30000); // Re-enable after 30 seconds
+                
             } else {
-                showNotification('Error disabling 2FA: ' + data.message, 'error');
+                showNotification('Error: ' + data.message, 'error');
+                button.innerHTML = originalText;
+                button.disabled = false;
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('Error disabling 2FA. Please try again.', 'error');
+            showNotification('Error sending confirmation email. Please try again.', 'error');
+            button.innerHTML = originalText;
+            button.disabled = false;
         });
     }
 }

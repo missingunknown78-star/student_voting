@@ -565,6 +565,37 @@ class AdminTrustedDevice(db.Model):
         }
 
 
+class TwoFADisableToken(db.Model):
+    """Model for storing 2FA disable confirmation tokens"""
+    __tablename__ = 'twofa_disable_tokens'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admins.id', ondelete='CASCADE'), nullable=False)
+    token = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+    
+    # Relationship
+    admin = db.relationship('Admin', backref=db.backref('twofa_disable_tokens', lazy='dynamic'))
+    
+    def __init__(self, admin_id):
+        import secrets
+        from datetime import datetime, timedelta
+        
+        self.admin_id = admin_id
+        self.token = secrets.token_urlsafe(32)  # Generate secure random token
+        self.expires_at = datetime.utcnow() + timedelta(minutes=15)  # 15 minute expiry
+    
+    def is_valid(self):
+        """Check if token is valid (not used and not expired)"""
+        from datetime import datetime
+        return not self.used and datetime.utcnow() < self.expiresats
+    
+    def __repr__(self):
+        return f'<TwoFADisableToken for Admin {self.admin_id}>'
+    
+    
 
 class PdfResult(db.Model):
     """Model for storing uploaded PDF result files"""
