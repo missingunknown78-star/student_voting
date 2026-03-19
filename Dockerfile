@@ -1,8 +1,8 @@
-# Use official Python 3.11 image
+# Use official Python 3.11 slim image
 FROM python:3.11-slim
 
-# ---------------- System Packages for WeasyPrint ----------------
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for WeasyPrint + general build
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libcairo2 \
     libpango-1.0-0 \
@@ -12,9 +12,12 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     zlib1g-dev \
     python3-cffi \
+    apt-utils \
+    wget \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# ---------------- Create app directory ----------------
+# Create app directory
 WORKDIR /app
 
 # Copy requirements first for caching
@@ -31,8 +34,8 @@ COPY . .
 ENV PORT 10000
 EXPOSE $PORT
 
-# Environment variables placeholders (Render dashboard)
+# Environment variables placeholder
 ENV FLASK_ENV=production
 
 # Start the app using gunicorn
-CMD exec gunicorn app:app --bind 0.0.0.0:$PORT --workers 4 --threads 4
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:$PORT", "--workers", "4", "--threads", "4"]
