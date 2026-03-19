@@ -2,7 +2,7 @@
 FROM python:3.11-slim
 
 # ---------------- System Packages for WeasyPrint ----------------
-    RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
     build-essential \
     libcairo2 \
     libpango-1.0-0 \
@@ -13,6 +13,7 @@ FROM python:3.11-slim
     zlib1g-dev \
     python3-cffi \
     && rm -rf /var/lib/apt/lists/*
+
 # ---------------- Create app directory ----------------
 WORKDIR /app
 
