@@ -875,7 +875,7 @@
         document.getElementById('requestsTable').style.display = 'none';
         document.getElementById('emptyState').style.display = 'none';
         
-        let url = `/admin/deletion-requests/data?page=${page}`;
+        let url = `/ctumoalboal-comelec/deletion-requests/data?page=${page}`;
         if (currentStatus !== 'all') url += `&status=${currentStatus}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
         if (date) url += `&date=${date}`;
@@ -954,7 +954,7 @@
     // Load statistics
     function loadStats() {
         // GET request - no CSRF token needed
-        fetch('/admin/deletion-requests/stats')
+        fetch('/ctumoalboal-comelec/deletion-requests/stats')
             .then(res => res.json())
             .then(data => {
                 const statsContainer = document.getElementById('statsContainer');
@@ -1012,7 +1012,7 @@
     // View details
     function viewDetails(id) {
         // GET request - no CSRF token needed
-        fetch(`/admin/deletion-requests/${id}`)
+        fetch(`/ctumoalboal-comelec/deletion-requests/${id}`)
             .then(res => res.json())
             .then(data => {
                 const modalDetails = document.getElementById('modalDetails');
@@ -1067,7 +1067,7 @@
         currentAction = action;
         
         // GET request - no CSRF token needed
-        fetch(`/admin/deletion-requests/${id}`)
+        fetch(`/ctumoalboal-comelec/deletion-requests/${id}`)
             .then(res => res.json())
             .then(data => {
                 document.getElementById('processModalTitle').innerHTML = action === 'approve' ? 
@@ -1090,7 +1090,7 @@
         const notes = document.getElementById('adminNotes').value;
         const csrfToken = getCsrfToken(); // Get CSRF token from meta tag
         
-        fetch(`/admin/deletion-requests/${currentRequestId}/process`, {
+        fetch(`/ctumoalboal-comelec/deletion-requests/${currentRequestId}/process`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1152,5 +1152,5 @@
             document.body.style.overflow = '';
         }
     }
-    </script>
+</script>
 {% endblock %}

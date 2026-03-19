@@ -1205,11 +1205,11 @@ def settings():
         for device in trusted_devices:
             device.is_current = (device.device_fingerprint == current_fingerprint)
         
+        # Get current access code - NEW
+        access_code = AccessCode.get_active_code()
+        
         # Get last backup info (you can implement this later)
         last_backup = None
-        
-        # 🚫 REMOVED: SETTINGS_VIEW audit log (page view - not a data modification)
-        # Viewing settings page should not be logged
         
         return render_template(
             'admin_settings.html',
@@ -1221,7 +1221,8 @@ def settings():
             end_date=end_date,
             pytz=pytz,
             last_backup=last_backup,
-            trusted_devices=trusted_devices
+            trusted_devices=trusted_devices,
+            access_code=access_code  # ADD THIS
         )
         
     except Exception as e:
@@ -1263,6 +1264,619 @@ def save_settings():
             'message': str(e)
         }), 500
 
+
+
+
+
+@admin_bp.route('/settings/access-code/update', methods=['POST'])
+@admin_required
+def update_access_code():
+    """
+    Update the admin access code
+    """
+    try:
+        data = request.get_json()
+        new_code = data.get('access_code')
+        expiration = data.get('expiration')
+        
+        if not new_code or len(new_code.strip()) < 4:
+            return jsonify({
+                'success': False,
+                'message': 'Access code must be at least 4 characters long'
+            }), 400
+        
+        # Get current active access code
+        current_code = AccessCode.get_active_code()
+        
+        if current_code:
+            # Deactivate current code
+            current_code.is_active = False
+            current_code.updated_at = datetime.utcnow()
+            current_code.updated_by = current_user.id
+        
+        # Create new access code
+        new_access_code = AccessCode(
+            code=new_code.strip(),
+            description=f"Updated by {current_user.username}",
+            is_active=True,
+            created_by=current_user.id,
+            updated_by=current_user.id
+        )
+        
+        # Set expiration if provided
+        if expiration:
+            try:
+                days = int(expiration)
+                if days > 0:
+                    new_access_code.expires_at = datetime.utcnow() + timedelta(days=days)
+            except (ValueError, TypeError):
+                pass
+        
+        db.session.add(new_access_code)
+        db.session.commit()
+        
+        # Audit log
+        log_audit(
+            action='ACCESS_CODE_UPDATED',
+            description=f"Admin user '{current_user.username}' updated access code from IP: {request.remote_addr}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Access code updated successfully!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating access code: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error updating access code: {str(e)}'
+        }), 500
+
+
+
+
+# Dictionary to store email change requests (similar to student's)
+email_change_requests = {}
+
+@admin_bp.route('/send-email-change-verification', methods=['POST'])
+@admin_required
+def send_email_change_verification():
+    """Send verification email to old email address"""
+    try:
+        data = request.get_json()
+        old_email = data.get('old_email')
+        new_email = data.get('new_email')
+        
+        if not old_email or not new_email:
+            return jsonify({'error': 'Emails are required'}), 400
+        
+        # Generate unique request ID
+        import uuid
+        request_id = str(uuid.uuid4())
+        
+        # Store request
+        email_change_requests[request_id] = {
+            'admin_id': current_user.id,
+            'old_email': old_email,
+            'new_email': new_email,
+            'status': 'pending',
+            'created_at': datetime.utcnow(),
+            'expiry': datetime.utcnow() + timedelta(minutes=15)
+        }
+        
+        # Mask email for display
+        def mask_email(email):
+            if not email or '@' not in email:
+                return email
+            name, domain = email.split('@')
+            if len(name) > 2:
+                return name[0] + '*' * (len(name) - 2) + name[-1] + '@' + domain
+            elif len(name) == 2:
+                return name[0] + '*@' + domain
+            return email
+        
+        masked_new_email = mask_email(new_email)
+        
+        # Generate confirm and reject URLs
+        confirm_url = url_for('admin.confirm_email_change', 
+                            request_id=request_id, 
+                            action='confirm', 
+                            _external=True)
+        reject_url = url_for('admin.confirm_email_change', 
+                           request_id=request_id, 
+                           action='reject', 
+                           _external=True)
+        
+        # Render the email template (you'll need to create this template)
+        from flask import render_template
+        email_html = render_template('verify_admin_email_change.html',
+                                   masked_email=masked_new_email,
+                                   confirm_url=confirm_url,
+                                   reject_url=reject_url)
+        
+        # Send verification email to OLD email
+        from flask_mail import Message
+        msg = Message(
+            'Confirm Email Change Request - Admin Account',
+            recipients=[old_email]
+        )
+        msg.html = email_html
+        
+        from extensions import mail
+        mail.send(msg)
+        
+        return jsonify({
+            'success': True,
+            'request_id': request_id
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error sending verification email: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/confirm-email-change/<request_id>/<action>')
+def confirm_email_change(request_id, action):
+    """Handle email confirmation from link"""
+    if request_id not in email_change_requests:
+        return "Invalid or expired request", 404
+    
+    request_data = email_change_requests[request_id]
+    
+    if datetime.utcnow() > request_data['expiry']:
+        return "This request has expired", 400
+    
+    if action == 'confirm':
+        request_data['status'] = 'confirmed'
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">✅</div>
+                <h2>Email Change Confirmed!</h2>
+                <p>You can now return to the admin panel and enter the OTP code.</p>
+                <p>This window can be closed.</p>
+            </div>
+        </body>
+        </html>
+        """
+    elif action == 'reject':
+        request_data['status'] = 'rejected'
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">❌</div>
+                <h2>Email Change Rejected</h2>
+                <p>The email change request has been cancelled.</p>
+                <p>This window can be closed.</p>
+            </div>
+        </body>
+        </html>
+        """
+    
+    return "Invalid action", 400
+
+
+@admin_bp.route('/email-change-status/<request_id>')
+@admin_required
+def email_change_status(request_id):
+    """Check status of email change request"""
+    if request_id not in email_change_requests:
+        return jsonify({'status': 'unknown'})
+    
+    request_data = email_change_requests[request_id]
+    
+    # Clean up expired requests
+    if datetime.utcnow() > request_data['expiry']:
+        return jsonify({'status': 'expired'})
+    
+    return jsonify({'status': request_data['status']})
+
+
+@admin_bp.route('/send-otp-to-new-email', methods=['POST'])
+@admin_required
+def send_otp_to_new_email():
+    """Send OTP to new email address"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        request_id = data.get('request_id')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # Generate 6-digit OTP
+        import random
+        import string
+        otp = ''.join(random.choices(string.digits, k=6))
+        
+        # Store OTP in session
+        session['new_email_otp'] = otp
+        session['new_email_otp_expiry'] = (datetime.utcnow() + timedelta(minutes=10)).timestamp()
+        session['pending_new_email'] = email
+        session['change_request_id'] = request_id
+        
+        # Send OTP email
+        from flask_mail import Message
+        msg = Message(
+            'Verify Your New Email Address - Admin Account',
+            recipients=[email]
+        )
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif; text-align: center; padding: 30px;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <h3>Admin Account Email Verification</h3>
+            <p>Your verification code for your new email address is:</p>
+            <h1 style="font-size: 36px; letter-spacing: 5px; color: #2563eb;">{otp}</h1>
+            <p>This code will expire in 10 minutes.</p>
+        </div>
+        """
+        
+        from extensions import mail
+        mail.send(msg)
+        
+        # In development, return code for testing
+        if current_app.config.get('DEBUG'):
+            return jsonify({'success': True, 'code': otp})
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error sending OTP: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/settings/profile/update', methods=['POST'])
+@admin_required
+def settings_profile_update():
+    """
+    Update admin profile (username and email) with verification
+    """
+    try:
+        admin = current_user
+        
+        # Get form data
+        new_username = request.form.get('username')
+        new_email = request.form.get('email')
+        old_email_verified = request.form.get('old_email_verified')
+        new_email_verified = request.form.get('new_email_verified')
+        
+        changes = {}
+        
+        # Update username if changed
+        if new_username and new_username != admin.username:
+            # Check if username is already taken
+            existing_admin = Admin.query.filter_by(username=new_username).first()
+            if existing_admin and existing_admin.id != admin.id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Username already taken'
+                }), 400
+            
+            admin.username = new_username
+            changes['username'] = new_username
+        
+        # Check if email is being changed
+        if new_email and new_email != admin.email:
+            # Verify both old and new email verifications
+            if old_email_verified != 'true' or new_email_verified != 'true':
+                return jsonify({
+                    'success': False,
+                    'error': 'Email change requires verification of both old and new emails'
+                }), 400
+            
+            # Check if new email is already taken
+            existing_admin = Admin.query.filter_by(email=new_email).first()
+            if existing_admin and existing_admin.id != admin.id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Email already in use'
+                }), 400
+            
+            # Update email
+            old_email = admin.email
+            admin.email = new_email
+            changes['email'] = {'old': old_email, 'new': new_email}
+            
+            # Send notification to old email
+            send_admin_email_change_notification(admin, old_email, new_email)
+        
+        db.session.commit()
+        
+        # Audit log
+        log_audit(
+            action='PROFILE_UPDATED',
+            description=f"Admin user updated profile from IP: {request.remote_addr}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Profile updated successfully',
+            'changes': changes,
+            'new_username': admin.username,
+            'new_email': admin.email
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating profile: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+def send_admin_email_change_notification(admin, old_email, new_email):
+    """Send notification to old email about email change"""
+    try:
+        from flask_mail import Message
+        from extensions import mail
+        
+        msg = Message(
+            'Your Admin Email Has Been Changed',
+            recipients=[old_email]
+        )
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <h3>Admin Account Email Change</h3>
+            <p>Hello <strong>{admin.username}</strong>,</p>
+            <p>Your email address for your admin account has been changed.</p>
+            <p><strong>Old email:</strong> {old_email}<br>
+            <strong>New email:</strong> {new_email}</p>
+            <p>If you did not make this change, please contact the system administrator immediately.</p>
+        </div>
+        """
+        
+        mail.send(msg)
+        current_app.logger.info(f"Email change notification sent to {old_email}")
+    except Exception as e:
+        current_app.logger.error(f"Failed to send email change notification: {e}")
+
+
+import secrets
+import hashlib
+from datetime import datetime, timedelta
+from flask import render_template, request, jsonify, url_for, redirect, flash
+from flask_login import current_user, login_required
+from werkzeug.security import generate_password_hash
+
+# Dictionary to store password reset tokens
+password_reset_tokens = {}
+
+@admin_bp.route('/forgot-password', methods=['POST'])
+@admin_required
+def forgot_password():
+    """
+    Send password reset email
+    """
+    try:
+        if not request.is_json:
+            return jsonify({
+                'success': False,
+                'message': 'Request must be JSON'
+            }), 400
+        
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        
+        if not email:
+            return jsonify({
+                'success': False,
+                'message': 'Email is required'
+            }), 400
+        
+        if email != current_user.email:
+            return jsonify({
+                'success': False,
+                'message': 'Email does not match current user'
+            }), 400
+        
+        # Generate reset token
+        token = secrets.token_urlsafe(48)
+        
+        # Store token with expiry (15 minutes)
+        password_reset_tokens[token] = {
+            'admin_id': current_user.id,
+            'admin_username': current_user.username,
+            'admin_name': f"{current_user.first_name} {current_user.last_name}",
+            'admin_email': current_user.email,
+            'expiry': datetime.utcnow() + timedelta(minutes=15)
+        }
+        
+        # Generate reset URL
+        reset_url = url_for('admin.reset_password_page', token=token, _external=True)
+        
+        # Render email template
+        email_html = render_template('admin_password_reset_email.html',
+                                   admin_name=f"{current_user.first_name} {current_user.last_name}",
+                                   admin_username=current_user.username,
+                                   reset_url=reset_url)
+        
+        # Send email
+        from flask_mail import Message
+        from extensions import mail
+        
+        msg = Message(
+            'Reset Your Admin Password - CTU COMELEC',
+            recipients=[current_user.email]
+        )
+        msg.html = email_html
+        
+        mail.send(msg)
+        
+        # Audit log
+        log_audit(
+            action='PASSWORD_RESET_REQUESTED',
+            description=f"Admin user '{current_user.username}' requested password reset from IP: {request.remote_addr}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password reset instructions sent to your email!'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error sending password reset: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
+
+@admin_bp.route('/reset-password/<token>')
+def reset_password_page(token):
+    """Display password reset page"""
+    # Check if token exists and is valid
+    if token not in password_reset_tokens:
+        return render_template('admin_reset_password.html', 
+                             error='Invalid or expired reset link. Please request a new one.')
+    
+    token_data = password_reset_tokens[token]
+    
+    # Check if token expired
+    if datetime.utcnow() > token_data['expiry']:
+        del password_reset_tokens[token]  # Clean up expired token
+        return render_template('admin_reset_password.html', 
+                             error='This reset link has expired. Please request a new one.')
+    
+    # Get admin details
+    admin = Admin.query.get(token_data['admin_id'])
+    if not admin:
+        return render_template('admin_reset_password.html', 
+                             error='Admin account not found.')
+    
+    # Get current secret path for back to login link
+    secret_path = AccessCode.get_secret_path()
+    
+    return render_template('admin_reset_password.html',
+                         token=token,
+                         admin_username=admin.username,
+                         secret_path=secret_path)
+
+
+@admin_bp.route('/reset-password/<token>', methods=['POST'])
+def reset_password(token):
+    """Handle password reset form submission"""
+    # Check if token exists and is valid
+    if token not in password_reset_tokens:
+        return render_template('admin_reset_password.html', 
+                             error='Invalid or expired reset link. Please request a new one.',
+                             token=token)
+    
+    token_data = password_reset_tokens[token]
+    
+    # Check if token expired
+    if datetime.utcnow() > token_data['expiry']:
+        del password_reset_tokens[token]  # Clean up expired token
+        return render_template('admin_reset_password.html', 
+                             error='This reset link has expired. Please request a new one.',
+                             token=token)
+    
+    # Get form data
+    password = request.form.get('password')
+    confirm_password = request.form.get('confirm_password')
+    
+    # Validate
+    if not password or not confirm_password:
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='All fields are required.')
+    
+    if password != confirm_password:
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='Passwords do not match.')
+    
+    # Validate password strength
+    if len(password) < 8:
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='Password must be at least 8 characters long.')
+    
+    if not any(c.isupper() for c in password):
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='Password must contain at least one uppercase letter.')
+    
+    if not any(c.islower() for c in password):
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='Password must contain at least one lowercase letter.')
+    
+    if not any(c.isdigit() for c in password):
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='Password must contain at least one number.')
+    
+    if not any(c in '!@#$%^&*()_+-=[]{};\':"\\|,.<>/?~' for c in password):
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error='Password must contain at least one special character.')
+    
+    try:
+        # Update password
+        admin = Admin.query.get(token_data['admin_id'])
+        if not admin:
+            return render_template('admin_reset_password.html',
+                                 token=token,
+                                 error='Admin account not found.')
+        
+        # Hash new password
+        from extensions import bcrypt
+        admin.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        db.session.commit()
+        
+        # Clean up used token
+        del password_reset_tokens[token]
+        
+        # Audit log
+        log_audit(
+            action='PASSWORD_RESET_COMPLETED',
+            description=f"Admin user '{admin.username}' successfully reset password from IP: {request.remote_addr}"
+        )
+        
+        # Get secret path for login link
+        secret_path = AccessCode.get_secret_path()
+        
+        return render_template('admin_reset_password.html',
+                             success='Password reset successfully! You can now login with your new password.',
+                             secret_path=secret_path)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error resetting password: {str(e)}")
+        return render_template('admin_reset_password.html',
+                             token=token,
+                             admin_username=token_data['admin_username'],
+                             error=f'Error resetting password: {str(e)}')
 
 
 

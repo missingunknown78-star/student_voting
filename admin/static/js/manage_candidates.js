@@ -357,7 +357,7 @@ function loadCourses(mode, departmentId) {
         courseSelect.appendChild(loadingOption);
         
         // FIXED: Use the correct endpoint with slashes, not hyphens
-        fetch(`/admin/courses/by_department/${departmentId}`, {
+        fetch(`/ctumoalboal-comelec/courses/by_department/${departmentId}`, {
             headers: {
                 'X-CSRFToken': getCsrfToken()
             }
@@ -553,7 +553,7 @@ function filterCandidates(page = null, keepPage = false) {
     tableContainer.classList.add('table-loading');
 
     // Build URL with query parameters
-    let url = `/admin/candidates/filter?page=${currentPage}`;
+    let url = `/ctumoalboal-comelec/candidates/filter?page=${currentPage}`;
     if (scope) url += `&scope=${scope}`;
     if (departmentId) url += `&department_id=${departmentId}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -970,7 +970,7 @@ if (addCandidateForm) {
 
         const formData = new FormData(this);
 
-        fetch("/admin/candidates", {
+        fetch("/ctumoalboal-comelec/candidates", {
             method: 'POST',
             body: formData,
             headers: {
@@ -1063,7 +1063,7 @@ if (editCandidateForm) {
         const formData = new FormData(this);
         const candidateId = document.getElementById('edit_id').value;
 
-        fetch(`/admin/candidates/edit/${candidateId}`, {
+        fetch(`/ctumoalboal-comelec/candidates/edit/${candidateId}`, {
             method: 'POST',
             body: formData,
             headers: {
@@ -1149,7 +1149,7 @@ function deleteCandidate(candidateId) {
     const currentPageElement = document.querySelector('.pagination .current');
     const currentPage = currentPageElement ? parseInt(currentPageElement.textContent) : 1;
 
-    fetch(`/admin/candidates/delete/${candidateId}`, {
+    fetch(`/ctumoalboal-comelec/candidates/delete/${candidateId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

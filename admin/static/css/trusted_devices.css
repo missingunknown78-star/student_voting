@@ -249,3 +249,134 @@
         padding: 10px;
     }
 }
+
+
+/* ==================== FIXED BUTTON STYLES ==================== */
+
+/* Override any conflicting button styles */
+.device-actions .btn-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 10px 16px !important;
+    background: var(--bg-tertiary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 100px !important;
+    white-space: nowrap !important;
+}
+
+.device-actions .btn-icon i {
+    font-size: 1rem !important;
+    margin-right: 4px !important;
+}
+
+.device-actions .btn-icon:hover {
+    background: #ef4444 !important;
+    color: white !important;
+    border-color: #ef4444 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Pending state button */
+.device-actions .btn-icon:disabled,
+.device-actions .btn-icon[disabled] {
+    background: #f59e0b !important;
+    color: white !important;
+    border-color: #f59e0b !important;
+    opacity: 1 !important;
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+}
+
+.device-actions .btn-icon:disabled:hover,
+.device-actions .btn-icon[disabled]:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Current device badge */
+.device-actions .badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 8px 16px !important;
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+    border-radius: 30px !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    border: 1px solid #10b981 !important;
+}
+
+/* Device actions container */
+.device-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    min-width: 120px !important;
+    justify-content: flex-end !important;
+}
+
+/* Pending note styling */
+.pending-note {
+    margin-top: 10px !important;
+    padding: 8px 12px !important;
+    background: rgba(245, 158, 11, 0.1) !important;
+    border-radius: 6px !important;
+    color: #f59e0b !important;
+    font-size: 0.85rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+}
+
+.pending-note i {
+    font-size: 1rem !important;
+}
+
+/* Loading spinner */
+.fa-spinner.fa-spin {
+    animation: fa-spin 1s infinite linear !important;
+}
+
+@keyframes fa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .device-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+    }
+    
+    .device-actions {
+        align-self: stretch !important;
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
+    
+    .device-actions .btn-icon {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    
+    .device-actions .badge {
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+    }
+}

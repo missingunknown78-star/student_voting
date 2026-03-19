@@ -1244,3 +1244,286 @@ input:checked + .toggle-slider:before {
         transition-duration: 0.01ms !important;
     }
 }
+
+
+/* ==================== PROFILE INFO STYLES ==================== */
+
+/* Profile header with edit button */
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.profile-header h3 {
+    margin: 0;
+}
+
+.btn-edit-toggle {
+    padding: 8px 16px;
+    border: 2px solid var(--primary-color);
+    border-radius: 30px;
+    background: transparent;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.btn-edit-toggle:hover {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-2px);
+}
+
+/* Profile info container */
+.profile-info {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Form groups - fix input width */
+.profile-info .form-group {
+    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.profile-info .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.profile-info .form-group label i {
+    color: var(--primary-color);
+    margin-right: 6px;
+    width: 18px;
+}
+
+/* Info value display (read-only mode) */
+.info-value {
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+}
+
+.info-value.disabled {
+    background: var(--bg-tertiary);
+    cursor: default;
+    opacity: 0.9;
+    border: 1px solid var(--border-color);
+}
+
+/* Profile inputs (edit mode) - FIXED WIDTH */
+.profile-info input[type="text"],
+.profile-info input[type="email"],
+.profile-info input[type="password"],
+.profile-info .profile-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+    height: 48px;
+    line-height: 1.5;
+    display: block;
+}
+
+.profile-info input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.1);
+}
+
+:root.dark-mode .profile-info input:focus {
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+
+/* Password field wrapper */
+.password-field-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+.password-field-wrapper .info-value {
+    flex: 1;
+    margin: 0;
+}
+
+.btn-forgot-password {
+    padding: 12px 20px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    box-sizing: border-box;
+}
+
+.btn-forgot-password:hover:not(:disabled) {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-2px);
+}
+
+.btn-forgot-password:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Info help text */
+.info-help {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Profile actions buttons */
+.profile-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid var(--border-color);
+    animation: slideDown 0.3s ease;
+}
+
+.profile-actions .btn {
+    padding: 12px 24px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+}
+
+.profile-actions .btn-primary {
+    background: var(--primary-gradient);
+    color: white;
+    flex: 1;
+}
+
+.profile-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255,85,0,0.3);
+}
+
+.profile-actions .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    flex: 1;
+}
+
+.profile-actions .btn-secondary:hover {
+    background: var(--border-color);
+    transform: translateY(-2px);
+}
+
+/* Animation */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .password-field-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-forgot-password {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .profile-actions {
+        flex-direction: column;
+    }
+    
+    .profile-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-info input[type="text"],
+    .profile-info input[type="email"],
+    .profile-info .profile-input {
+        font-size: 16px; /* Prevents zoom on mobile */
+    }
+}
+
+/* Dark mode adjustments */
+:root.dark-mode .profile-info input {
+    background: #1a1a1a;
+    border-color: #404040;
+}
+
+:root.dark-mode .info-value {
+    background: #1a1a1a;
+    border-color: #404040;
+}
+
+:root.dark-mode .btn-forgot-password {
+    background: #2d2d2d;
+    border-color: #404040;
+    color: #b0b0b0;
+}
+
+:root.dark-mode .btn-forgot-password:hover:not(:disabled) {
+    color: white;
+}

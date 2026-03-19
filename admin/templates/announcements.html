@@ -228,7 +228,7 @@
     </div>
 </div>
 
-<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+// =============== THEME SYNCHRONIZATION FIX ===============
 <script>
 // CSRF Token Helper Function
 function getCsrfToken() {
@@ -420,7 +420,7 @@ function openEditModal(announcementId, event) {
     }
     
     // Fetch announcement data via AJAX
-    fetch(`/admin/get-announcement/${announcementId}`, {
+    fetch(`/ctumoalboal-comelec/get-announcement/${announcementId}`, {
         headers: {
             'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
         }
@@ -483,7 +483,7 @@ function openEditModal(announcementId, event) {
                 }
                 
                 // Set form action
-                const actionUrl = `/admin/update-announcement/${announcementId}`;
+                const actionUrl = `/ctumoalboal-comelec/update-announcement/${announcementId}`;
                 console.log('🔗 Setting form action to:', actionUrl);
                 form.action = actionUrl;
                 
@@ -543,7 +543,7 @@ function openDeleteModal(announcementId, announcementTitle) {
     idField.value = announcementId;
     
     // Set form action
-    const actionUrl = `/admin/delete-announcement/${announcementId}`;
+    const actionUrl = `/ctumoalboal-comelec/delete-announcement/${announcementId}`;
     console.log('🔗 Setting delete form action to:', actionUrl);
     form.action = actionUrl;
     

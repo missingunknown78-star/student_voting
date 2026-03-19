@@ -258,233 +258,233 @@
 <div id="toast" class="toast" style="display: none;"></div>
 
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
-
-let currentApplicationId = null;
-
-function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
-    toast.style.display = 'block';
-    
-    setTimeout(() => {
-        toast.style.display = 'none';
-    }, 3000);
-}
-
-function viewApplication(id) {
-    currentApplicationId = id;
-    const modal = document.getElementById('viewModal');
-    const modalBody = document.getElementById('viewModalBody');
-    
-    modalBody.innerHTML = '<div class="loading-spinner"></div>';
-    modal.style.display = 'flex';
-    
-    fetch(`/admin/pending-candidate/${id}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            const app = data.application;
-            modalBody.innerHTML = `
-                <div class="application-detail">
-                    <div class="detail-row">
-                        <div class="detail-label">Student Information</div>
-                        <div class="detail-value">
-                            <p><strong>Name:</strong> ${escapeHtml(app.first_name)} ${escapeHtml(app.last_name)}</p>
-                            <p><strong>Student ID:</strong> ${escapeHtml(app.student_id || 'N/A')}</p>
-                            <p><strong>Course:</strong> ${escapeHtml(app.course || 'N/A')}</p>
-                            <p><strong>Year Level:</strong> ${escapeHtml(app.year_level || 'N/A')}</p>
-                        </div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Application Details</div>
-                        <div class="detail-value">
-                            <p><strong>Party List:</strong> ${escapeHtml(app.party_list || 'Independent')}</p>
-                            <p><strong>Platform:</strong> ${escapeHtml(app.platform || 'No platform provided')}</p>
-                            <p><strong>Position:</strong> ${escapeHtml(app.position)}</p>
-                            <p><strong>Election:</strong> ${escapeHtml(app.election)} (${escapeHtml(app.scope)})</p>
-                            <p><strong>Applied:</strong> ${escapeHtml(app.applied_at)}</p>
-                            <p><strong>Status:</strong> <span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span></p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            modalBody.innerHTML = `<p class="error-msg">Error: ${escapeHtml(data.message || 'Failed to load application details')}</p>`;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        modalBody.innerHTML = '<p class="error-msg">Error loading application details. Please try again.</p>';
-    });
-}
-
-function escapeHtml(text) {
-    if (!text) return text;
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function approveApplication(id) {
-    currentApplicationId = id;
-    document.getElementById('approveModal').style.display = 'flex';
-}
-
-function showRejectModal(id) {
-    currentApplicationId = id;
-    document.getElementById('rejectReason').value = '';
-    document.getElementById('rejectModal').style.display = 'flex';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function showPhoto(src) {
-    document.getElementById('lightbox').style.display = 'flex';
-    document.getElementById('lightbox-img').src = src;
-}
-
-function closeLightbox() {
-    document.getElementById('lightbox').style.display = 'none';
-}
-
-// Approve button click handler
-document.getElementById('confirmApproveBtn').addEventListener('click', function() {
-    if (!currentApplicationId) {
-        showToast('No application selected', 'error');
-        return;
+    // CSRF Token Helper Function
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : '';
     }
     
-    const btn = this;
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving...';
+    let currentApplicationId = null;
     
-    fetch(`/admin/approve-pending/${currentApplicationId}`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.style.display = 'block';
+        
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3000);
+    }
+    
+    function viewApplication(id) {
+        currentApplicationId = id;
+        const modal = document.getElementById('viewModal');
+        const modalBody = document.getElementById('viewModalBody');
+        
+        modalBody.innerHTML = '<div class="loading-spinner"></div>';
+        modal.style.display = 'flex';
+        
+        fetch(`/ctumoalboal-comelec/pending-candidate/${id}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const app = data.application;
+                modalBody.innerHTML = `
+                    <div class="application-detail">
+                        <div class="detail-row">
+                            <div class="detail-label">Student Information</div>
+                            <div class="detail-value">
+                                <p><strong>Name:</strong> ${escapeHtml(app.first_name)} ${escapeHtml(app.last_name)}</p>
+                                <p><strong>Student ID:</strong> ${escapeHtml(app.student_id || 'N/A')}</p>
+                                <p><strong>Course:</strong> ${escapeHtml(app.course || 'N/A')}</p>
+                                <p><strong>Year Level:</strong> ${escapeHtml(app.year_level || 'N/A')}</p>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Application Details</div>
+                            <div class="detail-value">
+                                <p><strong>Party List:</strong> ${escapeHtml(app.party_list || 'Independent')}</p>
+                                <p><strong>Platform:</strong> ${escapeHtml(app.platform || 'No platform provided')}</p>
+                                <p><strong>Position:</strong> ${escapeHtml(app.position)}</p>
+                                <p><strong>Election:</strong> ${escapeHtml(app.election)} (${escapeHtml(app.scope)})</p>
+                                <p><strong>Applied:</strong> ${escapeHtml(app.applied_at)}</p>
+                                <p><strong>Status:</strong> <span class="status-badge status-${escapeHtml(app.status)}">${escapeHtml(app.status)}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                modalBody.innerHTML = `<p class="error-msg">Error: ${escapeHtml(data.message || 'Failed to load application details')}</p>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            modalBody.innerHTML = '<p class="error-msg">Error loading application details. Please try again.</p>';
+        });
+    }
+    
+    function escapeHtml(text) {
+        if (!text) return text;
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function approveApplication(id) {
+        currentApplicationId = id;
+        document.getElementById('approveModal').style.display = 'flex';
+    }
+    
+    function showRejectModal(id) {
+        currentApplicationId = id;
+        document.getElementById('rejectReason').value = '';
+        document.getElementById('rejectModal').style.display = 'flex';
+    }
+    
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+    
+    function showPhoto(src) {
+        document.getElementById('lightbox').style.display = 'flex';
+        document.getElementById('lightbox-img').src = src;
+    }
+    
+    function closeLightbox() {
+        document.getElementById('lightbox').style.display = 'none';
+    }
+    
+    // Approve button click handler
+    document.getElementById('confirmApproveBtn').addEventListener('click', function() {
+        if (!currentApplicationId) {
+            showToast('No application selected', 'error');
+            return;
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.message || 'Server error'); });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            showToast('✅ Application approved successfully!', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
-        } else {
-            showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving...';
+        
+        fetch(`/ctumoalboal-comelec/approve-pending/${currentApplicationId}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Server error'); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showToast('✅ Application approved successfully!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                closeModal('approveModal');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('❌ Error approving application: ' + error.message, 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
             closeModal('approveModal');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('❌ Error approving application: ' + error.message, 'error');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        closeModal('approveModal');
+        });
     });
-});
-
-// Reject button click handler
-document.getElementById('confirmRejectBtn').addEventListener('click', function() {
-    if (!currentApplicationId) {
-        showToast('No application selected', 'error');
-        return;
-    }
     
-    const reason = document.getElementById('rejectReason').value.trim();
-    if (!reason) {
-        showToast('Please provide a reason for rejection.', 'error');
-        return;
-    }
-    
-    const btn = this;
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Rejecting...';
-    
-    fetch(`/admin/reject-pending/${currentApplicationId}`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
-        },
-        body: JSON.stringify({ reason: reason })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.message || 'Server error'); });
+    // Reject button click handler
+    document.getElementById('confirmRejectBtn').addEventListener('click', function() {
+        if (!currentApplicationId) {
+            showToast('No application selected', 'error');
+            return;
         }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            showToast('✅ Application rejected.', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
-        } else {
-            showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+        
+        const reason = document.getElementById('rejectReason').value.trim();
+        if (!reason) {
+            showToast('Please provide a reason for rejection.', 'error');
+            return;
+        }
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Rejecting...';
+        
+        fetch(`/ctumoalboal-comelec/reject-pending/${currentApplicationId}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            },
+            body: JSON.stringify({ reason: reason })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Server error'); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showToast('✅ Application rejected.', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                closeModal('rejectModal');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('❌ Error rejecting application: ' + error.message, 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
             closeModal('rejectModal');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('❌ Error rejecting application: ' + error.message, 'error');
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        closeModal('rejectModal');
-    });
-});
-
-// Close modals when clicking outside
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
-    }
-}
-
-// Add escape key handler
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            modal.style.display = 'none';
         });
+    });
+    
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
     }
-});
-</script>
+    
+    // Add escape key handler
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+    });
+    </script>
 
 <style>
 .toast {

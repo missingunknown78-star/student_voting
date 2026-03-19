@@ -96,11 +96,12 @@ function saveSettings(section) {
     
     console.log('Saving settings for', section, settings);
     
-    fetch('/admin/settings/save', {
+    // FIXED: Added /ctumoalboal-comelec prefix
+    fetch('/ctumoalboal-comelec/settings/save', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
             section: section,
@@ -150,7 +151,8 @@ function show2FASetup() {
         
         setupCard.scrollIntoView({ behavior: 'smooth' });
         
-        fetch('/admin/2fa/setup-data', {
+        // FIXED: Added /ctumoalboal-comelec prefix
+        fetch('/ctumoalboal-comelec/2fa/setup-data', {
             method: 'GET',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
@@ -208,11 +210,12 @@ function generateQRCodeHTML(data) {
 
 function disable2FA() {
     if (confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
-        fetch('/admin/2fa/disable', {
+        // FIXED: Added /ctumoalboal-comelec prefix
+        fetch('/ctumoalboal-comelec/2fa/disable', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(response => response.json())
@@ -251,11 +254,12 @@ function update2FAStatus(enabled) {
 
 function generateNewBackupCodes() {
     if (confirm('Generating new backup codes will invalidate your old ones. Continue?')) {
-        fetch('/admin/2fa/backup-codes', {
+        // FIXED: Added /ctumoalboal-comelec prefix
+        fetch('/ctumoalboal-comelec/2fa/backup-codes', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(response => response.json())
@@ -281,11 +285,12 @@ function trustCurrentDevice() {
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
     button.disabled = true;
     
-    fetch('/admin/trusted-devices/add', {
+    // FIXED: Added /ctumoalboal-comelec prefix
+    fetch('/ctumoalboal-comelec/trusted-devices/add', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            'X-CSRFToken': getCsrfToken()
         }
     })
     .then(response => response.json())
@@ -328,13 +333,13 @@ function revokeTrustedDevice(deviceId, event) {
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
     button.disabled = true;
     
-    // Send the request
-    fetch(`/admin/trusted-devices/remove/${deviceId}`, {
+    // FIXED: Added /ctumoalboal-comelec prefix
+    fetch(`/ctumoalboal-comelec/trusted-devices/remove/${deviceId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({})
     })
@@ -347,16 +352,13 @@ function revokeTrustedDevice(deviceId, event) {
     })
     .then(({ status, data }) => {
         if (data.success) {
-            // Show success message using notification system
             showNotification(data.message || 'Device removal email sent successfully! Please check your email.', 'success');
             
-            // Update button to show pending state
             button.innerHTML = '<i class="fa-solid fa-clock"></i> Pending Confirmation';
             button.style.background = '#f59e0b';
             button.style.borderColor = '#f59e0b';
             button.disabled = true;
             
-            // Add a small note that they need to check email
             const deviceItem = button.closest('.device-item');
             if (deviceItem) {
                 const pendingNote = document.createElement('div');
@@ -365,10 +367,7 @@ function revokeTrustedDevice(deviceId, event) {
                 deviceItem.querySelector('.device-actions').appendChild(pendingNote);
             }
         } else {
-            // Show error message
             showNotification(data.message || 'Failed to remove device', 'error');
-            
-            // Restore button state
             button.innerHTML = originalText;
             button.disabled = false;
         }
@@ -376,8 +375,6 @@ function revokeTrustedDevice(deviceId, event) {
     .catch(error => {
         console.error('Fetch error:', error);
         showNotification('Network error occurred. Please try again.', 'error');
-        
-        // Restore button state
         button.innerHTML = originalText;
         button.disabled = false;
     });
@@ -397,10 +394,11 @@ function simpleRevokeDevice(deviceId) {
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     button.disabled = true;
     
-    fetch(`/admin/trusted-devices/test-remove/${deviceId}`, {
+    // FIXED: Added /ctumoalboal-comelec prefix
+    fetch(`/ctumoalboal-comelec/trusted-devices/test-remove/${deviceId}`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            'X-CSRFToken': getCsrfToken()
         }
     })
     .then(response => response.json())
@@ -421,19 +419,16 @@ function simpleRevokeDevice(deviceId) {
 }
 
 // ==================== AUDIT LOG FUNCTIONS ====================
-// Current state for audit logs
 let currentPage = 1;
 let currentSearch = '';
 let currentStartDate = '';
 let currentEndDate = '';
 
 function initializeAuditLogs() {
-    // Get initial values from URL or DOM
     currentSearch = document.getElementById('searchInput')?.value || '';
     currentStartDate = document.getElementById('startDateInput')?.value || '';
     currentEndDate = document.getElementById('endDateInput')?.value || '';
     
-    // Get current page from URL if present
     const urlParams = new URLSearchParams(window.location.search);
     currentPage = parseInt(urlParams.get('page')) || 1;
 }
@@ -456,7 +451,8 @@ function loadAuditLogs(page = 1) {
         </div>
     `;
     
-    let url = `/admin/audit-logs-ajax?page=${page}`;
+    // FIXED: Added /ctumoalboal-comelec prefix
+    let url = `/ctumoalboal-comelec/audit-logs-ajax?page=${page}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
     if (startDate) url += `&start_date=${startDate}`;
     if (endDate) url += `&end_date=${endDate}`;
@@ -470,7 +466,6 @@ function loadAuditLogs(page = 1) {
     .then(html => {
         tableContainer.innerHTML = html;
         
-        // Refresh theme manager for new content
         if (window.themeManager) {
             window.themeManager.refresh();
         }
@@ -502,14 +497,12 @@ function clearAuditFilters() {
 
 // ==================== NOTIFICATION SYSTEM ====================
 function showNotification(message, type = 'info') {
-    // Create notification container if it doesn't exist
     let container = document.querySelector('.notification-container');
     if (!container) {
         container = document.createElement('div');
         container.className = 'notification-container';
         document.body.appendChild(container);
         
-        // Add styles for notifications
         const style = document.createElement('style');
         style.textContent = `
             .notification-container {
@@ -579,11 +572,9 @@ function showNotification(message, type = 'info') {
         document.head.appendChild(style);
     }
     
-    // Create notification
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     
-    // Add icon based on type
     let icon = 'fa-info-circle';
     if (type === 'success') icon = 'fa-check-circle';
     if (type === 'error') icon = 'fa-exclamation-circle';
@@ -596,7 +587,6 @@ function showNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Auto remove after 5 seconds
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => notification.remove(), 300);
@@ -613,4 +603,224 @@ function applyAuditFilters() {
     
     window.location.href = window.location.pathname + '?' + params + '#logs';
     return false;
+}
+
+// ==================== PROFILE MANAGEMENT FUNCTIONS ====================
+
+function saveGeneralSettings() {
+    const username = document.getElementById('username')?.value;
+    const email = document.getElementById('email')?.value;
+    
+    if (!username || !email) {
+        showNotification('Username and email are required', 'error');
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address', 'error');
+        return;
+    }
+    
+    const settings = {
+        username: username,
+        email: email
+    };
+    
+    const saveBtn = document.querySelector('#general .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    // FIXED: Added /ctumoalboal-comelec prefix
+    fetch('/ctumoalboal-comelec/settings/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            section: 'profile',
+            settings: settings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Profile settings saved successfully!', 'success');
+        } else {
+            showNotification('Error saving settings: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error saving settings. Please try again.', 'error');
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+function resetGeneralSettings() {
+    if (confirm('Reset all changes to original values?')) {
+        location.reload();
+    }
+}
+
+// ==================== PROFILE EDIT TOGGLE FUNCTIONS ====================
+
+let originalProfileValues = {};
+
+function toggleProfileEdit() {
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+    const passwordBtn = document.getElementById('forgotPasswordBtn');
+    const editBtn = document.getElementById('editProfileBtn');
+    const profileActions = document.getElementById('profileActions');
+    const usernameLock = document.getElementById('usernameLockIcon');
+    const emailLock = document.getElementById('emailLockIcon');
+    
+    if (!usernameInput || !emailInput) return;
+    
+    originalProfileValues = {
+        username: usernameInput.value,
+        email: emailInput.value
+    };
+    
+    usernameInput.disabled = false;
+    emailInput.disabled = false;
+    passwordBtn.disabled = false;
+    
+    if (usernameLock) {
+        usernameLock.className = 'fa-solid fa-lock-open input-lock-icon';
+    }
+    if (emailLock) {
+        emailLock.className = 'fa-solid fa-lock-open input-lock-icon';
+    }
+    
+    editBtn.innerHTML = '<i class="fa-solid fa-pencil"></i> Editing...';
+    editBtn.style.background = 'var(--primary-gradient)';
+    editBtn.style.color = 'white';
+    editBtn.style.borderColor = 'transparent';
+    
+    profileActions.style.display = 'flex';
+    usernameInput.focus();
+}
+
+function cancelProfileEdit() {
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+    const passwordBtn = document.getElementById('forgotPasswordBtn');
+    const editBtn = document.getElementById('editProfileBtn');
+    const profileActions = document.getElementById('profileActions');
+    const usernameLock = document.getElementById('usernameLockIcon');
+    const emailLock = document.getElementById('emailLockIcon');
+    
+    if (!usernameInput || !emailInput) return;
+    
+    if (originalProfileValues.username) {
+        usernameInput.value = originalProfileValues.username;
+    }
+    if (originalProfileValues.email) {
+        emailInput.value = originalProfileValues.email;
+    }
+    
+    usernameInput.disabled = true;
+    emailInput.disabled = true;
+    passwordBtn.disabled = true;
+    
+    if (usernameLock) {
+        usernameLock.className = 'fa-solid fa-lock input-lock-icon';
+    }
+    if (emailLock) {
+        emailLock.className = 'fa-solid fa-lock input-lock-icon';
+    }
+    
+    editBtn.innerHTML = '<i class="fa-solid fa-pencil"></i> Edit Profile';
+    editBtn.style.background = '';
+    editBtn.style.color = '';
+    editBtn.style.borderColor = '';
+    
+    profileActions.style.display = 'none';
+}
+
+// 🔴 THIS IS THE CRITICAL FUNCTION - MAKE SURE IT HAS THE CORRECT URL
+function saveProfileChanges() {
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+    const saveBtn = document.querySelector('#profileActions .btn-primary');
+    
+    if (!usernameInput || !emailInput) {
+        showNotification('Form inputs not found', 'error');
+        return;
+    }
+    
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    
+    console.log('Saving profile:', { username, email });
+    
+    if (!username || !email) {
+        showNotification('Username and email are required', 'error');
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address', 'error');
+        return;
+    }
+    
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    // 🔴 FIXED: This MUST be /ctumoalboal-comelec/settings/profile/update
+    const url = '/ctumoalboal-comelec/settings/profile/update';
+    console.log('Fetching URL:', url);
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            username: username,
+            email: email
+        })
+    })
+    .then(async response => {
+        console.log('Response status:', response.status);
+        const text = await response.text();
+        console.log('Response text:', text);
+        
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Failed to parse JSON. Response was HTML:', text.substring(0, 200));
+            throw new Error('Server returned HTML instead of JSON. The URL might be wrong.');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Profile updated successfully!', 'success');
+            originalProfileValues = {
+                username: username,
+                email: email
+            };
+            cancelProfileEdit();
+        } else {
+            showNotification(data.message || 'Failed to update profile', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Network error: ' + error.message, 'error');
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
 }

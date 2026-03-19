@@ -1,0 +1,73 @@
+<!-- Access Code Settings Partial - Simplified -->
+<div class="access-code-container">
+    <!-- Current Access Code Display -->
+    <div class="current-access-code">
+        <label class="access-code-label">
+            <i class="fa-solid fa-key"></i> Current Access Code
+        </label>
+        <div class="code-display-wrapper">
+            <div class="code-display" id="currentAccessCode">
+                {% if access_code %}
+                    {% set masked = access_code.code|string %}
+                    {% set visible_chars = 4 %}
+                    {% if masked|length > visible_chars %}
+                        {{ '*' * (masked|length - visible_chars) + masked[-visible_chars:] }}
+                    {% else %}
+                        {{ '*' * masked|length }}
+                    {% endif %}
+                {% else %}
+                    <span class="no-code">No access code set</span>
+                {% endif %}
+            </div>
+            <button class="btn-icon" onclick="toggleCodeVisibility()" title="Show/Hide Code">
+                <i class="fa-solid fa-eye" id="codeVisibilityIcon"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Set New Access Code Section -->
+    <div class="new-access-code-section">
+        <h4><i class="fa-solid fa-pen-to-square"></i> Set New Access Code</h4>
+        
+        <form id="accessCodeForm" onsubmit="return updateAccessCode(event)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="newAccessCode">New Access Code</label>
+                <input type="text" 
+                       id="newAccessCode" 
+                       name="new_access_code" 
+                       class="access-code-input"
+                       placeholder="Enter new access code"
+                       minlength="4"
+                       maxlength="50"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmAccessCode">Confirm Access Code</label>
+                <input type="text" 
+                       id="confirmAccessCode" 
+                       name="confirm_access_code" 
+                       class="access-code-input"
+                       placeholder="Confirm new access code"
+                       minlength="4"
+                       maxlength="50"
+                       required>
+                <div id="codeMatchMessage" class="validation-message"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="updateAccessCodeBtn">
+                    <i class="fa-solid fa-shield"></i> Update Access Code
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="clearAccessCodeForm()">
+                    <i class="fa-solid fa-eraser"></i> Clear
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Hidden element to store actual code for JavaScript -->
+<span id="actualAccessCode" style="display: none;">{{ access_code.code if access_code else '' }}</span>

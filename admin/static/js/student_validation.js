@@ -56,7 +56,7 @@ function validateStudent() {
     }
     
     // Build URL with query parameters
-    let url = `/admin/validate-student?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
+    let url = `/ctumoalboal-comelec/validate-student?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
     if (courseId) {
         url += `&course_id=${courseId}`;
     }

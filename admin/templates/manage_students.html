@@ -633,7 +633,7 @@ function loadStudents(page = 1) {
     // Show loading spinner
     showLoading(true);
 
-    let url = `/admin/students/data?page=${page}&search=${encodeURIComponent(search)}`;
+    let url = `/ctumoalboal-comelec/students/data?page=${page}&search=${encodeURIComponent(search)}`;
     if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
     if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
 
@@ -753,7 +753,7 @@ function exportExcel() {
     const search = document.getElementById("searchInput").value;
     const electionId = filterElectionEl.value;
 
-    let url = `/admin/students/export-excel?search=${encodeURIComponent(search)}`;
+    let url = `/ctumoalboal-comelec/students/export-excel?search=${encodeURIComponent(search)}`;
     if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
     if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
     

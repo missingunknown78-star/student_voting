@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Email Change</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .email-container {
+            max-width: 500px;
+            margin: 20px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .header {
+            background: linear-gradient(135deg, #ff9900, #ff5500);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .email-badge {
+            background: #f3f4f6;
+            padding: 12px 20px;
+            border-radius: 50px;
+            display: inline-block;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            border: 2px dashed #9b59b6;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 30px 0;
+            text-align: left;
+            color: #856404;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        .btn-confirm {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        .btn-reject {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .btn-reject:hover {
+            background: #fecaca;
+            transform: translateY(-2px);
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 20px 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer a {
+            color: #ff9900;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 480px) {
+            .button-group {
+                flex-direction: column;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🔐 Confirm Email Change</h1>
+            <p>Admin Account Security Verification</p>
+        </div>
+        
+        <div class="content">
+            <div class="icon">📧</div>
+            <h2 style="color: #1f2937; margin-bottom: 10px;">Verify Your Identity</h2>
+            <p style="color: #6b7280; margin-bottom: 20px;">We received a request to change the email address associated with your admin account.</p>
+            
+            <div class="email-badge">
+                New Email: {{ masked_email }}
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ Important:</strong> Clicking "Yes, it's me" will confirm that you initiated this email change request. You will then need to enter an OTP code sent to your new email address to complete the process.
+            </div>
+            
+            <div class="button-group">
+                <a href="{{ confirm_url }}" class="btn btn-confirm">
+                    <span>✅</span> Yes, it's me
+                </a>
+                <a href="{{ reject_url }}" class="btn btn-reject">
+                    <span>❌</span> No, cancel request
+                </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #9ca3af; margin-top: 20px;">
+                This link will expire in 15 minutes for security reasons.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Cebu Technological University - Moalboal Campus</p>
+            <p>COMELEC Administration System</p>
+            <p style="font-size: 12px; margin-top: 10px;">
+                If you didn't request this change, please ignore this email or contact support immediately.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

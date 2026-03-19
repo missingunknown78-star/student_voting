@@ -61,7 +61,7 @@ function qualifyStudent(studentId) {
         }
     }
     
-    fetch('/admin/qualify-student', {
+    fetch('/ctumoalboal-comelec/qualify-student', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ function removeQualification(studentId) {
         }
     }
     
-    fetch('/admin/remove-qualification', {
+    fetch('/ctumoalboal-comelec/remove-qualification', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -17,6 +17,9 @@
     <!-- Trusted Devices CSS -->
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/trusted_devices.css') }}">
     
+    <!-- Access Code Settings CSS - NEW -->
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/access-code-settings.css') }}">
+    
     <style>
         /* Theme toggle button styling for inside content - positioned at far right */
         .section-header-with-toggle {
@@ -166,7 +169,7 @@
 
         <!-- Settings Content -->
         <div class="settings-content">
-            <!-- General Settings -->
+            <!-- General Settings - UPDATED with Profile and Access Code -->
             <div class="settings-section active" id="general">
                 <!-- Header with title on left and theme toggle on right -->
                 <div class="section-header-with-toggle">
@@ -181,34 +184,106 @@
                 
                 <div class="info-box">
                     <i class="fa-solid fa-info-circle"></i>
-                    Configure basic system information and preferences.
+                    Manage your profile information and system access settings.
                 </div>
 
-                <div class="settings-card">
-                    <h3>System Information</h3>
-                    <div class="form-group">
-                        <label for="systemName">System Name</label>
-                        <input type="text" id="systemName" value="{{ system_name or 'CTU Moalboal COMELEC System' }}" placeholder="Enter system name">
-                    </div>
-                    <div class="form-group">
-                        <label for="institutionName">Institution Name</label>
-                        <input type="text" id="institutionName" value="{{ institution_name or 'Cebu Technological University - Moalboal Campus' }}" placeholder="Enter institution name">
-                    </div>
-                    <div class="form-group">
-                        <label for="systemEmail">System Email</label>
-                        <input type="email" id="systemEmail" value="{{ system_email or 'comelec@ctu-moalboal.edu.ph' }}" placeholder="Enter system email">
-                    </div>
-                    <div class="form-group">
-                        <label for="systemContact">Contact Number</label>
-                        <input type="text" id="systemContact" value="{{ system_contact or '+63 XXX XXX XXXX' }}" placeholder="Enter contact number">
-                    </div>
+                <!-- PROFILE INFORMATION CARD - WITH EMAIL VERIFICATION LIKE STUDENT'S -->
+<div class="settings-card" id="profileFormCard">
+    <div class="profile-header">
+        <h3><i class="fa-solid fa-user"></i> Profile Information</h3>
+        <button class="btn-edit-toggle" id="editProfileBtn" onclick="toggleProfileEdit()">
+            <i class="fa-solid fa-pencil"></i> Edit Profile
+        </button>
+    </div>
+    
+    <!-- Display Mode -->
+    <div id="profileDisplayMode" class="profile-info">
+        <div class="form-group">
+            <label for="username">
+                <i class="fa-solid fa-user-tag"></i> Username
+            </label>
+            <div class="info-value disabled" id="currentUsername">{{ admin.username }}</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">
+                <i class="fa-solid fa-envelope"></i> Email Address
+            </label>
+            <div class="info-value disabled" id="currentEmail">{{ admin.email }}</div>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <i class="fa-solid fa-key"></i> Password
+            </label>
+            <div class="info-value disabled">********</div>
+        </div>
+    </div>
+
+    <!-- Edit Mode (Hidden by default) -->
+    <div id="profileEditMode" class="profile-info" style="display: none;">
+        <form id="editProfileForm" method="POST" action="{{ url_for('admin.settings_profile_update') }}">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="newUsername">
+                    <i class="fa-solid fa-user-tag"></i> Username
+                </label>
+                <input type="text" id="newUsername" name="username" value="{{ admin.username }}" class="profile-input" required>
+                <p class="info-help">Choose a unique username</p>
+            </div>
+
+            <div class="form-group">
+                <label for="newEmail">
+                    <i class="fa-solid fa-envelope"></i> Email Address
+                </label>
+                <input type="email" id="newEmail" name="email" value="{{ admin.email }}" class="profile-input" required>
+                <p class="info-help">Changing email requires verification</p>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <i class="fa-solid fa-key"></i> Password
+                </label>
+                <div class="password-field-wrapper">
+                    <div class="info-value disabled" style="padding: 12px 16px; background: var(--bg-tertiary); border-radius: var(--border-radius);">********</div>
+                    <button type="button" class="btn-forgot-password" id="forgotPasswordBtn" onclick="handleForgotPassword()">
+                        <i class="fa-solid fa-question-circle"></i> Change Password
+                    </button>
+                </div>
+                <p class="info-help">Click "Change Password" to reset via email</p>
+            </div>
+
+            <!-- Profile Action Buttons -->
+            <div class="profile-actions" id="profileActions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> Save Changes
+                </button>
+                <button type="button" class="btn btn-secondary" id="cancelEditBtn">
+                    <i class="fa-solid fa-times"></i> Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Include the Email Change Modal -->
+{% include 'partials/email_change_modal.html' %}
+
+                <!-- ACCESS CODE SETTINGS CARD - NEW -->
+                <div class="settings-card access-code-card">
+                    <h3><i class="fa-solid fa-shield-key"></i> Access Code Settings</h3>
+                    
+                    <!-- Include the access code partial -->
+                    {% include 'partials/access_code_settings.html' %}
                 </div>
 
                 <div class="form-actions">
-                    <button class="btn btn-primary" onclick="saveSettings('general')">
+                    <button class="btn btn-primary" onclick="saveGeneralSettings()">
                         <i class="fa-solid fa-save"></i> Save Changes
                     </button>
-                    <button class="btn btn-secondary" onclick="resetSettings('general')">
+                    <button class="btn btn-secondary" onclick="resetGeneralSettings()">
                         <i class="fa-solid fa-rotate-left"></i> Reset
                     </button>
                 </div>
@@ -345,7 +420,12 @@
 <!-- Global Theme JS - Load this first -->
 <script src="{{ url_for('admin.static', filename='js/theme-manager.js') }}"></script>
 
-<!-- Link to external JavaScript - MOVED ALL JS TO EXTERNAL FILE -->
+<!-- Access Code Settings JS - NEW -->
+<script src="{{ url_for('admin.static', filename='js/access-code-settings.js') }}"></script>
+
+<script src="{{ url_for('admin.static', filename='js/admin-profile-edit.js') }}"></script>
+
+<!-- Link to external JavaScript -->
 <script src="{{ url_for('admin.static', filename='js/admin_settings.js') }}"></script>
 
 <script>
@@ -362,6 +442,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Settings page loaded, refreshing theme manager...');
     if (window.themeManager) {
         window.themeManager.refresh();
+    }
+    
+    // Initialize access code functionality
+    if (window.accessCodeManager) {
+        window.accessCodeManager.init();
     }
 });
 </script>

@@ -215,7 +215,7 @@ async function loadPositions() {
     `;
 
     try {
-        const response = await fetch('/admin/manage_positions/data', {
+        const response = await fetch('/ctumoalboal-comelec/manage_positions/data', {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -295,7 +295,7 @@ async function handleAddPosition(event) {
     submitBtn.disabled = true;
     
     try {
-        const response = await fetch('/admin/manage_positions', {
+        const response = await fetch('/ctumoalboal-comelec/manage_positions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -357,7 +357,7 @@ async function handleEditPosition(event) {
     submitBtn.disabled = true;
     
     try {
-        const response = await fetch(`/admin/manage_positions/${positionId}`, {
+        const response = await fetch(`/ctumoalboal-comelec/manage_positions/${positionId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -403,7 +403,7 @@ async function deletePosition(positionId, positionName) {
     }
     
     try {
-        const response = await fetch(`/admin/manage_positions/${positionId}`, {
+        const response = await fetch(`/ctumoalboal-comelec/manage_positions/${positionId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-Token': csrfToken,
@@ -448,7 +448,7 @@ function refreshPositionDropdowns() {
     const editPositionSelect = document.getElementById('edit_position');
     
     // Reload positions
-    fetch('/admin/manage_positions/data')
+    fetch('/ctumoalboal-comelec/manage_positions/data')
         .then(response => response.json())
         .then(positions => {
             // Update add position dropdown

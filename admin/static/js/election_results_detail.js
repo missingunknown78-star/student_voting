@@ -56,7 +56,7 @@ function checkForNewVotes() {
     
     console.log('Checking for new votes...');
     
-    fetch(`/admin/results/${electionId}/check-new-votes`, {
+    fetch(`/ctumoalboal-comelec/results/${electionId}/check-new-votes`, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -340,7 +340,7 @@ async function tallyVotes() {
     try {
         showNotification('info', isTallied ? 'Re-tallying votes...' : 'Starting official vote tally process...');
         
-        const response = await fetch(`/admin/results/${electionId}/tally`, {
+        const response = await fetch(`/ctumoalboal-comelec/results/${electionId}/tally`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -443,7 +443,7 @@ function exportToPDFWithChairman(chairmanName) {
     if (overlay) overlay.style.display = 'flex';
     
     // Include chairman name in the request
-    const url = `/admin/results/${electionId}/pdf?chairman=${encodeURIComponent(chairmanName)}`;
+    const url = `/ctumoalboal-comelec/results/${electionId}/pdf?chairman=${encodeURIComponent(chairmanName)}`;
     
     // Fetch PDF
     fetch(url, {
@@ -613,7 +613,7 @@ async function uploadPdfResult(e) {
     uploadBtn.disabled = true;
     
     try {
-        const response = await fetch(`/admin/results/${electionId}/upload-pdf`, {
+        const response = await fetch(`/ctumoalboal-comelec/results/${electionId}/upload-pdf`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE (FormData sets its own Content-Type)
@@ -660,7 +660,7 @@ async function deletePdfResult(pdfId) {
     deleteBtn.disabled = true;
     
     try {
-        const response = await fetch(`/admin/pdf-result/${pdfId}/delete`, {
+        const response = await fetch(`/ctumoalboal-comelec/pdf-result/${pdfId}/delete`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
