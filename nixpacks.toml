@@ -1,5 +1,8 @@
 [phases.setup]
-nixPkgs = ["pango", "cairo", "gdk-pixbuf", "libffi"]
+nixPkgs = ["pango", "cairo", "gdk-pixbuf", "libffi", "libpng", "libjpeg", "zlib"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
+
+[phases.start]
+cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
