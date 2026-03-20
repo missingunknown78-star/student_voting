@@ -22,6 +22,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const otpError = document.getElementById('otpError');
     const timerText = document.getElementById('timerText');
     
+    // New resend OTP text element
+    const resendOtpText = document.createElement('div');
+    resendOtpText.className = 'resend-otp-text';
+    resendOtpText.style.cssText = 'text-align: center; margin-top: 15px;';
+    resendOtpText.innerHTML = '<a href="#" id="resendOtpLink" style="color: #2563eb; text-decoration: none; font-size: 0.95rem;">Resend verification code</a>';
+    
+    // Add it after the buttons in otpVerification
+    if (otpVerification) {
+        otpVerification.appendChild(resendOtpText);
+    }
+    
+    const resendOtpLink = document.getElementById('resendOtpLink');
+    
     // Toast elements (reuse existing notification system)
     let originalEmail = document.getElementById('currentEmail')?.textContent.trim() || '';
     let pendingNewEmail = '';
@@ -263,9 +276,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 sessionStorage.setItem('otpExpiry', Date.now() + 600000); // 10 minutes
             }
             
+            // Reset resend link
+            if (resendOtpLink) {
+                resendOtpLink.style.pointerEvents = 'auto';
+                resendOtpLink.style.opacity = '1';
+                resendOtpLink.innerHTML = 'Resend verification code';
+            }
+            
         } catch (error) {
             showNotification('Failed to send OTP: ' + error.message, 'error');
         }
+    }
+    
+    // Resend OTP handler
+    if (resendOtpLink) {
+        resendOtpLink.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            // Change to spinning
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+            this.style.pointerEvents = 'none';
+            this.style.opacity = '0.7';
+            
+            try {
+                const response = await fetch('/ctumoalboal-comelec/send-otp-to-new-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ 
+                        email: pendingNewEmail,
+                        request_id: changeRequestId
+                    })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to send OTP');
+                }
+                
+                // Store new OTP if in development
+                if (data.code) {
+                    sessionStorage.setItem('otpCode', data.code);
+                    sessionStorage.setItem('otpExpiry', Date.now() + 600000);
+                }
+                
+                showNotification('Verification code resent!', 'success');
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    this.innerHTML = 'Resend verification code';
+                    this.style.pointerEvents = 'auto';
+                    this.style.opacity = '1';
+                }, 2000);
+                
+            } catch (error) {
+                showNotification('Failed to resend OTP: ' + error.message, 'error');
+                
+                // Reset on error
+                this.innerHTML = 'Resend verification code';
+                this.style.pointerEvents = 'auto';
+                this.style.opacity = '1';
+            }
+        });
     }
     
     // Verify OTP
