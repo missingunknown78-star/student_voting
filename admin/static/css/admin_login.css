@@ -1,5 +1,5 @@
 /* ========================================================================== 
-   PREMIUM ADMIN LOGIN - FORMAL STYLE
+   PREMIUM ADMIN LOGIN - GLASSY WHITE STYLE
    ========================================================================== */
 
 /* --- Reset & Base --- */
@@ -15,7 +15,10 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    background-image: url('../images/ctu_background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     background-attachment: fixed;
     padding: 20px;
     position: relative;
@@ -25,21 +28,19 @@ body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: 
-        radial-gradient(circle at 10% 20%, rgba(255,255,255,0.1) 0%, transparent 20%),
-        radial-gradient(circle at 90% 80%, rgba(255,255,255,0.05) 0%, transparent 20%);
+    background: rgba(0, 0, 0, 0.3);
     z-index: 1;
 }
 
-/* --- Login Container --- */
+/* --- Login Container - Glassy Transparent --- */
 .login-container {
     width: 380px;
     padding: 35px 30px;
     border-radius: 20px;
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.2);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
     position: relative;
     z-index: 2;
 }
@@ -55,21 +56,24 @@ body::before {
     height: 85px;
     border-radius: 50%;
     object-fit: contain;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.9);
     padding: 8px;
     margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .school-name {
     font-size: 22px;
     font-weight: 700;
     color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .system-name {
     font-size: 13px;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255, 255, 255, 0.9);
     letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* --- Form Header --- */
@@ -78,6 +82,8 @@ body::before {
     margin-bottom: 22px;
     color: #fff;
     font-size: 18px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* ===============================
@@ -93,7 +99,7 @@ body::before {
     width: 100%;
     padding: 14px 4px;
     border: none;
-    border-bottom: 2px solid rgba(255,255,255,0.4);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.6);
     background: transparent;
     color: #fff;
     font-size: 15px;
@@ -106,7 +112,7 @@ body::before {
     position: absolute;
     left: 4px;
     top: 14px;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 13px;
     pointer-events: none;
     transition: all 0.3s ease;
@@ -123,7 +129,7 @@ body::before {
 /* Input focus underline */
 .input-group input:focus {
     border-bottom: 2px solid #fff;
-    box-shadow: 0 2px 0 rgba(255,255,255,0.4);
+    box-shadow: 0 2px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* Hide placeholder for clean floating effect */
@@ -134,78 +140,13 @@ body::before {
 /* Autofill fix */
 input:-webkit-autofill {
     -webkit-text-fill-color: #fff !important;
-    box-shadow: 0 0 0px 1000px transparent inset !important;
+    background-color: transparent !important;
+    box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 /* ===============================
-   ROLE DROPDOWN STYLE
-================================ */
-.input-group select {
-    width: 100%;
-    padding: 12px 40px 12px 10px;
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 8px;
-    background: rgba(255,255,255,0.05);
-    color: #fff;
-    font-size: 15px;
-    outline: none;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.input-group select option {
-    background: rgba(0,0,0,0.8);
-    color: #fff;
-}
-
-.input-group select option[value=""] {
-    color: rgba(255,255,255,0.5);
-}
-
-/* Floating label for select */
-.input-group select + label {
-    position: absolute;
-    left: 10px;
-    top: -8px;
-    font-size: 11px;
-    color: #fff;
-    font-weight: 600;
-    pointer-events: none;
-    background: rgba(255,255,255,0.1);
-    padding: 0 4px;
-}
-
-/* Arrow ONLY for role dropdown */
-.input-group select::-ms-expand {
-    display: none;
-}
-
-.input-group select::after {
-    content: '';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23fff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-size: contain;
-    pointer-events: none;
-}
-
-/* Focus state for select */
-.input-group select:focus {
-    border-color: #fff;
-    background: rgba(255,255,255,0.1);
-    box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
-}
-
-/* ===============================
-   LOGIN BUTTON & ERROR
+   LOGIN BUTTON WITH SPINNER
 ================================ */
 
 .login-btn {
@@ -217,21 +158,69 @@ input:-webkit-autofill {
     font-weight: 600;
     letter-spacing: 1px;
     color: #fff;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
     cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.login-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 1), rgba(118, 75, 162, 1));
+}
+
+.login-btn:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+/* Button text */
+.btn-text {
     transition: all 0.3s ease;
 }
 
-.login-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+/* Spinner styling */
+.spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }
+
+/* Spinning state */
+.login-btn.spinning .btn-text {
+    display: none;
+}
+
+.login-btn.spinning .spinner {
+    display: inline-block;
+}
+
+/* Spin animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===============================
+   ERROR MESSAGE
+================================ */
 
 .error-msg {
     margin-top: 12px;
     text-align: center;
     color: #ffcccc;
     font-size: 13px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* --- Responsive --- */
@@ -259,14 +248,18 @@ input:-webkit-autofill {
         margin-bottom: 20px;
     }
 
-    .input-group input,
-    .input-group select {
-        padding: 12px 10px;
+    .input-group input {
+        padding: 12px 4px;
         font-size: 14px;
     }
 
     .login-btn {
         padding: 14px;
         font-size: 14px;
+    }
+    
+    .spinner {
+        width: 18px;
+        height: 18px;
     }
 }

@@ -1189,6 +1189,28 @@ def dashboard():
     if not school_year:
         school_year = session.get('admin_current_school_year')
     
+    # Get all available school years from elections first
+    all_elections = Election.query.order_by(Election.start_date.asc()).all()
+    school_years = set()
+    for election in all_elections:
+        if election.start_date:
+            year = election.start_date.year
+            school_years.add(f"{year}-{year+1}")
+    
+    # Sort school years in descending order (newest first)
+    school_years = sorted(list(school_years), reverse=True)
+    
+    # If no school_year is selected, default to the latest election's school year
+    if not school_year and school_years:
+        # Get the most recent election
+        latest_election = Election.query.order_by(Election.start_date.desc()).first()
+        if latest_election and latest_election.start_date:
+            year = latest_election.start_date.year
+            default_sy = f"{year}-{year+1}"
+            if default_sy in school_years:
+                school_year = default_sy
+                session['admin_current_school_year'] = school_year
+    
     # Parse school year to date range
     start_date = None
     end_date = None
@@ -1197,7 +1219,7 @@ def dashboard():
             start_year = int(school_year.split('-')[0])
             end_year = int(school_year.split('-')[1])
             start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31)
+            end_date = datetime(end_year, 12, 31, 23, 59, 59)
         except (ValueError, IndexError):
             start_date = None
             end_date = None
@@ -1212,7 +1234,6 @@ def dashboard():
     # ================================
     # Build base queries with school year filter
     # ================================
-    student_query = Student.query
     election_query = Election.query
     vote_query = Vote.query
     
@@ -1232,17 +1253,52 @@ def dashboard():
     # ================================
     # KPI counts with school year filter
     # ================================
-    total_students = Student.query.count()  # Total students always same
+    total_students = Student.query.count()  # Total students always same (no filter)
     total_elections = election_query.count()
     total_votes = vote_query.count()
-
-    # ===== Get pending applications count =====
-    from student.models import PendingCandidate
-    pending_applications = PendingCandidate.query.filter_by(status='pending').count()
     
-    # ===== Get pending deletion requests count =====
-    pending_deletion_requests = DeletionRequest.query.filter_by(status='pending').count()
-    # ===============================================
+    # ===== Get pending applications count filtered by school year =====
+    from student.models import PendingCandidate
+    
+    # Filter pending applications by school year (based on election dates)
+    pending_applications_query = PendingCandidate.query.filter_by(status='pending')
+    
+    if start_date and end_date:
+        # Join with Election to filter by school year
+        pending_applications_query = pending_applications_query.join(
+            Election, PendingCandidate.election_id == Election.id
+        ).filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    pending_applications = pending_applications_query.count()
+    
+    # ===== Get pending deletion requests count filtered by school year =====
+    # Filter deletion requests by request date (when the request was made)
+    pending_deletion_query = DeletionRequest.query.filter_by(status='pending')
+    
+    if start_date and end_date:
+        pending_deletion_query = pending_deletion_query.filter(
+            DeletionRequest.request_date >= start_date,
+            DeletionRequest.request_date <= end_date
+        )
+    
+    pending_deletion_requests = pending_deletion_query.count()
+    
+    # ===== Get ongoing elections count (based on current date, filtered by school year) =====
+    ongoing_elections_query = Election.query.filter(
+        Election.start_date <= now,
+        Election.end_date >= now
+    )
+    
+    if start_date and end_date:
+        ongoing_elections_query = ongoing_elections_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    ongoing_elections = ongoing_elections_query.count()
 
     # ================================
     # Recent elections table with school year filter
@@ -1258,20 +1314,6 @@ def dashboard():
             election.end_date = tz.localize(election.end_date)
 
     recent_elections = recent_elections_all[:5]
-    
-    # Calculate ongoing elections (based on current date, not filtered by school year)
-    ongoing_elections = sum(1 for e in Election.query.all() if e.status == 'Open')
-
-    # Get all available school years from elections
-    all_elections = Election.query.order_by(Election.start_date.asc()).all()
-    school_years = set()
-    for election in all_elections:
-        if election.start_date:
-            year = election.start_date.year
-            school_years.add(f"{year}-{year+1}")
-    
-    # Sort school years in descending order (newest first)
-    school_years = sorted(list(school_years), reverse=True)
 
     return render_template(
         'admin_dashboard.html',
@@ -1281,15 +1323,13 @@ def dashboard():
         ongoing_elections=ongoing_elections,
         total_votes=total_votes,
         pending_applications=pending_applications,
-        pending_deletion_requests=pending_deletion_requests,  # ← THIS WAS MISSING!
+        pending_deletion_requests=pending_deletion_requests,
         recent_elections=recent_elections,
         recent_elections_all=recent_elections_all,
         school_years=school_years,
         current_sy=school_year,
         now=now
     )
-
-
 
 # Add this to your admin routes file (where your dashboard route is)
 
@@ -3498,8 +3538,18 @@ from student.models import DeletionRequest
 @admin_bp.route('/deletion-requests')
 def account_deletion_requests():
     """Render the account deletion requests page"""
-    # 🚫 REMOVED: Page view audit log (not a data modification)
-    return render_template('account_deletion_requests.html')
+    # Get filters from session (set by dashboard)
+    start_date = session.get('admin_start_date')
+    end_date = session.get('admin_end_date')
+    school_year = session.get('admin_current_school_year')
+    
+    # Pass filters to template
+    return render_template(
+        'account_deletion_requests.html',
+        start_date=start_date,
+        end_date=end_date,
+        school_year=school_year
+    )
 
 @admin_bp.route('/deletion-requests/data')
 def get_deletion_requests_data():
@@ -3509,12 +3559,45 @@ def get_deletion_requests_data():
     search = request.args.get('search', '')
     date = request.args.get('date', '')
     
+    # Get GLOBAL filters from session (set by dashboard)
+    start_date_filter = session.get('admin_start_date')
+    end_date_filter = session.get('admin_end_date')
+    school_year = session.get('admin_current_school_year')
+    
     per_page = 10
+    
+    # Parse date range from session
+    start_date_obj = None
+    end_date_obj = None
+    if start_date_filter and end_date_filter:
+        try:
+            start_date_obj = datetime.strptime(start_date_filter, '%Y-%m-%d')
+            end_date_obj = datetime.strptime(end_date_filter, '%Y-%m-%d')
+            end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59)
+        except (ValueError, TypeError):
+            pass
+    
+    # If no explicit date range, try school year filter
+    if not start_date_obj and school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date_obj = datetime(start_year, 1, 1)
+            end_date_obj = datetime(end_year, 12, 31, 23, 59, 59)
+        except (ValueError, IndexError):
+            pass
     
     # Handle different status filters
     if status == 'pending':
         # Only from deletion_requests table (should only have pending)
         query = DeletionRequest.query.filter_by(status='pending')
+        
+        # Apply GLOBAL date range filter from dashboard
+        if start_date_obj and end_date_obj:
+            query = query.filter(
+                DeletionRequest.request_date >= start_date_obj,
+                DeletionRequest.request_date <= end_date_obj
+            )
         
         if search:
             query = query.join(Student).filter(
@@ -3552,6 +3635,13 @@ def get_deletion_requests_data():
         # Only from audit table with status approved
         query = DeletionRequestAudit.query.filter_by(status='approved')
         
+        # Apply GLOBAL date range filter from dashboard
+        if start_date_obj and end_date_obj:
+            query = query.filter(
+                DeletionRequestAudit.request_date >= start_date_obj,
+                DeletionRequestAudit.request_date <= end_date_obj
+            )
+        
         if search:
             query = query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
         if date:
@@ -3585,6 +3675,13 @@ def get_deletion_requests_data():
     elif status == 'rejected':
         # Only from audit table with status rejected
         query = DeletionRequestAudit.query.filter_by(status='rejected')
+        
+        # Apply GLOBAL date range filter from dashboard
+        if start_date_obj and end_date_obj:
+            query = query.filter(
+                DeletionRequestAudit.request_date >= start_date_obj,
+                DeletionRequestAudit.request_date <= end_date_obj
+            )
         
         if search:
             query = query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
@@ -3622,6 +3719,13 @@ def get_deletion_requests_data():
         # 1. Get pending requests from deletion_requests table
         pending_query = DeletionRequest.query.filter_by(status='pending')
         
+        # Apply GLOBAL date range filter from dashboard
+        if start_date_obj and end_date_obj:
+            pending_query = pending_query.filter(
+                DeletionRequest.request_date >= start_date_obj,
+                DeletionRequest.request_date <= end_date_obj
+            )
+        
         if search:
             pending_query = pending_query.join(Student).filter(
                 db.or_(
@@ -3652,6 +3756,13 @@ def get_deletion_requests_data():
         # 2. Get approved requests from audit table
         approved_query = DeletionRequestAudit.query.filter_by(status='approved')
         
+        # Apply GLOBAL date range filter from dashboard
+        if start_date_obj and end_date_obj:
+            approved_query = approved_query.filter(
+                DeletionRequestAudit.request_date >= start_date_obj,
+                DeletionRequestAudit.request_date <= end_date_obj
+            )
+        
         if search:
             approved_query = approved_query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
         if date:
@@ -3679,6 +3790,13 @@ def get_deletion_requests_data():
         
         # 3. Get rejected requests from audit table
         rejected_query = DeletionRequestAudit.query.filter_by(status='rejected')
+        
+        # Apply GLOBAL date range filter from dashboard
+        if start_date_obj and end_date_obj:
+            rejected_query = rejected_query.filter(
+                DeletionRequestAudit.request_date >= start_date_obj,
+                DeletionRequestAudit.request_date <= end_date_obj
+            )
         
         if search:
             rejected_query = rejected_query.filter(DeletionRequestAudit.student_name.ilike(f'%{search}%'))
@@ -3735,12 +3853,57 @@ def get_deletion_requests_data():
 def get_deletion_requests_stats():
     """Get statistics for deletion requests including audit logs"""
     
-    # Current pending requests
-    pending = DeletionRequest.query.filter_by(status='pending').count()
+    # Get GLOBAL filters from session (set by dashboard)
+    start_date_filter = session.get('admin_start_date')
+    end_date_filter = session.get('admin_end_date')
+    school_year = session.get('admin_current_school_year')
     
-    # From audit table
-    approved = DeletionRequestAudit.query.filter_by(status='approved').count()
-    rejected = DeletionRequestAudit.query.filter_by(status='rejected').count()
+    # Parse date range from session
+    start_date_obj = None
+    end_date_obj = None
+    if start_date_filter and end_date_filter:
+        try:
+            start_date_obj = datetime.strptime(start_date_filter, '%Y-%m-%d')
+            end_date_obj = datetime.strptime(end_date_filter, '%Y-%m-%d')
+            end_date_obj = end_date_obj.replace(hour=23, minute=59, second=59)
+        except (ValueError, TypeError):
+            pass
+    
+    # If no explicit date range, try school year filter
+    if not start_date_obj and school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date_obj = datetime(start_year, 1, 1)
+            end_date_obj = datetime(end_year, 12, 31, 23, 59, 59)
+        except (ValueError, IndexError):
+            pass
+    
+    # Current pending requests with global filter
+    pending_query = DeletionRequest.query.filter_by(status='pending')
+    if start_date_obj and end_date_obj:
+        pending_query = pending_query.filter(
+            DeletionRequest.request_date >= start_date_obj,
+            DeletionRequest.request_date <= end_date_obj
+        )
+    pending = pending_query.count()
+    
+    # From audit table with global filter
+    approved_query = DeletionRequestAudit.query.filter_by(status='approved')
+    rejected_query = DeletionRequestAudit.query.filter_by(status='rejected')
+    
+    if start_date_obj and end_date_obj:
+        approved_query = approved_query.filter(
+            DeletionRequestAudit.request_date >= start_date_obj,
+            DeletionRequestAudit.request_date <= end_date_obj
+        )
+        rejected_query = rejected_query.filter(
+            DeletionRequestAudit.request_date >= start_date_obj,
+            DeletionRequestAudit.request_date <= end_date_obj
+        )
+    
+    approved = approved_query.count()
+    rejected = rejected_query.count()
     
     # Total including both tables
     total = pending + approved + rejected
@@ -4086,6 +4249,32 @@ def pending_candidates():
     from student.models import PendingCandidate
     from sqlalchemy import or_
     
+    # Get GLOBAL filters from session (set by dashboard)
+    start_date_filter = session.get('admin_start_date')
+    end_date_filter = session.get('admin_end_date')
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse date range from session
+    start_date = None
+    end_date = None
+    if start_date_filter and end_date_filter:
+        try:
+            start_date = datetime.strptime(start_date_filter, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_filter, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+        except (ValueError, TypeError):
+            pass
+    
+    # If no explicit date range, try school year filter
+    if not start_date and school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31, 23, 59, 59)
+        except (ValueError, IndexError):
+            pass
+    
     # Get filter parameters
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'pending')
@@ -4094,6 +4283,14 @@ def pending_candidates():
     
     # Base query
     query = PendingCandidate.query
+    
+    # Apply GLOBAL date range filter (from dashboard)
+    if start_date and end_date:
+        # Join with Election to filter by election date range
+        query = query.join(Election, PendingCandidate.election_id == Election.id).filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
     
     # Filter by status
     if status != 'all':
@@ -4118,15 +4315,27 @@ def pending_candidates():
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     applications = paginated.items
     
-    # Get statistics
+    # FIXED: Get statistics with the SAME date range filter
+    stats_query = PendingCandidate.query
+    
+    # Apply date filter to stats (same logic as main query)
+    if start_date and end_date:
+        stats_query = stats_query.join(Election, PendingCandidate.election_id == Election.id).filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    # Get counts with NO status filter (for overall stats)
     stats = {
-        'pending': PendingCandidate.query.filter_by(status='pending').count(),
-        'approved': PendingCandidate.query.filter_by(status='approved').count(),
-        'rejected': PendingCandidate.query.filter_by(status='rejected').count(),
-        'total': PendingCandidate.query.count()
+        'pending': stats_query.filter(PendingCandidate.status == 'pending').count(),
+        'approved': stats_query.filter(PendingCandidate.status == 'approved').count(),
+        'rejected': stats_query.filter(PendingCandidate.status == 'rejected').count(),
+        'total': stats_query.count()
     }
     
-    # 🚫 REMOVED: Page view audit log (not a data modification)
+    # Debug prints to check what's happening
+    print(f"Date range applied: start={start_date}, end={end_date}")
+    print(f"Stats: pending={stats['pending']}, approved={stats['approved']}, rejected={stats['rejected']}, total={stats['total']}")
     
     return render_template('pending_candidates.html',
                          applications=applications,
@@ -4134,6 +4343,62 @@ def pending_candidates():
                          stats=stats,
                          status_filter=status,
                          search=search)
+
+
+@admin_bp.route('/pending-candidates/stats')
+@login_required
+def get_pending_candidates_stats():
+    """Get statistics for pending candidates with filters applied"""
+    from student.models import PendingCandidate
+    
+    # Get GLOBAL filters from session (set by dashboard)
+    start_date_filter = session.get('admin_start_date')
+    end_date_filter = session.get('admin_end_date')
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse date range from session
+    start_date = None
+    end_date = None
+    if start_date_filter and end_date_filter:
+        try:
+            start_date = datetime.strptime(start_date_filter, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_filter, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+        except (ValueError, TypeError):
+            pass
+    
+    # If no explicit date range, try school year filter
+    if not start_date and school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31, 23, 59, 59)
+        except (ValueError, IndexError):
+            pass
+    
+    # Base query
+    query = PendingCandidate.query
+    
+    # Apply date range filter
+    if start_date and end_date:
+        query = query.join(Election, PendingCandidate.election_id == Election.id).filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    stats = {
+        'pending': query.filter(PendingCandidate.status == 'pending').count(),
+        'approved': query.filter(PendingCandidate.status == 'approved').count(),
+        'rejected': query.filter(PendingCandidate.status == 'rejected').count(),
+        'total': query.count()
+    }
+    
+    print(f"Stats endpoint - Date range: {start_date} to {end_date}")
+    print(f"Stats endpoint - Counts: {stats}")
+    
+    return jsonify(stats)
+
 
 
 @admin_bp.route('/pending-candidate/<int:id>')
@@ -5338,11 +5603,11 @@ def configure_election_positions(election_id):
     # Get all positions
     all_positions = Position.query.order_by(Position.name).all()
     
-    # Get all courses for dropdown (for campus-wide elections)
+    # Get all courses for dropdown
     all_courses = Course.query.order_by(Course.course_name).all()
     
     # Get all program types (Day/Night)
-    from student.models import ProgramType  # Import ProgramType
+    from student.models import ProgramType
     program_types = ProgramType.query.order_by(ProgramType.name).all()
     
     # Get currently configured positions for this election
@@ -5369,12 +5634,13 @@ def configure_election_positions(election_id):
             position_id = int(position_id_str)
             max_votes = request.form.get(f'max_votes_{position_id}', type=int, default=1)
             
-            # Get course restriction if applicable
+            # Get course restriction
             course_id = request.form.get(f'course_{position_id}', type=int)
             
             # Get program type restriction
             program_type_id = request.form.get(f'program_type_{position_id}', type=int)
             
+            # Department restriction is removed - always None for all election types
             ep = ElectionPosition(
                 election_id=election_id,
                 position_id=position_id,
@@ -5382,6 +5648,7 @@ def configure_election_positions(election_id):
                 min_votes=1,  # Default minimum
                 course_id=course_id if course_id else None,
                 program_type_id=program_type_id if program_type_id else None,
+                department_id=None,  # Always None - department restriction removed
                 display_order=display_order
             )
             db.session.add(ep)
@@ -5411,11 +5678,8 @@ def configure_election_positions(election_id):
         
         flash('Election positions configured successfully!', 'success')
         
-        # CHANGED: Redirect back to the same page instead of create_election
+        # Redirect back to the same page
         return redirect(url_for('admin.configure_election_positions', election_id=election_id))
-    
-    # For GET request, pass ALL needed variables to template
-    # 🚫 REMOVED: Page view audit log (not a data modification)
     
     return render_template(
         'configure_election_positions.html',
@@ -5430,6 +5694,8 @@ def configure_election_positions(election_id):
     )
     
 # admin/routes.py - UPDATE your create_election route
+# admin/routes.py - Update your create_election route
+
 @admin_bp.route('/create-election', methods=['GET', 'POST'])
 @admin_required
 def create_election():
@@ -5440,7 +5706,6 @@ def create_election():
     - Redirects to position configuration after creation
     """
     # Clear any existing flash messages from other pages
-    # This ensures only messages from this page will be shown
     session.pop('_flashes', None)
     
     # Get all departments
@@ -5451,16 +5716,14 @@ def create_election():
 
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
-        scope = request.form.get('scope', '').strip().lower()  # 'campus' or 'department'
+        scope = request.form.get('scope', '').strip().lower()
         department_id_str = request.form.get('department_id')
         description = request.form.get('description', '').strip()
         start_date_str = request.form.get('start_date', '').strip()
         end_date_str = request.form.get('end_date', '').strip()
-        
-        # Get year levels (for campus elections)
         year_levels = request.form.getlist('year_levels')
         
-        # ========== VALIDATION ==========
+        # Validation
         if not all([title, scope, start_date_str, end_date_str]):
             flash('All required fields must be filled.', 'election-error')
             return redirect(url_for('admin.create_election'))
@@ -5469,7 +5732,6 @@ def create_election():
             flash('Invalid election scope. Must be campus or department.', 'election-error')
             return redirect(url_for('admin.create_election'))
 
-        # Parse dates
         try:
             start_date = tz.localize(datetime.strptime(start_date_str, '%Y-%m-%dT%H:%M'))
             end_date = tz.localize(datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M'))
@@ -5481,7 +5743,6 @@ def create_election():
             flash('End date must be later than start date.', 'election-error')
             return redirect(url_for('admin.create_election'))
 
-        # Handle department based on scope
         department_id = None
         department_name = None
         
@@ -5497,24 +5758,20 @@ def create_election():
                 return redirect(url_for('admin.create_election'))
             department_name = dept_obj.name
         
-        # Handle year levels for campus elections
-        year_levels_str = 'all'  # Default to all years
+        year_levels_str = 'all'
         if scope == 'campus' and year_levels:
-            # Sort year levels for consistency
             year_levels.sort()
             year_levels_str = ','.join(year_levels)
         
-        # Map scope to election_type for backward compatibility
         election_type = 'SSG' if scope == 'campus' else 'Department'
 
-        # Create election - populate ALL fields
         new_election = Election(
             title=title,
-            election_type=election_type,  # For backward compatibility
-            scope=scope,                   # New scalable field
+            election_type=election_type,
+            scope=scope,
             department_id=department_id,
-            department=department_name,     # Keep redundant field for existing code
-            year_levels=year_levels_str,    # New year levels field
+            department=department_name,
+            year_levels=year_levels_str,
             description=description,
             start_date=start_date,
             end_date=end_date
@@ -5523,10 +5780,9 @@ def create_election():
         db.session.add(new_election)
         db.session.commit()
         
-        # ---------- KEEP THIS AUDIT LOG (DATA MODIFICATION) ----------
+        # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
-        
         year_levels_display = 'All Years' if year_levels_str == 'all' else f"Year(s) {year_levels_str}"
         
         log_audit(
@@ -5537,8 +5793,8 @@ def create_election():
         flash('Election created successfully! Now configure positions and vote limits.', 'election-success')
         return redirect(url_for('admin.configure_election_positions', election_id=new_election.id))
 
-    # GET request: fetch elections
-    elections_all = Election.query.order_by(Election.start_date).all()
+    # GET request: fetch ALL elections for display
+    elections_all = Election.query.order_by(Election.start_date.desc()).all()
 
     # Ensure datetime are timezone-aware
     for e in elections_all:
@@ -5550,14 +5806,13 @@ def create_election():
     # Filter elections
     upcoming_elections = [e for e in elections_all if e.start_date > now]
     active_elections = [e for e in elections_all if e.start_date <= now <= e.end_date]
-    
-    # 🚫 REMOVED: CREATE_ELECTION_VIEW audit log (not a data modification)
 
     return render_template(
         'create_election.html',
         departments=departments,
         upcoming=upcoming_elections,
         active=active_elections,
+        elections_all=elections_all,  # ← ADD THIS for ended elections
         now=now
     )
 
@@ -5573,6 +5828,32 @@ def create_department_election():
 @admin_bp.route('/announcements', methods=['GET', 'POST'])
 @login_required
 def announcements():
+    # Get GLOBAL filters from session (set by dashboard)
+    start_date_filter = session.get('admin_start_date')
+    end_date_filter = session.get('admin_end_date')
+    school_year = session.get('admin_current_school_year')
+    
+    # Parse date range from session
+    start_date = None
+    end_date = None
+    if start_date_filter and end_date_filter:
+        try:
+            start_date = datetime.strptime(start_date_filter, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_filter, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+        except (ValueError, TypeError):
+            pass
+    
+    # If no explicit date range, try school year filter
+    if not start_date and school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31, 23, 59, 59)
+        except (ValueError, IndexError):
+            pass
+    
     departments = Department.query.all()  # For dropdown
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)  # Get current datetime
@@ -5614,8 +5895,17 @@ def announcements():
         flash('announcements_page:Announcement created successfully!', 'success')
         return redirect(url_for('admin.announcements'))
 
-    # GET: fetch announcements to display
-    announcements_list = Announcement.query.order_by(Announcement.date.desc()).all()
+    # GET: fetch announcements to display with date filter
+    announcements_query = Announcement.query
+    
+    # Apply date range filter from dashboard
+    if start_date and end_date:
+        announcements_query = announcements_query.filter(
+            Announcement.date >= start_date,
+            Announcement.date <= end_date
+        )
+    
+    announcements_list = announcements_query.order_by(Announcement.date.desc()).all()
     
     # 🚫 REMOVED: ANNOUNCEMENTS_VIEW audit log (not a data modification)
     # Viewing the page should not be logged
@@ -5624,7 +5914,10 @@ def announcements():
         'announcements.html', 
         departments=departments, 
         announcements=announcements_list,
-        now=now  # Pass current datetime to template
+        now=now,  # Pass current datetime to template
+        current_sy=school_year,  # Pass school year to template for display if needed
+        start_date=start_date_filter,
+        end_date=end_date_filter
     )
 
 
@@ -6963,21 +7256,64 @@ def admin_profile():
 
 
 from admin.models import VoteDistribution
+from datetime import datetime
+import pytz
+
 @admin_bp.route('/vote-distribution')
 @admin_required
-def vote_distribution():  # ← CHANGED: function name matches what template expects
-    """Main vote distribution page"""
-    # Get all elections for the dropdown
-    elections = Election.query.order_by(Election.created_at.desc()).all()
+def vote_distribution():
+    """Main vote distribution page with school year filtering"""
     
-    # Get current school year
-    current_sy = current_app.config.get('CURRENT_SCHOOL_YEAR', '2024-2025')
+    # ✅ GET SCHOOL YEAR FILTER FROM SESSION (set by dashboard)
+    school_year = session.get('admin_current_school_year')
     
-    # 🚫 REMOVED: Vote distribution page view audit log (not a data modification)
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31, 23, 59, 59)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
+    
+    # Get elections filtered by school year
+    election_query = Election.query
+    
+    if start_date and end_date:
+        election_query = election_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    # Get all elections for the dropdown (filtered by school year)
+    elections = election_query.order_by(Election.created_at.desc()).all()
+    
+    # Get current school year (if none in session, get the latest)
+    if not school_year and elections:
+        # Get the most recent election's school year
+        latest_election = Election.query.order_by(Election.start_date.desc()).first()
+        if latest_election and latest_election.start_date:
+            year = latest_election.start_date.year
+            school_year = f"{year}-{year+1}"
+            session['admin_current_school_year'] = school_year
+    
+    # Get all available school years for the filter dropdown
+    all_elections = Election.query.order_by(Election.start_date.asc()).all()
+    school_years = set()
+    for election in all_elections:
+        if election.start_date:
+            year = election.start_date.year
+            school_years.add(f"{year}-{year+1}")
+    school_years = sorted(list(school_years), reverse=True)
     
     return render_template('vote_distribution.html', 
                           elections=elections, 
-                          current_sy=current_sy)
+                          school_years=school_years,
+                          current_sy=school_year)
 
 
 @admin_bp.route('/api/vote-distribution/<int:election_id>')
@@ -7024,12 +7360,11 @@ def get_vote_distribution(election_id):
             'position': candidate.position.name if candidate.position else "Unknown",
             'position_id': candidate.position_id,
             'total_votes': total_votes,
-            'breakdown': []  # Changed from department_breakdown to generic 'breakdown'
+            'breakdown': []
         }
         
         # Add breakdown based on what's available
         for dist in dist_records:
-            # Determine the name based on which ID is present
             name = None
             item_id = None
             
@@ -7047,7 +7382,6 @@ def get_vote_distribution(election_id):
                 name = prog.name if prog else None
                 item_id = dist.program_type_id
             else:
-                # Fallback to stored grouping_name
                 name = dist.grouping_name
                 item_id = None
             
@@ -7118,14 +7452,14 @@ def get_vote_distribution(election_id):
         },
         'stats': {
             'total_candidates': total_candidates,
-            'total_departments': unique_groups,  # Keep key for backward compatibility
+            'total_departments': unique_groups,
             'total_votes': total_votes,
             'voter_turnout': turnout,
-            'group_label': group_label  # Add label for frontend
+            'group_label': group_label
         },
         'positions': positions,
         'all_candidates': distribution_data,
-        'grouping_type': grouping_type  # Tell frontend what type of grouping this is
+        'grouping_type': grouping_type
     })
 
 
@@ -7141,7 +7475,7 @@ def export_vote_distribution(election_id, format):
     
     election = Election.query.get_or_404(election_id)
     
-    if format not in ['pdf']:  # Only PDF allowed now
+    if format not in ['pdf']:
         return jsonify({'success': False, 'error': 'Invalid format'}), 400
     
     if format == 'pdf':
@@ -7300,10 +7634,8 @@ def populate_vote_distribution(election_id):
     """Manually populate vote_distributions table from votes"""
     import json
     from collections import defaultdict
-    import re
     
     try:
-        # ✅ FIRST: Get the election object
         election = Election.query.get_or_404(election_id)
         
         # Clear existing distribution data for this election
@@ -7315,7 +7647,7 @@ def populate_vote_distribution(election_id):
         if not votes:
             return jsonify({'success': False, 'message': 'No votes found'}), 404
         
-        # ===== DETERMINE GROUPING STRATEGY =====
+        # Determine grouping strategy
         grouping_type = determine_grouping_strategy(election)
         print(f"📊 Using grouping strategy: {grouping_type}")
         
@@ -7330,18 +7662,15 @@ def populate_vote_distribution(election_id):
                 
             try:
                 finder_data = json.loads(vote.finder_hash)
-                print(f"📝 Vote {vote.id} finder_data: {finder_data}")
                 
                 # Get student's details
                 student = Student.query.get(vote.student_id)
                 if not student:
-                    print(f"⚠️ Vote {vote.id} has no student record")
                     continue
                 
                 # Get grouping ID based on strategy
                 grouping_id = get_grouping_id(student, grouping_type)
                 if not grouping_id:
-                    print(f"⚠️ Student {student.id} has no {grouping_type} ID")
                     continue
                 
                 # Get grouping name for display
@@ -7351,33 +7680,24 @@ def populate_vote_distribution(election_id):
                 candidate_ids = []
                 
                 if isinstance(finder_data, dict):
-                    # New format with 'hashes' array
                     if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
                         for item in finder_data['hashes']:
                             if isinstance(item, dict) and 'candidate_id' in item:
                                 candidate_ids.append(item['candidate_id'])
-                    
-                    # Alternative format with 'candidate_ids' array
                     elif 'candidate_ids' in finder_data and isinstance(finder_data['candidate_ids'], list):
                         candidate_ids = finder_data['candidate_ids']
-                
                 elif isinstance(finder_data, list):
-                    # Old format: list of hash objects
                     for item in finder_data:
                         if isinstance(item, dict) and 'candidate_id' in item:
                             candidate_ids.append(item['candidate_id'])
                 
-                print(f"🔍 Vote {vote.id} contains candidate IDs: {candidate_ids}")
-                
-                # Count the votes - ONE VOTE PER CANDIDATE ID
+                # Count the votes
                 for candidate_id in candidate_ids:
-                    # Create unique key to prevent double-counting the same vote
                     vote_candidate_key = (vote.id, candidate_id)
                     
                     if vote_candidate_key not in counted_combinations:
                         counted_combinations.add(vote_candidate_key)
                         vote_counts[(candidate_id, grouping_id, grouping_name)] += 1
-                        print(f"✅ Counted vote for candidate {candidate_id} in {grouping_type} {grouping_id}")
                             
             except json.JSONDecodeError as e:
                 print(f"❌ JSON decode error for vote {vote.id}: {e}")
@@ -7386,14 +7706,7 @@ def populate_vote_distribution(election_id):
                 print(f"❌ Error processing vote {vote.id}: {e}")
                 continue
         
-        # ===== DEBUG: Show what we found =====
-        print(f"📊 Total unique vote-candidate combinations: {len(counted_combinations)}")
-        print(f"📊 Total grouping entries: {len(vote_counts)}")
-        
-        # ===== CHECK IF WE FOUND ANY VOTES =====
         if not vote_counts:
-            print("⚠️ No vote counts were generated!")
-            # Try one more time with a different extraction method
             return try_alternative_extraction(election_id, election)
         
         # Insert into VoteDistribution table
@@ -7401,7 +7714,6 @@ def populate_vote_distribution(election_id):
         for (candidate_id, grouping_id, grouping_name), count in vote_counts.items():
             candidate = Candidate.query.get(candidate_id)
             if candidate:
-                # Create distribution record based on grouping type
                 dist_kwargs = {
                     'election_id': election_id,
                     'candidate_id': candidate_id,
@@ -7412,7 +7724,6 @@ def populate_vote_distribution(election_id):
                     'grouping_name': grouping_name
                 }
                 
-                # Add the appropriate ID field based on grouping type
                 if grouping_type == 'department':
                     dist_kwargs['department_id'] = grouping_id
                 elif grouping_type == 'course':
@@ -7423,17 +7734,14 @@ def populate_vote_distribution(election_id):
                 dist = VoteDistribution(**dist_kwargs)
                 db.session.add(dist)
                 records_created += 1
-                print(f"✅ Created record for candidate {candidate_id} in {grouping_type} {grouping_id}: {count} votes")
         
         db.session.commit()
-        print(f"✅ Committed {records_created} records to database")
         
         # Calculate percentages
         if records_created > 0:
             VoteDistribution.calculate_percentages(election_id)
-            print(f"✅ Calculated percentages")
         
-        # ✅ AUDIT LOG
+        # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -7455,21 +7763,6 @@ def populate_vote_distribution(election_id):
         import traceback
         traceback.print_exc()
         
-        # For the error case
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        try:
-            election = Election.query.get(election_id)
-            election_info = f" for election '{election.title}'" if election else ""
-        except:
-            election_info = ""
-        
-        log_audit(
-            action='POPULATE_VOTE_DISTRIBUTION_FAILED',
-            description=f"Admin user '{username}' failed to populate vote distribution{election_info} (ID: {election_id}) from IP: {ip} | Error: {str(e)[:200]}"
-        )
-        
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -7479,7 +7772,6 @@ def try_alternative_extraction(election_id, election):
     
     from sqlalchemy import text
     
-    # Try raw SQL to see what's in the finder_hash
     connection = db.session.connection()
     result = connection.execute(
         text("SELECT id, finder_hash FROM votes WHERE election_id = :eid LIMIT 5"),
@@ -7502,15 +7794,12 @@ def try_alternative_extraction(election_id, election):
 def determine_grouping_strategy(election):
     """Determine how to group vote distribution"""
     if election.scope == 'department':
-        # Department election - check if multiple courses
         if election.department_id:
             courses_count = Course.query.filter_by(department_id=election.department_id).count()
             if courses_count > 1:
                 return 'course'
             else:
                 return 'program_type'
-    
-    # Default to department grouping
     return 'department'
 
 

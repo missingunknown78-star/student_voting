@@ -24,7 +24,11 @@
     <div class="instruction-box">
         <h3>📋 How to Configure</h3>
         <p>Select which positions will be included in this election and set how many candidates students can vote for per position.</p>
-        <p><strong>For Campus-Wide Elections:</strong> You can also restrict positions to specific courses or program types (Day/Night).</p>
+        {% if election.scope == 'campus' %}
+        <p><strong>For Campus-Wide Elections:</strong> You can restrict positions to specific courses or program types (Day/Night).</p>
+        {% elif election.scope == 'department' %}
+        <p><strong>For Department Elections:</strong> You can restrict positions to specific courses within this department or program types (Day/Night).</p>
+        {% endif %}
     </div>
 
     <form method="POST" id="configForm">
@@ -85,7 +89,7 @@
                         </div>
                     </div>
 
-                    <!-- Program Type -->
+                    <!-- Program Type (Day/Night) - Available for all election types -->
                     <div class="config-item">
                         <div class="config-label">
                             <i class="fa-solid fa-calendar-alt"></i>
@@ -118,12 +122,11 @@
                         </div>
                     </div>
 
-                    <!-- Course Restriction (Only for campus-wide elections) -->
-                    {% if election.scope == 'campus' %}
+                    <!-- Course Restriction - Available for ALL election types -->
                     <div class="config-item">
                         <div class="config-label">
                             <i class="fa-solid fa-graduation-cap"></i>
-                            <span>Course</span>
+                            <span>Course Restriction</span>
                         </div>
                         <div class="config-input-group">
                             <select name="course_{{ position.id }}" 
@@ -132,10 +135,21 @@
                                     {% if position.id not in configured_position_ids %}disabled{% endif %}>
                                 <option value="">All Courses</option>
                                 {% for course in all_courses %}
-                                    <option value="{{ course.id }}" 
-                                            {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
-                                        {{ course.course_name }}
-                                    </option>
+                                    {% if election.scope == 'campus' %}
+                                        <!-- For campus elections, show all courses -->
+                                        <option value="{{ course.id }}" 
+                                                {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
+                                            {{ course.course_name }} ({{ course.department.name if course.department else 'No Dept' }})
+                                        </option>
+                                    {% elif election.scope == 'department' %}
+                                        <!-- For department elections, only show courses in this department -->
+                                        {% if course.department_id == election.department_id %}
+                                            <option value="{{ course.id }}" 
+                                                    {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
+                                                {{ course.course_name }}
+                                            </option>
+                                        {% endif %}
+                                    {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -151,7 +165,6 @@
                             {% endif %}
                         </div>
                     </div>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}

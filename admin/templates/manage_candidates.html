@@ -74,21 +74,21 @@
     }
 
     /* Emergency override in template */
-.candidates-table .edit-btn,
-.candidates-table .delete-btn {
-    width: 70px !important;
-    min-width: 70px !important;
-    max-width: 70px !important;
-}
-
-@media (max-width: 480px) {
     .candidates-table .edit-btn,
     .candidates-table .delete-btn {
-        width: 55px !important;
-        min-width: 55px !important;
-        max-width: 55px !important;
+        width: 70px !important;
+        min-width: 70px !important;
+        max-width: 70px !important;
     }
-}
+
+    @media (max-width: 480px) {
+        .candidates-table .edit-btn,
+        .candidates-table .delete-btn {
+            width: 55px !important;
+            min-width: 55px !important;
+            max-width: 55px !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -98,13 +98,6 @@
     <div class="title-bar">
         <h1>Manage Candidates</h1>
         
-        <!-- School Year Indicator (if filtered) -->
-        {% if current_sy %}
-        <div class="school-year-badge">
-            <i class="fa-solid fa-calendar"></i> School Year: {{ current_sy }}
-        </div>
-        {% endif %}
-        
         <div class="title-buttons">
             <!-- Application Requests Button -->
             <a href="{{ url_for('admin.pending_candidates') }}" class="app-requests-btn">
@@ -113,7 +106,7 @@
             
             <!-- Convert Students to Candidates Button -->
             <a href="{{ url_for('admin.convert_to_candidates') }}" class="convert-students-btn">
-                <i class="fa-solid fa-user-plus"></i> Student Candidates
+                <i class="fa-solid fa-user-plus"></i> Qualify a Student
             </a>
             
             <button class="position-btn position-list-btn" id="openPositionListModal">

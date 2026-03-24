@@ -93,7 +93,7 @@
                     <th>Applied Date</th>
                     <th>Status</th>
                     <th>Actions</th>
-                </tr>
+                  </tr>
             </thead>
             <tbody>
                 {% if applications and applications|length > 0 %}
@@ -225,8 +225,8 @@
             <p class="warning-text">This will move the candidate to the official candidates list.</p>
         </div>
         <div class="modal-footer">
-            <button class="approve-btn" id="confirmApproveBtn">Yes, Approve</button>
-            <button class="cancel-btn" onclick="closeModal('approveModal')">Cancel</button>
+            <button class="modal-approve-btn" id="confirmApproveBtn">Yes, Approve</button>
+            <button class="modal-cancel-btn" onclick="closeModal('approveModal')">Cancel</button>
         </div>
     </div>
 </div>
@@ -239,12 +239,12 @@
             <span class="close" onclick="closeModal('rejectModal')">&times;</span>
         </div>
         <div class="modal-body">
-            <p>Please provide a reason for rejection:</p>
-            <textarea id="rejectReason" class="reject-textarea" placeholder="Enter reason for rejection..." rows="3"></textarea>
+            <p style="margin-bottom: 12px;">Please provide a reason for rejection:</p>
+            <textarea id="rejectReason" class="reject-textarea" placeholder="Enter reason for rejection..." rows="4"></textarea>
         </div>
         <div class="modal-footer">
-            <button class="reject-btn" id="confirmRejectBtn">Submit Rejection</button>
-            <button class="cancel-btn" onclick="closeModal('rejectModal')">Cancel</button>
+            <button class="modal-reject-btn" id="confirmRejectBtn">Submit Rejection</button>
+            <button class="modal-cancel-btn" onclick="closeModal('rejectModal')">Cancel</button>
         </div>
     </div>
 </div>
@@ -288,7 +288,7 @@
         fetch(`/ctumoalboal-comelec/pending-candidate/${id}`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(response => {
@@ -382,7 +382,7 @@
             headers: { 
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(response => {
@@ -436,7 +436,7 @@
             headers: { 
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ reason: reason })
         })
@@ -484,7 +484,7 @@
             });
         }
     });
-    </script>
+</script>
 
 <style>
 .toast {
@@ -531,6 +531,158 @@
 button:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* Modal Button Styles */
+.modal-approve-btn {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-approve-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.modal-reject-btn {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-reject-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.modal-cancel-btn {
+    padding: 10px 24px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-cancel-btn:hover {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+.modal-approve-btn:disabled,
+.modal-reject-btn:disabled,
+.modal-cancel-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Fixed Reject Modal Textarea Spacing with Dark Mode Support */
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body p {
+    margin: 0 0 12px 0;
+    color: var(--text-primary, #333);
+}
+
+.reject-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    margin: 0;
+    resize: vertical;
+    background: var(--input-bg, #f8f9fa);
+    color: var(--text-primary, #333);
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.reject-textarea:focus {
+    outline: none;
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+}
+
+/* Dark Mode Support for Textarea */
+:root.dark-mode .reject-textarea {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #404040;
+}
+
+:root.dark-mode .reject-textarea:focus {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.3);
+}
+
+:root.dark-mode .reject-textarea::placeholder {
+    color: #888;
+}
+
+/* Modal content spacing fix */
+.modal-content {
+    padding: 0;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 20px 24px;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 0 24px 20px 24px;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    margin: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Ensure modal text colors work in dark mode */
+:root.dark-mode .modal-body p {
+    color: #e0e0e0;
+}
+
+:root.dark-mode .modal-header h2 {
+    color: #ffffff;
+}
+
+:root.dark-mode .warning-text {
+    color: #ff6b6b;
 }
 </style>
 {% endblock %}

@@ -4,274 +4,554 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/create_election.css') }}">
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/election_modal.css') }}">
+<style>
+    /* Spinning Button Animation */
+    .create-election-btn {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    /* Spin animation on hover */
+    .create-election-btn:hover .btn-icon {
+        animation: spin 0.5s ease-in-out;
+    }
+    
+    /* Spin animation on click */
+    .create-election-btn.spinning .btn-icon {
+        animation: spin 0.5s ease-in-out;
+    }
+    
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    
+    /* Circular Spinner for submitting state */
+    @keyframes spinner-rotate {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spinner-rotate 0.8s linear infinite;
+        margin-right: 8px;
+    }
+    
+    /* Pulse effect on hover */
+    .create-election-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+    
+    /* Ripple effect */
+    .create-election-btn {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .create-election-btn .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.7);
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+    }
+    
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    /* Disabled button style during submission */
+    .create-election-btn.submitting {
+        opacity: 0.9;
+        cursor: wait;
+        pointer-events: none;
+    }
+    
+    /* Button icon styling */
+    .btn-icon {
+        display: inline-block;
+        transition: transform 0.3s ease;
+        font-size: 1.1rem;
+    }
+    
+    /* Updated Election Card Layout - Buttons on the right */
+    .election-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .election-card .election-info {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .election-card .election-actions-right {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    
+    /* Responsive - stack on mobile */
+    @media (max-width: 768px) {
+        .election-card {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .election-card .election-actions-right {
+            justify-content: flex-start;
+            margin-top: 0.75rem;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<!-- ADD THIS WRAPPER DIV -->
 <div class="create-election-page">
-    <h1 class="page-title">Create Election</h1>
-    <p class="page-description">Create a new campus-wide or departmental election</p>
-    
-    <!-- Flash messages - IMPROVED VERSION WITH CATEGORY FILTERING -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-    <div class="flash-container" id="flash-container">
-        {% for category, message in messages %}
-            <!-- Only show messages with categories relevant to this page -->
-            {% if category in ['election', 'success', 'error', 'danger', 'warning', 'info'] %}
-                <div class="flash-message {{ category }}" id="flash-{{ loop.index }}">
-                    {{ message }}
-                    <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
-                    <div class="progress-bar"></div>
-                </div>
-            {% endif %}
-        {% endfor %}
+    <div class="page-header">
+        <div class="header-left">
+            <h1 class="page-title">Manage Elections</h1>
+            <p class="page-description">Create and manage elections for your institution</p>
+        </div>
+        <button type="button" class="create-election-btn" id="openModalBtn">
+            <span class="btn-icon">➕</span> Create New Election
+        </button>
     </div>
-{% endif %}
-{% endwith %}
     
-    <!-- Add dark-mode class here based on parent's dark mode -->
-    <div class="election-form-container">
-        <h2>Manage Elections</h2>
-
-        <!-- Desktop-style Form -->
-        <form method="POST" class="desktop-form" id="electionForm">
-            <!-- CSRF Token - CRITICAL for security -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <!-- Row 1: Title + Scope and Description -->
-            <div class="form-row">
-                <!-- Left column: Title + Scope -->
-                <div class="form-column">
-                    <div class="election-form-group">
-                        <label for="title">Election Title <span class="required">*</span></label>
-                        <input type="text" id="title" name="title" placeholder="Enter election title" required>
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-container" id="flash-container">
+            {% for category, message in messages %}
+                {% if category in ['election', 'success', 'error', 'danger', 'warning', 'info'] %}
+                    <div class="flash-message {{ category }}" id="flash-{{ loop.index }}">
+                        {{ message }}
+                        <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+                        <div class="progress-bar"></div>
                     </div>
-                    <div class="election-form-group">
-                        <label for="scope">Election Scope <span class="required">*</span></label>
-                        <select id="scope" name="scope" required onchange="toggleFields()">
-                            <option value="">Select scope</option>
-                            <option value="campus">Campus-Wide (All Students)</option>
-                            <option value="department">Departmental (Specific Department)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Right column: Description -->
-                <div class="description-column election-form-group">
-                    <label for="description">Description (optional)</label>
-                    <textarea id="description" name="description" placeholder="Enter description..."></textarea>
-                </div>
-            </div>
-
-            <!-- Row 2: Department (hidden by default) -->
-            <div class="form-row" id="department_row" style="display: none;">
-                <div class="election-form-group">
-                    <label for="department_id">Department <span class="required">*</span></label>
-                    <select id="department_id" name="department_id">
-                        <option value="">Select department</option>
-                        {% for dept in departments %}
-                            <option value="{{ dept.id }}">{{ dept.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Row 3: Year Level Selection (for campus elections) -->
-            <div class="form-row" id="year_level_row" style="display: none;">
-                <div class="election-form-group" style="width: 100%;">
-                    <label>Target Year Levels <span class="required">*</span></label>
-                    <div class="year-level-container">
-                        <h4>Select which year levels can vote in this election:</h4>
-                        <div class="year-checkbox-group">
-                            <div class="year-checkbox-item">
-                                <input type="checkbox" id="year_1" name="year_levels" value="1">
-                                <label for="year_1">1st Year</label>
-                            </div>
-                            <div class="year-checkbox-item">
-                                <input type="checkbox" id="year_2" name="year_levels" value="2">
-                                <label for="year_2">2nd Year</label>
-                            </div>
-                            <div class="year-checkbox-item">
-                                <input type="checkbox" id="year_3" name="year_levels" value="3">
-                                <label for="year_3">3rd Year</label>
-                            </div>
-                            <div class="year-checkbox-item">
-                                <input type="checkbox" id="year_4" name="year_levels" value="4">
-                                <label for="year_4">4th Year</label>
-                            </div>
-                        </div>
-                        <span class="form-hint">Leave all unchecked if this election is for all students</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Row 4: Start & End Date -->
-            <div class="form-row">
-                <div class="election-form-group">
-                    <label for="start_date">Start Date & Time <span class="required">*</span></label>
-                    <input type="datetime-local" id="start_date" name="start_date" required>
-                </div>
-                <div class="election-form-group">
-                    <label for="end_date">End Date & Time <span class="required">*</span></label>
-                    <input type="datetime-local" id="end_date" name="end_date" required>
-                </div>
-            </div>
-
-            <!-- Submit button -->
-            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                <button type="submit" class="create-election-btn">Create Election</button>
-                <button type="button" class="reset-btn" onclick="resetForm()">Reset</button>
-            </div>
-        </form>
-
-        <hr>
-
-        <!-- Upcoming Elections -->
-        <h3>Upcoming Elections</h3>
-        <div class="election-list">
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+    
+    <!-- Election Tabs -->
+    <div class="election-tabs">
+        <button class="tab-btn active" data-tab="upcoming">Upcoming Elections</button>
+        <button class="tab-btn" data-tab="active">Active Elections</button>
+        <button class="tab-btn" data-tab="ended">Recent Elections</button>
+    </div>
+    
+    <!-- Upcoming Elections Tab -->
+    <div class="tab-pane active" id="upcoming-tab">
+        <div class="elections-grid">
             {% if upcoming %}
                 {% for election in upcoming %}
                     <div class="election-card">
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">
-                                    <strong>{{ election.title }}</strong>
-                                    {% if election.scope %}
-                                        <span class="scope-badge {{ election.scope }}">{{ election.scope|title }}</span>
-                                    {% endif %}
-                                    {% if election.year_levels %}
-                                        {% if election.year_levels == 'all' %}
-                                            <span class="year-badge all-years">All Years</span>
-                                        {% else %}
-                                            <span class="year-badge">Year {{ election.year_levels }}</span>
+                        <div class="election-info">
+                            <div class="election-header">
+                                <h3 class="election-title">
+                                    {{ election.title }}
+                                    <div class="election-badges">
+                                        <span class="badge {{ election.scope }}">{{ election.scope|title }}</span>
+                                        <span class="badge upcoming">Upcoming</span>
+                                        {% if election.year_levels %}
+                                            {% if election.year_levels == 'all' %}
+                                                <span class="badge year">All Years</span>
+                                            {% else %}
+                                                <span class="badge year">Year {{ election.year_levels }}</span>
+                                            {% endif %}
                                         {% endif %}
-                                    {% endif %}
-                                </div>
-                                <div style="font-size: 0.9rem; color: var(--text-secondary);">
-                                    {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
-                                    {% if election.department %}<br>Department: {{ election.department }}{% endif %}
-                                </div>
+                                    </div>
+                                </h3>
                             </div>
-                            
-                            <!-- Configure Positions Button -->
+                            <div class="election-details">
+                                <div>📅 {{ election.start_date.strftime("%B %d, %Y at %I:%M %p") }} - {{ election.end_date.strftime("%B %d, %Y at %I:%M %p") }}</div>
+                                {% if election.department %}
+                                    <div>🏛️ Department: {{ election.department }}</div>
+                                {% endif %}
+                                {% if election.description %}
+                                    <div>📝 {{ election.description[:100] }}{% if election.description|length > 100 %}...{% endif %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="election-actions-right">
                             <a href="{{ url_for('admin.configure_election_positions', election_id=election.id) }}" 
-                               class="configure-btn"
-                               style="background: #667eea; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
-                                <span style="font-size: 1.1rem;">⚙️</span> Configure Positions
+                               class="configure-btn">
+                                <span>⚙️</span> Configure Positions
                             </a>
                         </div>
                     </div>
                 {% endfor %}
             {% else %}
-                <p style="color: var(--text-secondary);">No upcoming elections.</p>
+                <div class="empty-state">
+                    <div class="empty-state-icon">📅</div>
+                    <p>No upcoming elections scheduled.</p>
+                    <button class="create-election-btn" id="emptyStateCreateBtn" style="margin-top: 1rem;">
+                        <span class="btn-icon">➕</span> Create an Election
+                    </button>
+                </div>
             {% endif %}
         </div>
-
-        <!-- Active Elections -->
-        <h3>Active Elections</h3>
-        <div class="election-list">
+    </div>
+    
+    <!-- Active Elections Tab -->
+    <div class="tab-pane" id="active-tab">
+        <div class="elections-grid">
             {% if active %}
                 {% for election in active %}
-                    <div class="election-card active">
-                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;">
-                                    <strong>{{ election.title }}</strong>
-                                    {% if election.scope %}
-                                        <span class="scope-badge {{ election.scope }}">{{ election.scope|title }}</span>
-                                    {% endif %}
-                                    {% if election.year_levels %}
-                                        {% if election.year_levels == 'all' %}
-                                            <span class="year-badge all-years">All Students</span>
-                                        {% else %}
-                                            <span class="year-badge">Year {{ election.year_levels }}</span>
+                    <div class="election-card active-card">
+                        <div class="election-info">
+                            <div class="election-header">
+                                <h3 class="election-title">
+                                    {{ election.title }}
+                                    <div class="election-badges">
+                                        <span class="badge {{ election.scope }}">{{ election.scope|title }}</span>
+                                        <span class="badge active">Active</span>
+                                        {% if election.year_levels %}
+                                            {% if election.year_levels == 'all' %}
+                                                <span class="badge year">All Years</span>
+                                            {% else %}
+                                                <span class="badge year">Year {{ election.year_levels }}</span>
+                                            {% endif %}
                                         {% endif %}
-                                    {% endif %}
-                                </div>
-                                <div style="font-size: 0.9rem; color: var(--text-secondary);">
-                                    {{ election.start_date.strftime("%Y-%m-%d %H:%M") }} to {{ election.end_date.strftime("%Y-%m-%d %H:%M") }}
-                                    {% if election.department %}<br>Department: {{ election.department }}{% endif %}
-                                </div>
+                                    </div>
+                                </h3>
                             </div>
-                            
-                            <!-- Configure Positions Button -->
+                            <div class="election-details">
+                                <div>📅 {{ election.start_date.strftime("%B %d, %Y at %I:%M %p") }} - {{ election.end_date.strftime("%B %d, %Y at %I:%M %p") }}</div>
+                                {% if election.department %}
+                                    <div>🏛️ Department: {{ election.department }}</div>
+                                {% endif %}
+                                {% if election.description %}
+                                    <div>📝 {{ election.description[:100] }}{% if election.description|length > 100 %}...{% endif %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="election-actions-right">
                             <a href="{{ url_for('admin.configure_election_positions', election_id=election.id) }}" 
-                               class="configure-btn"
-                               style="background: #667eea; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;">
-                                <span style="font-size: 1.1rem;">⚙️</span> Configure Positions
+                               class="configure-btn">
+                                <span>⚙️</span> Configure Positions
+                            </a>
+                            <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
+                               class="view-results-btn">
+                                <span>📊</span> View Live Results
                             </a>
                         </div>
                     </div>
                 {% endfor %}
             {% else %}
-                <p style="color: var(--text-secondary);">No active elections.</p>
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎯</div>
+                    <p>No active elections at the moment.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Ended Elections Tab -->
+    <div class="tab-pane" id="ended-tab">
+        <div class="elections-grid">
+            {% set ended_elections = [] %}
+            {% for election in elections_all if election.status == 'Ended' %}
+                {% set _ = ended_elections.append(election) %}
+            {% endfor %}
+            
+            {% if ended_elections %}
+                {% for election in ended_elections %}
+                    <div class="election-card ended-card">
+                        <div class="election-info">
+                            <div class="election-header">
+                                <h3 class="election-title">
+                                    {{ election.title }}
+                                    <div class="election-badges">
+                                        <span class="badge {{ election.scope }}">{{ election.scope|title }}</span>
+                                        <span class="badge ended">Ended</span>
+                                        {% if election.year_levels %}
+                                            {% if election.year_levels == 'all' %}
+                                                <span class="badge year">All Years</span>
+                                            {% else %}
+                                                <span class="badge year">Year {{ election.year_levels }}</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </h3>
+                            </div>
+                            <div class="election-details">
+                                <div>📅 {{ election.start_date.strftime("%B %d, %Y at %I:%M %p") }} - {{ election.end_date.strftime("%B %d, %Y at %I:%M %p") }}</div>
+                                {% if election.department %}
+                                    <div>🏛️ Department: {{ election.department }}</div>
+                                {% endif %}
+                                {% if election.description %}
+                                    <div>📝 {{ election.description[:100] }}{% if election.description|length > 100 %}...{% endif %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="election-actions-right">
+                            <a href="{{ url_for('admin.election_results', election_id=election.id) }}" 
+                               class="view-results-btn">
+                                <span>📊</span> View Results
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>No ended elections yet.</p>
+                </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<!-- Modal for Create Election -->
+<div id="electionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Election</h2>
+            <button class="modal-close" id="closeModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form method="POST" id="electionForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-row">
+                    <div class="form-column">
+                        <div class="election-form-group">
+                            <label for="title">Election Title <span class="required">*</span></label>
+                            <input type="text" id="title" name="title" placeholder="Enter election title" required>
+                        </div>
+                        <div class="election-form-group">
+                            <label for="scope">Election Scope <span class="required">*</span></label>
+                            <select id="scope" name="scope" required onchange="toggleFields()">
+                                <option value="">Select scope</option>
+                                <option value="campus">Campus-Wide (All Students)</option>
+                                <option value="department">Departmental (Specific Department)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="description-column election-form-group">
+                        <label for="description">Description (optional)</label>
+                        <textarea id="description" name="description" placeholder="Enter description..." rows="4"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-row" id="department_row" style="display: none;">
+                    <div class="election-form-group">
+                        <label for="department_id">Department <span class="required">*</span></label>
+                        <select id="department_id" name="department_id">
+                            <option value="">Select department</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row" id="year_level_row" style="display: none;">
+                    <div class="election-form-group" style="width: 100%;">
+                        <label>Target Year Levels <span class="required">*</span></label>
+                        <div class="year-level-container">
+                            <h4>Select which year levels can vote in this election:</h4>
+                            <div class="year-checkbox-group">
+                                <div class="year-checkbox-item">
+                                    <input type="checkbox" id="year_1" name="year_levels" value="1">
+                                    <label for="year_1">1st Year</label>
+                                </div>
+                                <div class="year-checkbox-item">
+                                    <input type="checkbox" id="year_2" name="year_levels" value="2">
+                                    <label for="year_2">2nd Year</label>
+                                </div>
+                                <div class="year-checkbox-item">
+                                    <input type="checkbox" id="year_3" name="year_levels" value="3">
+                                    <label for="year_3">3rd Year</label>
+                                </div>
+                                <div class="year-checkbox-item">
+                                    <input type="checkbox" id="year_4" name="year_levels" value="4">
+                                    <label for="year_4">4th Year</label>
+                                </div>
+                            </div>
+                            <span class="form-hint">Leave all unchecked if this election is for all students</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="election-form-group">
+                        <label for="start_date">Start Date & Time <span class="required">*</span></label>
+                        <input type="datetime-local" id="start_date" name="start_date" required>
+                    </div>
+                    <div class="election-form-group">
+                        <label for="end_date">End Date & Time <span class="required">*</span></label>
+                        <input type="datetime-local" id="end_date" name="end_date" required>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="create-election-btn submit-btn" id="submitElectionBtn">
+                        <span class="btn-icon"></span> Create Election
+                    </button>
+                    <button type="button" class="reset-btn" onclick="resetForm()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-// This ensures the theme applies immediately without refresh
+// Ripple effect function
+function createRipple(event, element) {
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.width = ripple.style.height = `${size}px`;
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    
+    element.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+}
+
+// Add ripple effect to all create election buttons
+function addRippleEffect() {
+    const buttons = document.querySelectorAll('.create-election-btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            createRipple(e, this);
+            
+            // Add spinning class temporarily
+            this.classList.add('spinning');
+            setTimeout(() => {
+                this.classList.remove('spinning');
+            }, 500);
+        });
+    });
+}
+
+// Modal functionality
+const modal = document.getElementById('electionModal');
+const openModalBtn = document.getElementById('openModalBtn');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const emptyStateCreateBtn = document.getElementById('emptyStateCreateBtn');
+const submitElectionBtn = document.getElementById('submitElectionBtn');
+
+function openModal() {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    // Add ripple and spin to the button that opened modal
+    if (openModalBtn) {
+        openModalBtn.classList.add('spinning');
+        setTimeout(() => {
+            openModalBtn.classList.remove('spinning');
+        }, 500);
+    }
+}
+
+function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    resetForm();
+}
+
+if (openModalBtn) openModalBtn.addEventListener('click', openModal);
+if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+if (emptyStateCreateBtn) {
+    emptyStateCreateBtn.addEventListener('click', function(e) {
+        createRipple(e, this);
+        this.classList.add('spinning');
+        setTimeout(() => {
+            this.classList.remove('spinning');
+        }, 500);
+        openModal();
+    });
+}
+
+// Close modal when clicking outside
+modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+        closeModal();
+    }
+});
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+        closeModal();
+    }
+});
+
+// Tab functionality
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabPanes = document.querySelectorAll('.tab-pane');
+
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+        const tabName = this.getAttribute('data-tab');
+        
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanes.forEach(p => p.classList.remove('active'));
+        
+        this.classList.add('active');
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+    });
+});
+
+// Theme synchronization
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
     
-    // Check current theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
     
-    // Apply or remove dark-mode class - ONLY to mainContent, NOT to body
     if (isDark) {
         mainContent.classList.add('dark-mode');
+        document.documentElement.classList.add('dark-mode');
     } else {
         mainContent.classList.remove('dark-mode');
+        document.documentElement.classList.remove('dark-mode');
     }
     
-    // Ensure content is visible
     mainContent.classList.add('theme-applied');
 }
 
-// Apply immediately when page loads
-(function() {
-    applyThemeToMainContent();
-    
-    // Also apply after a tiny delay
-    setTimeout(applyThemeToMainContent, 10);
-    setTimeout(applyThemeToMainContent, 50);
-    setTimeout(applyThemeToMainContent, 100);
-    
-    // Listen for theme toggle button clicks
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
-        }
-    });
-    
-    // Listen for storage events
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
-    });
-    
-    // Create a mutation observer
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
-            }
-        });
-        mainContentObserver.observe(mainContent, { attributes: true });
-    }
-})();
-
-// UPDATED FUNCTION: Toggle department field and year level field based on scope
+// Toggle fields based on scope
 function toggleFields() {
     const scope = document.getElementById('scope').value;
     const departmentRow = document.getElementById('department_row');
@@ -280,55 +560,59 @@ function toggleFields() {
     const yearCheckboxes = document.querySelectorAll('input[name="year_levels"]');
     
     if (scope === 'department') {
-        // Show department, hide year levels
         departmentRow.style.display = 'block';
         yearLevelRow.style.display = 'none';
         departmentSelect.required = true;
         departmentSelect.disabled = false;
         
-        // Disable year checkboxes
         yearCheckboxes.forEach(cb => {
             cb.disabled = true;
             cb.checked = false;
         });
     } else if (scope === 'campus') {
-        // Show year levels, hide department
         departmentRow.style.display = 'none';
         yearLevelRow.style.display = 'block';
         departmentSelect.required = false;
         departmentSelect.disabled = true;
         departmentSelect.value = '';
         
-        // Enable year checkboxes
         yearCheckboxes.forEach(cb => {
             cb.disabled = false;
         });
     } else {
-        // No scope selected
         departmentRow.style.display = 'none';
         yearLevelRow.style.display = 'none';
     }
 }
 
-// UPDATED FUNCTION: Reset form
+// Reset form
 function resetForm() {
-    document.getElementById('electionForm').reset();
+    const form = document.getElementById('electionForm');
+    if (form) {
+        form.reset();
+    }
     toggleFields();
 }
 
-// UPDATED FUNCTION: Validate form before submission
+// Validate form
 function validateForm() {
     const scope = document.getElementById('scope').value;
-    const startDate = new Date(document.getElementById('start_date').value);
-    const endDate = new Date(document.getElementById('end_date').value);
+    const startDateInput = document.getElementById('start_date').value;
+    const endDateInput = document.getElementById('end_date').value;
     
-    // Validate dates
-    if (startDate && endDate && endDate <= startDate) {
+    if (!startDateInput || !endDateInput) {
+        alert('Please select both start and end dates.');
+        return false;
+    }
+    
+    const startDate = new Date(startDateInput);
+    const endDate = new Date(endDateInput);
+    
+    if (endDate <= startDate) {
         alert('End date must be later than start date.');
         return false;
     }
     
-    // Validate department selection for department scope
     if (scope === 'department') {
         const departmentId = document.getElementById('department_id').value;
         if (!departmentId) {
@@ -337,12 +621,9 @@ function validateForm() {
         }
     }
     
-    // Validate year level selection for campus scope
     if (scope === 'campus') {
         const yearCheckboxes = document.querySelectorAll('input[name="year_levels"]:checked');
         if (yearCheckboxes.length === 0) {
-            // If none selected, treat as all years (this is valid)
-            // Just show a small confirmation
             if (!confirm('No year levels selected. This election will be available to ALL students. Continue?')) {
                 return false;
             }
@@ -352,12 +633,30 @@ function validateForm() {
     return true;
 }
 
-// AUTO-DISMISS FLASH MESSAGES AFTER 7 SECONDS
+// Handle form submission with circular spinner
+function handleFormSubmit(e) {
+    if (!validateForm()) {
+        e.preventDefault();
+        return;
+    }
+    
+    // Add circular spinner to submit button
+    if (submitElectionBtn) {
+        submitElectionBtn.classList.add('submitting');
+        // Replace content with spinner and text
+        submitElectionBtn.innerHTML = '<span class="spinner"></span> Creating Election...';
+        submitElectionBtn.disabled = true;
+    }
+    
+    // Allow form to submit
+    return true;
+}
+
+// Auto-dismiss flash messages
 function setupFlashMessages() {
     const flashMessages = document.querySelectorAll('.flash-message');
     
     flashMessages.forEach(message => {
-        // Auto dismiss after 7 seconds
         setTimeout(() => {
             if (message.parentElement) {
                 message.style.animation = 'fadeOut 0.5s ease forwards';
@@ -369,7 +668,6 @@ function setupFlashMessages() {
             }
         }, 7000);
         
-        // Add click handler for close button
         const closeBtn = message.querySelector('.close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', function() {
@@ -384,39 +682,31 @@ function setupFlashMessages() {
     });
 }
 
-// =============== FORCE SIDEBAR HIGHLIGHT FIX ===============
-// This ensures the Create Election button stays highlighted when returning to this page
+// Highlight sidebar link
 function highlightCreateElectionLink() {
-    // Get all possible sidebar links
     const sidebarLinks = document.querySelectorAll('.sidebar-menu a, .nav-link, .sidebar a, .menu a');
     
-    // Remove active class from all links first
     sidebarLinks.forEach(link => {
         link.classList.remove('active', 'current', 'selected', 'is-active');
         
-        // Also remove from parent li
         const parentLi = link.closest('li');
         if (parentLi) {
             parentLi.classList.remove('active', 'current', 'selected');
         }
     });
     
-    // Find and highlight the Create Election link
     sidebarLinks.forEach(link => {
         const href = link.getAttribute('href');
         const text = link.textContent || link.innerText;
         
-        // Check if this is the Create Election link
         if (href && (href.includes('create_election') || href.includes('manage-elections') || href.includes('elections'))) {
             link.classList.add('active');
             
-            // Also highlight parent li
             const parentLi = link.closest('li');
             if (parentLi) {
                 parentLi.classList.add('active');
             }
             
-            // If it's in a dropdown/submenu, expand it
             const submenu = link.closest('.submenu, .dropdown-menu');
             if (submenu) {
                 submenu.style.display = 'block';
@@ -445,49 +735,37 @@ function highlightCreateElectionLink() {
     });
 }
 
-// Initialize when DOM is ready
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     applyThemeToMainContent();
-    toggleFields(); // Initialize field visibility
-    setupFlashMessages(); // Initialize flash message auto-dismiss
+    toggleFields();
+    setupFlashMessages();
+    addRippleEffect();
     
-    // Run sidebar highlight
     setTimeout(highlightCreateElectionLink, 50);
-    setTimeout(highlightCreateElectionLink, 150);
-    setTimeout(highlightCreateElectionLink, 300);
     
-    // Add form validation
-    document.getElementById('electionForm').addEventListener('submit', function(e) {
-        if (!validateForm()) {
-            e.preventDefault();
+    // Add form validation with spinning effect
+    const form = document.getElementById('electionForm');
+    if (form) {
+        form.addEventListener('submit', handleFormSubmit);
+    }
+    
+    // Check for success flash and close modal
+    const flashMessages = document.querySelectorAll('.flash-message.success, .flash-message.election-success');
+    if (flashMessages.length > 0) {
+        closeModal();
+        // Reset submit button if it was in submitting state
+        if (submitElectionBtn) {
+            submitElectionBtn.classList.remove('submitting');
+            submitElectionBtn.innerHTML = '<span class="btn-icon"></span> Create Election';
+            submitElectionBtn.disabled = false;
         }
-    });
+    }
     
-    // Periodic check for theme
-    let checkCount = 0;
-    const checkInterval = setInterval(function() {
-        if (document.querySelector('.main-content') || checkCount > 20) {
-            clearInterval(checkInterval);
-            applyThemeToMainContent();
-            highlightCreateElectionLink();
-        }
-        checkCount++;
-    }, 100);
-    
-    // Run on page show (for bfcache/back navigation)
-    window.addEventListener('pageshow', function() {
-        highlightCreateElectionLink();
-    });
-    
-    // Run on popstate (browser back/forward)
-    window.addEventListener('popstate', function() {
-        highlightCreateElectionLink();
-    });
+    window.addEventListener('pageshow', highlightCreateElectionLink);
+    window.addEventListener('popstate', highlightCreateElectionLink);
 });
 
-// Also run when the page is fully loaded
-window.addEventListener('load', function() {
-    highlightCreateElectionLink();
-});
+window.addEventListener('load', highlightCreateElectionLink);
 </script>
 {% endblock %}

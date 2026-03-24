@@ -28,7 +28,7 @@
     </div>
 
     <!-- Login Form -->
-    <form action="{{ url_for('admin.login') }}" method="POST" class="login-form" autocomplete="off">
+    <form action="{{ url_for('admin.login') }}" method="POST" class="login-form" autocomplete="off" id="loginForm">
         
         <!-- CSRF Token - CRITICAL for security -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -64,7 +64,10 @@
         </div>
         
         <!-- Submit Button -->
-        <button type="submit" class="login-btn">Login</button>
+        <button type="submit" class="login-btn" id="loginBtn">
+            <span class="btn-text">Login</span>
+            <span class="spinner"></span>
+        </button>
 
         <!-- Error Message -->
         {% if error %}
@@ -74,13 +77,15 @@
     </form>
 </div>
 
-<!-- JS for Floating Labels -->
+<!-- JS for Floating Labels & Button Spinner -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const inputs = document.querySelectorAll('.input-group input');
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
 
+    // Float label on page load if value exists
     inputs.forEach(input => {
-        // Float label on page load if value exists
         if(input.value.trim() !== '') input.classList.add('filled');
 
         // Toggle 'filled' class when user types
@@ -92,8 +97,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Add spinning animation on form submit
+    loginForm.addEventListener('submit', function(e) {
+        // Add spinning class to button
+        loginBtn.classList.add('spinning');
+        
+        // Disable the button to prevent multiple submissions
+        loginBtn.disabled = true;
+        
+        // The form will continue to submit normally
+        // If you want to prevent submission for demo, uncomment the next line
+        // e.preventDefault();
+    });
 });
 </script>
 
 </body>
+
 </html>

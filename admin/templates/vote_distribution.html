@@ -188,10 +188,6 @@
                 <i class="fa-solid fa-file-pdf"></i>
                 Export PDF
             </button>
-            <button class="export-btn" id="populateBtn" onclick="populateData()" style="background: var(--success-green);" disabled>
-                <i class="fa-solid fa-database"></i>
-                Populate Data
-            </button>
             <a href="#" class="back-btn" onclick="history.back(); return false;">
                 <i class="fa-solid fa-arrow-left"></i>
                 Back
@@ -225,9 +221,9 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 View Distribution
             </button>
-            <button class="view-btn" id="refreshBtn" onclick="refreshData()" style="background: var(--warning-orange);" disabled>
-                <i class="fa-solid fa-rotate"></i>
-                Refresh
+            <button class="view-btn" id="populateBtn" onclick="populateData()" style="background: var(--success-green);" disabled>
+                <i class="fa-solid fa-database"></i>
+                Populate Data
             </button>
         </div>
     </div>
@@ -251,10 +247,7 @@
             <p>Select an election above to view vote distribution analysis</p>
         </div>
     </div>
-
-    <!-- Debug Toggle -->
-    <div class="debug-toggle" onclick="toggleDebug()">🐞 Show Debug Info</div>
-    <div id="debugInfo" class="debug-info"></div>
+    
 </div>
 
 <!-- Simple Theme Synchronization -->
@@ -292,7 +285,6 @@
         
         const electionSelect = document.getElementById('electionSelect');
         const viewBtn = document.getElementById('viewBtn');
-        const refreshBtn = document.getElementById('refreshBtn');
         const populateBtn = document.getElementById('populateBtn');
         const exportPDFBtn = document.getElementById('exportPDFBtn');
         
@@ -300,13 +292,11 @@
         electionSelect.addEventListener('change', function() {
             if (this.value) {
                 viewBtn.disabled = false;
-                refreshBtn.disabled = false;
                 populateBtn.disabled = false;
                 exportPDFBtn.disabled = false;
                 addDebug(`Election selected: ${this.value} (Scope: ${this.options[this.selectedIndex].dataset.scope})`);
             } else {
                 viewBtn.disabled = true;
-                refreshBtn.disabled = true;
                 populateBtn.disabled = true;
                 exportPDFBtn.disabled = true;
             }
@@ -318,7 +308,6 @@
         if (electionId) {
             electionSelect.value = electionId;
             viewBtn.disabled = false;
-            refreshBtn.disabled = false;
             populateBtn.disabled = false;
             exportPDFBtn.disabled = false;
             loadElectionData();
@@ -344,7 +333,7 @@
         try {
             const response = await fetch(`/ctumoalboal-comelec/api/vote-distribution/${electionId}`, {
                 headers: {
-                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                    'X-CSRFToken': getCsrfToken()
                 }
             });
             const data = await response.json();
@@ -407,7 +396,7 @@
             const response = await fetch(`/ctumoalboal-comelec/api/vote-distribution/populate/${electionId}`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                    'X-CSRFToken': getCsrfToken()
                 }
             });
             const data = await response.json();
@@ -424,27 +413,6 @@
             console.error('Error:', error);
             addDebug(`❌ Error: ${error.message}`);
             alert('Failed to populate data');
-        } finally {
-            hideLoading();
-        }
-    }
-    
-    async function refreshData() {
-        if (!currentElectionId) {
-            alert('Please load an election first');
-            return;
-        }
-        
-        showLoading();
-        addDebug(`Refreshing data for election ID: ${currentElectionId}`);
-        
-        try {
-            await loadElectionData();
-            alert('Data refreshed successfully');
-        } catch (error) {
-            console.error('Error:', error);
-            addDebug(`❌ Error: ${error.message}`);
-            alert('Failed to refresh data');
         } finally {
             hideLoading();
         }

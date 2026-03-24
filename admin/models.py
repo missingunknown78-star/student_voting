@@ -392,8 +392,15 @@ class ElectionPosition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     election_id = db.Column(db.Integer, db.ForeignKey('elections.id', ondelete='CASCADE'), nullable=False)
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='SET NULL'), nullable=True)  # For course-specific positions
-    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id', ondelete='SET NULL'), nullable=True)  # NEW: For Day/Night specific positions
+    
+    # Department restriction (for campus-wide elections)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='SET NULL'), nullable=True)
+    
+    # Course restriction (for both campus and department elections)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='SET NULL'), nullable=True)
+    
+    # Program type restriction (Day/Night - for both campus and department elections)
+    program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id', ondelete='SET NULL'), nullable=True)
     
     # THIS IS THE KEY FIELD - how many votes allowed for this position in this election
     max_votes = db.Column(db.Integer, nullable=False, default=1)
@@ -411,8 +418,9 @@ class ElectionPosition(db.Model):
     # Relationships
     election = db.relationship('Election', backref=db.backref('election_positions', cascade='all, delete-orphan'))
     position = db.relationship('Position', backref=db.backref('election_positions', cascade='all, delete-orphan'))
-    course = db.relationship('Course', backref='election_positions')  # Course relationship
-    program_type = db.relationship('ProgramType', backref='election_positions')  # NEW: Program type relationship
+    department = db.relationship('Department', backref='election_positions')
+    course = db.relationship('Course', backref='election_positions')
+    program_type = db.relationship('ProgramType', backref='election_positions')
 
     # Ensure unique combination of election and position
     __table_args__ = (
@@ -421,6 +429,8 @@ class ElectionPosition(db.Model):
 
     def __repr__(self):
         parts = [f'<ElectionPosition {self.election_id}:{self.position_id} max={self.max_votes}']
+        if self.department_id:
+            parts.append(f' department={self.department_id}')
         if self.course_id:
             parts.append(f' course={self.course_id}')
         if self.program_type_id:

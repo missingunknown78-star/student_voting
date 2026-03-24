@@ -250,33 +250,7 @@
     transition: none !important;
 }
 
-/* School Year Indicator - Moved to header-right */
-.school-year-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-    color: white;
-    border-radius: 30px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.3);
-    margin-right: 15px;
-    transition: all 0.3s ease;
-}
-
-.school-year-indicator i {
-    font-size: 0.9rem;
-}
-
-/* Dark mode support for school year indicator */
-:root.dark-mode .school-year-indicator {
-    background: linear-gradient(135deg, #66b0ff, #88c0ff);
-    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.4);
-}
-
-/* Header right container - now flex row to accommodate both elements */
+/* Header right container - now flex row to accommodate elements */
 .header-right {
     flex: 1;
     display: flex;
@@ -293,23 +267,9 @@
         gap: 10px;
     }
     
-    .school-year-indicator {
-        margin-right: 0;
-        width: 100%;
-        justify-content: center;
-    }
-    
     .request-deletion-btn {
         width: 100%;
         justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .school-year-indicator {
-        flex-direction: column;
-        text-align: center;
-        padding: 8px;
     }
 }
 </style>
@@ -323,25 +283,16 @@
             <h1 class="page-title">Manage Students</h1>
         </div>
         <div class="header-center"></div>
-        <!-- In the header-right div, add this after the school year indicator -->
-<div class="header-right">
-    <!-- School Year Indicator moved here beside Request Deletion button -->
-    {% if current_sy %}
-    <div class="school-year-indicator">
-        <i class="fa-solid fa-calendar"></i>
-        <span>School Year: <strong>{{ current_sy }}</strong></span>
-    </div>
-    {% endif %}
-    
-    <!-- NEW: Manage All Students Button -->
-    <a href="{{ url_for('admin.all_registered_students') }}" class="manage-all-btn">
-        <i class="fa-solid fa-users"></i> Manage All Students
-    </a>
-    
-    <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
-        <i class="fa-solid fa-clock"></i> Request Deletion
-    </a>
-</div>
+        <div class="header-right">
+            <!-- NEW: Manage All Students Button -->
+            <a href="{{ url_for('admin.all_registered_students') }}" class="manage-all-btn">
+                <i class="fa-solid fa-users"></i> Manage All Students
+            </a>
+            
+            <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
+                <i class="fa-solid fa-clock"></i> Request Deletion
+            </a>
+        </div>
     </div>
     <p class="page-description">View and monitor registered voters' participation.</p>
 
@@ -826,14 +777,6 @@ if (typeof $ !== 'undefined') {
 
 // === INIT ===
 document.addEventListener("DOMContentLoaded", () => {
-    // Check if there's a school year filter active
-    const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
-    const currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
-    
-    if (currentSchoolYear) {
-        console.log('School Year Filter Active (Elections only):', currentSchoolYear);
-    }
-    
     // Initially, show no scope selected state
     showEmptyState('noScope');
     applyThemeToMainContent();
