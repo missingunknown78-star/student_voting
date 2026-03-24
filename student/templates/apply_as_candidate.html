@@ -9,6 +9,29 @@
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/apply-candidate.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="{{ url_for('student.static', filename='js/candidate-application.js') }}" defer></script>
+<style>
+    .readonly-field {
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px 12px;
+        color: #333;
+        font-size: 0.95rem;
+        margin: 5px 0 10px 0;
+    }
+    
+    .required-star {
+        color: #e74c3c;
+        margin-left: 4px;
+    }
+    
+    .form-hint {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+        margin-top: 4px;
+        display: block;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -62,23 +85,27 @@
                         <h3>
                             <i class="fa-solid fa-file-lines"></i> Application Details
                         </h3>
-                        <table>
+                        <table class="details-table">
                             <tr>
-                                <td>Election:</td>
+                                <td><strong>Election:</strong></td>
                                 <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
                             </tr>
                             <tr>
-                                <td>Position:</td>
+                                <td><strong>Position:</strong></td>
                                 <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Year Level:</strong></td>
+                                <td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
                             </tr>
                             {% if app.party_list %}
                             <tr>
-                                <td>Party List:</td>
+                                <td><strong>Party List:</strong></td>
                                 <td>{{ app.party_list }}</td>
                             </tr>
                             {% endif %}
                             <tr>
-                                <td>Scope:</td>
+                                <td><strong>Scope:</strong></td>
                                 <td>{{ app.scope|title }}</td>
                             </tr>
                         </table>
@@ -105,28 +132,32 @@
                         <h3>
                             <i class="fa-solid fa-star"></i> Application Details
                         </h3>
-                        <table>
+                        <table class="details-table">
                             <tr>
-                                <td>Election:</td>
+                                <td><strong>Election:</strong></td>
                                 <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
                             </tr>
                             <tr>
-                                <td>Position:</td>
+                                <td><strong>Position:</strong></td>
                                 <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Year Level:</strong></td>
+                                <td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
                             </tr>
                             {% if app.party_list %}
                             <tr>
-                                <td>Party List:</td>
+                                <td><strong>Party List:</strong></td>
                                 <td>{{ app.party_list }}</td>
                             </tr>
                             {% endif %}
                             <tr>
-                                <td>Scope:</td>
+                                <td><strong>Scope:</strong></td>
                                 <td>{{ app.scope|title }}</td>
                             </tr>
                             {% if app.reviewed_at %}
                             <tr>
-                                <td>Reviewed on:</td>
+                                <td><strong>Reviewed on:</strong></td>
                                 <td>{{ app.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}</td>
                             </tr>
                             {% endif %}
@@ -148,18 +179,22 @@
                     
                     <div class="details-table">
                         <h3>Application Details</h3>
-                        <table>
+                        <table class="details-table">
                             <tr>
-                                <td>Election:</td>
+                                <td><strong>Election:</strong></td>
                                 <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
                             </tr>
                             <tr>
-                                <td>Position:</td>
+                                <td><strong>Position:</strong></td>
                                 <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Year Level:</strong></td>
+                                <td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
                             </tr>
                             {% if app.party_list %}
                             <tr>
-                                <td>Party List:</td>
+                                <td><strong>Party List:</strong></td>
                                 <td>{{ app.party_list }}</td>
                             </tr>
                             {% endif %}
@@ -220,19 +255,20 @@
                 
                 <div class="form-group full-width">
                     <label>Your Name</label>
-                    <p id="applicantName">{{ student.first_name }} {{ student.last_name }}</p>
+                    <p id="applicantName" class="readonly-field">{{ student.first_name }} {{ student.last_name }}</p>
                 </div>
 
-                <!-- Display Year Level (read-only) - Optional but good for user feedback -->
+                <!-- Display Year Level (read-only) -->
                 <div class="form-group full-width">
-                    <label>Your Year Level</label>
+                    <label>Your Year Level <span class="required-star">*</span></label>
                     <p class="readonly-field" id="applicantYearLevel">
                         {% if student.year_level %}
                             {{ student.year_level.year_name }}
                         {% else %}
-                            Not specified
+                            Not specified - Please contact admin to update your year level
                         {% endif %}
                     </p>
+                    <small class="form-hint">Your current year level will be included in your application</small>
                 </div>
 
                 <!-- Party List Field -->
@@ -251,7 +287,7 @@
 
                 <!-- ELECTION SCOPE -->
                 <div class="form-group">
-                    <label>Election Scope <span class="required">*</span></label>
+                    <label>Election Scope <span class="required-star">*</span></label>
                     <select name="scope" id="apply_scope" required onchange="filterElectionsForApply()">
                         <option value="" disabled selected>Select Election Scope</option>
                         <option value="campus">Campus-Wide Election</option>
@@ -261,7 +297,7 @@
 
                 <!-- Election Field -->
                 <div class="form-group">
-                    <label>Election <span class="required">*</span></label>
+                    <label>Election <span class="required-star">*</span></label>
                     <select name="election_id" id="apply_election" required>
                         <option value="" disabled selected>Select election</option>
                         {% for election in active_elections %}
@@ -281,7 +317,7 @@
 
                 <!-- Position Field -->
                 <div class="form-group">
-                    <label>Position <span class="required">*</span></label>
+                    <label>Position <span class="required-star">*</span></label>
                     <select name="position_id" id="apply_position" required>
                         <option value="" disabled selected>Select position</option>
                         {% for position in positions %}
@@ -316,20 +352,6 @@
     </div>
 </div>
 
-<!-- Add this CSS for the readonly field -->
-<style>
-.readonly-field {
-    background-color: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 10px 12px;
-    color: #333;
-    font-size: 0.95rem;
-    margin: 5px 0 10px 0;
-}
-</style>
-
-<!-- Keep only the filter function since it's not in the external JS -->
 <script>
 function filterElectionsForApply() {
     const scope = document.getElementById('apply_scope').value;

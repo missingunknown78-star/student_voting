@@ -97,6 +97,81 @@
         display: none;
     }
     
+    /* ==================== PAGINATION STYLES ==================== */
+    .pagination-wrapper {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid var(--border-color) !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .pagination-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .pagination-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color) !important;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .pagination-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+        color: white !important;
+        transform: translateY(-2px);
+    }
+    
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .page-number {
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color) !important;
+        text-decoration: none;
+    }
+    
+    .page-number.active {
+        background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+    
+    .page-number:hover:not(.active) {
+        background: var(--border-color) !important;
+        transform: translateY(-2px);
+    }
+    
+    .pagination-info {
+        font-size: 0.85rem;
+        color: var(--text-secondary) !important;
+    }
+    
     /* Responsive stats */
     @media (max-width: 768px) {
         .stats-grid {
@@ -115,6 +190,15 @@
         .stat-label {
             font-size: 0.95rem;
         }
+        
+        .pagination-wrapper {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .pagination-controls {
+            justify-content: center;
+        }
     }
     
     @media (max-width: 480px) {
@@ -131,12 +215,12 @@
     <h1>COMELEC Dashboard</h1>
     
     <div class="header-actions">
-        <!-- School Year Filter Dropdown -->
+        <!-- Year Filter Dropdown (Changed from School Year to Year) -->
         <div class="school-year-filter">
-            <select id="schoolYearSelect" class="school-year-select" onchange="changeSchoolYear(this.value)">
-                <option value="">All School Years</option>
-                {% for sy in school_years %}
-                <option value="{{ sy }}" {% if current_sy == sy %}selected{% endif %}>{{ sy }}</option>
+            <select id="yearSelect" class="school-year-select" onchange="changeYear(this.value)">
+                <option value="">All Years</option>
+                {% for yr in available_years %}
+                <option value="{{ yr }}" {% if current_year == yr|string %}selected{% endif %}>{{ yr }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -147,9 +231,9 @@
     </div>
 </div>
 
-<!-- ================= STATS TABS (Quick Stats) ================= -->
+<!-- Stats Cards -->
 <div class="stats-grid">
-    <!-- Total Students Card (KEPT) -->
+    <!-- Total Students Card -->
     <div class="stat-card">
         <div class="stat-icon">
             <i class="fa-solid fa-users"></i>
@@ -159,7 +243,7 @@
         <div class="stat-note">Registered voters</div>
     </div>
     
-    <!-- Ongoing Elections Card (MOVED HERE) -->
+    <!-- Ongoing Elections Card -->
     <div class="stat-card">
         <div class="stat-icon">
             <i class="fa-solid fa-calendar-check"></i>
@@ -179,7 +263,7 @@
         <div class="stat-note">Click to manage</div>
     </div>
     
-    <!-- Delete Account Requests Card (Clickable) - NEW -->
+    <!-- Delete Account Requests Card (Clickable) -->
     <div class="stat-card" onclick="window.location.href='{{ url_for('admin.account_deletion_requests') }}'">
         <div class="stat-icon">
             <i class="fa-solid fa-user-minus"></i>
@@ -190,7 +274,7 @@
     </div>
 </div>
 
-<!-- ================= RECENT ELECTIONS ================= -->
+<!-- ================= RECENT ELECTIONS WITH PAGINATION ================= -->
 <div class="recent-elections-container">
     <h3>Recent Elections</h3>
 
@@ -205,7 +289,7 @@
             </tr>
         </thead>
         <tbody>
-        {% for election in recent_elections %}
+        {% for election in paginated_elections %}
             <tr>
                 <td>{{ election.title }}</td>
                 <td>{{ election.department or 'General' }}</td>
@@ -225,63 +309,76 @@
         </tbody>
     </table>
 
-    {% if recent_elections_all|length > 5 %}
-    <div class="see-more-wrapper">
-        <button id="seeMoreBtn" class="see-more-btn">See more...</button>
+    <!-- Pagination Controls -->
+    {% if total_pages > 1 %}
+    <div class="pagination-wrapper">
+        <div class="pagination-info">
+            Showing {{ start_index }} to {{ end_index }} of {{ total_elections_count }} elections
+        </div>
+        <div class="pagination-controls">
+            {% if current_page > 1 %}
+            <a href="#" class="pagination-btn" data-page="{{ current_page - 1 }}">
+                <i class="fa-solid fa-chevron-left"></i> Previous
+            </a>
+            {% else %}
+            <button class="pagination-btn" disabled>
+                <i class="fa-solid fa-chevron-left"></i> Previous
+            </button>
+            {% endif %}
+            
+            {% for page_num in page_range %}
+                {% if page_num == current_page %}
+                <span class="page-number active">{{ page_num }}</span>
+                {% elif page_num == '...' %}
+                <span class="page-dots">...</span>
+                {% else %}
+                <a href="#" class="page-number" data-page="{{ page_num }}">{{ page_num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if current_page < total_pages %}
+            <a href="#" class="pagination-btn" data-page="{{ current_page + 1 }}">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <button class="pagination-btn" disabled>
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 </div>
 
-<!-- ================= MODAL ================= -->
-<div id="recentElectionsModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h3>All Recent Elections</h3>
-
-        <div class="modal-table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Department</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for election in recent_elections_all %}
-                    <tr>
-                        <td>{{ election.title }}</td>
-                        <td>{{ election.department or 'General' }}</td>
-                        <td>{{ election.start_date.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>{{ election.end_date.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>
-                            <span class="badge
-                                {% if election.status == 'Open' %} bg-success
-                                {% elif election.status == 'Upcoming' %} bg-warning
-                                {% else %} bg-danger
-                                {% endif %}">
-                                {{ election.status }}
-                            </span>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
 <script>
-    // Function to change school year
-    function changeSchoolYear(schoolYear) {
-        if (schoolYear) {
-            window.location.href = "{{ url_for('admin.dashboard') }}?school_year=" + encodeURIComponent(schoolYear);
+    // Function to change year (changed from school year)
+    function changeYear(year) {
+        if (year) {
+            window.location.href = "{{ url_for('admin.dashboard') }}?year=" + encodeURIComponent(year);
         } else {
             window.location.href = "{{ url_for('admin.dashboard') }}";
         }
     }
+    
+    // Pagination click handler (updated to use year)
+    document.addEventListener('DOMContentLoaded', function() {
+        const paginationLinks = document.querySelectorAll('.pagination-btn, .page-number');
+        const currentYear = '{{ current_year }}';
+        
+        paginationLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.getAttribute('data-page');
+                if (page) {
+                    let url = "{{ url_for('admin.dashboard') }}?page=" + page;
+                    if (currentYear) {
+                        url += "&year=" + encodeURIComponent(currentYear);
+                    }
+                    window.location.href = url;
+                }
+            });
+        });
+    });
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/admin_dashboard.js') }}"></script>

@@ -38,9 +38,6 @@ from datetime import datetime
 import pytz
 from admin.models import YearLevel, DeletionRequestAudit
 from student.models import PendingCandidate
-# Add this near your other imports
-
-
 
 
 
@@ -55,6 +52,7 @@ except ImportError:
 
 # ---------------------- Blueprint ---------------------- #
 admin_bp = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
+
 
 # ---------------------- PHE Helper Functions ---------------------- #
 def get_encryption_keys():
@@ -99,32 +97,28 @@ def deserialize_encrypted_vote(encrypted_data):
 
 def count_votes_for_candidate(candidate_id, election_id):
     """Count votes for a specific candidate in an election using PHE"""
-    # Get all votes for this election
+
     votes = Vote.query.filter_by(election_id=election_id).all()
     
     if not votes:
         return 0
     
-    # Get all candidates in this election
+
     candidates = Candidate.query.filter_by(election_id=election_id).all()
     candidate_ids = [c.id for c in candidates]
-    
-    # Find the index of our target candidate
+
     try:
         candidate_index = candidate_ids.index(candidate_id)
     except ValueError:
-        return 0  # Candidate not found in this election
+        return 0 
     
-    # Initialize encrypted sum
     total_encrypted = public_key.encrypt(0)
     
-    # Add all votes homomorphically
     for vote in votes:
         enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
         if candidate_index < len(enc_votes):
             total_encrypted = total_encrypted + enc_votes[candidate_index]
     
-    # Decrypt the total for this candidate
     return private_key.decrypt(total_encrypted)
 
 def get_all_voters_for_election(election_id):
@@ -133,10 +127,8 @@ def get_all_voters_for_election(election_id):
     return list(set(vote.student_id for vote in votes))
 
 # ---------------------- Secure Admin Required Decorator ---------------------- #
-# Configure logging for unauthorized attempts
 logging.basicConfig(filename='admin_access.log', level=logging.WARNING,
                     format='%(asctime)s - %(message)s')
-
 
 def admin_required(f):
     @wraps(f)
@@ -145,20 +137,16 @@ def admin_required(f):
         attempts = session.get(f'admin_attempts_{ip}', 0)
         cooldown = session.get(f'admin_cooldown_{ip}', 0)
 
-        # Check cooldown
         if time.time() < cooldown:
             flash(f"Too many failed attempts. Try again in {int(cooldown - time.time())} seconds.", "admin-warning")
             return redirect(url_for('admin.login'))
 
-        # Check if user is authenticated and has role 'Admin'
         if not current_user.is_authenticated or getattr(current_user, 'role', None) != 'Admin':
             logging.warning(f"Unauthorized admin access attempt from IP: {ip}")
 
-            # Increment failed attempts
             attempts += 1
             session[f'admin_attempts_{ip}'] = attempts
 
-            # Start cooldown if max attempts reached
             if attempts >= MAX_ATTEMPTS:
                 session[f'admin_cooldown_{ip}'] = time.time() + COOLDOWN_TIME
                 session[f'admin_attempts_{ip}'] = 0
@@ -168,7 +156,6 @@ def admin_required(f):
 
             return redirect(url_for('admin.login'))
 
-        # Reset failed attempts on successful admin access
         session[f'admin_attempts_{ip}'] = 0
         session[f'admin_cooldown_{ip}'] = 0
 
@@ -183,23 +170,19 @@ def count_unique_voters(election_id):
     ).distinct().count()
 
 
-
-def get_all_school_years():
-    """Get all unique school years from elections"""
+def get_all_years():
+    """Get all unique years from elections"""
     try:
         elections = Election.query.order_by(Election.start_date.asc()).all()
-        school_years = set()
+        years = set()
         
         for election in elections:
             if election.start_date:
-                year = election.start_date.year
-                school_years.add(f"{year}-{year+1}")
+                years.add(election.start_date.year)
         
-        # Sort in descending order (newest first)
-        return sorted(list(school_years), reverse=True)
+        return sorted(list(years), reverse=True)
     except:
         return []
-
 
 
 # ------------------- Configuration ------------------- #
@@ -212,7 +195,7 @@ from admin.models import AccessCode
 from datetime import datetime
 import time
 
-# Add these constants at the top with your other imports
+
 ACCESS_ATTEMPTS_LIMIT = 5
 ACCESS_COOLDOWN = 300  # 5 minutes in seconds
 
@@ -221,27 +204,24 @@ from datetime import datetime
 import time
 from flask import abort
 
-# Add these constants at the top with your other imports
 ACCESS_ATTEMPTS_LIMIT = 5
 ACCESS_COOLDOWN = 300  # 5 minutes in seconds
+
 
 # ------------------- Dynamic Admin Access Code Entry ------------------- #
 @admin_bp.route('/<path:secret_path>', methods=['GET', 'POST'])
 def dynamic_access(secret_path):
     """Dynamic URL access code entry - path comes from database"""
     
-    # Verify if the path matches the active secret path
     if not AccessCode.verify_path(secret_path):
-        # If path doesn't match, return 404 to hide existence
+
         abort(404)
     
     ip = request.remote_addr
     
-    # Check if already authenticated
     if session.get('access_granted'):
         return redirect(url_for('admin.login'))
     
-    # Check cooldown for failed attempts
     attempts_key = f'access_attempts_{ip}'
     cooldown_key = f'access_cooldown_{ip}'
     
@@ -256,15 +236,13 @@ def dynamic_access(secret_path):
     if request.method == 'POST':
         entered_code = request.form.get('access_code', '').strip()
         
-        # Verify code against database
         if AccessCode.verify_code(entered_code):
-            # Success - reset attempts and grant access
+
             session[attempts_key] = 0
             session[cooldown_key] = 0
             session['access_granted'] = True
             session['access_time'] = datetime.now().isoformat()
-            
-            # Log successful access
+
             log_audit(
                 action='ACCESS_CODE_SUCCESS',
                 description=f"Admin access code entered successfully from IP: {ip}"
@@ -272,11 +250,10 @@ def dynamic_access(secret_path):
             
             return redirect(url_for('admin.login'))
         else:
-            # Failed attempt
+
             attempts += 1
             session[attempts_key] = attempts
             
-            # Log failed attempt
             log_audit(
                 action='ACCESS_CODE_FAILED',
                 description=f"Failed access code attempt from IP: {ip} - Attempt {attempts}"
@@ -303,7 +280,6 @@ def dynamic_access(secret_path):
 def verify_access_code_ajax():
     """AJAX endpoint for auto-verifying access code"""
     
-    # 🔴 ADD THIS CSRF VALIDATION
     from flask_wtf.csrf import validate_csrf
     from flask_wtf.csrf import CSRFError
     
@@ -317,7 +293,6 @@ def verify_access_code_ajax():
     
     ip = request.remote_addr
     
-    # Rest of your code remains exactly the same...
     attempts_key = f'access_attempts_{ip}'
     cooldown_key = f'access_cooldown_{ip}'
     
@@ -333,7 +308,6 @@ def verify_access_code_ajax():
     
     entered_code = request.form.get('access_code', '').strip()
     
-    # Verify code against database
     if AccessCode.verify_code(entered_code):
         # Success
         session[attempts_key] = 0
@@ -378,22 +352,21 @@ def verify_access_code_ajax():
 def login():
     """Second layer: Actual login page - only accessible after access code"""
     
-    # 🚫 CHECK ACCESS CODE FIRST
     if not session.get('access_granted'):
-        # Get current secret path from database
+
         secret_path = AccessCode.get_secret_path()
-        # Redirect to the dynamic path
+
         return redirect(url_for('admin.dynamic_access', secret_path=secret_path))
     
     ip = request.remote_addr
     attempts = session.get(f'login_attempts_{ip}', 0)
     cooldown = session.get(f'login_cooldown_{ip}', 0)
 
-    # Redirect already logged-in admins to dashboard
+
     if current_user.is_authenticated and getattr(current_user, 'role', None) == 'Admin':
         return redirect(url_for('admin.dashboard'))
 
-    # Check cooldown
+
     if time.time() < cooldown:
         remaining = int(cooldown - time.time())
         error = f'Too many failed attempts. Try again in {remaining} seconds.'
@@ -411,7 +384,7 @@ def login():
         
         if admin and admin.username == username:
             if bcrypt.check_password_hash(admin.password, password) and admin.role == 'Admin':
-                # Reset failed attempts
+
                 session[f'login_attempts_{ip}'] = 0
                 session[f'login_cooldown_{ip}'] = 0
                 session.permanent = True
@@ -442,7 +415,7 @@ def login():
         else:
             admin = None
 
-        # If we get here, login failed
+
         if not admin:
             attempts += 1
             session[f'login_attempts_{ip}'] = attempts
@@ -476,8 +449,6 @@ def login():
                 error = error_msg
 
     return render_template('admin_login.html', error=error)
-
-
 
 
 
@@ -1182,57 +1153,53 @@ def get_2fa_setup_data():
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    # Get school year filter from URL parameters or session
-    school_year = request.args.get('school_year')
+    # Get year filter from URL parameters or session
+    year = request.args.get('year')
     
-    # If no school_year parameter, try to get from session
-    if not school_year:
-        school_year = session.get('admin_current_school_year')
+    # If no year parameter, try to get from session
+    if not year:
+        year = session.get('admin_current_year')
     
-    # Get all available school years from elections first
+    # Get all available years from elections first
     all_elections = Election.query.order_by(Election.start_date.asc()).all()
-    school_years = set()
+    available_years = set()
     for election in all_elections:
         if election.start_date:
-            year = election.start_date.year
-            school_years.add(f"{year}-{year+1}")
+            available_years.add(election.start_date.year)
     
-    # Sort school years in descending order (newest first)
-    school_years = sorted(list(school_years), reverse=True)
+    # Sort years in descending order (newest first)
+    available_years = sorted(list(available_years), reverse=True)
     
-    # If no school_year is selected, default to the latest election's school year
-    if not school_year and school_years:
+    # If no year is selected, default to the latest election's year
+    if not year and available_years:
         # Get the most recent election
         latest_election = Election.query.order_by(Election.start_date.desc()).first()
         if latest_election and latest_election.start_date:
             year = latest_election.start_date.year
-            default_sy = f"{year}-{year+1}"
-            if default_sy in school_years:
-                school_year = default_sy
-                session['admin_current_school_year'] = school_year
+            if year in available_years:
+                session['admin_current_year'] = year
     
-    # Parse school year to date range
+    # Parse year to date range (January 1 to December 31 of that year)
     start_date = None
     end_date = None
-    if school_year:
+    if year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             start_date = None
             end_date = None
     
     # Save to session
-    if school_year:
-        session['admin_current_school_year'] = school_year
+    if year:
+        session['admin_current_year'] = year
     
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
 
     # ================================
-    # Build base queries with school year filter
+    # Build base queries with year filter
     # ================================
     election_query = Election.query
     vote_query = Vote.query
@@ -1251,20 +1218,20 @@ def dashboard():
         )
     
     # ================================
-    # KPI counts with school year filter
+    # KPI counts with year filter
     # ================================
     total_students = Student.query.count()  # Total students always same (no filter)
     total_elections = election_query.count()
     total_votes = vote_query.count()
     
-    # ===== Get pending applications count filtered by school year =====
+    # ===== Get pending applications count filtered by year =====
     from student.models import PendingCandidate
     
-    # Filter pending applications by school year (based on election dates)
+    # Filter pending applications by year (based on election dates)
     pending_applications_query = PendingCandidate.query.filter_by(status='pending')
     
     if start_date and end_date:
-        # Join with Election to filter by school year
+        # Join with Election to filter by year
         pending_applications_query = pending_applications_query.join(
             Election, PendingCandidate.election_id == Election.id
         ).filter(
@@ -1274,7 +1241,7 @@ def dashboard():
     
     pending_applications = pending_applications_query.count()
     
-    # ===== Get pending deletion requests count filtered by school year =====
+    # ===== Get pending deletion requests count filtered by year =====
     # Filter deletion requests by request date (when the request was made)
     pending_deletion_query = DeletionRequest.query.filter_by(status='pending')
     
@@ -1286,7 +1253,7 @@ def dashboard():
     
     pending_deletion_requests = pending_deletion_query.count()
     
-    # ===== Get ongoing elections count (based on current date, filtered by school year) =====
+    # ===== Get ongoing elections count (based on current date, filtered by year) =====
     ongoing_elections_query = Election.query.filter(
         Election.start_date <= now,
         Election.end_date >= now
@@ -1301,19 +1268,47 @@ def dashboard():
     ongoing_elections = ongoing_elections_query.count()
 
     # ================================
-    # Recent elections table with school year filter
+    # Recent elections table with year filter (with pagination)
     # ================================
     elections = election_query.order_by(Election.start_date.desc()).all()
-    recent_elections_all = elections
 
     # Localize timezone if naive
-    for election in recent_elections_all:
+    for election in elections:
         if election.start_date.tzinfo is None:
             election.start_date = tz.localize(election.start_date)
         if election.end_date.tzinfo is None:
             election.end_date = tz.localize(election.end_date)
 
-    recent_elections = recent_elections_all[:5]
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
+    total_elections_count = len(elections)
+    total_pages = (total_elections_count + per_page - 1) // per_page if total_elections_count > 0 else 1
+    
+    if page < 1:
+        page = 1
+    if page > total_pages and total_pages > 0:
+        page = total_pages
+    
+    start_idx = (page - 1) * per_page
+    end_idx = min(start_idx + per_page, total_elections_count)
+    paginated_elections = elections[start_idx:end_idx]
+    
+    start_index = start_idx + 1 if elections else 0
+    end_index = end_idx
+    
+    # Generate page range
+    page_range = []
+    if total_pages <= 7:
+        page_range = list(range(1, total_pages + 1))
+    else:
+        if page <= 3:
+            page_range = [1, 2, 3, 4, '...', total_pages - 1, total_pages]
+        elif page >= total_pages - 2:
+            page_range = [1, 2, '...', total_pages - 3, total_pages - 2, total_pages - 1, total_pages]
+        else:
+            page_range = [1, '...', page - 1, page, page + 1, '...', total_pages]
 
     return render_template(
         'admin_dashboard.html',
@@ -1324,14 +1319,19 @@ def dashboard():
         total_votes=total_votes,
         pending_applications=pending_applications,
         pending_deletion_requests=pending_deletion_requests,
-        recent_elections=recent_elections,
-        recent_elections_all=recent_elections_all,
-        school_years=school_years,
-        current_sy=school_year,
+        paginated_elections=paginated_elections,
+        total_elections_count=total_elections_count,
+        total_pages=total_pages,
+        current_page=page,
+        start_index=start_index,
+        end_index=end_index,
+        page_range=page_range,
+        available_years=available_years,  
+        current_year=year,  
         now=now
     )
 
-# Add this to your admin routes file (where your dashboard route is)
+
 
 @admin_bp.route('/settings')
 @admin_required
@@ -3007,19 +3007,18 @@ def import_students_table():
 @admin_bp.route('/students')
 @admin_required
 def manage_students():
-    # Get school year filter from session (set by dashboard) - ONLY FOR ELECTIONS DROPDOWN
-    school_year = session.get('admin_current_school_year')
+    # Get year filter from session (set by dashboard)
+    year = session.get('admin_current_year')
     
-    # Parse school year to date range for elections filtering
+    # Parse year to date range for elections filtering
     start_date = None
     end_date = None
-    if school_year:
+    if year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             start_date = None
             end_date = None
     
@@ -3030,10 +3029,10 @@ def manage_students():
     departments_data = [{"id": d.id, "name": d.name} for d in departments]
     courses_data = [{"id": c.id, "name": c.course_name} for c in courses]
 
-    # -------------------- Fetch Elections with scope - FILTERED BY SCHOOL YEAR -------------------- #
+    # -------------------- Fetch Elections with scope - FILTERED BY YEAR -------------------- #
     election_query = Election.query.order_by(Election.start_date.desc())
     
-    # Apply school year filter to elections ONLY
+    # Apply year filter to elections ONLY
     if start_date and end_date:
         election_query = election_query.filter(
             Election.start_date >= start_date,
@@ -3048,15 +3047,13 @@ def manage_students():
         "year_levels": e.year_levels  # Include year_levels for display
     } for e in elections]
 
-    # 🚫 REMOVED: MANAGE_STUDENTS_VIEW audit log (page view - not a data modification)
-
     # -------------------- Render Template -------------------- #
     return render_template(
         'manage_students.html',
         departments=departments_data,
         courses=courses_data,
         elections=elections_data,
-        current_sy=school_year  # Pass current school year to template
+        current_year=year  # Changed from current_sy to current_year
     )
 
 
@@ -3372,7 +3369,8 @@ def delete_student(id):
 def all_registered_students():
     """Display all registered students"""
     
-    school_year = session.get('admin_current_school_year')
+    # Get year filter from session (set by dashboard) - for consistency across pages
+    year = session.get('admin_current_year')
     page = request.args.get('page', 1, type=int)
     per_page = 20
     
@@ -3398,7 +3396,7 @@ def all_registered_students():
         courses=[{"id": c.id, "name": c.course_name, "department_id": c.department_id} for c in courses],
         year_levels=[{"id": y.id, "year_name": y.year_name} for y in year_levels],
         registered_numbers=registered_numbers,
-        current_sy=school_year
+        current_year=year  # Changed from current_sy to current_year
     )
 
 
@@ -3541,15 +3539,16 @@ def account_deletion_requests():
     # Get filters from session (set by dashboard)
     start_date = session.get('admin_start_date')
     end_date = session.get('admin_end_date')
-    school_year = session.get('admin_current_school_year')
+    year = session.get('admin_current_year')  
     
     # Pass filters to template
     return render_template(
         'account_deletion_requests.html',
         start_date=start_date,
         end_date=end_date,
-        school_year=school_year
+        current_year=year  
     )
+
 
 @admin_bp.route('/deletion-requests/data')
 def get_deletion_requests_data():
@@ -3562,7 +3561,7 @@ def get_deletion_requests_data():
     # Get GLOBAL filters from session (set by dashboard)
     start_date_filter = session.get('admin_start_date')
     end_date_filter = session.get('admin_end_date')
-    school_year = session.get('admin_current_school_year')
+    year = session.get('admin_current_year')  
     
     per_page = 10
     
@@ -3577,14 +3576,13 @@ def get_deletion_requests_data():
         except (ValueError, TypeError):
             pass
     
-    # If no explicit date range, try school year filter
-    if not start_date_obj and school_year:
+    # If no explicit date range, try year filter
+    if not start_date_obj and year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date_obj = datetime(start_year, 1, 1)
-            end_date_obj = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date_obj = datetime(year_int, 1, 1)
+            end_date_obj = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             pass
     
     # Handle different status filters
@@ -3856,7 +3854,7 @@ def get_deletion_requests_stats():
     # Get GLOBAL filters from session (set by dashboard)
     start_date_filter = session.get('admin_start_date')
     end_date_filter = session.get('admin_end_date')
-    school_year = session.get('admin_current_school_year')
+    year = session.get('admin_current_year')  
     
     # Parse date range from session
     start_date_obj = None
@@ -3869,14 +3867,13 @@ def get_deletion_requests_stats():
         except (ValueError, TypeError):
             pass
     
-    # If no explicit date range, try school year filter
-    if not start_date_obj and school_year:
+    # If no explicit date range, try year filter
+    if not start_date_obj and year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date_obj = datetime(start_year, 1, 1)
-            end_date_obj = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date_obj = datetime(year_int, 1, 1)
+            end_date_obj = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             pass
     
     # Current pending requests with global filter
@@ -3915,6 +3912,7 @@ def get_deletion_requests_stats():
         'rejected': rejected
     })
 
+
 @admin_bp.route('/deletion-requests/<int:request_id>')
 def get_deletion_request(request_id):
     """Get details of a specific deletion request"""
@@ -3933,6 +3931,7 @@ def get_deletion_request(request_id):
         'processed_by_name': req.admin.username if req.admin else None,
         'processed_date': req.processed_date.isoformat() if req.processed_date else None
     })
+
 
 @admin_bp.route('/deletion-requests/<int:request_id>/process', methods=['POST'])
 @admin_required
@@ -4252,7 +4251,7 @@ def pending_candidates():
     # Get GLOBAL filters from session (set by dashboard)
     start_date_filter = session.get('admin_start_date')
     end_date_filter = session.get('admin_end_date')
-    school_year = session.get('admin_current_school_year')
+    year = session.get('admin_current_year') 
     
     # Parse date range from session
     start_date = None
@@ -4265,14 +4264,13 @@ def pending_candidates():
         except (ValueError, TypeError):
             pass
     
-    # If no explicit date range, try school year filter
-    if not start_date and school_year:
+    # If no explicit date range, try year filter
+    if not start_date and year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             pass
     
     # Get filter parameters
@@ -4315,7 +4313,7 @@ def pending_candidates():
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     applications = paginated.items
     
-    # FIXED: Get statistics with the SAME date range filter
+    # Get statistics with the SAME date range filter
     stats_query = PendingCandidate.query
     
     # Apply date filter to stats (same logic as main query)
@@ -4342,7 +4340,8 @@ def pending_candidates():
                          pagination=paginated,
                          stats=stats,
                          status_filter=status,
-                         search=search)
+                         search=search,
+                         current_year=year)  # Pass current year to template
 
 
 @admin_bp.route('/pending-candidates/stats')
@@ -4354,7 +4353,7 @@ def get_pending_candidates_stats():
     # Get GLOBAL filters from session (set by dashboard)
     start_date_filter = session.get('admin_start_date')
     end_date_filter = session.get('admin_end_date')
-    school_year = session.get('admin_current_school_year')
+    year = session.get('admin_current_year') 
     
     # Parse date range from session
     start_date = None
@@ -4367,14 +4366,13 @@ def get_pending_candidates_stats():
         except (ValueError, TypeError):
             pass
     
-    # If no explicit date range, try school year filter
-    if not start_date and school_year:
+    # If no explicit date range, try year filter
+    if not start_date and year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             pass
     
     # Base query
@@ -4400,7 +4398,6 @@ def get_pending_candidates_stats():
     return jsonify(stats)
 
 
-
 @admin_bp.route('/pending-candidate/<int:id>')
 @login_required
 def get_pending_candidate(id):
@@ -4422,8 +4419,6 @@ def get_pending_candidate(id):
             if student.year_level_id:
                 year = YearLevel.query.get(student.year_level_id)
                 year_name = year.year_name if year else None
-        
-        # 🚫 REMOVED: Single fetch audit log (not a data modification)
         
         return jsonify({
             'success': True,
@@ -4462,11 +4457,11 @@ def approve_pending(id):
         if pending.status != 'pending':
             return jsonify({'success': False, 'message': 'This application is no longer pending'}), 400
         
-        # FIXED: Check if candidate already exists with same name in the SAME election only
+        # Check if candidate already exists with same name in the SAME election only
         existing = Candidate.query.filter_by(
             first_name=pending.first_name,
             last_name=pending.last_name,
-            election_id=pending.election_id  # Add election_id to check
+            election_id=pending.election_id
         ).first()
         
         if existing:
@@ -4475,7 +4470,6 @@ def approve_pending(id):
             pending.reviewed_at = datetime.utcnow()
             db.session.commit()
             
-            # ✅ KEEP THIS AUDIT LOG (AUTO-REJECT DUPLICATE - data modification)
             username = getattr(current_user, 'username', 'Unknown')
             ip = request.remote_addr
             
@@ -4489,7 +4483,7 @@ def approve_pending(id):
                 'message': f'A candidate with the name {pending.first_name} {pending.last_name} already exists in this election. Cannot approve.'
             }), 400
         
-        # Create new candidate
+        # Create new candidate with year level
         new_candidate = Candidate(
             first_name=pending.first_name,
             last_name=pending.last_name,
@@ -4497,6 +4491,7 @@ def approve_pending(id):
             platform=pending.platform,
             department_id=pending.department_id,
             course_id=pending.course_id,
+            year_level_id=pending.year_level_id,
             position_id=pending.position_id,
             election_id=pending.election_id,
             scope=pending.scope,
@@ -4513,7 +4508,6 @@ def approve_pending(id):
         
         db.session.commit()
         
-        # ✅ KEEP THIS AUDIT LOG (APPROVE CANDIDATE - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -4560,7 +4554,6 @@ def reject_pending(id):
         
         db.session.commit()
         
-        # ✅ KEEP THIS AUDIT LOG (REJECT CANDIDATE - data modification)
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -4881,28 +4874,27 @@ def update_course():
 @admin_bp.route('/candidates', methods=['GET', 'POST'])
 @admin_required
 def manage_candidates():
-    # Get school year filter from session (set by dashboard)
-    school_year = session.get('admin_current_school_year')
+    # Get year filter from session (set by dashboard)
+    year = session.get('admin_current_year')
     
-    # Parse school year to date range
+    # Parse year to date range (January 1 to December 31)
     start_date = None
     end_date = None
-    if school_year:
+    if year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             start_date = None
             end_date = None
     
-    # Get positions, departments, year levels (these are not filtered by school year)
+    # Get positions, departments, year levels (these are not filtered by year)
     positions = Position.query.all()
     departments = Department.query.order_by(Department.name).all()
-    year_levels = YearLevel.query.all()  # ADD THIS
+    year_levels = YearLevel.query.all()
     
-    # Filter elections by school year if set
+    # Filter elections by year if set
     election_query = Election.query.order_by(Election.start_date.desc())
     if start_date and end_date:
         election_query = election_query.filter(
@@ -4920,14 +4912,14 @@ def manage_candidates():
 
     query = Candidate.query
 
-    # Filter by school year through elections
+    # Filter by year through elections
     if start_date and end_date:
-        # Get election IDs within the school year
+        # Get election IDs within the year
         election_ids = [e.id for e in elections]
         if election_ids:
             query = query.filter(Candidate.election_id.in_(election_ids))
         else:
-            # No elections in this school year, return empty result
+            # No elections in this year, return empty result
             query = query.filter(False)  # This will return no candidates
 
     # Filter by scope
@@ -4959,7 +4951,7 @@ def manage_candidates():
         position_id = request.form.get('position_id')
         election_id = request.form.get('election_id')
         scope = request.form.get('scope')
-        year_level_id = request.form.get('year_level_id', type=int)  # ADD THIS
+        year_level_id = request.form.get('year_level_id', type=int)
 
         # Get election to verify
         election = Election.query.get(election_id)
@@ -4976,7 +4968,7 @@ def manage_candidates():
             flash('Please fill in all required fields.', 'danger')
             return redirect(url_for('admin.manage_candidates'))
 
-        # ===== NEW: Check for duplicate candidate in the SAME election =====
+        # Check for duplicate candidate in the SAME election
         existing_candidate = Candidate.query.filter_by(
             first_name=first_name,
             last_name=last_name,
@@ -4989,12 +4981,9 @@ def manage_candidates():
                 return jsonify({'success': False, 'message': error_msg}), 400
             flash(error_msg, 'danger')
             return redirect(url_for('admin.manage_candidates'))
-        # ===================================================================
 
-        # Validate department based on scope (but department is now optional)
+        # Validate department based on scope
         if scope == 'department' and not department_id_form:
-            # Department is optional now, so we don't require it
-            # Just set department_id_form to None if not provided
             department_id_form = None
 
         # Save photo if uploaded
@@ -5020,27 +5009,27 @@ def manage_candidates():
             position_id=position_id,
             election_id=election_id,
             scope=scope,
-            year_level_id=year_level_id,  # ADD THIS
+            year_level_id=year_level_id,
             photo=photo_filename
         )
 
         db.session.add(new_candidate)
         db.session.commit()
 
-        # ✅ KEEP THIS AUDIT LOG (CREATE CANDIDATE - data modification)
+        # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         department_name = new_candidate.department.name if new_candidate.department else 'N/A'
         position_name = new_candidate.position.name if new_candidate.position else 'N/A'
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
         party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
-        year_level_name = new_candidate.year_level.year_name if new_candidate.year_level else 'N/A'  # ADD THIS
+        year_level_name = new_candidate.year_level.year_name if new_candidate.year_level else 'N/A'
         
-        school_year_info = f" | School Year: {school_year}" if school_year else ""
+        year_info = f" | Year: {year}" if year else ""
         
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Election: {election_title} ({scope}){school_year_info}"
+            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Election: {election_title} ({scope}){year_info}"
         )
 
         # Return JSON for AJAX requests
@@ -5056,8 +5045,8 @@ def manage_candidates():
                 'department': new_candidate.department.name if new_candidate.department else '',
                 'department_id': new_candidate.department_id,
                 'course_id': new_candidate.course_id,
-                'year_level_id': new_candidate.year_level_id,  # ADD THIS
-                'year_level': new_candidate.year_level.year_name if new_candidate.year_level else '',  # ADD THIS
+                'year_level_id': new_candidate.year_level_id,
+                'year_level': new_candidate.year_level.year_name if new_candidate.year_level else '',
                 'position': new_candidate.position.name,
                 'position_id': new_candidate.position_id,
                 'election_id': new_candidate.election_id,
@@ -5072,21 +5061,19 @@ def manage_candidates():
     campus_elections = [e for e in elections if e.scope == 'campus']
     department_elections = [e for e in elections if e.scope == 'department']
 
-    # 🚫 REMOVED: Page view audit log (not a data modification)
-
     return render_template(
         'manage_candidates.html',
         candidates=candidates,
         candidates_pagination=candidates_pagination,
         positions=positions,
         departments=departments,
-        year_levels=year_levels,  # ADD THIS
+        year_levels=year_levels,
         elections=elections,
         campus_elections=campus_elections,
         department_elections=department_elections,
         selected_department=selected_department,
         selected_scope=selected_scope,
-        current_sy=school_year  # Pass current school year to template
+        current_year=year  # Changed from current_sy to current_year
     )
 
 
@@ -5094,19 +5081,18 @@ def manage_candidates():
 @admin_required
 def filter_candidates():
     """AJAX endpoint for filtering candidates"""
-    # Get school year filter from session
-    school_year = session.get('admin_current_school_year')
+    # Get year filter from session
+    year = session.get('admin_current_year')
     
-    # Parse school year to date range
+    # Parse year to date range (January 1 to December 31)
     start_date = None
     end_date = None
-    if school_year:
+    if year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             start_date = None
             end_date = None
     
@@ -5118,9 +5104,9 @@ def filter_candidates():
 
     query = Candidate.query
 
-    # Filter by school year through elections
+    # Filter by year through elections
     if start_date and end_date:
-        # Get elections within the school year
+        # Get elections within the year
         election_query = Election.query.filter(
             Election.start_date >= start_date,
             Election.start_date <= end_date
@@ -5129,7 +5115,7 @@ def filter_candidates():
         if election_ids:
             query = query.filter(Candidate.election_id.in_(election_ids))
         else:
-            # No elections in this school year, return empty result
+            # No elections in this year, return empty result
             candidates_data = []
             return jsonify({
                 'candidates': candidates_data,
@@ -5142,7 +5128,7 @@ def filter_candidates():
                     'prev_page': None,
                     'next_page': None
                 },
-                'current_sy': school_year
+                'current_year': year
             })
 
     # Filter by scope
@@ -5183,8 +5169,8 @@ def filter_candidates():
             'department': c.department.name if c.department else '',
             'department_id': c.department_id,
             'course_id': c.course_id,
-            'year_level_id': c.year_level_id,  # ADD THIS
-            'year_level': c.year_level.year_name if c.year_level else '',  # ADD THIS
+            'year_level_id': c.year_level_id,
+            'year_level': c.year_level.year_name if c.year_level else '',
             'position': c.position.name if c.position else '',
             'position_id': c.position_id,
             'election_id': c.election_id,
@@ -5192,8 +5178,6 @@ def filter_candidates():
             'scope': c.scope,
             'photo': url_for('admin.static', filename='images/' + c.photo) if c.photo else None
         })
-
-    # 🚫 REMOVED: AJAX filter endpoint audit log (not a data modification)
 
     return jsonify({
         'candidates': candidates_data,
@@ -5206,7 +5190,7 @@ def filter_candidates():
             'prev_page': pagination.prev_num if pagination.has_prev else None,
             'next_page': pagination.next_num if pagination.has_next else None
         },
-        'current_sy': school_year
+        'current_year': year
     })
 
 
@@ -5693,7 +5677,8 @@ def configure_election_positions(election_id):
         position_program_types=position_program_types
     )
     
-# admin/routes.py - UPDATE your create_election route
+
+
 # admin/routes.py - Update your create_election route
 
 @admin_bp.route('/create-election', methods=['GET', 'POST'])
@@ -5704,6 +5689,7 @@ def create_election():
     - Handles both campus and department elections
     - Adds year level filtering for campus elections
     - Redirects to position configuration after creation
+    - Filters election lists by selected year from dashboard
     """
     # Clear any existing flash messages from other pages
     session.pop('_flashes', None)
@@ -5793,8 +5779,33 @@ def create_election():
         flash('Election created successfully! Now configure positions and vote limits.', 'election-success')
         return redirect(url_for('admin.configure_election_positions', election_id=new_election.id))
 
-    # GET request: fetch ALL elections for display
-    elections_all = Election.query.order_by(Election.start_date.desc()).all()
+    # ========== GET request: fetch elections filtered by selected year ==========
+    # Get year filter from session (set by dashboard)
+    year = session.get('admin_current_year')
+    
+    # Parse year to date range (January 1 to December 31)
+    start_date = None
+    end_date = None
+    if year:
+        try:
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
+            start_date = None
+            end_date = None
+    
+    # Build election query with year filter
+    election_query = Election.query.order_by(Election.start_date.desc())
+    
+    if start_date and end_date:
+        election_query = election_query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    # Get all elections filtered by year
+    elections_all = election_query.all()
 
     # Ensure datetime are timezone-aware
     for e in elections_all:
@@ -5803,18 +5814,21 @@ def create_election():
         if e.end_date.tzinfo is None:
             e.end_date = tz.localize(e.end_date)
 
-    # Filter elections
+    # Filter elections by status (upcoming, active, ended)
     upcoming_elections = [e for e in elections_all if e.start_date > now]
     active_elections = [e for e in elections_all if e.start_date <= now <= e.end_date]
+    # Ended elections are the rest (elections_all minus upcoming and active)
 
     return render_template(
         'create_election.html',
         departments=departments,
         upcoming=upcoming_elections,
         active=active_elections,
-        elections_all=elections_all,  # ← ADD THIS for ended elections
+        elections_all=elections_all,
+        current_year=year,  # Pass current year to template for display if needed
         now=now
     )
+
 
 # Keep the old route for backward compatibility
 @admin_bp.route('/create-department-election', methods=['GET', 'POST'])
@@ -5828,31 +5842,20 @@ def create_department_election():
 @admin_bp.route('/announcements', methods=['GET', 'POST'])
 @login_required
 def announcements():
-    # Get GLOBAL filters from session (set by dashboard)
-    start_date_filter = session.get('admin_start_date')
-    end_date_filter = session.get('admin_end_date')
-    school_year = session.get('admin_current_school_year')
+    # Get year filter from session (set by dashboard)
+    year = session.get('admin_current_year')
     
-    # Parse date range from session
+    # Parse year to date range (January 1 to December 31)
     start_date = None
     end_date = None
-    if start_date_filter and end_date_filter:
+    if year:
         try:
-            start_date = datetime.strptime(start_date_filter, '%Y-%m-%d')
-            end_date = datetime.strptime(end_date_filter, '%Y-%m-%d')
-            end_date = end_date.replace(hour=23, minute=59, second=59)
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
         except (ValueError, TypeError):
-            pass
-    
-    # If no explicit date range, try school year filter
-    if not start_date and school_year:
-        try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
-            pass
+            start_date = None
+            end_date = None
     
     departments = Department.query.all()  # For dropdown
     tz = pytz.timezone('Asia/Manila')
@@ -5895,10 +5898,10 @@ def announcements():
         flash('announcements_page:Announcement created successfully!', 'success')
         return redirect(url_for('admin.announcements'))
 
-    # GET: fetch announcements to display with date filter
+    # GET: fetch announcements to display with year filter
     announcements_query = Announcement.query
     
-    # Apply date range filter from dashboard
+    # Apply year filter from dashboard
     if start_date and end_date:
         announcements_query = announcements_query.filter(
             Announcement.date >= start_date,
@@ -5915,9 +5918,9 @@ def announcements():
         departments=departments, 
         announcements=announcements_list,
         now=now,  # Pass current datetime to template
-        current_sy=school_year,  # Pass school year to template for display if needed
-        start_date=start_date_filter,
-        end_date=end_date_filter
+        current_year=year,  # Changed from current_sy to current_year
+        start_date=start_date,
+        end_date=end_date
     )
 
 
@@ -6121,8 +6124,6 @@ def guidelines_settings():
         guidelines_content.privacy_security = request.form.get('privacy_security')
         guidelines_content.important_reminders = request.form.get('important_reminders')
         guidelines_content.fingerprint_info = request.form.get('fingerprint_info')
-        # REMOVE THIS LINE - don't set updated_by
-        # guidelines_content.updated_by = current_user.id
         
         db.session.commit()
         
@@ -6140,7 +6141,6 @@ def guidelines_settings():
     # 🚫 REMOVED: VIEW audit log for guidelines page
     
     return render_template('guidelines_settings.html', content=guidelines_content)
-
 
 
 from student.models import GuidelinesContent
@@ -6170,26 +6170,25 @@ def get_guidelines():
 @admin_bp.route('/results')
 @admin_required
 def results_page():
-    # Get school year filter from session (set by dashboard)
-    school_year = session.get('admin_current_school_year')
+    # Get year filter from session (set by dashboard)
+    year = session.get('admin_current_year')
     
-    # Parse school year to date range
+    # Parse year to date range (January 1 to December 31)
     start_date = None
     end_date = None
-    if school_year:
+    if year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             start_date = None
             end_date = None
     
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
     
-    # Filter elections by school year if set
+    # Filter elections by year if set
     election_query = Election.query.order_by(Election.end_date.desc())
     
     if start_date and end_date:
@@ -6240,7 +6239,7 @@ def results_page():
         active_elections=active,
         completed_elections=completed,
         now=now,
-        current_sy=school_year,  # Pass current school year to template
+        current_year=year,  # Changed from current_sy to current_year
         total_filtered=len(elections),
         total_elections=total_elections
     )
@@ -7262,25 +7261,24 @@ import pytz
 @admin_bp.route('/vote-distribution')
 @admin_required
 def vote_distribution():
-    """Main vote distribution page with school year filtering"""
+    """Main vote distribution page with year filtering"""
     
-    # ✅ GET SCHOOL YEAR FILTER FROM SESSION (set by dashboard)
-    school_year = session.get('admin_current_school_year')
+    # ✅ GET YEAR FILTER FROM SESSION (set by dashboard)
+    year = session.get('admin_current_year')
     
-    # Parse school year to date range
+    # Parse year to date range (January 1 to December 31)
     start_date = None
     end_date = None
-    if school_year:
+    if year:
         try:
-            start_year = int(school_year.split('-')[0])
-            end_year = int(school_year.split('-')[1])
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31, 23, 59, 59)
-        except (ValueError, IndexError):
+            year_int = int(year)
+            start_date = datetime(year_int, 1, 1)
+            end_date = datetime(year_int, 12, 31, 23, 59, 59)
+        except (ValueError, TypeError):
             start_date = None
             end_date = None
     
-    # Get elections filtered by school year
+    # Get elections filtered by year
     election_query = Election.query
     
     if start_date and end_date:
@@ -7289,31 +7287,26 @@ def vote_distribution():
             Election.start_date <= end_date
         )
     
-    # Get all elections for the dropdown (filtered by school year)
     elections = election_query.order_by(Election.created_at.desc()).all()
     
-    # Get current school year (if none in session, get the latest)
-    if not school_year and elections:
-        # Get the most recent election's school year
+    if not year and elections:
+
         latest_election = Election.query.order_by(Election.start_date.desc()).first()
         if latest_election and latest_election.start_date:
             year = latest_election.start_date.year
-            school_year = f"{year}-{year+1}"
-            session['admin_current_school_year'] = school_year
+            session['admin_current_year'] = year
     
-    # Get all available school years for the filter dropdown
     all_elections = Election.query.order_by(Election.start_date.asc()).all()
-    school_years = set()
+    available_years = set()
     for election in all_elections:
         if election.start_date:
-            year = election.start_date.year
-            school_years.add(f"{year}-{year+1}")
-    school_years = sorted(list(school_years), reverse=True)
+            available_years.add(election.start_date.year)
+    available_years = sorted(list(available_years), reverse=True)
     
     return render_template('vote_distribution.html', 
                           elections=elections, 
-                          school_years=school_years,
-                          current_sy=school_year)
+                          available_years=available_years,  
+                          current_year=year)  
 
 
 @admin_bp.route('/api/vote-distribution/<int:election_id>')
