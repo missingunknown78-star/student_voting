@@ -138,8 +138,16 @@ def count_votes_for_candidates(election_id, candidate_ids):
         if not votes:
             return {candidate_id: 0 for candidate_id in candidate_ids}
         
-        # Initialize with encrypted zeros
-        total_encrypted = [public_key.encrypt(0) for _ in candidate_ids]
+        # ===== CRITICAL FIX: Sort candidates by ID to match vote creation order =====
+        all_candidates = Candidate.query.filter_by(election_id=election_id)\
+                                        .order_by(Candidate.id).all()  # ← SORT BY ID
+        sorted_candidate_ids = [c.id for c in all_candidates]
+        
+        # Create mapping from candidate_id to its sorted index
+        candidate_index_map = {cid: idx for idx, cid in enumerate(sorted_candidate_ids)}
+        
+        # Initialize with encrypted zeros for sorted order
+        total_encrypted = [public_key.encrypt(0) for _ in sorted_candidate_ids]
         
         # Add all votes homomorphically
         valid_votes = 0
@@ -147,8 +155,8 @@ def count_votes_for_candidates(election_id, candidate_ids):
             try:
                 enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
                 # Check if the length matches
-                if len(enc_votes) != len(candidate_ids):
-                    print(f"Warning: Vote {vote.id} has {len(enc_votes)} candidates, expected {len(candidate_ids)}")
+                if len(enc_votes) != len(sorted_candidate_ids):
+                    print(f"Warning: Vote {vote.id} has {len(enc_votes)} candidates, expected {len(sorted_candidate_ids)}")
                     continue
                     
                 for i in range(len(total_encrypted)):
@@ -164,8 +172,16 @@ def count_votes_for_candidates(election_id, candidate_ids):
         # Decrypt final totals
         decrypted_totals = [private_key.decrypt(x) for x in total_encrypted]
         
-        # Map to candidate IDs
-        return dict(zip(candidate_ids, decrypted_totals))
+        # Map back to the requested candidate_ids
+        results = {}
+        for cid in candidate_ids:
+            if cid in candidate_index_map:
+                idx = candidate_index_map[cid]
+                results[cid] = decrypted_totals[idx]
+            else:
+                results[cid] = 0
+        
+        return results
         
     except Exception as e:
         print(f"Error in count_votes_for_candidates: {e}")
@@ -300,15 +316,43 @@ def register():
             session.pop('error_fields', None)
 
     if request.method == 'POST':
-        session['registration_data'] = request.form.to_dict()
+        # Helper function to clean text fields
+        def clean_text(value):
+            """Remove leading/trailing spaces and normalize multiple spaces to single space"""
+            if not value:
+                return ''
+            # Trim and replace multiple spaces with single space
+            return ' '.join(value.strip().split())
+        
+        # Clean all text inputs
+        first_name = clean_text(request.form.get('first_name', ''))
+        middle_name = clean_text(request.form.get('middle_name', ''))
+        last_name = clean_text(request.form.get('last_name', ''))
+        suffix = clean_text(request.form.get('suffix', ''))
+        email = clean_text(request.form.get('email', ''))
+        id_number = clean_text(request.form.get('id_number', ''))
+        username = clean_text(request.form.get('username', ''))
+        password = request.form.get('password', '')  # Don't trim password
+        birth_date = request.form.get('birth_date', '')
+        
+        # Store cleaned data in session
+        session['registration_data'] = {
+            'first_name': first_name,
+            'middle_name': middle_name,
+            'last_name': last_name,
+            'suffix': suffix,
+            'email': email,
+            'id_number': id_number,
+            'username': username,
+            'password': password,
+            'birth_date': birth_date,
+            'course': request.form.get('course', ''),
+            'year_level': request.form.get('year_level', ''),
+            'program_type': request.form.get('program_type', '')
+        }
+        
         session['error_fields'] = []
         session['keep_form'] = True
-
-        first_name = request.form.get('first_name', '').strip()
-        last_name = request.form.get('last_name', '').strip()
-        email = request.form.get('email', '').strip()
-        id_number = request.form.get('id_number', '').strip()
-        username = request.form.get('username', '').strip()
 
         # ---------------- DUPLICATE CHECKS ----------------
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
@@ -363,10 +407,11 @@ def register():
             session['error_fields'].append('program_type')
 
         # ---------------- CTU DATABASE VERIFICATION ----------------
+        # Also clean the database values for comparison
         ctu_match = CtuStudent.query.filter(
-            func.lower(CtuStudent.first_name) == first_name.lower(),
-            func.lower(CtuStudent.last_name) == last_name.lower(),
-            func.lower(CtuStudent.student_number) == id_number.lower(),
+            func.trim(func.lower(CtuStudent.first_name)) == first_name.lower(),
+            func.trim(func.lower(CtuStudent.last_name)) == last_name.lower(),
+            func.trim(func.lower(CtuStudent.student_number)) == id_number.lower(),
             CtuStudent.is_active == True
         ).first()
 
@@ -384,14 +429,7 @@ def register():
         session['otp'] = otp
 
         try:
-            # Import the EmailTemplates (you'll need to read the JS file)
-            js_file_path = os.path.join(current_app.root_path, 'student', 'static', 'js', 'email_templates.js')
-            
-            # Simple approach: Read the JS file and extract the template function
-            # OR better: Use a Python template file instead
-            # For now, we'll use a simplified version
-            
-            # Send OTP email with simplified HTML
+            # Send OTP email with cleaned data
             msg = Message(
                 subject="🔐 CTU Moalboal - Email Verification Code",
                 recipients=[email]
@@ -399,15 +437,15 @@ def register():
             
             # Prepare data for template
             template_data = {
-                'first_name': registration_data['first_name'],
-                'last_name': registration_data['last_name'],
+                'first_name': first_name,
+                'last_name': last_name,
                 'program_type_name': program_type_name,
                 'year_level': year_level,
                 'course_name': course_obj.course_name,
                 'id_number': id_number
             }
             
-            # Use a simplified HTML template (or you could use Jinja2 template)
+            # HTML email template (same as before)
             msg.html = f"""
             <!DOCTYPE html>
             <html>
@@ -419,36 +457,44 @@ def register():
             </head>
             <body style="margin:0; padding:0; font-family: 'Inter', Arial; background: #f0f4f8;">
                 <table width="100%" style="padding:40px 20px;">
-                    <tr><td align="center">
-                        <table width="560" style="background:#fff; border-radius:24px; box-shadow:0 20px 40px rgba(0,0,0,0.08);">
-                            <tr><td style="background:linear-gradient(135deg,#667eea,#764ba2); padding:35px; text-align:center;">
-                                <div style="width:80px; height:80px; background:rgba(255,255,255,0.2); border-radius:50%; margin:0 auto 15px; display:flex; align-items:center; justify-content:center;">
-                                    <span style="color:white; font-size:40px; font-weight:700;">CTU</span>
-                                </div>
-                                <h1 style="color:white; margin:0; font-size:24px;">Cebu Technological University</h1>
-                                <p style="color:rgba(255,255,255,0.9); margin:8px 0 0;">Moalboal Campus</p>
-                            </td></tr>
-                            <tr><td style="padding:40px 30px;">
-                                <h2 style="color:#1a2639; margin:0 0 10px;">Hello, <span style="color:#667eea;">{template_data['first_name']} {template_data['last_name']}</span>!</h2>
-                                <p style="color:#4a5568; margin:0 0 25px;">Please verify your email to complete registration.</p>
-                                <div style="background:linear-gradient(135deg,#f8faff,#f0f4ff); border-radius:16px; padding:25px; text-align:center;">
-                                    <p style="color:#4a5568; margin:0 0 10px; font-size:14px;">Your Verification Code</p>
-                                    <div style="background:white; padding:20px 30px; border-radius:12px; display:inline-block;">
-                                        <span style="font-size:42px; font-weight:700; letter-spacing:8px; color:#1a2639;">{otp}</span>
-                                    </div>
-                                    <p style="color:#718096; margin:15px 0 0;">Expires in <strong style="color:#667eea;">10 minutes</strong></p>
-                                </div>
-                                <div style="margin-top:20px; font-size:13px; color:#718096;">
-                                    <p>Program: {template_data['program_type_name']} | Year: {template_data['year_level']}</p>
-                                    <p>Course: {template_data['course_name']}</p>
-                                    <p>ID: {template_data['id_number']}</p>
-                                </div>
-                            </td></tr>
-                            <tr><td style="padding:30px; border-top:1px solid #e9ecef; text-align:center; color:#94a3b8; font-size:12px;">
-                                <p>CTU Moalboal Campus Student Portal</p>
-                            </td></tr>
-                        </table>
-                    </td></tr>
+                    <tr>
+                        <td align="center">
+                            <table width="560" style="background:#fff; border-radius:24px; box-shadow:0 20px 40px rgba(0,0,0,0.08);">
+                                <tr>
+                                    <td style="background:linear-gradient(135deg,#667eea,#764ba2); padding:35px; text-align:center;">
+                                        <div style="width:80px; height:80px; background:rgba(255,255,255,0.2); border-radius:50%; margin:0 auto 15px; display:flex; align-items:center; justify-content:center;">
+                                            <span style="color:white; font-size:40px; font-weight:700;">CTU</span>
+                                        </div>
+                                        <h1 style="color:white; margin:0; font-size:24px;">Cebu Technological University</h1>
+                                        <p style="color:rgba(255,255,255,0.9); margin:8px 0 0;">Moalboal Campus</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:40px 30px;">
+                                        <h2 style="color:#1a2639; margin:0 0 10px;">Hello, <span style="color:#667eea;">{template_data['first_name']} {template_data['last_name']}</span>!</h2>
+                                        <p style="color:#4a5568; margin:0 0 25px;">Please verify your email to complete registration.</p>
+                                        <div style="background:linear-gradient(135deg,#f8faff,#f0f4ff); border-radius:16px; padding:25px; text-align:center;">
+                                            <p style="color:#4a5568; margin:0 0 10px; font-size:14px;">Your Verification Code</p>
+                                            <div style="background:white; padding:20px 30px; border-radius:12px; display:inline-block;">
+                                                <span style="font-size:42px; font-weight:700; letter-spacing:8px; color:#1a2639;">{otp}</span>
+                                            </div>
+                                            <p style="color:#718096; margin:15px 0 0;">Expires in <strong style="color:#667eea;">10 minutes</strong></p>
+                                        </div>
+                                        <div style="margin-top:20px; font-size:13px; color:#718096;">
+                                            <p>Program: {template_data['program_type_name']} | Year: {template_data['year_level']}</p>
+                                            <p>Course: {template_data['course_name']}</p>
+                                            <p>ID: {template_data['id_number']}</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:30px; border-top:1px solid #e9ecef; text-align:center; color:#94a3b8; font-size:12px;">
+                                        <p>CTU Moalboal Campus Student Portal</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
                 </table>
             </body>
             </html>
@@ -1606,12 +1652,17 @@ def help_page():
 
 
 # ------------------- VOTING -------------------
-from flask import flash, redirect, url_for, render_template, request
+from flask import flash, redirect, url_for, render_template, request, session
 from flask_login import login_required, current_user
 from datetime import datetime
 import pytz
+import time
+import json
+import hashlib
+import secrets
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from student.models import Vote
-from admin.models import Election, Candidate
+from admin.models import Election, Candidate, ElectionPosition, Course
 from collections import defaultdict
 
 @student_bp.route('/vote/<int:election_id>', methods=['GET'])
@@ -1649,7 +1700,7 @@ def vote_page(election_id):
                     'course_name': f"{course.course_name} ({course.course_code})" if course.course_code else course.course_name
                 }
     
-    # Get program type restrictions for positions (for filtering only, not display)
+    # Get program type restrictions for positions
     position_program_type_restrictions = {}
     from student.models import ProgramType
     for ep in election_positions:
@@ -1661,8 +1712,9 @@ def vote_page(election_id):
                     'program_type_name': program_type.name
                 }
     
-    # Fetch all candidates for this election
-    all_candidates = Candidate.query.filter_by(election_id=election_id).all()
+    # ===== CRITICAL FIX: Fetch ALL candidates and sort them by ID for consistency =====
+    all_candidates = Candidate.query.filter_by(election_id=election_id)\
+                                    .order_by(Candidate.id).all()  # ← SORT BY ID
     
     # Filter candidates based on student's course, department, and program type
     filtered_candidates = []
@@ -1702,8 +1754,9 @@ def vote_page(election_id):
     
     # Group filtered candidates by position
     candidates_by_position = {}
-    all_candidate_ids = []
+    all_candidate_ids = []  # ← This will be in SORTED order by candidate ID
     
+    # IMPORTANT: filtered_candidates is already sorted by ID from the query above
     for c in filtered_candidates:
         if c.position:
             position_name = c.position.name
@@ -1716,12 +1769,11 @@ def vote_page(election_id):
                     'position_id': c.position_id,
                     'max_votes': position_limits.get(c.position_id, 1),
                     'restricted_to_course': course_restriction_info['course_name'] if course_restriction_info else None
-                    # Note: program_type is NOT passed to template - filtering only
                 }
             candidates_by_position[position_name]['candidates'].append(c)
-        all_candidate_ids.append(c.id)
+            all_candidate_ids.append(c.id)  # ← Already in sorted order by ID
     
-    # Sort by position ID
+    # Sort positions by position ID for consistent display
     sorted_positions = sorted(
         candidates_by_position.items(),
         key=lambda item: item[1]['position_id']
@@ -1738,22 +1790,14 @@ def vote_page(election_id):
         'vote_page.html',
         election=election,
         candidates_by_position=candidates_by_position,
-        all_candidate_ids=all_candidate_ids,
+        all_candidate_ids=all_candidate_ids,  # ← Sorted by candidate ID
         current_user=current_user
     )
+
 
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
 def submit_vote(election_id):
-    import time
-    import pytz
-    import json
-    import hashlib
-    import secrets
-    from datetime import datetime
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    from functools import lru_cache
-    
     start_time = time.time()
     
     # Set timezone
@@ -1779,7 +1823,7 @@ def submit_vote(election_id):
         flash("Voting data error. Please try again.", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
     
-    # Convert string to list of integers
+    # Convert string to list of integers (already in sorted order from vote_page)
     all_candidate_ids = [int(id_str) for id_str in all_candidate_ids_str.split(',') if id_str.strip()]
     
     # Get selected candidates - Use getlist() for checkboxes
@@ -1827,7 +1871,7 @@ def submit_vote(election_id):
     
     # ===== CREATE FINDER HASHES FOR EACH SELECTED CANDIDATE =====
     finder_hashes = []
-    finder_hash_strings = []  # Keep separate list for easy searching
+    finder_hash_strings = []
     
     # Create a mapping of candidate_id to its index in all_candidate_ids
     candidate_index_map = {candidate_id: idx for idx, candidate_id in enumerate(all_candidate_ids)}
@@ -1842,13 +1886,13 @@ def submit_vote(election_id):
                 'candidate_id': candidate_id,
                 'hash': finder_hash
             })
-            finder_hash_strings.append(finder_hash)  # Store just the hash string
+            finder_hash_strings.append(finder_hash)
             print(f"🔑 DEBUG: Created finder_hash for candidate {candidate_id}: {finder_hash[:16]}...")
     
     # ===== OPTIMIZED: SINGLE VOTE VECTOR FOR ALL POSITIONS =====
     encrypt_start = time.time()
     
-    # Create a single vote vector for ALL candidates
+    # Create a single vote vector for ALL candidates (in the same sorted order)
     vote_vector = [0] * len(all_candidate_ids)
     
     # Mark selected candidates with 1
@@ -1863,7 +1907,6 @@ def submit_vote(election_id):
     print(f"DEBUG: Created vote vector with {selected_count} selected candidates out of {len(all_candidate_ids)} total")
     
     # ===== OPTIMIZATION 1: Cache encryption results =====
-    # Create a simple cache for encryptions
     encryption_cache = {}
     
     def get_cached_encryption(value):
@@ -1873,7 +1916,6 @@ def submit_vote(election_id):
         return encryption_cache[value]
     
     # ===== OPTIMIZATION 2: Use parallel processing for encryption =====
-    # Determine optimal number of workers (don't exceed CPU count * 2)
     import multiprocessing
     max_workers = min(8, multiprocessing.cpu_count() * 2)
     
@@ -1881,24 +1923,20 @@ def submit_vote(election_id):
     
     # Use ThreadPoolExecutor for parallel encryption
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all encryption tasks
         future_to_index = {}
         for i, value in enumerate(vote_vector):
-            # Submit encryption task
             future = executor.submit(get_cached_encryption, value)
             future_to_index[future] = i
         
-        # Collect results as they complete
         for future in as_completed(future_to_index):
             index = future_to_index[future]
             try:
                 enc_vote[index] = future.result()
             except Exception as e:
                 print(f"ERROR: Encryption failed for index {index}: {e}")
-                # Fallback to sequential encryption if parallel fails
                 enc_vote[index] = public_key.encrypt(vote_vector[index])
     
-    # ===== OPTIMIZATION 3: Ensure no None values (fallback for any failures) =====
+    # ===== OPTIMIZATION 3: Ensure no None values =====
     for i, enc in enumerate(enc_vote):
         if enc is None:
             print(f"WARNING: Re-encrypting index {i} due to parallel processing failure")
@@ -1921,12 +1959,12 @@ def submit_vote(election_id):
         flash("Voting encryption error. Please try again.", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
     
-    # ===== FIXED: STORE FINDER HASHES PROPERLY =====
-    # Store as JSON in a TEXT field
+    # ===== STORE FINDER HASHES PROPERLY =====
     finder_data = {
         'nonce': secret_nonce,
         'hashes': finder_hashes,
-        'hash_strings': finder_hash_strings
+        'hash_strings': finder_hash_strings,
+        'candidate_order': all_candidate_ids  # ← STORE THE CANDIDATE ORDER!
     }
     finder_json = json.dumps(finder_data)
     
@@ -1935,12 +1973,11 @@ def submit_vote(election_id):
         student_id=current_user.id, 
         election_id=election_id,
         encrypted_vote=encrypted_vote_json,
-        finder_hash=finder_json,  # Store ALL data as JSON
+        finder_hash=finder_json,
         cast_timestamp=cast_timestamp,
         recorded_timestamp=recorded_timestamp
     )
     
-    # Add single vote
     db.session.add(vote)
     print(f"DEBUG: Added 1 vote record with {len(finder_hashes)} finder hashes")
 

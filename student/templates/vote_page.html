@@ -117,11 +117,8 @@
                         <div class="candidate-details">
                             <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
                             
-                            <!-- Course and Party List -->
+                            <!-- Party List Badge only (course removed) -->
                             <div class="candidate-course">
-                                <span class="course-name">{{ candidate.course.course_name if candidate.course else 'N/A' }}</span>
-                                
-                                <!-- Party List Badge -->
                                 {% if candidate.party_list and candidate.party_list.strip() %}
                                     <span class="party-badge">{{ candidate.party_list }}</span>
                                 {% else %}

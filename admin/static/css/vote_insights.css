@@ -1,0 +1,503 @@
+/* ================================
+   VOTE INSIGHTS CHARTS CSS
+   WITH TRUE BLACK DARK THEME
+   ================================ */
+
+/* ==================== INSIGHT CHARTS SECTION ==================== */
+.insight-charts-section {
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+/* Dark mode support */
+:root.dark-mode .insight-charts-section {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.insight-charts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.insight-charts-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.insight-charts-header h2 i {
+    color: var(--primary-blue);
+    font-size: 1.5rem;
+}
+
+:root.dark-mode .insight-charts-header h2 {
+    color: #f0f0f0;
+}
+
+.chart-note {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+:root.dark-mode .chart-note {
+    color: #b0b0b0;
+}
+
+/* ==================== POSITION CHART CARD ==================== */
+.position-chart-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+:root.dark-mode .position-chart-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.position-chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.position-chart-header {
+    background: linear-gradient(135deg, var(--light-gray) 0%, rgba(59, 130, 246, 0.05) 100%);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+:root.dark-mode .position-chart-header {
+    background: linear-gradient(135deg, #2d2d2d 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+.position-color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.position-chart-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+:root.dark-mode .position-chart-header h3 {
+    color: #f0f0f0;
+}
+
+.position-chart-header .vote-info {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+:root.dark-mode .position-chart-header .vote-info {
+    color: #b0b0b0;
+}
+
+/* ==================== CHART CONTAINER - FIXED SPACING ==================== */
+.chart-container {
+    padding: 0;
+    border-bottom: 1px solid var(--border-color);
+    width: 100%;
+    overflow: visible;
+    background: var(--card-bg);
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+}
+
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        padding: 0;
+    }
+}
+
+/* ==================== LEGEND CONTAINER ==================== */
+.candidate-legend {
+    padding: 1rem 1.5rem;
+    background: var(--light-gray);
+    border-top: 1px solid var(--border-color);
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: var(--transition);
+}
+
+:root.dark-mode .candidate-legend {
+    background: #2d2d2d;
+}
+
+/* ==================== LEGEND GRID - 3 COLUMNS DEFAULT ==================== */
+.legend-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+/* Responsive: 2 columns on smaller screens */
+@media (max-width: 1024px) {
+    .legend-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Responsive: 1 column on mobile */
+@media (max-width: 768px) {
+    .legend-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Legend Item Styles */
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-color);
+    padding: 10px 12px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
+}
+
+:root.dark-mode .legend-item {
+    background: #1f2937;
+    color: #f0f0f0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    border-color: #404040;
+}
+
+.legend-item:hover {
+    background: var(--light-gray);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+:root.dark-mode .legend-item:hover {
+    background: #374151;
+}
+
+.legend-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.legend-name {
+    font-weight: 600;
+    flex-shrink: 0;
+    color: var(--text-color);
+    font-size: 0.85rem;
+    min-width: 100px;
+}
+
+:root.dark-mode .legend-name {
+    color: #f0f0f0;
+}
+
+.legend-stats {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.legend-badge {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    background: var(--light-gray);
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: var(--transition);
+}
+
+:root.dark-mode .legend-badge {
+    background: #374151;
+    color: #b0b0b0;
+}
+
+.legend-badge i {
+    font-size: 0.65rem;
+}
+
+.legend-badge.winner {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning-amber);
+}
+
+:root.dark-mode .legend-badge.winner {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fbbf24;
+}
+
+/* ==================== SCROLLBAR STYLING ==================== */
+.candidate-legend::-webkit-scrollbar {
+    width: 8px;
+}
+
+.candidate-legend::-webkit-scrollbar-track {
+    background: var(--light-gray);
+    border-radius: 10px;
+}
+
+:root.dark-mode .candidate-legend::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.candidate-legend::-webkit-scrollbar-thumb {
+    background: var(--text-secondary);
+    border-radius: 10px;
+}
+
+.candidate-legend::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-blue);
+}
+
+/* ==================== SCROLL HINT ==================== */
+.scroll-hint {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+:root.dark-mode .scroll-hint {
+    color: #b0b0b0;
+    border-color: #404040;
+}
+
+.scroll-hint i {
+    font-size: 0.65rem;
+    color: var(--primary-blue);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1200px) {
+    .legend-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.65rem;
+    }
+    
+    .legend-name {
+        min-width: 80px;
+        font-size: 0.8rem;
+    }
+    
+    .legend-badge {
+        font-size: 0.65rem;
+        padding: 2px 8px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .legend-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .legend-item {
+        padding: 8px 10px;
+    }
+    
+    .legend-name {
+        min-width: 90px;
+    }
+}
+
+@media (max-width: 768px) {
+    .insight-charts-section {
+        padding: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .insight-charts-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .insight-charts-header h2 {
+        font-size: 1.1rem;
+    }
+    
+    .chart-note {
+        font-size: 0.75rem;
+    }
+    
+    .candidate-legend {
+        padding: 0.75rem 1rem;
+        max-height: 280px;
+    }
+    
+    .legend-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .legend-item {
+        padding: 8px 12px;
+        flex-wrap: wrap;
+    }
+    
+    .legend-name {
+        font-size: 0.8rem;
+        min-width: auto;
+        flex: 1;
+    }
+    
+    .legend-stats {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+        padding-left: 34px;
+        margin-top: 5px;
+    }
+    
+    .legend-badge {
+        font-size: 0.65rem;
+        padding: 2px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .insight-charts-section {
+        padding: 0.75rem;
+    }
+    
+    .position-chart-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .position-chart-header h3 {
+        font-size: 1rem;
+    }
+    
+    .legend-item {
+        padding: 6px 10px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .legend-badge {
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes chartFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.position-chart-card {
+    animation: chartFadeIn 0.4s ease-out;
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+    .insight-charts-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin: 1rem 0;
+        padding: 0;
+        background: white;
+    }
+    
+    .position-chart-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .chart-container {
+        overflow: visible;
+        max-height: none;
+    }
+    
+    .chart-wrapper {
+        min-height: auto;
+    }
+    
+    .candidate-legend {
+        overflow: visible;
+        max-height: none;
+    }
+    
+    .scroll-hint {
+        display: none;
+    }
+    
+    .legend-item {
+        border: 1px solid #ddd;
+    }
+    
+    .legend-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

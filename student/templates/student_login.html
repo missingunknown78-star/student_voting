@@ -75,10 +75,34 @@
     color: #fff;
     font-size: 16px;
     cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .login-btn:hover {
     background-color: #2980b9;
+}
+
+.login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.login-btn .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -108,7 +132,7 @@
         {% endwith %}
 
         <!-- NORMAL LOGIN FORM -->
-        <form method="POST">
+        <form method="POST" id="loginForm">
             <!-- CSRF Token - CRITICAL for security -->
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
@@ -135,7 +159,9 @@
                 <a href="javascript:void(0);" id="forgotPasswordLink">Forgot Password?</a>
             </div>
 
-            <button type="submit" class="login-btn">Login</button>
+            <button type="submit" class="login-btn" id="loginButton">
+                <span class="btn-text">Login</span>
+            </button>
         </form>
 
         <!-- Forgot Password Modal -->
@@ -183,6 +209,37 @@ function getCsrfToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     return metaTag ? metaTag.getAttribute('content') : '';
 }
+</script>
+
+<!-- ================= LOGIN FORM HANDLER (WITH BUTTON DISABLE) ================= -->
+<script>
+const loginForm = document.getElementById('loginForm');
+const loginButton = document.getElementById('loginButton');
+const btnText = loginButton.querySelector('.btn-text');
+
+if (loginForm) {
+    loginForm.addEventListener('submit', function(e) {
+        // Disable the button immediately
+        loginButton.disabled = true;
+        
+        // Change button content to show spinner
+        btnText.innerHTML = '<span class="spinner"></span> Logging in...';
+        
+        // Form will submit normally
+        // If there's an error (like invalid credentials), the page will reload with flash message
+        // and the button will be re-enabled on page load
+    });
+}
+
+// Re-enable button if there are flash messages (page reload with error)
+// This runs on page load - if there are error messages, re-enable the button
+window.addEventListener('load', function() {
+    const flashMessages = document.querySelectorAll('.alert');
+    if (flashMessages.length > 0) {
+        loginButton.disabled = false;
+        btnText.innerHTML = 'Login';
+    }
+});
 </script>
 
 <!-- ================= BIOMETRIC SCRIPT (UPDATED WITH CSRF) ================= -->

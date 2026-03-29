@@ -4,6 +4,177 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/election_results_detail.css') }}">
+<!-- Vote Insights CSS -->
+<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/vote_insights.css') }}">
+<!-- Chart.js CDN for bar charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    /* Insight Charts Section Styles */
+    .insight-charts-section {
+        margin-top: 3rem;
+        margin-bottom: 2rem;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    
+    .insight-charts-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .insight-charts-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .insight-charts-header h2 i {
+        color: #3b82f6;
+        font-size: 1.5rem;
+    }
+    
+    .chart-note {
+        color: #64748b;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .position-chart-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .position-chart-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .position-chart-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .position-color-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        display: inline-block;
+    }
+    
+    .position-chart-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    
+    .position-chart-header .vote-info {
+        margin-left: auto;
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    
+    .chart-container {
+        padding: 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+    }
+    
+    .candidate-legend {
+        padding: 1rem 1.5rem;
+        background: #fafbfc;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #334155;
+        min-width: 200px;
+        padding: 4px 8px;
+        background: white;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+    
+    .legend-item:hover {
+        background: #f1f5f9;
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+    
+    .legend-name {
+        font-weight: 500;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .legend-position {
+        font-size: 0.7rem;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 12px;
+        margin-left: 4px;
+    }
+    
+    .legend-votes {
+        color: #64748b;
+        font-family: monospace;
+        font-size: 0.75rem;
+    }
+    
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 400px;
+        }
+        
+        .candidate-legend {
+            gap: 0.5rem;
+            max-height: 300px;
+        }
+        
+        .legend-item {
+            min-width: 150px;
+            font-size: 0.7rem;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -109,12 +280,10 @@
         </div>
     </div>
     
-    <!-- Export Actions - Split into two columns -->
+    <!-- Export Actions -->
     <div class="export-actions-container">
-        <!-- Left side: Upload PDF Form -->
         <div class="upload-pdf-section">
             <form id="uploadPdfForm" enctype="multipart/form-data" class="upload-pdf-form">
-                <!-- CSRF Token - CRITICAL for file upload -->
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="file-upload-wrapper">
                     <label for="pdfFile" class="file-upload-label">
@@ -129,7 +298,6 @@
                 </button>
             </form>
             
-            <!-- Display existing PDFs if any -->
             {% if election.pdf_results and election.pdf_results|length > 0 %}
             <div class="existing-pdfs">
                 <div class="existing-pdfs-header">
@@ -170,7 +338,6 @@
             {% endif %}
         </div>
         
-        <!-- Right side: Export PDF button -->
         <div class="export-pdf-section">
             <button class="export-btn" id="exportPdfBtn">
                 <i class="fa-solid fa-file-pdf"></i> Export Results (PDF) - Letter Size
@@ -224,7 +391,6 @@
                             <i class="fa-solid fa-user"></i>
                         </div>
                         {% endif %}
-                        <!-- Vote badge container - will be populated by JavaScript -->
                         <div class="vote-badge-container" id="vote-badge-{{ candidate.id }}"></div>
                     </div>
                     <div class="candidate-text">
@@ -299,7 +465,7 @@
     <!-- ============================================ -->
     {% else %}
 
-    <!-- ===== WINNERS SECTION - ALL YELLOW ===== -->
+    <!-- ===== WINNERS SECTION ===== -->
     {% if winners_by_position %}
     <div class="results-section">
         <h2 class="section-title">
@@ -318,7 +484,6 @@
             {% for position, winners in winners_by_position.items() %}
                 {% if winners and winners|length > 0 %}
                     {% if winners|length == 1 %}
-                        <!-- Single winner for this position -->
                         {% set winner = winners[0] %}
                         <div class="winner-row">
                             <div class="winner-rank">
@@ -344,7 +509,6 @@
                             </div>
                         </div>
                     {% else %}
-                        <!-- Multiple winners for this position -->
                         <div class="winner-position-header">
                             <div class="winner-position-title">
                                 <i class="fa-solid fa-users" style="margin-right: 8px;"></i>
@@ -352,7 +516,6 @@
                             </div>
                         </div>
                         
-                        <!-- List each winner -->
                         {% for winner in winners %}
                         <div class="winner-subrow">
                             <div class="winner-rank-small">#{{ loop.index }}</div>
@@ -375,7 +538,6 @@
                         {% endfor %}
                     {% endif %}
                 {% else %}
-                    <!-- No winners for this position -->
                     <div class="winner-row">
                         <div class="winner-rank">
                             <i class="fa-solid fa-info-circle" style="color: #95a5a6;"></i>
@@ -416,7 +578,6 @@
             </div>
             
             {% for candidate in candidate_results %}
-            {# Check if this candidate is a winner #}
             {% set is_winner = false %}
             {% for position, winners in winners_by_position.items() %}
                 {% if winners %}
@@ -432,7 +593,9 @@
                  data-candidate-id="{{ candidate.id }}"
                  data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
                  data-candidate-position="{{ candidate.position }}"
-                 data-vote-count="{{ candidate.vote_count }}">
+                 data-position-id="{{ candidate.position_id }}"
+                 data-vote-count="{{ candidate.vote_count }}"
+                 data-vote-percentage="{{ candidate.voter_percentage }}">
                 <div>{{ loop.index }}</div>
                 <div class="candidate-info">
                     <div class="candidate-photo-container">
@@ -483,6 +646,41 @@
         {% endif %}
     </div>
     
+    <!-- =========================================== -->
+    <!-- INSIGHT CHARTS SECTION - Single Bar Chart -->
+    <!-- =========================================== -->
+    <div class="insight-charts-section">
+        <div class="insight-charts-header">
+            <h2>
+                <i class="fa-solid fa-chart-bar"></i>
+                Vote Distribution Overview
+            </h2>
+            <div class="chart-note">
+                <i class="fa-solid fa-chart-simple"></i>
+                Bar chart showing vote distribution across all positions
+            </div>
+        </div>
+        
+        <div class="position-chart-card">
+            <div class="position-chart-header">
+                <span class="position-color-indicator" style="background: #3b82f6"></span>
+                <h3>All Candidates by Vote Count</h3>
+                <div class="vote-info">
+                    <i class="fa-solid fa-chart-line"></i>
+                    Total Candidates: <span id="totalCandidatesCount">0</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="overallVoteChart" style="max-height: 500px;"></canvas>
+                </div>
+            </div>
+            <div class="candidate-legend" id="overallChartLegend">
+                <!-- Legend will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
     {% endif %} <!-- End of is_tallied conditional -->
 
     <!-- COMELEC Chairman Name Modal -->
@@ -527,15 +725,6 @@
     </div>
 </div>
 
-<!-- Debug Information -->
-<div style="display: none;" id="debugInfo">
-    Election ID: {{ election.id }}<br>
-    Candidates: {{ candidate_results|length }}<br>
-    Election Title: {{ election.title }}<br>
-    Tally Status: {{ is_tallied }}<br>
-    Data Source: {% if is_tallied %}TallyVote Table{% else %}Vote Table (Encrypted){% endif %}
-</div>
-
 <!-- Pass template variables to JavaScript -->
 <script id="template-data" type="application/json">
 {
@@ -549,4 +738,6 @@
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/election_results_detail.js') }}"></script>
+<!-- Add the vote insights script -->
+<script src="{{ url_for('admin.static', filename='js/vote_insights.js') }}"></script>
 {% endblock %}

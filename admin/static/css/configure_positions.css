@@ -227,11 +227,22 @@ body {
     justify-content: flex-end;
 }
 
-.position-checkbox {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: var(--button-primary);
+/* Checkmark Indicator (No visible box, just checkmark that appears/disappears) */
+.checkmark-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--success-green);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.checkmark-indicator.visible {
+    opacity: 1;
 }
 
 .position-name {
@@ -300,9 +311,35 @@ body {
     box-sizing: border-box;
     text-align: center;
     font-weight: 600;
+    /* Remove increment/decrement buttons */
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
-/* ==================== DROPDOWN STYLES - FIXED (ARROWS ONLY WHEN ENABLED) ==================== */
+/* Remove increment/decrement buttons in WebKit browsers (Chrome, Safari, Edge) */
+.vote-input::-webkit-inner-spin-button,
+.vote-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.vote-input:disabled {
+    background: var(--disabled-bg);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.vote-input:focus {
+    outline: none;
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.vote-input:not(:disabled):hover {
+    border-color: var(--button-primary);
+}
+
+/* ==================== DROPDOWN STYLES ==================== */
 .program-select,
 .course-select {
     width: 100%;
@@ -321,9 +358,6 @@ body {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    
-    /* NO ARROW by default (disabled state) */
-    background-image: none;
 }
 
 /* Remove any IE/Edge default arrows */
@@ -332,7 +366,7 @@ body {
     display: none;
 }
 
-/* Show arrow ONLY when enabled (not disabled) - LIGHT MODE */
+/* Show arrow only when enabled */
 .program-select:not(:disabled),
 .course-select:not(:disabled) {
     background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -341,19 +375,19 @@ body {
     background-size: 12px;
 }
 
-/* Show arrow ONLY when enabled (not disabled) - DARK MODE */
+/* Dark mode arrow */
 :root.dark-mode .program-select:not(:disabled),
 :root.dark-mode .course-select:not(:disabled) {
     background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
-/* Disabled state - NO ARROW, just gray background */
+/* Disabled state */
 .program-select:disabled,
 .course-select:disabled {
     background: var(--disabled-bg);
     opacity: 0.6;
     cursor: not-allowed;
-    background-image: none; /* Ensure no arrow when disabled */
+    background-image: none;
 }
 
 /* Hover and focus states for enabled dropdowns */

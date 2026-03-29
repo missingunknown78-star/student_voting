@@ -720,3 +720,24 @@ window.addEventListener('beforeunload', function() {
         }
     });
 });
+
+
+// At the bottom of your election_results_detail.js, add:
+
+// ==================== INITIALIZE INSIGHT CHARTS ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Only render if we're in tallied state
+    const isTallied = templateData.isTallied;
+    
+    if (isTallied) {
+        console.log('📊 Initializing vote distribution chart');
+        // Small delay to ensure DOM is fully loaded
+        setTimeout(() => {
+            if (typeof renderGroupedVoteChart === 'function') {
+                renderGroupedVoteChart();
+            } else {
+                console.error('vote_insights.js not loaded properly');
+            }
+        }, 200);
+    }
+});

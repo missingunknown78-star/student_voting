@@ -1017,3 +1017,12 @@ body {
         font-size: 0.75rem;
     }
 }
+
+/* More specific selector */
+.deletion-requests-container .data-table thead tr th {
+    color: var(--table-header-text);
+}
+
+:root.dark-mode .deletion-requests-container .data-table thead tr th {
+    color: #ffffff;
+}

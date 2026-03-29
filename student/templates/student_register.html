@@ -23,9 +23,9 @@
         border-top-color: #fff;
         animation: spin 1s ease-in-out infinite;
         margin-right: 8px;
-        vertical-align: middle; /* THIS FIXES VERTICAL ALIGNMENT */
+        vertical-align: middle;
         position: relative;
-        top: -1px; /* Fine-tune adjustment */
+        top: -1px;
     }
     
     @keyframes spin {
@@ -36,7 +36,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 48px; /* Fixed height for consistency */
+        height: 48px;
         line-height: 1;
     }
     
@@ -54,12 +54,35 @@
         line-height: 1;
     }
     
-    /* Ensure button content is always centered */
     .register-btn span {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         vertical-align: middle;
+    }
+    
+    /* Input trim indicator styles */
+    .input-trimmed {
+        border-color: #f59e0b !important;
+        background-color: #fffbeb !important;
+    }
+    
+    .field-hint {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+        display: block;
+    }
+    
+    .trim-hint {
+        color: #f59e0b;
+        font-size: 11px;
+        margin-top: 2px;
+        display: none;
+    }
+    
+    .trim-hint.visible {
+        display: block;
     }
 </style>
 </head>
@@ -84,7 +107,6 @@
             {% endfor %}
         {% endwith %}
 
-        <!-- ✅ FORM ID IS REQUIRED -->
         <form id="registrationForm" method="POST" novalidate>
             <!-- CSRF Token - CRITICAL for security -->
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -92,29 +114,37 @@
             <!-- FIRST NAME -->
             <div class="input-group floating">
                 <input type="text" name="first_name" required placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('first_name', '') }}">
+                       value="{{ session.get('registration_data', {}).get('first_name', '') }}"
+                       data-trim="true">
                 <label>First Name <span class="required-asterisk">*</span></label>
+                <div class="trim-hint" id="first_name_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <!-- MIDDLE NAME -->
             <div class="input-group floating">
                 <input type="text" name="middle_name" placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('middle_name', '') }}">
+                       value="{{ session.get('registration_data', {}).get('middle_name', '') }}"
+                       data-trim="true">
                 <label>Middle Name</label>
+                <div class="trim-hint" id="middle_name_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <!-- LAST NAME -->
             <div class="input-group floating">
                 <input type="text" name="last_name" required placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('last_name', '') }}">
+                       value="{{ session.get('registration_data', {}).get('last_name', '') }}"
+                       data-trim="true">
                 <label>Last Name <span class="required-asterisk">*</span></label>
+                <div class="trim-hint" id="last_name_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <!-- SUFFIX -->
             <div class="input-group floating">
                 <input type="text" name="suffix" placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('suffix', '') }}">
+                       value="{{ session.get('registration_data', {}).get('suffix', '') }}"
+                       data-trim="true">
                 <label>Suffix</label>
+                <div class="trim-hint" id="suffix_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <!-- COURSE -->
@@ -174,15 +204,19 @@
             <!-- EMAIL -->
             <div class="input-group floating">
                 <input type="email" name="email" required placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('email', '') }}">
+                       value="{{ session.get('registration_data', {}).get('email', '') }}"
+                       data-trim="true">
                 <label>Email <span class="required-asterisk">*</span></label>
+                <div class="trim-hint" id="email_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <!-- USERNAME -->
             <div class="input-group floating">
                 <input type="text" name="username" required placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('username', '') }}">
+                       value="{{ session.get('registration_data', {}).get('username', '') }}"
+                       data-trim="true">
                 <label>Username <span class="required-asterisk">*</span></label>
+                <div class="trim-hint" id="username_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <!-- PASSWORD -->
@@ -194,8 +228,10 @@
             <!-- ID NUMBER -->
             <div class="input-group floating">
                 <input type="text" name="id_number" required placeholder=" "
-                       value="{{ session.get('registration_data', {}).get('id_number', '') }}">
+                       value="{{ session.get('registration_data', {}).get('id_number', '') }}"
+                       data-trim="true">
                 <label>ID Number <span class="required-asterisk">*</span></label>
+                <div class="trim-hint" id="id_number_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
             <button type="submit" class="register-btn" id="registerBtn">
@@ -217,6 +253,78 @@ function getCsrfToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     return metaTag ? metaTag.getAttribute('content') : '';
 }
+
+// Function to trim input values (remove leading/trailing spaces, preserve internal spaces)
+function trimInputValue(input) {
+    if (!input || !input.value) return;
+    
+    const originalValue = input.value;
+    const trimmedValue = originalValue.trim().replace(/\s+/g, ' ');
+    
+    // Only update if value changed
+    if (originalValue !== trimmedValue) {
+        input.value = trimmedValue;
+        
+        // Show visual feedback
+        const wrapper = input.closest('.input-group');
+        if (wrapper) {
+            wrapper.classList.add('input-trimmed');
+            setTimeout(() => {
+                wrapper.classList.remove('input-trimmed');
+            }, 1000);
+        }
+        
+        // Show hint that spaces were removed
+        const hintId = input.name + '_hint';
+        const hint = document.getElementById(hintId);
+        if (hint) {
+            hint.classList.add('visible');
+            setTimeout(() => {
+                hint.classList.remove('visible');
+            }, 2000);
+        }
+    }
+}
+
+// Function to trim all text inputs in the form
+function trimAllFormInputs(form) {
+    const textInputs = form.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
+    let wasTrimmed = false;
+    
+    textInputs.forEach(input => {
+        if (input.value && input.dataset.trim === 'true') {
+            const originalValue = input.value;
+            const trimmedValue = originalValue.trim().replace(/\s+/g, ' ');
+            
+            if (originalValue !== trimmedValue) {
+                input.value = trimmedValue;
+                wasTrimmed = true;
+            }
+        }
+    });
+    
+    return wasTrimmed;
+}
+
+// Add real-time trimming on blur for better UX
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all inputs that should be trimmed
+    const trimInputs = document.querySelectorAll('input[data-trim="true"]');
+    
+    trimInputs.forEach(input => {
+        // Trim on blur (when user leaves the field)
+        input.addEventListener('blur', function() {
+            trimInputValue(this);
+        });
+        
+        // Optional: Also trim on paste to clean pasted content
+        input.addEventListener('paste', function(e) {
+            setTimeout(() => {
+                trimInputValue(this);
+            }, 10);
+        });
+    });
+});
 </script>
 
 <!-- ================= AJAX VALIDATION WITH SPINNER BUTTON ================= -->
@@ -224,6 +332,9 @@ function getCsrfToken() {
 document.getElementById('registrationForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
+    // First, trim all inputs before validation and submission
+    trimAllFormInputs(this);
+    
     const registerBtn = document.getElementById('registerBtn');
     const btnText = registerBtn.querySelector('.btn-text');
     const originalText = btnText.textContent;
@@ -300,11 +411,13 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 });
 </script>
 
-<!-- Optional: Add this to prevent double submission on regular form submit -->
+<!-- Handle regular form submission (if JavaScript fails) -->
 <script>
-// Also handle regular form submission (if JavaScript fails)
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
     const registerBtn = document.getElementById('registerBtn');
+    
+    // Trim all inputs before submission (safety measure)
+    trimAllFormInputs(this);
     
     // If button is already disabled, prevent double submission
     if (registerBtn.disabled) {

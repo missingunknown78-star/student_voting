@@ -96,30 +96,56 @@ def deserialize_encrypted_vote(encrypted_data):
     ]
 
 def count_votes_for_candidate(candidate_id, election_id):
-    """Count votes for a specific candidate in an election using PHE"""
-
+    """Count votes for a specific candidate using encrypted votes (OFFICIAL TALLY)"""
+    import json
+    
     votes = Vote.query.filter_by(election_id=election_id).all()
     
     if not votes:
         return 0
     
-
-    candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidate_ids = [c.id for c in candidates]
-
-    try:
-        candidate_index = candidate_ids.index(candidate_id)
-    except ValueError:
-        return 0 
+    # Get current candidates sorted by ID (for reference only)
+    all_candidates = Candidate.query.filter_by(election_id=election_id)\
+                                    .order_by(Candidate.id).all()
+    current_sorted_ids = [c.id for c in all_candidates]
     
-    total_encrypted = public_key.encrypt(0)
+    total_votes = 0
     
     for vote in votes:
-        enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
-        if candidate_index < len(enc_votes):
-            total_encrypted = total_encrypted + enc_votes[candidate_index]
+        if not vote.finder_hash:
+            continue
+            
+        try:
+            finder_data = json.loads(vote.finder_hash)
+            
+            # Get the candidate order that was used when this vote was created
+            stored_order = finder_data.get('candidate_order')
+            
+            if not stored_order:
+                # For old votes without candidate_order, use current order
+                # (This will be wrong for old votes but we fixed them)
+                stored_order = current_sorted_ids
+            
+            # Find which index this candidate is in the stored order
+            try:
+                candidate_index = stored_order.index(candidate_id)
+            except ValueError:
+                # Candidate not in this vote's candidate list (shouldn't happen)
+                continue
+            
+            # Decrypt the vote at that index
+            enc_votes = deserialize_encrypted_vote(vote.encrypted_vote)
+            
+            if candidate_index < len(enc_votes):
+                decrypted = private_key.decrypt(enc_votes[candidate_index])
+                if decrypted > 0:  # This candidate was voted for
+                    total_votes += 1
+                    
+        except Exception as e:
+            print(f"Error processing vote {vote.id}: {e}")
+            continue
     
-    return private_key.decrypt(total_encrypted)
+    return total_votes
 
 def get_all_voters_for_election(election_id):
     """Get all unique voters for an election"""
@@ -183,6 +209,50 @@ def get_all_years():
         return sorted(list(years), reverse=True)
     except:
         return []
+
+def get_position_color(position_name, index=None):
+    """
+    Generate consistent colors for positions based on name hash.
+    This ensures the same position always gets the same color.
+    """
+    import hashlib
+    hash_obj = hashlib.md5(position_name.encode())
+    hash_hex = hash_obj.hexdigest()
+    # Use first 6 characters for a consistent color
+    return f'#{hash_hex[:6]}'
+
+
+def calculate_chart_step_size(max_value):
+    """Calculate appropriate step size for chart y-axis"""
+    if max_value <= 10:
+        return 2
+    elif max_value <= 20:
+        return 5
+    elif max_value <= 50:
+        return 10
+    elif max_value <= 100:
+        return 20
+    elif max_value <= 200:
+        return 50
+    elif max_value <= 500:
+        return 100
+    elif max_value <= 1000:
+        return 200
+    elif max_value <= 5000:
+        return 500
+    else:
+        return 1000
+
+
+def get_candidate_color(candidate_name, position_name, index, total):
+    """
+    Generate automatic colors for candidates based on index.
+    Uses HSL for visually distinct colors without hardcoding.
+    """
+    # Use prime number for good distribution
+    hue = (index * 31) % 360
+    return f'hsl({hue}, 70%, 55%)'
+
 
 
 # ------------------- Configuration ------------------- #
@@ -6285,119 +6355,151 @@ def election_results(election_id):
     # Get all candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()
     
-    # GET POSITION LIMITS
+    # GET POSITION LIMITS AND RESTRICTIONS
     position_limits = {}
+    position_restrictions = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
+        position_restrictions[ep.position_id] = {
+            'course_id': ep.course_id,
+            'program_type_id': ep.program_type_id
+        }
     
-    # COUNT UNIQUE VOTERS
-    unique_voters = db.session.query(Vote.student_id).filter_by(
-        election_id=election_id
-    ).distinct().count()
+    # GET ALL VOTES AND COUNT UNIQUE VOTERS
+    all_votes = Vote.query.filter_by(election_id=election_id).all()
+    unique_voters = len(set(vote.student_id for vote in all_votes))
     
-    # ===== GET VOTE COUNTS - OPTIMIZED! =====
+    # ===== GET VOTE COUNTS =====
     if is_tallied and TALLY_VOTE_AVAILABLE:
-        # STATE 1: OFFICIALLY TALLIED - Use TallyVote table (INSTANT!)
         print("📊 Using official tally results")
         tally_records = TallyVote.query.filter_by(election_id=election_id).all()
         vote_counts = {t.candidate_id: t.vote_count for t in tally_records}
-        
-        # Ensure all candidates have at least 0
         for candidate in candidates:
             if candidate.id not in vote_counts:
                 vote_counts[candidate.id] = 0
-                
     else:
-        # STATE 2: LIVE RESULTS - Use finder_hashes (NO DECRYPTION, 2-3 seconds!)
         print("📊 Using finder_hashes for live results")
         vote_counts = get_admin_live_vote_counts(election_id)
     
-    # Build candidate results
-    candidate_results = []
-    total_votes_cast = 0
+    # ===== CALCULATE ELIGIBLE VOTERS PER POSITION =====
+    position_eligible_voters = {}
+    
+    # Get all students
+    all_students = Student.query.all()
+    
+    # For each position, find eligible voters among those who actually voted
+    for ep in election_positions:
+        position_id = ep.position_id
+        position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
+        
+        # Count voters who are eligible for this position
+        eligible_voter_ids = set()
+        
+        for vote in all_votes:
+            student = Student.query.get(vote.student_id)
+            if not student:
+                continue
+            
+            # Check course restriction
+            if ep.course_id:
+                if student.course_id != ep.course_id:
+                    continue
+            
+            # Check program type restriction
+            if ep.program_type_id:
+                if student.program_type_id != ep.program_type_id:
+                    continue
+            
+            # Student is eligible
+            eligible_voter_ids.add(vote.student_id)
+        
+        position_eligible_voters[position_id] = {
+            'count': len(eligible_voter_ids),
+            'name': position_name,
+            'max_votes': ep.max_votes
+        }
+    
+    # ===== GROUP CANDIDATES BY POSITION =====
+    candidates_by_position = {}
     
     for candidate in candidates:
-        vote_count = vote_counts.get(candidate.id, 0)
-        total_votes_cast += vote_count
+        position_id = candidate.position_id
+        position_name = candidate.position.name if candidate.position else "Unknown"
         
-        candidate_results.append({
+        if position_name not in candidates_by_position:
+            candidates_by_position[position_name] = {
+                'id': position_id,
+                'name': position_name,
+                'max_votes': position_limits.get(position_id, 1),
+                'eligible_voters': position_eligible_voters.get(position_id, {}).get('count', 0),
+                'candidates': []
+            }
+        
+        vote_count = vote_counts.get(candidate.id, 0)
+        
+        candidates_by_position[position_name]['candidates'].append({
             'id': candidate.id,
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
             'photo': candidate.photo,
-            'position': candidate.position.name if candidate.position else "N/A",
-            'position_id': candidate.position_id,
-            'department': candidate.department.name if candidate.department else "All Departments",
+            'party_list': candidate.party_list,
+            'position': position_name,
+            'position_id': position_id,
             'vote_count': vote_count,
-            'voter_percentage': 0,  # Calculate after
-            'is_tallied': is_tallied
+            'voter_percentage': 0,
+            'is_winner': False
         })
     
-    # Calculate percentages based on UNIQUE VOTERS
-    if unique_voters > 0:
-        for candidate in candidate_results:
-            candidate['voter_percentage'] = round((candidate['vote_count'] / unique_voters) * 100, 2)
+    # ===== CALCULATE PERCENTAGES PER POSITION =====
+    for position_name, pos_data in candidates_by_position.items():
+        eligible_voters = pos_data['eligible_voters']
+        
+        if eligible_voters == 0:
+            for candidate in pos_data['candidates']:
+                candidate['voter_percentage'] = 0
+        else:
+            for candidate in pos_data['candidates']:
+                candidate['voter_percentage'] = round((candidate['vote_count'] / eligible_voters) * 100, 2)
+        
+        # Sort candidates by vote count
+        pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
     
-    # Group candidates by position for winner determination
-    candidates_by_position = {}
-    for candidate in candidate_results:
-        position = candidate['position']
-        if position not in candidates_by_position:
-            candidates_by_position[position] = []
-        candidates_by_position[position].append(candidate)
-    
-    # Sort candidates within each position by vote count
-    for position in candidates_by_position:
-        candidates_by_position[position].sort(key=lambda x: x['vote_count'], reverse=True)
-    
-    # Determine winners for each position
-    winners_by_position = {}
-    for position_name, candidates_in_pos in candidates_by_position.items():
-        if candidates_in_pos:
-            position_id = candidates_in_pos[0]['position_id']
-            max_winners = position_limits.get(position_id, 1)
+    # ===== DETERMINE WINNERS (only for tallied results) =====
+    if is_tallied:
+        for position_name, pos_data in candidates_by_position.items():
+            max_winners = pos_data['max_votes']
+            candidates_list = pos_data['candidates']
             
-            winners = []
-            for i, candidate in enumerate(candidates_in_pos):
+            for i, candidate in enumerate(candidates_list):
                 if i < max_winners and candidate['vote_count'] > 0:
-                    winners.append(candidate)
-                else:
-                    break
-            
-            if winners:
-                winners_by_position[position_name] = winners
+                    candidate['is_winner'] = True
     
-    # Sort winners_by_position by position_id
+    # Convert to list for template, sorted by position_id
     position_order = []
-    for position_name, candidates_in_pos in candidates_by_position.items():
-        if candidates_in_pos:
-            position_id = candidates_in_pos[0]['position_id']
-            position_order.append((position_id, position_name))
-    
+    for pos_name, pos_data in candidates_by_position.items():
+        position_order.append((pos_data['id'], pos_name))
     position_order.sort(key=lambda x: x[0])
     
-    sorted_winners_by_position = {}
-    for position_id, position_name in position_order:
-        if position_name in winners_by_position:
-            sorted_winners_by_position[position_name] = winners_by_position[position_name]
+    sorted_candidate_results_by_position = {}
+    for pos_id, pos_name in position_order:
+        sorted_candidate_results_by_position[pos_name] = candidates_by_position[pos_name]
     
-    # Sort candidate_results by position_id first, then by vote count
-    candidates_by_pos_id = {}
-    for candidate in candidate_results:
-        pos_id = candidate['position_id']
-        if pos_id not in candidates_by_pos_id:
-            candidates_by_pos_id[pos_id] = []
-        candidates_by_pos_id[pos_id].append(candidate)
+    # ===== CREATE FLAT CANDIDATE RESULTS LIST FOR DETAILED TABLE =====
+    flat_candidate_results = []
+    for position_name, pos_data in sorted_candidate_results_by_position.items():
+        for candidate in pos_data['candidates']:
+            flat_candidate_results.append(candidate)
     
-    for pos_id in candidates_by_pos_id:
-        candidates_by_pos_id[pos_id].sort(key=lambda x: x['vote_count'], reverse=True)
+    # Build winners_by_position for template
+    winners_by_position = {}
+    if is_tallied:
+        for pos_name, pos_data in sorted_candidate_results_by_position.items():
+            winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
+            if winners:
+                winners_by_position[pos_name] = winners
     
-    sorted_candidate_results = []
-    for pos_id in sorted(candidates_by_pos_id.keys()):
-        sorted_candidate_results.extend(candidates_by_pos_id[pos_id])
-    
-    # Calculate voter statistics
+    # Calculate voter statistics (overall)
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
@@ -6406,22 +6508,26 @@ def election_results(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
-    # ✅ KEEP THIS AUDIT LOG (Results view for specific election - but consider if this is too frequent)
+    # ===== REGISTER HELPER FUNCTIONS FOR TEMPLATE =====
+    app = current_app._get_current_object()
+    app.jinja_env.globals.update(get_position_color=get_position_color)
+    
+    # Audit log
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     
     log_audit(
         action='ELECTION_RESULTS_VIEW',
-        description=f"Admin user '{username}' viewed results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Status: {status}, Tallied: {is_tallied}, Voter turnout: {voter_turnout}%, Unique voters: {unique_voters}/{total_eligible_voters}"
+        description=f"Admin user '{username}' viewed results for election: '{election.title}' (ID: {election_id}) from IP: {ip} | Status: {status}, Tallied: {is_tallied}"
     )
     
     return render_template(
         'election_results_detail.html',
         election=election,
-        candidate_results=sorted_candidate_results,
-        winners_by_position=sorted_winners_by_position,
+        candidate_results=flat_candidate_results,
+        candidate_results_by_position=sorted_candidate_results_by_position,
+        winners_by_position=winners_by_position,
         total_voters=unique_voters,
-        total_votes_cast=total_votes_cast,
         total_eligible_voters=total_eligible_voters,
         voter_turnout=voter_turnout,
         students_not_voted=students_not_voted,
@@ -6939,6 +7045,9 @@ def get_tally_results(election_id):
     })
 
 
+
+
+
 @admin_bp.route('/results/<int:election_id>/pdf')
 @admin_required
 def election_results_pdf(election_id):
@@ -6981,7 +7090,6 @@ def election_results_pdf(election_id):
     
     # ===== BLOCK PDF IF NOT TALLIED =====
     if not is_tallied:
-        # Return error message (can be JSON for AJAX or flash for redirect)
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
                 'success': False,
@@ -6991,98 +7099,126 @@ def election_results_pdf(election_id):
             flash('PDF results are only available after official tally. Please tally the votes first.', 'warning')
             return redirect(url_for('admin.election_results', election_id=election_id))
     
-    # ===== ONLY GET HERE IF TALLIED =====
     print(f"📊 Generating PDF for election {election_id} using official tally results")
     print(f"📝 COMELEC Chairman: {chairman_name}")
     
+    # Get all votes for this election
+    all_votes = Vote.query.filter_by(election_id=election_id).all()
+    unique_voters = len(set(vote.student_id for vote in all_votes))
+    
     # Get candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()
-    candidate_results = []
-    total_votes_cast = 0
     
-    # COUNT UNIQUE VOTERS
-    unique_voters = db.session.query(Vote.student_id).filter_by(
-        election_id=election_id
-    ).distinct().count()
-    
-    # GET POSITION LIMITS
+    # GET POSITION LIMITS AND RESTRICTIONS
     position_limits = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
     
-    # ===== USE TALLY TABLE ONLY (NO DECRYPTION, NO FALLBACK) =====
+    # ===== USE TALLY TABLE ONLY =====
     tally_records = TallyVote.query.filter_by(election_id=election_id).all()
     tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
     
-    for candidate in candidates:
-        vote_count = tally_dict.get(candidate.id, 0)
+    # ===== CALCULATE ELIGIBLE VOTERS PER POSITION =====
+    position_eligible_voters = {}
+    
+    # Get all students
+    all_students = Student.query.all()
+    student_courses = {s.id: s.course_id for s in all_students}
+    student_programs = {s.id: s.program_type_id for s in all_students}
+    
+    # For each position, find eligible voters among those who actually voted
+    for ep in election_positions:
+        position_id = ep.position_id
+        position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
         
-        candidate_results.append({
+        # Count voters who are eligible for this position
+        eligible_voter_ids = set()
+        
+        for vote in all_votes:
+            student = Student.query.get(vote.student_id)
+            if not student:
+                continue
+            
+            # Check course restriction
+            if ep.course_id:
+                if student.course_id != ep.course_id:
+                    continue
+            
+            # Check program type restriction
+            if ep.program_type_id:
+                if student.program_type_id != ep.program_type_id:
+                    continue
+            
+            # Student is eligible
+            eligible_voter_ids.add(vote.student_id)
+        
+        position_eligible_voters[position_id] = {
+            'count': len(eligible_voter_ids),
+            'name': position_name,
+            'max_votes': ep.max_votes
+        }
+    
+    # ===== BUILD CANDIDATE RESULTS WITH POSITION-SPECIFIC PERCENTAGES =====
+    candidate_results = []
+    candidates_by_position = {}
+    
+    for candidate in candidates:
+        position_id = candidate.position_id
+        position_name = candidate.position.name if candidate.position else "Unknown"
+        vote_count = tally_dict.get(candidate.id, 0)
+        eligible_voters = position_eligible_voters.get(position_id, {}).get('count', 0)
+        
+        # Calculate percentage based on eligible voters for this position
+        if eligible_voters > 0:
+            voter_percentage = round((vote_count / eligible_voters) * 100, 2)
+        else:
+            voter_percentage = 0
+        
+        candidate_data = {
             'id': candidate.id,
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
             'photo': candidate.photo,
-            'position': candidate.position.name if candidate.position else "N/A",
-            'position_id': candidate.position_id,
+            'position': position_name,
+            'position_id': position_id,
             'department': candidate.department.name if candidate.department else "All Departments",
             'vote_count': vote_count,
-            'voter_percentage': 0,
-            'is_tallied': True
-        })
-        total_votes_cast += vote_count
+            'voter_percentage': voter_percentage,
+            'is_tallied': True,
+            'is_winner': False
+        }
+        
+        candidate_results.append(candidate_data)
+        
+        # Group by position
+        if position_name not in candidates_by_position:
+            candidates_by_position[position_name] = {
+                'id': position_id,
+                'name': position_name,
+                'max_votes': position_limits.get(position_id, 1),
+                'candidates': []
+            }
+        candidates_by_position[position_name]['candidates'].append(candidate_data)
     
-    # Calculate percentages based on UNIQUE VOTERS
-    if unique_voters > 0:
-        for candidate in candidate_results:
-            candidate['voter_percentage'] = round((candidate['vote_count'] / unique_voters) * 100, 2)
-    
-    # ===== WINNER DETERMINATION =====
-    # Group candidates by position
-    candidates_by_position = {}
-    for candidate in candidate_results:
-        position = candidate['position']
-        if position not in candidates_by_position:
-            candidates_by_position[position] = []
-        candidates_by_position[position].append(candidate)
-    
-    # Sort candidates within each position by vote count
-    for position in candidates_by_position:
-        candidates_by_position[position].sort(key=lambda x: x['vote_count'], reverse=True)
-    
-    # Determine winners
+    # Sort candidates within each position by vote count and determine winners
     winners_by_position = {}
+    for position_name, pos_data in candidates_by_position.items():
+        # Sort by vote count
+        pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
+        
+        # Determine winners
+        max_winners = pos_data['max_votes']
+        winners = []
+        for i, candidate in enumerate(pos_data['candidates']):
+            if i < max_winners and candidate['vote_count'] > 0:
+                candidate['is_winner'] = True
+                winners.append(candidate)
+        
+        if winners:
+            winners_by_position[position_name] = winners
     
-    for position_name, candidates_in_pos in candidates_by_position.items():
-        if candidates_in_pos:
-            position_id = candidates_in_pos[0]['position_id']
-            max_winners = position_limits.get(position_id, 1)
-            
-            winners = []
-            for i, candidate in enumerate(candidates_in_pos):
-                if i < max_winners and candidate['vote_count'] > 0:
-                    winners.append(candidate)
-                else:
-                    break
-            
-            if winners:
-                winners_by_position[position_name] = winners
-    
-    # Sort winners_by_position by position_id
-    position_order = []
-    for position_name, candidates_in_pos in candidates_by_position.items():
-        if candidates_in_pos:
-            position_id = candidates_in_pos[0]['position_id']
-            position_order.append((position_id, position_name))
-    
-    position_order.sort(key=lambda x: x[0])
-    
-    sorted_winners_by_position = {}
-    for position_id, position_name in position_order:
-        if position_name in winners_by_position:
-            sorted_winners_by_position[position_name] = winners_by_position[position_name]
-    
-    # Sort candidate_results by position_id
+    # Sort candidate_results by position_id for detailed table
     candidates_by_pos_id = {}
     for candidate in candidate_results:
         pos_id = candidate['position_id']
@@ -7097,7 +7233,7 @@ def election_results_pdf(election_id):
     for pos_id in sorted(candidates_by_pos_id.keys()):
         sorted_candidate_results.extend(candidates_by_pos_id[pos_id])
     
-    # Get total eligible voters
+    # Calculate overall statistics
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
@@ -7106,12 +7242,14 @@ def election_results_pdf(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
+    total_votes_cast = sum(c['vote_count'] for c in candidate_results)
+    
     # Render HTML template for PDF
     html = render_template(
         'election_results_pdf.html',
         election=election,
         candidate_results=sorted_candidate_results,
-        winners_by_position=sorted_winners_by_position,
+        winners_by_position=winners_by_position,
         total_voters=unique_voters,
         total_votes_cast=total_votes_cast,
         total_eligible_voters=total_eligible_voters,
@@ -7122,7 +7260,7 @@ def election_results_pdf(election_id):
         is_tallied=is_tallied,
         tally_timestamp=tally_timestamp,
         position_limits=position_limits,
-        chairman_name=chairman_name  # Pass chairman name to template
+        chairman_name=chairman_name
     )
     
     try:
@@ -7136,8 +7274,7 @@ def election_results_pdf(election_id):
             stylesheets=[CSS(string='''
                 @page {
                     size: letter;
-                    margin: 0.75in;
-                    /* Page numbers removed - now handled by template */
+                    margin: 0.5in 0.5in 1.5in 0.5in;
                 }
             ''')],
             font_config=font_config
@@ -7151,7 +7288,7 @@ def election_results_pdf(election_id):
         response.headers['Content-Type'] = 'application/pdf'
         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
         
-        # ✅ KEEP THIS AUDIT LOG (PDF GENERATION - data access with chairman name)
+        # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -7164,6 +7301,8 @@ def election_results_pdf(election_id):
         
     except Exception as e:
         current_app.logger.error(f"PDF Generation Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
@@ -7252,6 +7391,106 @@ def admin_profile():
                            total_votes=total_votes)
 
 
+
+@admin_bp.route('/debug-candidate-order/<int:election_id>')
+@admin_required
+def debug_candidate_order(election_id):
+    """Debug endpoint to see candidate order in votes"""
+    import json
+    
+    output = []
+    output.append("=" * 60)
+    output.append(f"DEBUG FOR ELECTION ID: {election_id}")
+    output.append("=" * 60)
+    
+    # Get current candidates sorted by ID
+    current_candidates = Candidate.query.filter_by(election_id=election_id)\
+                                        .order_by(Candidate.id).all()
+    
+    output.append("\n📋 CURRENT CANDIDATES (Sorted by ID - used for tallying):")
+    output.append("-" * 50)
+    for idx, c in enumerate(current_candidates):
+        output.append(f"  Index {idx}: ID {c.id} - {c.first_name} {c.last_name} ({c.position.name if c.position else 'N/A'})")
+    
+    # Get all votes for this election
+    votes = Vote.query.filter_by(election_id=election_id).all()
+    output.append(f"\n📊 TOTAL VOTES: {len(votes)}")
+    
+    if not votes:
+        output.append("❌ No votes found!")
+        return "<br>".join(output)
+    
+    # Check first 3 votes to see stored candidate_order
+    output.append("\n🔍 CHECKING FIRST 3 VOTES:")
+    output.append("-" * 50)
+    
+    for i, vote in enumerate(votes[:3]):
+        output.append(f"\n--- VOTE #{i+1} (ID: {vote.id}) ---")
+        
+        if not vote.finder_hash:
+            output.append("  ❌ No finder_hash found!")
+            continue
+            
+        try:
+            finder_data = json.loads(vote.finder_hash)
+            output.append(f"  📦 finder_data keys: {list(finder_data.keys())}")
+            
+            # Check if candidate_order exists
+            if 'candidate_order' in finder_data:
+                stored_order = finder_data['candidate_order']
+                output.append(f"  ✅ candidate_order FOUND! Length: {len(stored_order)}")
+                output.append(f"  📍 Stored order: {stored_order}")
+                
+                # Compare with current order
+                current_ids = [c.id for c in current_candidates]
+                if stored_order == current_ids:
+                    output.append("  ✅ PERFECT MATCH! Orders are identical.")
+                else:
+                    output.append("  ⚠️ MISMATCH DETECTED!")
+                    for idx, (stored, current) in enumerate(zip(stored_order, current_ids)):
+                        if stored != current:
+                            output.append(f"     Index {idx}: Stored ID {stored} vs Current ID {current}")
+            else:
+                output.append("  ❌ NO candidate_order in this vote!")
+                output.append(f"  📦 Available keys: {list(finder_data.keys())}")
+                
+                # Show what IS stored
+                if 'hashes' in finder_data:
+                    output.append(f"  📍 Hashes count: {len(finder_data['hashes'])}")
+                    for h in finder_data['hashes'][:3]:
+                        output.append(f"     - Candidate ID: {h.get('candidate_id')}")
+                        
+        except json.JSONDecodeError as e:
+            output.append(f"  ❌ JSON decode error: {e}")
+        except Exception as e:
+            output.append(f"  ❌ Error: {e}")
+    
+    # Summary
+    output.append("\n" + "=" * 60)
+    output.append("SUMMARY")
+    output.append("=" * 60)
+    
+    # Count how many votes have candidate_order
+    votes_with_order = 0
+    for vote in votes:
+        if vote.finder_hash:
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                if 'candidate_order' in finder_data:
+                    votes_with_order += 1
+            except:
+                pass
+    
+    output.append(f"✅ Votes with candidate_order: {votes_with_order} / {len(votes)}")
+    
+    if votes_with_order == 0:
+        output.append("\n❌ PROBLEM: No votes have candidate_order stored!")
+        output.append("   This is why tallying is miscounting votes.")
+        output.append("\n🔧 SOLUTION: You need to:")
+        output.append("   1. Update submit_vote to include 'candidate_order'")
+        output.append("   2. Or manually fix existing votes (use fix script below)")
+    
+    return "<br>".join(output)
 
 
 from admin.models import VoteDistribution

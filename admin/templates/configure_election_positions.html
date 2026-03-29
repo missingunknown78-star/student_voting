@@ -35,29 +35,36 @@
         <!-- CSRF Token - CRITICAL for security -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
+        <!-- Select All Bar -->
         <div class="select-all-bar">
             <label>
-                <input type="checkbox" id="selectAll">
+                <input type="checkbox" id="selectAll" {% if configured_position_ids|length > 0 %}checked{% endif %}>
                 <strong>Select All Positions</strong>
             </label>
             <span class="selection-counter">
-                <strong id="selected-count">0</strong> positions selected
+                <strong id="selected-count">{{ configured_position_ids|length }}</strong> positions selected
             </span>
+        </div>
+
+        <!-- Hidden inputs to submit all positions when select all is checked -->
+        <div id="hidden-positions-container">
+            {% if configured_position_ids|length > 0 %}
+                {% for position in all_positions|sort(attribute='id') %}
+                    <input type="hidden" name="positions" value="{{ position.id }}" class="position-hidden-input">
+                {% endfor %}
+            {% endif %}
         </div>
 
         <!-- Positions Grid - Fixed 3 columns -->
         <div class="positions-grid">
             {% for position in all_positions|sort(attribute='id') %}
-            <div class="position-card" id="position-{{ position.id }}" data-position-id="{{ position.id }}">
-                <!-- Card Header with Checkbox and Position Name -->
+            <div class="position-card {% if position.id in configured_position_ids %}selected{% endif %}" id="position-{{ position.id }}" data-position-id="{{ position.id }}">
+                <!-- Card Header with Position Name and Checkmark Indicator -->
                 <div class="card-header">
                     <div class="header-left">
-                        <input type="checkbox" 
-                               name="positions" 
-                               value="{{ position.id }}" 
-                               id="pos_{{ position.id }}"
-                               class="position-checkbox"
-                               {% if position.id in configured_position_ids %}checked{% endif %}>
+                        <span class="checkmark-indicator {% if position.id in configured_position_ids %}visible{% endif %}" id="indicator-{{ position.id }}">
+                            ✓
+                        </span>
                     </div>
                     <div class="header-center">
                         <span class="position-name">{{ position.name }}</span>
@@ -78,11 +85,11 @@
                             <span>Max Votes</span>
                         </div>
                         <div class="config-input-group">
-                            <input type="number" 
+                            <input type="text" 
                                    name="max_votes_{{ position.id }}" 
                                    id="max_votes_{{ position.id }}"
-                                   min="1" 
-                                   max="50"
+                                   pattern="[0-9]+"
+                                   inputmode="numeric"
                                    value="{{ configured_positions.get(position.id, 1) }}"
                                    class="vote-input"
                                    {% if position.id not in configured_position_ids %}disabled{% endif %}>
@@ -183,70 +190,162 @@
 
 <script>
 function updateSelectedCount() {
-    const checkboxes = document.querySelectorAll('input[name="positions"]:checked');
-    document.getElementById('selected-count').textContent = checkboxes.length;
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const hiddenInputs = document.querySelectorAll('.position-hidden-input');
+    const selectedCount = selectAllCheckbox.checked ? hiddenInputs.length : 0;
+    document.getElementById('selected-count').textContent = selectedCount;
 }
 
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('input[name="positions"]');
+function toggleAllPositions(isChecked) {
+    const hiddenContainer = document.getElementById('hidden-positions-container');
+    const allPositions = {{ all_positions|map(attribute='id')|list|tojson }};
     
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-        togglePositionSelection(checkbox.value);
-    });
+    // Clear existing hidden inputs
+    hiddenContainer.innerHTML = '';
+    
+    if (isChecked) {
+        // Add hidden inputs for all positions
+        allPositions.forEach(positionId => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'positions';
+            hiddenInput.value = positionId;
+            hiddenInput.className = 'position-hidden-input';
+            hiddenContainer.appendChild(hiddenInput);
+        });
+        
+        // Enable all configuration inputs
+        document.querySelectorAll('.vote-input, .program-select, .course-select').forEach(input => {
+            input.disabled = false;
+        });
+        
+        // Show checkmark indicators for all positions
+        document.querySelectorAll('.checkmark-indicator').forEach(indicator => {
+            indicator.classList.add('visible');
+        });
+        
+        // Add selected class to all cards
+        document.querySelectorAll('.position-card').forEach(card => {
+            card.classList.add('selected');
+        });
+    } else {
+        // Remove all hidden inputs (nothing selected)
+        // Disable all configuration inputs
+        document.querySelectorAll('.vote-input, .program-select, .course-select').forEach(input => {
+            input.disabled = true;
+        });
+        
+        // Hide checkmark indicators for all positions
+        document.querySelectorAll('.checkmark-indicator').forEach(indicator => {
+            indicator.classList.remove('visible');
+        });
+        
+        // Remove selected class from all cards
+        document.querySelectorAll('.position-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+    }
+    
     updateSelectedCount();
 }
 
-function togglePositionSelection(positionId) {
-    const checkbox = document.getElementById(`pos_${positionId}`);
-    const card = document.getElementById(`position-${positionId}`);
-    const limitInput = document.getElementById(`max_votes_${positionId}`);
-    const programSelect = document.getElementById(`program_type_${positionId}`);
-    const courseSelect = document.getElementById(`course_${positionId}`);
+function validateVoteLimit(input) {
+    // Get current value
+    let value = input.value;
     
-    if (checkbox && checkbox.checked) {
-        card.classList.add('selected');
-        if (limitInput) limitInput.disabled = false;
-        if (programSelect) programSelect.disabled = false;
-        if (courseSelect) courseSelect.disabled = false;
+    // If empty, don't do anything (will be handled on blur)
+    if (value === '') {
+        return;
+    }
+    
+    // Remove any non-numeric characters
+    value = value.replace(/[^\d]/g, '');
+    
+    // If empty after cleaning, return (will be handled on blur)
+    if (value === '') {
+        return;
+    }
+    
+    let numValue = parseInt(value);
+    
+    // Check range
+    if (numValue < 1) {
+        input.value = '1';
+    } else if (numValue > 50) {
+        input.value = '50';
+        alert('Maximum votes cannot exceed 50');
     } else {
-        card.classList.remove('selected');
-        if (limitInput) limitInput.disabled = true;
-        if (programSelect) programSelect.disabled = true;
-        if (courseSelect) courseSelect.disabled = true;
+        input.value = numValue;
     }
 }
 
-function validateVoteLimit(input) {
-    let value = parseInt(input.value);
-    if (isNaN(value) || value < 1) {
-        input.value = 1;
-    } else if (value > 50) {
-        input.value = 50;
-        alert('Maximum votes cannot exceed 50');
+function handleVoteInputBlur(input) {
+    // On blur, if empty, set to default 1
+    if (input.value === '') {
+        input.value = '1';
+    } else {
+        // Validate the value
+        let numValue = parseInt(input.value);
+        if (isNaN(numValue) || numValue < 1) {
+            input.value = '1';
+        } else if (numValue > 50) {
+            input.value = '50';
+            alert('Maximum votes cannot exceed 50');
+        }
     }
+}
+
+function updateBadges() {
+    // Update program type badges
+    document.querySelectorAll('.program-select:not(:disabled)').forEach(select => {
+        const positionId = select.id.replace('program_type_', '');
+        const badge = document.getElementById(`program-badge-${positionId}`);
+        if (badge && select.value) {
+            const selectedOption = select.options[select.selectedIndex];
+            badge.textContent = selectedOption.text;
+        } else if (badge && !select.value) {
+            badge.textContent = 'All';
+        }
+    });
+    
+    // Update course badges
+    document.querySelectorAll('.course-select:not(:disabled)').forEach(select => {
+        const positionId = select.id.replace('course_', '');
+        const badge = document.getElementById(`course-badge-${positionId}`);
+        if (badge && select.value) {
+            const selectedOption = select.options[select.selectedIndex];
+            badge.textContent = selectedOption.text.length > 12 ? 
+                selectedOption.text.substring(0, 12) + '...' : 
+                selectedOption.text;
+        } else if (badge && !select.value) {
+            badge.textContent = 'All';
+        }
+    });
 }
 
 function validateForm() {
-    const checkboxes = document.querySelectorAll('input[name="positions"]:checked');
+    const selectAllCheckbox = document.getElementById('selectAll');
     
-    if (checkboxes.length === 0) {
+    if (!selectAllCheckbox.checked) {
         alert('Please select at least one position for this election.');
         return false;
     }
     
+    const voteInputs = document.querySelectorAll('.vote-input:not(:disabled)');
     let valid = true;
-    checkboxes.forEach(checkbox => {
-        const positionId = checkbox.value;
-        const limitInput = document.getElementById(`max_votes_${positionId}`);
-        if (limitInput) {
-            const value = parseInt(limitInput.value);
-            if (isNaN(value) || value < 1) {
-                const positionName = checkbox.closest('.position-card').querySelector('.position-name').textContent.trim();
-                alert(`Please set a valid vote limit for ${positionName}`);
-                valid = false;
-            }
+    
+    voteInputs.forEach(input => {
+        const value = parseInt(input.value);
+        if (isNaN(value) || value < 1) {
+            const positionCard = input.closest('.position-card');
+            const positionName = positionCard.querySelector('.position-name').textContent.trim();
+            alert(`Please set a valid vote limit (1-50) for ${positionName}`);
+            valid = false;
+        } else if (value > 50) {
+            const positionCard = input.closest('.position-card');
+            const positionName = positionCard.querySelector('.position-name').textContent.trim();
+            alert(`Maximum votes cannot exceed 50 for ${positionName}`);
+            valid = false;
         }
     });
     
@@ -256,48 +355,76 @@ function validateForm() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('input[name="positions"]');
     const selectAllCheckbox = document.getElementById('selectAll');
     
-    // Initialize each position based on whether it's configured
-    checkboxes.forEach(checkbox => {
-        togglePositionSelection(checkbox.value);
-    });
-    
-    updateSelectedCount();
-    
-    // Check if all checkboxes are checked (for select all)
-    if (selectAllCheckbox) {
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        selectAllCheckbox.checked = allChecked;
+    // Initialize based on current state (if any positions are configured)
+    const hasConfiguredPositions = {{ configured_position_ids|length }} > 0;
+    if (hasConfiguredPositions) {
+        toggleAllPositions(true);
+        selectAllCheckbox.checked = true;
+    } else {
+        toggleAllPositions(false);
+        selectAllCheckbox.checked = false;
     }
     
-    // Add event listeners to individual checkboxes
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            togglePositionSelection(this.value);
-            updateSelectedCount();
+    // Add event listener to select all checkbox
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            toggleAllPositions(this.checked);
+        });
+    }
+    
+    // Add vote limit validation for text inputs
+    document.querySelectorAll('.vote-input').forEach(input => {
+        // Validate on input (as user types) - only clean non-numeric but allow empty
+        input.addEventListener('input', function() {
+            // Allow empty field while typing
+            if (this.value === '') {
+                return;
+            }
+            // Remove non-numeric characters but keep the value as is
+            let cleaned = this.value.replace(/[^\d]/g, '');
+            if (cleaned !== this.value) {
+                this.value = cleaned;
+            }
+        });
+        
+        // On blur, set default if empty
+        input.addEventListener('blur', function() {
+            handleVoteInputBlur(this);
+        });
+        
+        // On change, validate
+        input.addEventListener('change', function() {
+            if (this.value !== '') {
+                validateVoteLimit(this);
+            }
+        });
+        
+        // Prevent non-numeric characters
+        input.addEventListener('keypress', function(e) {
+            // Allow: backspace, delete, tab, escape, enter, home, end, left, right, etc.
+            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab' || 
+                e.key === 'Escape' || e.key === 'Enter' || e.key === 'Home' || 
+                e.key === 'End' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                return;
+            }
             
-            // Update select all checkbox state
-            if (selectAllCheckbox) {
-                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-                selectAllCheckbox.checked = allChecked;
+            // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'c' || e.key === 'v' || e.key === 'x')) {
+                return;
+            }
+            
+            // Allow only numbers
+            if (e.key < '0' || e.key > '9') {
+                e.preventDefault();
             }
         });
     });
     
-    // Add select all functionality
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            toggleSelectAll();
-        });
-    }
-    
-    // Add vote limit validation
-    document.querySelectorAll('.vote-input').forEach(input => {
-        input.addEventListener('change', function() {
-            validateVoteLimit(this);
-        });
+    // Update badges when dropdowns change
+    document.querySelectorAll('.program-select, .course-select').forEach(select => {
+        select.addEventListener('change', updateBadges);
     });
     
     // Form validation
