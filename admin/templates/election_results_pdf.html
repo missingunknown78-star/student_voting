@@ -472,12 +472,27 @@
         Individual votes remain private while ensuring accurate totals.
     </div>
     
-    <!-- WINNERS SECTION -->
+    <!-- WINNERS SECTION - SORTED BY POSITION ID -->
     <div class="winners-title-container">
         <div class="winners-title">🏆 OFFICIAL ELECTION WINNERS</div>
     </div>
     
     {% if is_tallied and winners_by_position %}
+        {% set sorted_winners = [] %}
+        {# First, collect winners with their position IDs #}
+        {% for position_name, winners in winners_by_position.items() %}
+            {# Get position ID from the first candidate in winners list #}
+            {% set position_id = winners[0].position_id if winners else 999 %}
+            {% set _ = sorted_winners.append({
+                'position_id': position_id,
+                'position_name': position_name,
+                'winners': winners
+            }) %}
+        {% endfor %}
+        
+        {# Sort by position ID #}
+        {% set sorted_winners = sorted_winners|sort(attribute='position_id') %}
+        
         <table>
             <thead>
                 <tr>
@@ -488,7 +503,9 @@
                 </tr>
             </thead>
             <tbody>
-                {% for position_name, winners in winners_by_position.items() %}
+                {% for item in sorted_winners %}
+                    {% set position_name = item.position_name %}
+                    {% set winners = item.winners %}
                     {% if winners %}
                         {% if winners|length == 1 %}
                             {% set winner = winners[0] %}
@@ -522,7 +539,7 @@
     <!-- Page Break - Force next page for detailed results -->
     <div class="page-break"></div>
     
-    <!-- DETAILED RESULTS SECTION -->
+    <!-- DETAILED RESULTS SECTION - SORTED BY POSITION ID -->
     <div class="detailed-title-container">
         <div class="detailed-title">📊 DETAILED RESULTS BY POSITION</div>
     </div>
@@ -531,20 +548,27 @@
         {% set position_groups = {} %}
         {% for candidate in candidate_results %}
             {% set pos_name = candidate.position %}
+            {% set pos_id = candidate.position_id %}
             {% if pos_name not in position_groups %}
                 {% set _ = position_groups.update({pos_name: {
-                    'id': candidate.position_id,
+                    'id': pos_id,
                     'candidates': []
                 }}) %}
             {% endif %}
             {% set _ = position_groups[pos_name]['candidates'].append(candidate) %}
         {% endfor %}
         
+        {# Sort positions by ID #}
         {% set sorted_positions = position_groups.items()|sort(attribute='1.id') %}
         
         {% for position_name, group in sorted_positions %}
             {% set candidates_in_pos = group.candidates|sort(attribute='vote_count', reverse=true) %}
-            {% set max_winners = winners_by_position[position_name]|length if is_tallied and position_name in winners_by_position else 1 %}
+            {% set max_winners = 0 %}
+            {% for item in sorted_winners %}
+                {% if item.position_name == position_name %}
+                    {% set max_winners = item.winners|length %}
+                {% endif %}
+            {% endfor %}
             
             <div class="position-container">
                 <div style="font-size: 12pt; font-weight: bold; margin: 0.1in 0 0.05in 0;">

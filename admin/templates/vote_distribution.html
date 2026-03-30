@@ -278,6 +278,7 @@
     let currentData = null;
     let currentElectionScope = null;
     let currentGroupingType = null;
+    let positionsOrder = []; // Store positions in ID order
     
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -347,6 +348,25 @@
                 // Store grouping type from response
                 currentGroupingType = data.grouping_type || 'department';
                 addDebug(`Grouping type: ${currentGroupingType}`);
+                
+                // Store positions order from the API response (with IDs)
+                if (data.positions_order) {
+                    positionsOrder = data.positions_order;
+                    addDebug(`Positions order (by ID): ${positionsOrder.join(', ')}`);
+                } else {
+                    // Fallback: get positions and sort by ID from candidates
+                    const allCandidates = data.all_candidates || [];
+                    const positionIds = {};
+                    for (const candidate of allCandidates) {
+                        if (candidate.position_id && candidate.position) {
+                            positionIds[candidate.position] = candidate.position_id;
+                        }
+                    }
+                    positionsOrder = Object.keys(positionIds).sort((a, b) => {
+                        return (positionIds[a] || 999) - (positionIds[b] || 999);
+                    });
+                    addDebug(`Positions order (calculated): ${positionsOrder.join(', ')}`);
+                }
                 
                 renderDashboard(data);
                 hideNoDataMessage();
@@ -422,10 +442,39 @@
         addDebug('Rendering dashboard...');
         
         renderStatsCards(data.stats, data.election);
-        renderFilterTabs(Object.keys(data.positions));
-        renderCandidates(data.positions);
         
-        addDebug(`Rendered ${Object.keys(data.positions).length} positions with grouping type: ${data.grouping_type || 'department'}`);
+        // Get sorted position names
+        const sortedPositions = getSortedPositionNames(data.positions);
+        renderFilterTabs(sortedPositions);
+        renderCandidates(data.positions, sortedPositions);
+        
+        addDebug(`Rendered ${sortedPositions.length} positions with grouping type: ${data.grouping_type || 'department'}`);
+    }
+    
+    function getSortedPositionNames(positions) {
+        // Get all position names from the positions object
+        const positionNames = Object.keys(positions);
+        
+        // Get position IDs from the data
+        const allCandidates = currentData?.all_candidates || [];
+        const positionIdMap = {};
+        
+        for (const candidate of allCandidates) {
+            if (candidate.position_id && candidate.position && !positionIdMap[candidate.position]) {
+                positionIdMap[candidate.position] = candidate.position_id;
+            }
+        }
+        
+        // Sort position names by their ID
+        const sortedNames = [...positionNames].sort((a, b) => {
+            const idA = positionIdMap[a] || 999;
+            const idB = positionIdMap[b] || 999;
+            return idA - idB;
+        });
+        
+        addDebug(`Sorted positions: ${sortedNames.map(p => `${p} (ID: ${positionIdMap[p] || '?'})`).join(', ')}`);
+        
+        return sortedNames;
     }
     
     function renderStatsCards(stats, election) {
@@ -482,31 +531,35 @@
         }
     }
     
-    function renderFilterTabs(positions) {
+    function renderFilterTabs(sortedPositions) {
         const filterTabs = document.getElementById('filterTabs');
         filterTabs.style.display = 'flex';
         
         let html = '<button class="filter-tab active" onclick="filterByPosition(\'all\')">All Positions</button>';
         
-        positions.forEach(position => {
-            const escapedPosition = position.replace(/'/g, "\\'");
-            html += `<button class="filter-tab" onclick="filterByPosition('${escapedPosition}')">${position}</button>`;
+        sortedPositions.forEach(position => {
+            const escapedPosition = position.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            html += `<button class="filter-tab" onclick="filterByPosition('${escapedPosition}')">${escapeHtml(position)}</button>`;
         });
         
         filterTabs.innerHTML = html;
     }
     
-    function renderCandidates(positions) {
+    function renderCandidates(positions, sortedPositions) {
         const container = document.getElementById('candidatesContainer');
         let html = '';
         let hasAnyCandidates = false;
         
-        for (const [positionName, candidates] of Object.entries(positions)) {
-            if (candidates.length === 0) continue;
+        // Use sorted positions order
+        for (const positionName of sortedPositions) {
+            const candidates = positions[positionName];
+            if (!candidates || candidates.length === 0) continue;
             
             hasAnyCandidates = true;
             
-            html += `<h2 class="section-title" id="position-${positionName.replace(/\s+/g, '-')}">`;
+            const positionId = positionName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+            
+            html += `<h2 class="section-title" id="position-${positionId}">`;
             html += `<i class="fa-solid ${getPositionIcon(positionName)}"></i>`;
             html += `${positionName} (${candidates.length} candidates)`;
             html += `<span class="breakdown-badge ${currentGroupingType}">${getBreakdownTypeLabel()}</span>`;
@@ -533,6 +586,12 @@
         container.innerHTML = html;
     }
     
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     function getBreakdownTypeLabel() {
         if (currentGroupingType === 'course') {
             return 'Course Breakdown';
@@ -544,15 +603,25 @@
     }
     
     function renderCandidateCard(candidate) {
+        // Get photo HTML - use actual photo if available
+        let photoHtml = '';
+        if (candidate.photo) {
+            photoHtml = `<img src="${candidate.photo}" alt="${candidate.name}" class="candidate-photo-img">`;
+        } else {
+            photoHtml = `<div class="candidate-avatar">${escapeHtml(candidate.initials)}</div>`;
+        }
+        
         let html = `
             <div class="candidate-card" data-position="${candidate.position.replace(/"/g, '&quot;')}">
                 <div class="candidate-header">
-                    <div class="candidate-avatar">${candidate.initials}</div>
+                    <div class="candidate-photo-wrapper">
+                        ${photoHtml}
+                    </div>
                     <div class="candidate-info">
-                        <div class="candidate-name">${candidate.name}</div>
+                        <div class="candidate-name">${escapeHtml(candidate.name)}</div>
                         <div class="candidate-position">
                             <i class="fa-solid ${getPositionIcon(candidate.position)}"></i>
-                            ${candidate.position}
+                            ${escapeHtml(candidate.position)}
                         </div>
                     </div>
                 </div>
@@ -573,11 +642,14 @@
             `;
             
             candidate.breakdown.forEach(item => {
+                // Use the formatted percentage display
+                const percentageDisplay = item.percentage_display || `${item.percentage.toFixed(2)}%`;
+                
                 html += `
                     <div class="department-item">
                         <div class="dept-header">
-                            <span class="dept-name"><i class="fa-solid ${getItemIcon(item.name)}"></i> ${item.name}</span>
-                            <span class="dept-votes">${item.votes.toLocaleString()} votes (${item.percentage}%)</span>
+                            <span class="dept-name"><i class="fa-solid ${getItemIcon(item.name)}"></i> ${escapeHtml(item.name)}</span>
+                            <span class="dept-votes">${item.votes.toLocaleString()} votes (${percentageDisplay})</span>
                         </div>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${item.percentage}%"></div>

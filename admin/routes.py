@@ -3500,6 +3500,9 @@ def all_students_data():
             )
         )
     
+    # Get total count for the badge
+    total_count = query.count()
+    
     students = query.order_by(Student.last_name).paginate(page=page, per_page=per_page)
     
     ctu_students = CtuStudent.query.all()
@@ -3516,7 +3519,8 @@ def all_students_data():
     return jsonify({
         'html': html,
         'current_page': students.page,
-        'total_pages': students.pages
+        'total_pages': students.pages,
+        'total_count': total_count  # ← ADD THIS LINE
     })
 
 
@@ -3524,7 +3528,7 @@ def all_students_data():
 @admin_bp.route('/delete-all-student/<int:id>', methods=['POST'])
 @admin_required
 def delete_all_student(id):
-    """Delete a student permanently"""
+    """Delete a student permanently - with vote anonymization (same as request deletion)"""
     
     student = Student.query.get_or_404(id)
     
@@ -3537,7 +3541,7 @@ def delete_all_student(id):
         from student.models import Vote, TrustedDevice, DeletionRequest, QualifiedCandidate, PendingCandidate
         
         # Delete in correct order to avoid foreign key issues
-        print(f"Deleting student ID: {id}")
+        print(f"Processing student deletion for ID: {id}")
         
         # 1. Delete pending candidates
         pending = PendingCandidate.query.filter_by(student_id=id).all()
@@ -3563,11 +3567,14 @@ def delete_all_student(id):
             db.session.delete(d)
         print(f"Deleted {len(devices)} trusted devices")
         
-        # 5. Delete votes
+        # 5. ANONYMIZE VOTES (instead of deleting them) - Same as request deletion
         votes = Vote.query.filter_by(student_id=id).all()
-        for v in votes:
-            db.session.delete(v)
-        print(f"Deleted {len(votes)} votes")
+        vote_count = len(votes)
+        for vote in votes:
+            vote.original_student_id = id  # Store original student ID for audit
+            vote.anonymized_at = datetime.utcnow()  # Record when anonymized
+            vote.student_id = None  # Remove link to student
+        print(f"Anonymized {vote_count} votes (student_id set to NULL, original_student_id preserved)")
         
         # 6. Finally delete the student
         db.session.delete(student)
@@ -3582,10 +3589,10 @@ def delete_all_student(id):
         
         log_audit(
             action='DELETE_STUDENT_PERMANENT',
-            description=f"Admin user '{username}' permanently deleted student: {student_name} (ID: {student_id_number}) from IP: {ip} | Removed related records: {len(pending)} pending, {len(qualified)} qualified, {len(requests)} requests, {len(devices)} devices, {len(votes)} votes"
+            description=f"Admin user '{username}' permanently deleted student: {student_name} (ID: {student_id_number}) from IP: {ip} | Anonymized {vote_count} votes, removed related records: {len(pending)} pending, {len(qualified)} qualified, {len(requests)} requests, {len(devices)} devices"
         )
         
-        return jsonify({"success": True, "message": "Student deleted successfully"})
+        return jsonify({"success": True, "message": f"Student deleted successfully. {vote_count} votes were anonymized."})
         
     except Exception as e:
         db.session.rollback()
@@ -4150,19 +4157,16 @@ def convert_to_candidates():
     from sqlalchemy import or_
     from student.models import QualifiedCandidate
     
-    # Get filter parameters
+    # Get filter parameters - only search now
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
-    department_id = request.args.get('department', 'all')
-    course_id = request.args.get('course', 'all')
-    year_level = request.args.get('year_level', 'all')
     
     per_page = 15
     
     # Base query - get all students
     query = Student.query
     
-    # Apply search filter
+    # Apply search filter only
     if search:
         query = query.filter(
             or_(
@@ -4171,18 +4175,6 @@ def convert_to_candidates():
                 Student.id_number.ilike(f'%{search}%')
             )
         )
-    
-    # Apply department filter
-    if department_id != 'all' and department_id:
-        query = query.filter(Student.department_id == int(department_id))
-    
-    # Apply course filter
-    if course_id != 'all' and course_id:
-        query = query.filter(Student.course_id == int(course_id))
-    
-    # Apply year level filter
-    if year_level != 'all' and year_level:
-        query = query.filter(Student.year_level_id == int(year_level))
     
     # Order by ID
     query = query.order_by(Student.id_number)
@@ -4196,12 +4188,10 @@ def convert_to_candidates():
     qualified_student_ids = [q.student_id for q in qualified]
     qualified_count = len(qualified_student_ids)
     
-    # Get filter dropdown data
+    # Get filter dropdown data (still needed for the template but we'll hide them)
     departments = Department.query.all()
     courses = Course.query.all()
     year_levels = YearLevel.query.all()
-    
-    # 🚫 REMOVED: Page view audit log (not a data modification)
     
     return render_template('convert_to_candidates.html',
                          students=students,
@@ -4213,10 +4203,92 @@ def convert_to_candidates():
                          current_page=page,
                          total_pages=paginated.pages,
                          total_students=paginated.total,
-                         search=search,
-                         department_filter=department_id,
-                         course_filter=course_id,
-                         year_filter=year_level)
+                         search=search)
+
+
+@admin_bp.route('/get-qualified-students-data')
+@login_required
+def get_qualified_students_data():
+    """AJAX endpoint for qualified students with real-time search (no filters)"""
+    from sqlalchemy import or_
+    from student.models import QualifiedCandidate
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = 15
+    search = request.args.get('search', '').strip()
+    
+    # Base query
+    query = Student.query
+    
+    # Apply search filter only
+    if search:
+        query = query.filter(
+            or_(
+                Student.first_name.ilike(f'%{search}%'),
+                Student.last_name.ilike(f'%{search}%'),
+                Student.id_number.ilike(f'%{search}%')
+            )
+        )
+    
+    # Order by ID
+    query = query.order_by(Student.id_number)
+    
+    # Get total count for stats
+    total_students = query.count()
+    
+    # Paginate
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    students = paginated.items
+    
+    # Get qualified students
+    qualified = QualifiedCandidate.query.all()
+    qualified_student_ids = [q.student_id for q in qualified]
+    qualified_count = len(qualified_student_ids)
+    
+    # Generate HTML for table body
+    html = ''
+    for student in students:
+        full_name = f"{student.first_name} {student.last_name}"
+        is_qualified = student.id in qualified_student_ids
+        year_name = student.year_level.year_name if student.year_level else 'N/A'
+        
+        if is_qualified:
+            status_html = '<span class="candidate-badge"><i class="fa-solid fa-star"></i> Qualified</span>'
+            action_html = f'<button class="action-btn remove-btn" onclick="removeQualification({student.id})"><i class="fa-solid fa-times"></i> Remove</button>'
+        else:
+            status_html = '<span class="not-candidate-badge"><i class="fa-solid fa-user"></i> Not Qualified</span>'
+            action_html = f'<button class="action-btn qualify-btn" onclick="qualifyStudent({student.id})"><i class="fa-solid fa-check"></i> Qualify</button>'
+        
+        html += f'''
+        <tr data-id="{student.id}">
+            <td>{student.id_number}</td>
+            <td>{full_name}</td>
+            <td>{student.course or 'N/A'}</td>
+            <td>{year_name}</td>
+            <td>{status_html}</td>
+            <td>{action_html}</td>
+        </tr>
+        '''
+    
+    # Empty state
+    if not students:
+        html = '''
+        <tr>
+            <td colspan="6" class="empty-state">
+                <i class="fa-solid fa-users-slash"></i>
+                <h3>No Students Found</h3>
+                <p>No students match your search criteria.</p>
+            </td>
+        </tr>
+        '''
+    
+    return jsonify({
+        'html': html,
+        'current_page': paginated.page,
+        'total_pages': paginated.pages,
+        'total_students': total_students,
+        'qualified_count': qualified_count
+    })
 
 
 @admin_bp.route('/qualify-student', methods=['POST'])
@@ -4249,7 +4321,7 @@ def qualify_student():
         db.session.add(qualification)
         db.session.commit()
         
-        # ✅ KEEP THIS AUDIT LOG (QUALIFY STUDENT - data modification)
+        # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -4290,7 +4362,7 @@ def remove_qualification():
         db.session.delete(qualification)
         db.session.commit()
         
-        # ✅ KEEP THIS AUDIT LOG (REMOVE QUALIFICATION - data modification)
+        # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
@@ -4352,9 +4424,8 @@ def pending_candidates():
     # Base query
     query = PendingCandidate.query
     
-    # Apply GLOBAL date range filter (from dashboard)
+    # Apply GLOBAL date range filter (from dashboard) - JOIN ONLY ONCE
     if start_date and end_date:
-        # Join with Election to filter by election date range
         query = query.join(Election, PendingCandidate.election_id == Election.id).filter(
             Election.start_date >= start_date,
             Election.start_date <= end_date
@@ -4364,9 +4435,19 @@ def pending_candidates():
     if status != 'all':
         query = query.filter(PendingCandidate.status == status)
     
-    # Search filter
+    # Search filter - FIXED: Use ONE join to elections, not multiple
     if search:
-        query = query.join(Position).join(Election).outerjoin(Student).filter(
+        # Join only once, then use that join for filtering
+        query = query.join(Position, PendingCandidate.position_id == Position.id)
+        
+        # Only join elections if not already joined
+        if not (start_date and end_date):
+            query = query.join(Election, PendingCandidate.election_id == Election.id)
+        
+        # Join student for search
+        query = query.outerjoin(Student, PendingCandidate.student_id == Student.id)
+        
+        query = query.filter(
             or_(
                 PendingCandidate.first_name.ilike(f'%{search}%'),
                 PendingCandidate.last_name.ilike(f'%{search}%'),
@@ -4386,7 +4467,7 @@ def pending_candidates():
     # Get statistics with the SAME date range filter
     stats_query = PendingCandidate.query
     
-    # Apply date filter to stats (same logic as main query)
+    # Apply date filter to stats (same logic as main query) - JOIN ONLY ONCE
     if start_date and end_date:
         stats_query = stats_query.join(Election, PendingCandidate.election_id == Election.id).filter(
             Election.start_date >= start_date,
@@ -4401,17 +4482,13 @@ def pending_candidates():
         'total': stats_query.count()
     }
     
-    # Debug prints to check what's happening
-    print(f"Date range applied: start={start_date}, end={end_date}")
-    print(f"Stats: pending={stats['pending']}, approved={stats['approved']}, rejected={stats['rejected']}, total={stats['total']}")
-    
     return render_template('pending_candidates.html',
                          applications=applications,
                          pagination=paginated,
                          stats=stats,
                          status_filter=status,
                          search=search,
-                         current_year=year)  # Pass current year to template
+                         current_year=year)
 
 
 @admin_bp.route('/pending-candidates/stats')
@@ -4512,6 +4589,7 @@ def get_pending_candidate(id):
     except Exception as e:
         print(f"Error in get_pending_candidate: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 
 @admin_bp.route('/approve-pending/<int:id>', methods=['POST'])
@@ -4665,8 +4743,6 @@ def manage_departments():
 
     cursor.close()
     connection.close()
-    
-    # 🚫 REMOVED: MANAGE_DEPARTMENTS_VIEW audit log (page view - not a data modification)
 
     return render_template('manage_departments.html', departments=departments, courses=courses)
 
@@ -4676,28 +4752,45 @@ def manage_departments():
 @admin_required
 def add_department():
     name = request.form['name'].strip()
+    
     connection = mysql.connector.connect(
         host=MYSQL_HOST,
         user=MYSQL_USER,
         password=MYSQL_PASSWORD,
         database=MYSQL_DB
     )
-    cursor = connection.cursor()
-    cursor.execute("INSERT INTO departments (name) VALUES (%s)", (name,))
-    connection.commit()
-    cursor.close()
-    connection.close()
-
-    # ✅ KEEP THIS AUDIT LOG (ADD DEPARTMENT - data modification)
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
+    cursor = connection.cursor(dictionary=True)
     
-    log_audit(
-        action='ADD_DEPARTMENT',
-        description=f"Admin user '{username}' added new department: '{name}' from IP: {ip}"
-    )
-
-    flash('Department added successfully', 'success')
+    # Check for duplicate department name
+    cursor.execute("SELECT id FROM departments WHERE name = %s", (name,))
+    existing = cursor.fetchone()
+    
+    if existing:
+        cursor.close()
+        connection.close()
+        flash(f'Department "{name}" already exists!', 'error')
+        return redirect(url_for('admin.manage_departments'))
+    
+    try:
+        cursor.execute("INSERT INTO departments (name) VALUES (%s)", (name,))
+        connection.commit()
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='ADD_DEPARTMENT',
+            description=f"Admin user '{username}' added new department: '{name}' from IP: {ip}"
+        )
+        
+        flash('Department added successfully', 'success')
+    except Exception as e:
+        flash(f'Error adding department: {str(e)}', 'error')
+    finally:
+        cursor.close()
+        connection.close()
+    
     return redirect(url_for('admin.manage_departments'))
 
 
@@ -4706,7 +4799,6 @@ def add_department():
 def delete_multiple_departments():
     ids = request.form.getlist('department_ids')
     if ids:
-        # Get department names before deletion for audit log
         connection = mysql.connector.connect(
             host=MYSQL_HOST,
             user=MYSQL_USER,
@@ -4714,30 +4806,48 @@ def delete_multiple_departments():
             database=MYSQL_DB
         )
         cursor = connection.cursor(dictionary=True)
-        format_strings = ','.join(['%s'] * len(ids))
-        cursor.execute(f"SELECT id, name FROM departments WHERE id IN ({format_strings})", tuple(ids))
-        departments_to_delete = cursor.fetchall()
-        department_names = [d['name'] for d in departments_to_delete]
         
-        # Delete departments
-        cursor.execute(f"DELETE FROM departments WHERE id IN ({format_strings})", tuple(ids))
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-        # ✅ KEEP THIS AUDIT LOG (DELETE MULTIPLE DEPARTMENTS - data modification)
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='DELETE_MULTIPLE_DEPARTMENTS',
-            description=f"Admin user '{username}' deleted {len(ids)} department(s) from IP: {ip} | Departments: {', '.join(department_names)} (IDs: {', '.join(ids)})"
-        )
-        
-        flash(f'{len(ids)} department(s) deleted successfully!', 'success')
+        try:
+            # Check if departments have courses
+            format_strings = ','.join(['%s'] * len(ids))
+            cursor.execute(f"""
+                SELECT COUNT(*) as course_count 
+                FROM courses 
+                WHERE department_id IN ({format_strings})
+            """, tuple(ids))
+            result = cursor.fetchone()
+            
+            if result and result['course_count'] > 0:
+                flash(f'Cannot delete departments that have courses. Please delete the courses first.', 'error')
+                cursor.close()
+                connection.close()
+                return redirect(url_for('admin.manage_departments'))
+            
+            # Get department names before deletion for audit log
+            cursor.execute(f"SELECT id, name FROM departments WHERE id IN ({format_strings})", tuple(ids))
+            departments_to_delete = cursor.fetchall()
+            department_names = [d['name'] for d in departments_to_delete]
+            
+            # Delete departments
+            cursor.execute(f"DELETE FROM departments WHERE id IN ({format_strings})", tuple(ids))
+            connection.commit()
+            
+            # Audit log
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='DELETE_MULTIPLE_DEPARTMENTS',
+                description=f"Admin user '{username}' deleted {len(ids)} department(s) from IP: {ip} | Departments: {', '.join(department_names)} (IDs: {', '.join(ids)})"
+            )
+            
+            flash(f'{len(ids)} department(s) deleted successfully!', 'success')
+        except Exception as e:
+            flash(f'Error deleting departments: {str(e)}', 'error')
+        finally:
+            cursor.close()
+            connection.close()
     else:
-        # 🚫 REMOVED: DELETE_DEPARTMENTS_NO_SELECTION audit log (no data modification happened)
-        # Just show a flash message instead
         flash('No departments selected for deletion.', 'warning')
     
     return redirect(url_for('admin.manage_departments'))
@@ -4749,6 +4859,10 @@ def delete_multiple_departments():
 def add_course():
     course_name = request.form['course_name'].strip()
     department_id = request.form['department_id']
+    
+    if not department_id:
+        flash('Please select a department', 'warning')
+        return redirect(url_for('admin.manage_departments'))
 
     connection = mysql.connector.connect(
         host=MYSQL_HOST,
@@ -4756,31 +4870,49 @@ def add_course():
         password=MYSQL_PASSWORD,
         database=MYSQL_DB
     )
-    cursor = connection.cursor()
+    cursor = connection.cursor(dictionary=True)
+    
+    # Check for duplicate course in the same department
     cursor.execute(
-        "INSERT INTO courses (course_name, department_id) VALUES (%s, %s)",
+        "SELECT id FROM courses WHERE course_name = %s AND department_id = %s",
         (course_name, department_id)
     )
-    connection.commit()
+    existing = cursor.fetchone()
     
-    # Get department name for audit log
-    cursor.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
-    department_result = cursor.fetchone()
-    department_name = department_result[0] if department_result else 'Unknown'
+    if existing:
+        cursor.close()
+        connection.close()
+        flash(f'Course "{course_name}" already exists in this department!', 'error')
+        return redirect(url_for('admin.manage_departments'))
     
-    cursor.close()
-    connection.close()
-
-    # ✅ KEEP THIS AUDIT LOG (ADD COURSE - data modification)
-    username = getattr(current_user, 'username', 'Unknown')
-    ip = request.remote_addr
+    try:
+        cursor.execute(
+            "INSERT INTO courses (course_name, department_id) VALUES (%s, %s)",
+            (course_name, department_id)
+        )
+        connection.commit()
+        
+        # Get department name for audit log
+        cursor.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
+        department_result = cursor.fetchone()
+        department_name = department_result['name'] if department_result else 'Unknown'
+        
+        # Audit log
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='ADD_COURSE',
+            description=f"Admin user '{username}' added new course: '{course_name}' to department: '{department_name}' (ID: {department_id}) from IP: {ip}"
+        )
+        
+        flash('Course added successfully', 'success')
+    except Exception as e:
+        flash(f'Error adding course: {str(e)}', 'error')
+    finally:
+        cursor.close()
+        connection.close()
     
-    log_audit(
-        action='ADD_COURSE',
-        description=f"Admin user '{username}' added new course: '{course_name}' to department: '{department_name}' (ID: {department_id}) from IP: {ip}"
-    )
-
-    flash('Course added successfully', 'success')
     return redirect(url_for('admin.manage_departments'))
 
 
@@ -4789,7 +4921,6 @@ def add_course():
 def delete_multiple_courses():
     ids = request.form.getlist('course_ids')
     if ids:
-        # Get course names and department info before deletion for audit log
         connection = mysql.connector.connect(
             host=MYSQL_HOST,
             user=MYSQL_USER,
@@ -4797,35 +4928,53 @@ def delete_multiple_courses():
             database=MYSQL_DB
         )
         cursor = connection.cursor(dictionary=True)
-        format_strings = ','.join(['%s'] * len(ids))
-        cursor.execute(f"""
-            SELECT c.id, c.course_name, d.name AS department_name 
-            FROM courses c
-            JOIN departments d ON c.department_id = d.id
-            WHERE c.id IN ({format_strings})
-        """, tuple(ids))
-        courses_to_delete = cursor.fetchall()
-        course_names = [f"{c['course_name']} ({c['department_name']})" for c in courses_to_delete]
         
-        # Delete courses
-        cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-        # ✅ KEEP THIS AUDIT LOG (DELETE MULTIPLE COURSES - data modification)
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='DELETE_MULTIPLE_COURSES',
-            description=f"Admin user '{username}' deleted {len(ids)} course(s) from IP: {ip} | Courses: {', '.join(course_names)} (IDs: {', '.join(ids)})"
-        )
-        
-        flash(f'{len(ids)} course(s) deleted successfully!', 'success')
+        try:
+            # Check if courses are used in voters or students
+            format_strings = ','.join(['%s'] * len(ids))
+            cursor.execute(f"""
+                SELECT COUNT(*) as usage_count 
+                FROM voters 
+                WHERE course_id IN ({format_strings})
+            """, tuple(ids))
+            result = cursor.fetchone()
+            
+            if result and result['usage_count'] > 0:
+                flash(f'Cannot delete courses that are assigned to voters. Please reassign voters first.', 'error')
+                cursor.close()
+                connection.close()
+                return redirect(url_for('admin.manage_departments'))
+            
+            # Get course names and department info before deletion for audit log
+            cursor.execute(f"""
+                SELECT c.id, c.course_name, d.name AS department_name 
+                FROM courses c
+                JOIN departments d ON c.department_id = d.id
+                WHERE c.id IN ({format_strings})
+            """, tuple(ids))
+            courses_to_delete = cursor.fetchall()
+            course_names = [f"{c['course_name']} ({c['department_name']})" for c in courses_to_delete]
+            
+            # Delete courses
+            cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
+            connection.commit()
+            
+            # Audit log
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='DELETE_MULTIPLE_COURSES',
+                description=f"Admin user '{username}' deleted {len(ids)} course(s) from IP: {ip} | Courses: {', '.join(course_names)} (IDs: {', '.join(ids)})"
+            )
+            
+            flash(f'{len(ids)} course(s) deleted successfully!', 'success')
+        except Exception as e:
+            flash(f'Error deleting courses: {str(e)}', 'error')
+        finally:
+            cursor.close()
+            connection.close()
     else:
-        # 🚫 REMOVED: DELETE_COURSES_NO_SELECTION audit log (no data modification happened)
-        # Just show a flash message instead
         flash('No courses selected for deletion.', 'warning')
     
     return redirect(url_for('admin.manage_departments'))
@@ -4847,10 +4996,21 @@ def update_department():
         )
         cursor = connection.cursor(dictionary=True)
         
-        # Get old name for audit log
+        # Check if department exists
         cursor.execute("SELECT name FROM departments WHERE id = %s", (dept_id,))
         old_name_result = cursor.fetchone()
-        old_name = old_name_result['name'] if old_name_result else 'Unknown'
+        
+        if not old_name_result:
+            return jsonify({'success': False, 'message': 'Department not found'}), 404
+        
+        old_name = old_name_result['name']
+        
+        # Check for duplicate name (if name is different)
+        if old_name != new_name:
+            cursor.execute("SELECT id FROM departments WHERE name = %s AND id != %s", (new_name, dept_id))
+            duplicate = cursor.fetchone()
+            if duplicate:
+                return jsonify({'success': False, 'message': f'Department "{new_name}" already exists'}), 400
         
         # Update department
         cursor.execute(
@@ -4894,7 +5054,7 @@ def update_course():
         )
         cursor = connection.cursor(dictionary=True)
         
-        # Get old data for audit log
+        # Get old data for audit log and duplicate check
         cursor.execute("""
             SELECT c.course_name, c.department_id, d.name as dept_name 
             FROM courses c
@@ -4902,6 +5062,19 @@ def update_course():
             WHERE c.id = %s
         """, (course_id,))
         old_data = cursor.fetchone()
+        
+        if not old_data:
+            return jsonify({'success': False, 'message': 'Course not found'}), 404
+        
+        # Check for duplicate course in the same department (if name or department changed)
+        if old_data['course_name'] != new_name or old_data['department_id'] != int(new_department_id):
+            cursor.execute("""
+                SELECT id FROM courses 
+                WHERE course_name = %s AND department_id = %s AND id != %s
+            """, (new_name, new_department_id, course_id))
+            duplicate = cursor.fetchone()
+            if duplicate:
+                return jsonify({'success': False, 'message': f'Course "{new_name}" already exists in this department'}), 400
         
         # Update course
         cursor.execute(
@@ -4964,14 +5137,34 @@ def manage_candidates():
     departments = Department.query.order_by(Department.name).all()
     year_levels = YearLevel.query.all()
     
-    # Filter elections by year if set
-    election_query = Election.query.order_by(Election.start_date.desc())
+    # Get current time for filtering elections in dropdown
+    tz = pytz.timezone('Asia/Manila')
+    now = datetime.now(tz)
+    
+    # ===== FOR MAIN DISPLAY: Get ALL elections (for filtering candidates) =====
+    all_elections_query = Election.query.order_by(Election.start_date.desc())
     if start_date and end_date:
-        election_query = election_query.filter(
+        all_elections_query = all_elections_query.filter(
             Election.start_date >= start_date,
             Election.start_date <= end_date
         )
-    elections = election_query.all()
+    all_elections = all_elections_query.all()
+    
+    # ===== FOR DROPDOWN (Add/Edit): Only upcoming and active elections =====
+    dropdown_elections = []
+    for e in all_elections:
+        # Make dates timezone-aware for comparison
+        start_date_e = e.start_date
+        end_date_e = e.end_date
+        
+        if start_date_e.tzinfo is None:
+            start_date_e = tz.localize(start_date_e)
+        if end_date_e.tzinfo is None:
+            end_date_e = tz.localize(end_date_e)
+        
+        # Include if election is upcoming (start_date > now) OR active (start_date <= now <= end_date)
+        if start_date_e > now or (start_date_e <= now <= end_date_e):
+            dropdown_elections.append(e)
 
     # ================= FILTER =================
     selected_scope = request.args.get('scope', default=None)
@@ -4982,15 +5175,15 @@ def manage_candidates():
 
     query = Candidate.query
 
-    # Filter by year through elections
+    # Filter by year through elections (using ALL elections)
     if start_date and end_date:
         # Get election IDs within the year
-        election_ids = [e.id for e in elections]
+        election_ids = [e.id for e in all_elections]
         if election_ids:
             query = query.filter(Candidate.election_id.in_(election_ids))
         else:
             # No elections in this year, return empty result
-            query = query.filter(False)  # This will return no candidates
+            query = query.filter(False)
 
     # Filter by scope
     if selected_scope:
@@ -5015,7 +5208,7 @@ def manage_candidates():
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         party_list = request.form.get('party_list')
-        platform = request.form.get('platform')
+        platform = request.form.get('platform')  # FIXED: Get platform correctly
         department_id_form = request.form.get('department_id', type=int)
         course_id = request.form.get('course_id', type=int)
         position_id = request.form.get('position_id')
@@ -5052,9 +5245,18 @@ def manage_candidates():
             flash(error_msg, 'danger')
             return redirect(url_for('admin.manage_candidates'))
 
-        # Validate department based on scope
-        if scope == 'department' and not department_id_form:
-            department_id_form = None
+        # Validate department and course (required for ALL candidates)
+        if not department_id_form:
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Department is required for all candidates.'}), 400
+            flash('Department is required for all candidates.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
+        
+        if not course_id:
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Course is required for all candidates.'}), 400
+            flash('Course is required for all candidates.', 'danger')
+            return redirect(url_for('admin.manage_candidates'))
 
         # Save photo if uploaded
         photo_file = request.files.get('photo')
@@ -5068,12 +5270,12 @@ def manage_candidates():
             photo_filename = f"{name}_{int(time.time())}{ext}"
             photo_file.save(os.path.join(photo_folder, photo_filename))
 
-        # Create candidate with new fields including year_level
+        # Create candidate with platform field
         new_candidate = Candidate(
             first_name=first_name,
             last_name=last_name,
             party_list=party_list if party_list else None,
-            platform=platform if platform else None,
+            platform=platform if platform else None,  # FIXED: Save platform correctly
             department_id=department_id_form,
             course_id=course_id,
             position_id=position_id,
@@ -5094,12 +5296,13 @@ def manage_candidates():
         election_title = new_candidate.election.title if new_candidate.election else 'N/A'
         party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
         year_level_name = new_candidate.year_level.year_name if new_candidate.year_level else 'N/A'
+        platform_display = new_candidate.platform[:50] + '...' if new_candidate.platform and len(new_candidate.platform) > 50 else (new_candidate.platform or 'None')
         
         year_info = f" | Year: {year}" if year else ""
         
         log_audit(
             action='CREATE_CANDIDATE',
-            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Election: {election_title} ({scope}){year_info}"
+            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Platform: {platform_display} | Election: {election_title} ({scope}){year_info}"
         )
 
         # Return JSON for AJAX requests
@@ -5111,7 +5314,7 @@ def manage_candidates():
                 'first_name': new_candidate.first_name,
                 'last_name': new_candidate.last_name,
                 'party_list': new_candidate.party_list,
-                'platform': new_candidate.platform,
+                'platform': new_candidate.platform,  # Include platform in response
                 'department': new_candidate.department.name if new_candidate.department else '',
                 'department_id': new_candidate.department_id,
                 'course_id': new_candidate.course_id,
@@ -5127,9 +5330,9 @@ def manage_candidates():
         flash('Candidate added successfully!', 'success')
         return redirect(url_for('admin.manage_candidates'))
 
-    # Filter elections for modals
-    campus_elections = [e for e in elections if e.scope == 'campus']
-    department_elections = [e for e in elections if e.scope == 'department']
+    # ===== FOR DROPDOWN IN MODALS: Only upcoming and active elections =====
+    campus_elections = [e for e in dropdown_elections if e.scope == 'campus']
+    department_elections = [e for e in dropdown_elections if e.scope == 'department']
 
     return render_template(
         'manage_candidates.html',
@@ -5138,12 +5341,12 @@ def manage_candidates():
         positions=positions,
         departments=departments,
         year_levels=year_levels,
-        elections=elections,
+        elections=dropdown_elections,  # DROPDOWN only gets upcoming/active
         campus_elections=campus_elections,
         department_elections=department_elections,
         selected_department=selected_department,
         selected_scope=selected_scope,
-        current_year=year  # Changed from current_sy to current_year
+        current_year=year
     )
 
 
@@ -5277,7 +5480,7 @@ def update_candidate(id):
     old_platform = candidate.platform
     old_position = candidate.position.name if candidate.position else 'N/A'
     old_department = candidate.department.name if candidate.department else 'N/A'
-    old_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'  # ADD THIS
+    old_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'
     old_scope = candidate.scope
 
     # Get form data
@@ -5298,11 +5501,11 @@ def update_candidate(id):
     
     department_id = request.form.get('department_id', type=int)
     course_id = request.form.get('course_id', type=int)
-    year_level_id = request.form.get('year_level_id', type=int)  # ADD THIS
+    year_level_id = request.form.get('year_level_id', type=int)
     
     candidate.department_id = department_id if department_id else None
     candidate.course_id = course_id if course_id else None
-    candidate.year_level_id = year_level_id if year_level_id else None  # ADD THIS
+    candidate.year_level_id = year_level_id if year_level_id else None
     
     # Get election to verify
     election = Election.query.get(candidate.election_id)
@@ -5316,43 +5519,58 @@ def update_candidate(id):
         
         photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
         os.makedirs(photo_folder, exist_ok=True)
+        
+        # Delete old photo if exists
+        if candidate.photo:
+            old_photo_path = os.path.join(photo_folder, candidate.photo)
+            if os.path.exists(old_photo_path):
+                try:
+                    os.remove(old_photo_path)
+                except Exception as e:
+                    print(f"Error deleting old photo: {e}")
+        
         photo_file.save(os.path.join(photo_folder, filename))
         candidate.photo = filename
 
     db.session.commit()
     
-    # ✅ KEEP THIS AUDIT LOG (UPDATE CANDIDATE - data modification)
+    # Format platform for audit log (truncate if too long)
+    old_platform_display = old_platform[:50] + '...' if old_platform and len(old_platform) > 50 else (old_platform or 'None')
+    new_platform_display = candidate.platform[:50] + '...' if candidate.platform and len(candidate.platform) > 50 else (candidate.platform or 'None')
+    
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
     new_department = candidate.department.name if candidate.department else 'N/A'
     new_position = candidate.position.name if candidate.position else 'N/A'
     new_party_list = candidate.party_list if candidate.party_list else 'Independent'
-    new_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'  # ADD THIS
+    new_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'
     
     log_audit(
         action='UPDATE_CANDIDATE',
-        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department} | Year Level: {old_year_level} → {new_year_level}"
+        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Platform: {old_platform_display} → {new_platform_display} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department} | Year Level: {old_year_level} → {new_year_level}"
     )
     
     if is_ajax:
         return jsonify({
             'success': True,
             'message': 'Candidate updated successfully!',
-            'id': candidate.id,
-            'first_name': candidate.first_name,
-            'last_name': candidate.last_name,
-            'party_list': candidate.party_list,
-            'platform': candidate.platform,
-            'department': candidate.department.name if candidate.department else '',
-            'department_id': candidate.department_id,
-            'course_id': candidate.course_id,
-            'year_level_id': candidate.year_level_id,  # ADD THIS
-            'year_level': candidate.year_level.year_name if candidate.year_level else '',  # ADD THIS
-            'position': candidate.position.name if candidate.position else '',
-            'position_id': candidate.position_id,
-            'election_id': candidate.election_id,
-            'scope': candidate.scope,
-            'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
+            'candidate': {  # Wrap in candidate object for consistency
+                'id': candidate.id,
+                'first_name': candidate.first_name,
+                'last_name': candidate.last_name,
+                'party_list': candidate.party_list,
+                'platform': candidate.platform,
+                'department': candidate.department.name if candidate.department else '',
+                'department_id': candidate.department_id,
+                'course_id': candidate.course_id,
+                'year_level_id': candidate.year_level_id,
+                'year_level': candidate.year_level.year_name if candidate.year_level else '',
+                'position': candidate.position.name if candidate.position else '',
+                'position_id': candidate.position_id,
+                'election_id': candidate.election_id,
+                'scope': candidate.scope,
+                'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
+            }
         })
     
     flash('Candidate updated successfully!', 'success')
@@ -7564,10 +7782,10 @@ def get_vote_distribution(election_id):
             'suggestion': 'Use the populate endpoint to generate data.'
         }), 404
     
-    # Get all candidates for this election
+    # Get all candidates for this election with position ordering
     candidates = Candidate.query.filter_by(election_id=election_id)\
         .join(Position)\
-        .order_by(Position.name, Candidate.last_name)\
+        .order_by(Position.id, Candidate.last_name)\
         .all()
     
     # Determine grouping type from first record (assuming consistent)
@@ -7576,7 +7794,13 @@ def get_vote_distribution(election_id):
     
     # Build distribution data FROM vote_distributions TABLE
     distribution_data = []
+    positions_with_ids = {}  # Store position names with their IDs for sorting
+    
     for candidate in candidates:
+        # Store position ID for sorting
+        if candidate.position:
+            positions_with_ids[candidate.position.name] = candidate.position.id
+        
         # Get distribution records for this candidate
         dist_records = VoteDistribution.query.filter_by(
             election_id=election_id,
@@ -7585,6 +7809,11 @@ def get_vote_distribution(election_id):
         
         total_votes = sum(d.vote_count for d in dist_records)
         
+        # Get photo URL
+        photo_url = None
+        if candidate.photo:
+            photo_url = url_for('admin.static', filename='images/' + candidate.photo)
+        
         candidate_data = {
             'id': candidate.id,
             'name': f"{candidate.first_name} {candidate.last_name}",
@@ -7592,10 +7821,11 @@ def get_vote_distribution(election_id):
             'position': candidate.position.name if candidate.position else "Unknown",
             'position_id': candidate.position_id,
             'total_votes': total_votes,
+            'photo': photo_url,  # Add photo URL
             'breakdown': []
         }
         
-        # Add breakdown based on what's available
+        # Add breakdown based on what's available with formatted percentages
         for dist in dist_records:
             name = None
             item_id = None
@@ -7618,11 +7848,15 @@ def get_vote_distribution(election_id):
                 item_id = None
             
             if name:
+                # Format percentage to 2 decimal places
+                percentage_formatted = f"{dist.percentage:.2f}" if dist.percentage else "0.00"
+                
                 candidate_data['breakdown'].append({
                     'id': item_id,
                     'name': name,
                     'votes': dist.vote_count,
-                    'percentage': dist.percentage or 0
+                    'percentage': float(percentage_formatted),  # Send as float for consistency
+                    'percentage_display': f"{percentage_formatted}%"  # Display format
                 })
         
         # Sort by vote count (highest first)
@@ -7663,7 +7897,7 @@ def get_vote_distribution(election_id):
         .distinct().count()
     turnout = round((voted_students / total_students * 100), 1) if total_students > 0 else 0
     
-    # Group by position
+    # Group by position - use position ID for sorting
     positions = {}
     for candidate in distribution_data:
         pos_name = candidate['position']
@@ -7674,6 +7908,9 @@ def get_vote_distribution(election_id):
     # Sort candidates by votes within each position
     for pos in positions:
         positions[pos].sort(key=lambda x: x['total_votes'], reverse=True)
+    
+    # Create sorted positions list based on position IDs
+    sorted_position_names = sorted(positions.keys(), key=lambda x: positions_with_ids.get(x, 999))
     
     return jsonify({
         'success': True,
@@ -7690,6 +7927,7 @@ def get_vote_distribution(election_id):
             'group_label': group_label
         },
         'positions': positions,
+        'positions_order': sorted_position_names,  # Add positions order
         'all_candidates': distribution_data,
         'grouping_type': grouping_type
     })

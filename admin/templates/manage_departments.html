@@ -13,7 +13,10 @@
         border: none;
         border-radius: 4px;
         cursor: pointer;
+        position: relative;
+        transition: all 0.3s ease;
     }
+    
     .edit-btn { background-color: #2c7be5; color: #fff; }
     .edit-btn:hover { background-color: #1a5bb8; }
     .delete-btn { background-color: #e74c3c; color: #fff; }
@@ -53,6 +56,99 @@
     }
     .inline-cancel-btn:hover {
         background-color: #7f8c8d;
+    }
+    
+    /* Spinner Animation */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .btn-loading {
+        position: relative;
+        pointer-events: none;
+        opacity: 0.7;
+    }
+    
+    .btn-loading::after {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.8s linear infinite;
+    }
+    
+    .btn-loading span {
+        visibility: hidden;
+    }
+    
+    /* Flash notification styling */
+    .flash-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+    }
+    
+    .flash-message {
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        color: #fff;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+        cursor: pointer;
+    }
+    
+    .flash-message.success {
+        background-color: #27ae60;
+        border-left: 4px solid #2ecc71;
+    }
+    
+    .flash-message.error {
+        background-color: #e74c3c;
+        border-left: 4px solid #c0392b;
+    }
+    
+    .flash-message.warning {
+        background-color: #f39c12;
+        border-left: 4px solid #e67e22;
+    }
+    
+    .flash-message.info {
+        background-color: #3498db;
+        border-left: 4px solid #2980b9;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
     }
     
     .select-col { width: 40px; text-align: center; }
@@ -152,11 +248,11 @@
     <!-- -------------------- ADD DEPARTMENT -------------------- -->
     <div class="card">
         <h3>Add Department</h3>
-        <form method="POST" action="{{ url_for('admin.add_department') }}">
+        <form id="addDepartmentForm" method="POST" action="{{ url_for('admin.add_department') }}">
             <!-- CSRF Token -->
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="name" placeholder="Department Name" required>
-            <button type="submit">Add Department</button>
+            <button type="submit" id="addDeptBtn">Add Department</button>
         </form>
     </div>
 
@@ -205,7 +301,7 @@
     <!-- -------------------- ADD COURSE -------------------- -->
     <div class="card">
         <h3>Add Course</h3>
-        <form method="POST" action="{{ url_for('admin.add_course') }}">
+        <form id="addCourseForm" method="POST" action="{{ url_for('admin.add_course') }}">
             <!-- CSRF Token -->
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <select name="department_id" required>
@@ -215,7 +311,7 @@
                 {% endfor %}
             </select>
             <input type="text" name="course_name" placeholder="Course Name" required>
-            <button type="submit">Add Course</button>
+            <button type="submit" id="addCourseBtn">Add Course</button>
         </form>
     </div>
 
@@ -355,6 +451,74 @@ function applyThemeToMainContent() {
 </script>
 
 <script>
+// Helper function to show floating notifications
+function showFlashMessage(message, category = 'info') {
+    // Check if flash container exists, if not create one
+    let flashContainer = document.querySelector('.flash-container');
+    if (!flashContainer) {
+        flashContainer = document.createElement('div');
+        flashContainer.className = 'flash-container';
+        document.body.appendChild(flashContainer);
+    }
+    
+    const flashDiv = document.createElement('div');
+    flashDiv.className = `flash-message ${category}`;
+    flashDiv.textContent = message;
+    
+    // Add click to dismiss functionality
+    flashDiv.addEventListener('click', function() {
+        this.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            this.remove();
+        }, 300);
+    });
+    
+    flashContainer.appendChild(flashDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (flashDiv.parentElement) {
+            flashDiv.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                flashDiv.remove();
+            }, 300);
+        }
+    }, 5000);
+}
+
+// Spinner button handler
+function showButtonSpinner(button) {
+    if (!button) return;
+    
+    // Save original content
+    const originalHtml = button.innerHTML;
+    button.setAttribute('data-original-html', originalHtml);
+    
+    // Add loading class
+    button.classList.add('btn-loading');
+    
+    // Create span for text
+    const span = document.createElement('span');
+    span.textContent = button.textContent || 'Loading...';
+    button.innerHTML = '';
+    button.appendChild(span);
+    
+    return function restoreButton() {
+        button.classList.remove('btn-loading');
+        button.innerHTML = button.getAttribute('data-original-html') || originalHtml;
+    };
+}
+
+// Handle all form submissions with spinner
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn && !submitBtn.classList.contains('btn-loading')) {
+            showButtonSpinner(submitBtn);
+        }
+    });
+});
+
 // -------------------- Scroll Position --------------------
 document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', () => {
@@ -423,17 +587,17 @@ function saveEdit(button) {
     const rowId = row.dataset.id;
     const rowType = row.dataset.type; // 'department' or 'course'
     
-    // Add spinning animation to save button
-    button.classList.add('saving');
+    // Add spinner to save button
+    const restoreSpinner = showButtonSpinner(button);
     
     let formData = new FormData();
-    formData.append('csrf_token', getCsrfToken()); // Add CSRF token
+    formData.append('csrf_token', getCsrfToken());
     
     if (rowType === 'department') {
         const newName = row.querySelector('.edit-mode-input').value.trim();
         if (!newName) {
-            alert('Department name cannot be empty');
-            button.classList.remove('saving');
+            showFlashMessage('Department name cannot be empty', 'error');
+            if (restoreSpinner) restoreSpinner();
             return;
         }
         formData.append('id', rowId);
@@ -446,8 +610,7 @@ function saveEdit(button) {
         })
         .then(response => response.json())
         .then(data => {
-            // Remove spinning animation
-            button.classList.remove('saving');
+            if (restoreSpinner) restoreSpinner();
             
             if (data.success) {
                 // Update the view mode span
@@ -455,14 +618,13 @@ function saveEdit(button) {
                 cancelEdit(button);
                 showFlashMessage('Department updated successfully', 'success');
             } else {
-                alert('Error: ' + data.message);
+                showFlashMessage('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            // Remove spinning animation on error
-            button.classList.remove('saving');
+            if (restoreSpinner) restoreSpinner();
             console.error('Error:', error);
-            alert('An error occurred while updating');
+            showFlashMessage('An error occurred while updating', 'error');
         });
         
     } else if (rowType === 'course') {
@@ -470,8 +632,8 @@ function saveEdit(button) {
         const newDeptId = row.querySelectorAll('.edit-mode-input')[1].value;
         
         if (!newName) {
-            alert('Course name cannot be empty');
-            button.classList.remove('saving');
+            showFlashMessage('Course name cannot be empty', 'error');
+            if (restoreSpinner) restoreSpinner();
             return;
         }
         
@@ -486,8 +648,7 @@ function saveEdit(button) {
         })
         .then(response => response.json())
         .then(data => {
-            // Remove spinning animation
-            button.classList.remove('saving');
+            if (restoreSpinner) restoreSpinner();
             
             if (data.success) {
                 // Update the view mode spans
@@ -496,14 +657,13 @@ function saveEdit(button) {
                 cancelEdit(button);
                 showFlashMessage('Course updated successfully', 'success');
             } else {
-                alert('Error: ' + data.message);
+                showFlashMessage('Error: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            // Remove spinning animation on error
-            button.classList.remove('saving');
+            if (restoreSpinner) restoreSpinner();
             console.error('Error:', error);
-            alert('An error occurred while updating');
+            showFlashMessage('An error occurred while updating', 'error');
         });
     }
     
@@ -511,167 +671,172 @@ function saveEdit(button) {
     setTimeout(applyThemeToMainContent, 10);
 }
 
-// Helper function to show flash messages
-function showFlashMessage(message, category) {
-    // Check if flash container exists, if not create one
-    let flashContainer = document.querySelector('.flash-container');
-    if (!flashContainer) {
-        flashContainer = document.createElement('div');
-        flashContainer.className = 'flash-container';
-        document.querySelector('.container').insertBefore(flashContainer, document.querySelector('.container').firstChild);
-    }
-    
-    const flashDiv = document.createElement('div');
-    flashDiv.className = `flash-message ${category}`;
-    flashDiv.textContent = message;
-    flashContainer.appendChild(flashDiv);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        flashDiv.remove();
-    }, 3000);
-}
-
 // -------------------- Departments Edit Mode --------------------
 const deptCard = document.querySelector('.card:nth-of-type(2)'); // Departments table
-const deptCols = deptCard.querySelectorAll('.select-col');
-const deptActionCols = deptCard.querySelectorAll('.actions-col');
-const deptCheckboxes = deptCard.querySelectorAll('.select-dept');
+const deptCols = deptCard ? deptCard.querySelectorAll('.select-col') : [];
+const deptActionCols = deptCard ? deptCard.querySelectorAll('.actions-col') : [];
+const deptCheckboxes = deptCard ? deptCard.querySelectorAll('.select-dept') : [];
 const editDepartmentsBtn = document.getElementById('editDepartmentsBtn');
 const deleteDepartmentsBtn = document.getElementById('deleteDepartmentsBtn');
 const selectAllDepartmentsBtn = document.getElementById('selectAllDepartmentsBtn');
 const deleteDepartmentsForm = document.getElementById('deleteDepartmentsForm');
 let deptEditMode = false;
 
-editDepartmentsBtn.addEventListener('click', () => {
-    deptEditMode = !deptEditMode;
-    deptCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
-    deptActionCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
-    deleteDepartmentsBtn.style.display = 'none';
-    selectAllDepartmentsBtn.style.display = deptEditMode ? 'inline-block' : 'none';
-    deptCheckboxes.forEach(cb => cb.checked = false);
-    
-    // If exiting edit mode, cancel any inline edits
-    if (!deptEditMode) {
-        deptCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
-            if (btn.style.display !== 'none') {
-                cancelEdit(btn);
-            }
-        });
-    }
-    
-    // Reapply theme after state change
-    setTimeout(applyThemeToMainContent, 10);
-});
+if (editDepartmentsBtn) {
+    editDepartmentsBtn.addEventListener('click', () => {
+        deptEditMode = !deptEditMode;
+        deptCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
+        deptActionCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
+        if (deleteDepartmentsBtn) deleteDepartmentsBtn.style.display = 'none';
+        if (selectAllDepartmentsBtn) selectAllDepartmentsBtn.style.display = deptEditMode ? 'inline-block' : 'none';
+        deptCheckboxes.forEach(cb => cb.checked = false);
+        
+        // If exiting edit mode, cancel any inline edits
+        if (!deptEditMode && deptCard) {
+            deptCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
+                if (btn.style.display !== 'none') {
+                    cancelEdit(btn);
+                }
+            });
+        }
+        
+        // Reapply theme after state change
+        setTimeout(applyThemeToMainContent, 10);
+    });
+}
 
-selectAllDepartmentsBtn.addEventListener('click', () => {
-    const allChecked = Array.from(deptCheckboxes).every(cb => cb.checked);
-    deptCheckboxes.forEach(cb => cb.checked = !allChecked);
-    deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
-    
-    // Reapply theme after state change
-    setTimeout(applyThemeToMainContent, 10);
-});
+if (selectAllDepartmentsBtn) {
+    selectAllDepartmentsBtn.addEventListener('click', () => {
+        const allChecked = Array.from(deptCheckboxes).every(cb => cb.checked);
+        deptCheckboxes.forEach(cb => cb.checked = !allChecked);
+        if (deleteDepartmentsBtn) {
+            deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        }
+        
+        // Reapply theme after state change
+        setTimeout(applyThemeToMainContent, 10);
+    });
+}
 
 deptCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
-        deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        if (deleteDepartmentsBtn) {
+            deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        }
         
         // Reapply theme after state change
         setTimeout(applyThemeToMainContent, 10);
     });
 });
 
-deleteDepartmentsBtn.addEventListener('click', () => {
-    const ids = Array.from(deptCheckboxes).filter(c => c.checked).map(c => c.value);
-    if(ids.length && confirm('Are you sure you want to delete selected departments?')){
-        // Add CSRF token to form before submitting
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = getCsrfToken();
-        deleteDepartmentsForm.appendChild(csrfInput);
-        
-        ids.forEach(id => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'department_ids';
-            input.value = id;
-            deleteDepartmentsForm.appendChild(input);
-        });
-        deleteDepartmentsForm.submit();
-    }
-});
+if (deleteDepartmentsBtn) {
+    deleteDepartmentsBtn.addEventListener('click', () => {
+        const ids = Array.from(deptCheckboxes).filter(c => c.checked).map(c => c.value);
+        if(ids.length && confirm('Are you sure you want to delete selected departments?')){
+            // Add spinner to delete button
+            const restoreSpinner = showButtonSpinner(deleteDepartmentsBtn);
+            
+            // Add CSRF token to form before submitting
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = getCsrfToken();
+            deleteDepartmentsForm.appendChild(csrfInput);
+            
+            ids.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'department_ids';
+                input.value = id;
+                deleteDepartmentsForm.appendChild(input);
+            });
+            deleteDepartmentsForm.submit();
+        }
+    });
+}
 
 // -------------------- Courses Edit Mode --------------------
 const courseCard = document.querySelector('.card:nth-of-type(4)'); // Courses table
-const courseCols = courseCard.querySelectorAll('.select-col');
-const courseActionCols = courseCard.querySelectorAll('.actions-col');
-const courseCheckboxes = courseCard.querySelectorAll('.select-course');
+const courseCols = courseCard ? courseCard.querySelectorAll('.select-col') : [];
+const courseActionCols = courseCard ? courseCard.querySelectorAll('.actions-col') : [];
+const courseCheckboxes = courseCard ? courseCard.querySelectorAll('.select-course') : [];
 const editCoursesBtn = document.getElementById('editCoursesBtn');
 const deleteCoursesBtn = document.getElementById('deleteCoursesBtn');
 const selectAllCoursesBtn = document.getElementById('selectAllCoursesBtn');
 const deleteCoursesForm = document.getElementById('deleteCoursesForm');
 let courseEditMode = false;
 
-editCoursesBtn.addEventListener('click', () => {
-    courseEditMode = !courseEditMode;
-    courseCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
-    courseActionCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
-    deleteCoursesBtn.style.display = 'none';
-    selectAllCoursesBtn.style.display = courseEditMode ? 'inline-block' : 'none';
-    courseCheckboxes.forEach(cb => cb.checked = false);
-    
-    // If exiting edit mode, cancel any inline edits
-    if (!courseEditMode) {
-        courseCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
-            if (btn.style.display !== 'none') {
-                cancelEdit(btn);
-            }
-        });
-    }
-    
-    // Reapply theme after state change
-    setTimeout(applyThemeToMainContent, 10);
-});
+if (editCoursesBtn) {
+    editCoursesBtn.addEventListener('click', () => {
+        courseEditMode = !courseEditMode;
+        courseCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
+        courseActionCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
+        if (deleteCoursesBtn) deleteCoursesBtn.style.display = 'none';
+        if (selectAllCoursesBtn) selectAllCoursesBtn.style.display = courseEditMode ? 'inline-block' : 'none';
+        courseCheckboxes.forEach(cb => cb.checked = false);
+        
+        // If exiting edit mode, cancel any inline edits
+        if (!courseEditMode && courseCard) {
+            courseCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
+                if (btn.style.display !== 'none') {
+                    cancelEdit(btn);
+                }
+            });
+        }
+        
+        // Reapply theme after state change
+        setTimeout(applyThemeToMainContent, 10);
+    });
+}
 
-selectAllCoursesBtn.addEventListener('click', () => {
-    const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
-    courseCheckboxes.forEach(cb => cb.checked = !allChecked);
-    deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
-    
-    // Reapply theme after state change
-    setTimeout(applyThemeToMainContent, 10);
-});
+if (selectAllCoursesBtn) {
+    selectAllCoursesBtn.addEventListener('click', () => {
+        const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
+        courseCheckboxes.forEach(cb => cb.checked = !allChecked);
+        if (deleteCoursesBtn) {
+            deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        }
+        
+        // Reapply theme after state change
+        setTimeout(applyThemeToMainContent, 10);
+    });
+}
 
 courseCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
-        deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        if (deleteCoursesBtn) {
+            deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+        }
         
         // Reapply theme after state change
         setTimeout(applyThemeToMainContent, 10);
     });
 });
 
-deleteCoursesBtn.addEventListener('click', () => {
-    const ids = Array.from(courseCheckboxes).filter(c => c.checked).map(c => c.value);
-    if(ids.length && confirm('Are you sure you want to delete selected courses?')){
-        // Add CSRF token to form before submitting
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrf_token';
-        csrfInput.value = getCsrfToken();
-        deleteCoursesForm.appendChild(csrfInput);
-        
-        ids.forEach(id => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'course_ids';
-            input.value = id;
-            deleteCoursesForm.appendChild(input);
-        });
-        deleteCoursesForm.submit();
-    }
-});
+if (deleteCoursesBtn) {
+    deleteCoursesBtn.addEventListener('click', () => {
+        const ids = Array.from(courseCheckboxes).filter(c => c.checked).map(c => c.value);
+        if(ids.length && confirm('Are you sure you want to delete selected courses?')){
+            // Add spinner to delete button
+            const restoreSpinner = showButtonSpinner(deleteCoursesBtn);
+            
+            // Add CSRF token to form before submitting
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = getCsrfToken();
+            deleteCoursesForm.appendChild(csrfInput);
+            
+            ids.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'course_ids';
+                input.value = id;
+                deleteCoursesForm.appendChild(input);
+            });
+            deleteCoursesForm.submit();
+        }
+    });
+}
 </script>
 {% endblock %}

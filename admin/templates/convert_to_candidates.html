@@ -5,6 +5,83 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/convert_to_candidates.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* Real-time search styles - FULL WIDTH + ROUNDED */
+    .filter-bar {
+        width: 100%;
+        margin-bottom: 25px;
+    }
+    
+    .search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+    
+    .search-input-compact {
+        width: 100%;
+        padding: 14px 50px 14px 24px;
+        border: 2px solid var(--border-color);
+        border-radius: 50px !important;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        outline: none;
+        box-sizing: border-box;
+    }
+    
+    .search-input-compact:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+    }
+    
+    .search-input-compact::placeholder {
+        color: var(--text-muted);
+    }
+    
+    .search-loading {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        display: none;
+        font-size: 1.1rem;
+    }
+    
+    .search-wrapper.loading .search-loading {
+        display: block;
+    }
+    
+    /* Remove old filter styles - hide dropdowns */
+    .filter-select-compact,
+    .reset-btn-compact {
+        display: none !important;
+    }
+    
+    /* Table container loading state */
+    .table-container.loading {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    
+    /* Stats card stays as is */
+    .stats-card {
+        margin-bottom: 25px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .search-input-compact {
+            padding: 12px 45px 12px 20px;
+            font-size: 0.9rem;
+        }
+        
+        .search-loading {
+            right: 16px;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -26,47 +103,31 @@
     <div class="stats-card">
         <div class="stats-info">
             <h3>Total Students</h3>
-            <p>{{ total_students }}</p>
+            <p id="totalStudentsCount">{{ total_students }}</p>
         </div>
         <div class="stats-info">
             <h3>Qualified Students</h3>
-            <p>{{ qualified_count }}</p>
+            <p id="qualifiedCount">{{ qualified_count }}</p>
         </div>
     </div>
 
-    <!-- Filter Bar - Compact -->
-    <form method="GET" class="filter-bar" id="filterForm">
-        <input type="text" name="search" placeholder="Search by ID or name..." value="{{ search }}" id="searchInput" class="search-input-compact">
-        
-        <select name="department" id="departmentFilter" class="filter-select-compact">
-            <option value="all">All Departments</option>
-            {% for dept in departments %}
-            <option value="{{ dept.id }}" {% if department_filter == dept.id|string %}selected{% endif %}>{{ dept.name }}</option>
-            {% endfor %}
-        </select>
-        
-        <select name="course" id="courseFilter" class="filter-select-compact">
-            <option value="all">All Courses</option>
-            {% for course in courses %}
-            <option value="{{ course.id }}" {% if course_filter == course.id|string %}selected{% endif %}>{{ course.course_name }}</option>
-            {% endfor %}
-        </select>
-        
-        <select name="year_level" id="yearFilter" class="filter-select-compact">
-            <option value="all">All Year Levels</option>
-            {% for year in year_levels %}
-            <option value="{{ year.id }}" {% if year_filter == year.id|string %}selected{% endif %}>{{ year.year_name }}</option>
-            {% endfor %}
-        </select>
-        
-
-        <a href="{{ url_for('admin.convert_to_candidates') }}" class="reset-btn-compact">
-            <i class="fa-solid fa-undo"></i> Reset
-        </a>
-    </form>
+    <!-- Search Bar - Full Width with Rounded Corners -->
+    <div class="filter-bar">
+        <div class="search-wrapper" id="searchWrapper">
+            <input type="text" 
+                   placeholder="Search by ID or name..." 
+                   value="{{ search }}" 
+                   id="searchInput" 
+                   class="search-input-compact"
+                   autocomplete="off">
+            <span class="search-loading">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+        </div>
+    </div>
 
     <!-- Table Container -->
-    <div class="table-container">
+    <div class="table-container" id="tableContainer">
         <table class="students-table">
             <thead>
                 <tr>
@@ -78,16 +139,12 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="studentsTableBody">
                 {% if students and students|length > 0 %}
                     {% for student in students %}
                     {% set full_name = student.first_name ~ ' ' ~ student.last_name %}
                     {% set is_qualified = student.id in qualified_student_ids %}
-                    <tr data-id="{{ student.id }}" 
-                        data-first="{{ student.first_name }}" 
-                        data-last="{{ student.last_name }}"
-                        data-course="{{ student.course }}"
-                        data-department="{{ student.department_id }}">
+                    <tr data-id="{{ student.id }}">
                         <td>{{ student.id_number }}</td>
                         <td>{{ full_name }}</td>
                         <td>{{ student.course or 'N/A' }}</td>
@@ -130,7 +187,7 @@
 
         <!-- Pagination -->
         {% if total_pages > 1 %}
-        <div class="pagination">
+        <div class="pagination" id="pagination">
             {% for page_num in range(1, total_pages + 1) %}
             <button onclick="goToPage({{ page_num }})" {% if page_num == current_page %}disabled{% endif %}>
                 {{ page_num }}
@@ -141,22 +198,238 @@
     </div>
 </div>
 
-<!-- Load JavaScript -->
-<script src="{{ url_for('admin.static', filename='js/convert_to_candidates.js') }}"></script>
-
-<!-- Add CSRF Helper Function -->
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+    // CSRF Token Helper Function
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.getAttribute('content') : '';
+    }
 
-// Override the goToPage function to preserve filters
-function goToPage(pageNum) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('page', pageNum);
-    window.location.href = url.toString();
-}
+    let searchTimeout = null;
+    let currentPage = {{ current_page|default(1) }};
+    let totalPages = {{ total_pages|default(1) }};
+    
+    const searchInput = document.getElementById('searchInput');
+    const searchWrapper = document.getElementById('searchWrapper');
+    const tableContainer = document.getElementById('tableContainer');
+    const studentsTableBody = document.getElementById('studentsTableBody');
+    const totalStudentsSpan = document.getElementById('totalStudentsCount');
+    const qualifiedCountSpan = document.getElementById('qualifiedCount');
+    const paginationDiv = document.getElementById('pagination');
+    
+    // REAL-TIME SEARCH - triggers on every keystroke
+    searchInput.addEventListener('input', function() {
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        const searchTerm = this.value;
+        
+        // Show loading indicator
+        searchWrapper.classList.add('loading');
+        tableContainer.classList.add('loading');
+        
+        // Debounce to avoid too many requests while typing fast
+        searchTimeout = setTimeout(() => {
+            loadStudents(1, searchTerm);
+        }, 300);
+    });
+    
+    function loadStudents(page = 1, search = null) {
+        const searchValue = search !== null ? search : searchInput.value;
+        
+        const params = new URLSearchParams({
+            page: page,
+            search: searchValue
+        });
+        
+        fetch(`{{ url_for('admin.get_qualified_students_data') }}?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update table body
+                studentsTableBody.innerHTML = data.html;
+                currentPage = data.current_page;
+                totalPages = data.total_pages;
+                
+                // Update stats
+                if (data.total_students !== undefined) {
+                    totalStudentsSpan.textContent = data.total_students;
+                    qualifiedCountSpan.textContent = data.qualified_count;
+                }
+                
+                // Update pagination
+                updatePagination(data.current_page, data.total_pages);
+                
+                // Hide loading
+                searchWrapper.classList.remove('loading');
+                tableContainer.classList.remove('loading');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                searchWrapper.classList.remove('loading');
+                tableContainer.classList.remove('loading');
+                showNotification('Error loading students', 'error');
+            });
+    }
+    
+    function updatePagination(currentPage, totalPages) {
+        if (!paginationDiv) return;
+        
+        if (totalPages <= 1) {
+            paginationDiv.style.display = 'none';
+            return;
+        }
+        
+        paginationDiv.style.display = 'flex';
+        paginationDiv.innerHTML = '';
+        
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.onclick = () => goToPage(i);
+            if (i === currentPage) {
+                btn.disabled = true;
+            }
+            paginationDiv.appendChild(btn);
+        }
+    }
+    
+    function goToPage(pageNum) {
+        currentPage = pageNum;
+        loadStudents(pageNum);
+    }
+    
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `global-notification ${type}`;
+        notification.innerHTML = `
+            <i class="fa ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            z-index: 100000;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: ${type === 'success' ? 'linear-gradient(135deg, #00c851, #00a844)' : 
+                        type === 'error' ? 'linear-gradient(135deg, #ff4444, #cc0000)' : 
+                        'linear-gradient(135deg, #4361ee, #3b82f6)'};
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out forwards';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    function qualifyStudent(studentId) {
+        const button = event ? event.target.closest('button') : null;
+        if (button) {
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            button.disabled = true;
+        }
+        
+        fetch('/ctumoalboal-comelec/qualify-student', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ student_id: studentId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Student qualified successfully!', 'success');
+                loadStudents(currentPage);
+            } else {
+                showNotification('Error: ' + data.message, 'error');
+                if (button) {
+                    button.innerHTML = '<i class="fa-solid fa-check"></i> Qualify';
+                    button.disabled = false;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error qualifying student', 'error');
+            if (button) {
+                button.innerHTML = '<i class="fa-solid fa-check"></i> Qualify';
+                button.disabled = false;
+            }
+        });
+    }
+    
+    function removeQualification(studentId) {
+        if (!confirm('Are you sure you want to remove qualification from this student?')) {
+            return;
+        }
+        
+        const button = event ? event.target.closest('button') : null;
+        if (button) {
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            button.disabled = true;
+        }
+        
+        fetch('/ctumoalboal-comelec/remove-qualification', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ student_id: studentId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Qualification removed successfully!', 'success');
+                loadStudents(currentPage);
+            } else {
+                showNotification('Error: ' + data.message, 'error');
+                if (button) {
+                    button.innerHTML = '<i class="fa-solid fa-times"></i> Remove';
+                    button.disabled = false;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error removing qualification', 'error');
+            if (button) {
+                button.innerHTML = '<i class="fa-solid fa-times"></i> Remove';
+                button.disabled = false;
+            }
+        });
+    }
+    
+    // Add animation styles if not present
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 </script>
 {% endblock %}

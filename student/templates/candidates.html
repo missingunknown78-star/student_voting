@@ -22,7 +22,7 @@
             {% set positions_set = {} %}
             {% for c in candidates %}
                 {% if c.position %}
-                    {% set _ = positions_set.update({c.position.name: true}) %}
+                    {% set _ = positions_set.update({c.position.id: c.position.name}) %}
                 {% endif %}
             {% endfor %}
             {% set total_positions = positions_set|length %}
@@ -81,11 +81,18 @@
                                 <input type="radio" name="position-filter" value="all" checked>
                                 <span>All Positions</span>
                             </label>
-                            {% for position_name in positions_set.keys()|sort %}
-                            <label class="position-filter" data-position="{{ position_name|lower|replace(' ', '-') }}">
-                                <input type="radio" name="position-filter" value="{{ position_name|lower|replace(' ', '-') }}">
-                                <span>{{ position_name }}</span>
-                            </label>
+                            {% set unique_positions = {} %}
+                            {% for c in candidates %}
+                                {% if c.position and c.position.id not in unique_positions %}
+                                    {% set _ = unique_positions.update({c.position.id: c.position.name}) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for pos_id in unique_positions.keys()|sort %}
+                                {% set pos_name = unique_positions[pos_id] %}
+                                <label class="position-filter" data-position="{{ pos_name|lower|replace(' ', '-') }}">
+                                    <input type="radio" name="position-filter" value="{{ pos_name|lower|replace(' ', '-') }}">
+                                    <span>{{ pos_name }}</span>
+                                </label>
                             {% endfor %}
                         </div>
                     </div>
@@ -139,78 +146,88 @@
                 {% endif %}
             </div>
 
-            {# Group candidates by position within this election #}
+            {# Group candidates by position within this election - SORT BY POSITION ID #}
             {% set candidates_by_position = {} %}
+            {% set position_ids = [] %}
             {% for c in election_candidates %}
                 {% if c.position %}
+                    {% set position_id = c.position.id %}
                     {% set position_name = c.position.name %}
-                    {% if position_name not in candidates_by_position %}
-                        {% set _ = candidates_by_position.update({position_name: []}) %}
+                    {% if position_id not in position_ids %}
+                        {% set _ = position_ids.append(position_id) %}
                     {% endif %}
-                    {% set _ = candidates_by_position[position_name].append(c) %}
+                    {% if position_name not in candidates_by_position %}
+                        {% set _ = candidates_by_position.update({position_name: {'id': position_id, 'candidates': []}}) %}
+                    {% endif %}
+                    {% set _ = candidates_by_position[position_name]['candidates'].append(c) %}
                 {% endif %}
             {% endfor %}
 
-            {# Display each position group #}
-            {% for position_name, position_candidates in candidates_by_position.items()|sort %}
-            <div class="position-group" data-position="{{ position_name|lower|replace(' ', '-') }}">
-                <h3 class="position-group-title">{{ position_name }}</h3>
-                <div class="candidates-grid">
-                    {% for c in position_candidates %}
-                    <div class="candidate-card" data-candidate-id="{{ c.id }}" data-position="{{ position_name|lower|replace(' ', '-') }}" data-election="{{ election_title|lower|replace(' ', '-') }}">
-                        <!-- Candidate Header -->
-                        <div class="candidate-header">
-                            <div class="candidate-photo" 
-                                 data-photo-url="{% if c.photo %}{{ url_for('admin.static', filename='images/' ~ c.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
-                                 onclick="openCandidatePhoto(this)">
-                                {% if c.photo %}
-                                    <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
-                                         alt="{{ c.first_name }} {{ c.last_name }}"
-                                         class="candidate-photo-img">
-                                {% else %}
-                                    <span class="candidate-initials">
-                                        {{ c.first_name[0] }}{{ c.last_name[0] }}
-                                    </span>
-                                {% endif %}
+            {# Sort position IDs and display in order #}
+            {% set sorted_position_ids = position_ids|sort %}
+            {% for pos_id in sorted_position_ids %}
+                {% for pos_name, pos_data in candidates_by_position.items() %}
+                    {% if pos_data.id == pos_id %}
+                        <div class="position-group" data-position="{{ pos_name|lower|replace(' ', '-') }}">
+                            <h3 class="position-group-title">{{ pos_name }}</h3>
+                            <div class="candidates-grid">
+                                {% for c in pos_data.candidates %}
+                                <div class="candidate-card" data-candidate-id="{{ c.id }}" data-position="{{ pos_name|lower|replace(' ', '-') }}" data-election="{{ election_title|lower|replace(' ', '-') }}">
+                                    <!-- Candidate Header -->
+                                    <div class="candidate-header">
+                                        <div class="candidate-photo" 
+                                             data-photo-url="{% if c.photo %}{{ url_for('admin.static', filename='images/' ~ c.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
+                                             onclick="openCandidatePhoto(this)">
+                                            {% if c.photo %}
+                                                <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
+                                                     alt="{{ c.first_name }} {{ c.last_name }}"
+                                                     class="candidate-photo-img">
+                                            {% else %}
+                                                <span class="candidate-initials">
+                                                    {{ c.first_name[0] }}{{ c.last_name[0] }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Candidate Info - Only Name and Party List -->
+                                    <div class="candidate-info">
+                                        <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
+                                        
+                                        {% if c.party_list %}
+                                        <div class="party-badge">{{ c.party_list }}</div>
+                                        {% else %}
+                                        <div class="party-badge independent">INDEPENDENT</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Candidate Actions -->
+                                    <div class="candidate-actions">
+                                        {% set candidate_data = {
+                                            'id': c.id,
+                                            'first_name': c.first_name,
+                                            'last_name': c.last_name,
+                                            'party': c.party_list if c.party_list else '',
+                                            'position': c.position.name if c.position else 'Position not specified',
+                                            'course': c.course.course_name if c.course else 'Not specified',
+                                            'department': c.department.name if c.department else 'Not specified',
+                                            'year_level': c.year_level.year_name if c.year_level else 'Not specified',
+                                            'election': c.election.title if c.election else 'Not specified',
+                                            'scope': c.scope|upper if c.scope else 'Not specified',
+                                            'platform': c.platform if c.platform else ''
+                                        } %}
+                                        <button class="btn btn-secondary btn-small view-profile-btn"
+                                                onclick='openCandidateProfileModal({{ candidate_data|tojson|safe }})'>
+                                            <span class="btn-icon">📄</span>
+                                            View Profile
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
                             </div>
                         </div>
-                        
-                        <!-- Candidate Info - Only Name and Party List -->
-                        <div class="candidate-info">
-                            <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
-                            
-                            {% if c.party_list %}
-                            <div class="party-badge">{{ c.party_list }}</div>
-                            {% else %}
-                            <div class="party-badge independent">INDEPENDENT</div>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Candidate Actions -->
-                        <div class="candidate-actions">
-                            {% set candidate_data = {
-                                'id': c.id,
-                                'first_name': c.first_name,
-                                'last_name': c.last_name,
-                                'party': c.party_list if c.party_list else '',
-                                'position': c.position.name if c.position else 'Position not specified',
-                                'course': c.course.course_name if c.course else 'Not specified',
-                                'department': c.department.name if c.department else 'Not specified',
-                                'year_level': c.year_level.year_name if c.year_level else 'Not specified',
-                                'election': c.election.title if c.election else 'Not specified',
-                                'scope': c.scope|upper if c.scope else 'Not specified',
-                                'platform': c.platform if c.platform else ''
-                            } %}
-                            <button class="btn btn-secondary btn-small view-profile-btn"
-                                    onclick='openCandidateProfileModal({{ candidate_data|tojson|safe }})'>
-                                <span class="btn-icon">📄</span>
-                                View Profile
-                            </button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+                    {% endif %}
+                {% endfor %}
             {% endfor %}
         </div>
         {% endfor %}
@@ -272,7 +289,7 @@
     </div>
 </div>
 
-<!-- Candidate Profile Modal (Compact) - UPDATED -->
+<!-- Candidate Profile Modal (Compact) -->
 <div id="candidateProfileModal" class="modal-compact">
     <div class="modal-compact-content">
         <div class="modal-compact-header">
@@ -314,7 +331,7 @@
                 </div>
             </div>
 
-            <!-- Election Information - UPDATED: Removed Election Type -->
+            <!-- Election Information -->
             <div class="modal-compact-section">
                 <div class="modal-compact-section-title">
                     <span>🗳️</span> Election Details
@@ -353,7 +370,7 @@
 <!-- Load candidates.js FIRST -->
 <script src="{{ url_for('student.static', filename='js/candidates.js') }}"></script>
 
-<!-- Modal JavaScript - UPDATED -->
+<!-- Modal JavaScript -->
 <script>
 // This function opens the profile modal with candidate data
 function openCandidateProfileModal(candidate) {
@@ -397,7 +414,7 @@ function openCandidateProfileModal(candidate) {
     document.getElementById('modalProfileDepartment').textContent = candidate.department || 'Not specified';
     document.getElementById('modalProfileYearLevel').textContent = candidate.year_level || 'Not specified';
     
-    // Set election info - UPDATED: Removed election_type
+    // Set election info
     document.getElementById('modalProfileElection').textContent = candidate.election || 'Not specified';
     document.getElementById('modalProfileScope').textContent = candidate.scope || 'Not specified';
     

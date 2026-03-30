@@ -27,6 +27,8 @@
 .logo {
     width: 100px;
     margin-bottom: 10px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .university-name {

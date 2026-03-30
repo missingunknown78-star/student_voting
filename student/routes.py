@@ -2250,7 +2250,7 @@ def available_elections():
         # Get vote timestamps if student has voted
         vote_timestamps = None
         if student_has_voted and student_vote:
-            # Handle cast_timestamp (stored as Manila time)
+            # Handle cast_timestamp (stored as Manila time - when user clicked submit)
             cast_time = student_vote.cast_timestamp
             if cast_time:
                 if cast_time.tzinfo is None:
@@ -2261,7 +2261,7 @@ def available_elections():
             else:
                 cast_time_manila = None
             
-            # Handle recorded_timestamp (stored as UTC)
+            # Handle recorded_timestamp (stored as UTC - when vote was saved to DB)
             recorded_time = student_vote.recorded_timestamp
             if recorded_time:
                 if recorded_time.tzinfo is None:
@@ -2282,6 +2282,12 @@ def available_elections():
                 else:
                     recorded_time_manila = None
             
+            # UPDATED: Calculate processing time (time from submission to confirmation/redirect)
+            processing_seconds = None
+            if cast_time_manila and recorded_time_manila:
+                time_diff = recorded_time_manila - cast_time_manila
+                processing_seconds = round(time_diff.total_seconds(), 2)
+            
             # Format for display
             vote_timestamps = {
                 'cast_time': cast_time,
@@ -2292,6 +2298,7 @@ def available_elections():
                 'recorded_time_manila': recorded_time_manila,
                 'recorded_time_formatted': recorded_time_manila.strftime('%I:%M:%S %p') if recorded_time_manila else None,
                 'recorded_date_formatted': recorded_time_manila.strftime('%Y-%m-%d %I:%M:%S %p') if recorded_time_manila else None,
+                'processing_seconds': processing_seconds  # NEW: Processing time in seconds
             }
         
         # Determine eligible voters count

@@ -5,49 +5,153 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/all_students.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* Additional styles for search bar - full width matching table */
+    .search-wrapper {
+        margin-bottom: 25px;
+        width: 100%;
+    }
+    
+    .search-container {
+        position: relative;
+        width: 100%;
+    }
+    
+    .search-container input {
+        width: 100%;
+        padding: 12px 20px 12px 48px;
+        border: 2px solid var(--border-color);
+        border-radius: 50px;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        outline: none;
+        box-sizing: border-box;
+    }
+    
+    .search-container input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(102, 176, 255, 0.2);
+    }
+    
+    .search-container .search-icon {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        font-size: 1rem;
+        pointer-events: none;
+    }
+    
+    .search-container .search-loading {
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        display: none;
+    }
+    
+    .search-container.loading .search-loading {
+        display: block;
+    }
+    
+    .search-container.loading input {
+        padding-right: 45px;
+    }
+    
+    .search-hint {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        text-align: left;
+    }
+    
+    .search-hint i {
+        margin-right: 5px;
+    }
+    
+    /* Dark mode support for search */
+    :root.dark-mode .search-container input {
+        background: #2d2d2d;
+        border-color: #404040;
+    }
+    
+    :root.dark-mode .search-container input:focus {
+        border-color: var(--accent-color);
+    }
+    
+    /* Student count badge */
+    .page-header-left {
+        display: flex;
+        align-items: baseline;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .student-count-badge {
+        background: var(--accent-color);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+    
+    .student-count-badge i {
+        font-size: 0.9rem;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="all-students-page">
     
+    <!-- Page Header with Title and Count Badge -->
     <div class="page-header">
         <div>
-            <h1 class="page-title">All Registered Students</h1>
-            <p>View and manage all registered students.</p>
+            <div class="page-header-left">
+                <h1 class="page-title">All Registered Students</h1>
+                <span class="student-count-badge" id="studentCountBadge">
+                    <i class="fa-solid fa-users"></i>
+                    <span id="studentCount">0</span> Students
+                </span>
+            </div>
+            <p class="page-description">View and manage all registered students.</p>
         </div>
         <a href="{{ url_for('admin.manage_students') }}" class="back-btn">
             <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </div>
     
-    <!-- Filter Bar -->
-    <div class="filter-bar">
-        <select id="departmentFilter">
-            <option value="">All Departments</option>
-            {% for dept in departments %}
-            <option value="{{ dept.id }}">{{ dept.name }}</option>
-            {% endfor %}
-        </select>
-        
-        <select id="courseFilter">
-            <option value="">All Courses</option>
-            {% for course in courses %}
-            <option value="{{ course.id }}" data-dept="{{ course.department_id }}">{{ course.name }}</option>
-            {% endfor %}
-        </select>
-        
-        <select id="yearLevelFilter">
-            <option value="">All Year Levels</option>
-            {% for year in year_levels %}
-            <option value="{{ year.id }}">{{ year.year_name }}</option>
-            {% endfor %}
-        </select>
-        
-        <input type="text" id="searchInput" placeholder="Search...">
+    <!-- Search Bar Only - Full Width -->
+    <div class="search-wrapper">
+        <div class="search-container" id="searchContainer">
+            <span class="search-icon">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" 
+                   id="searchInput" 
+                   placeholder="Search by name or ID number..." 
+                   autocomplete="off">
+            <span class="search-loading">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+        </div>
+        <div class="search-hint">
+            <i class="fa-solid fa-info-circle"></i> Type to search - results appear instantly
+        </div>
     </div>
     
     <!-- Table Container -->
-    <div class="table-container">
+    <div class="table-container" id="tableContainer">
         <div id="studentsTableContainer">
             {% include 'partials/students_table.html' %}
         </div>
@@ -88,13 +192,14 @@
 
     let currentStudentId = null;
     let currentPage = 1;
+    let searchTimeout = null;
     
-    // Filter elements
-    const departmentFilter = document.getElementById('departmentFilter');
-    const courseFilter = document.getElementById('courseFilter');
-    const yearLevelFilter = document.getElementById('yearLevelFilter');
+    // Elements
     const searchInput = document.getElementById('searchInput');
-    const tableContainer = document.getElementById('studentsTableContainer');
+    const tableContainer = document.getElementById('tableContainer');
+    const searchContainer = document.getElementById('searchContainer');
+    const studentsTableContainer = document.getElementById('studentsTableContainer');
+    const studentCountSpan = document.getElementById('studentCount');
     const loadingSpinner = document.getElementById('loadingSpinner');
     const deleteModal = document.getElementById('deleteModal');
     const closeModalBtn = document.querySelector('.close-modal');
@@ -103,64 +208,68 @@
     const modalStudentCourse = document.getElementById('modalStudentCourse');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     
-    // Filter courses by department
-    departmentFilter.addEventListener('change', function() {
-        const deptId = this.value;
-        document.querySelectorAll('#courseFilter option').forEach(opt => {
-            if (opt.value && opt.dataset.dept !== deptId && deptId) {
-                opt.style.display = 'none';
-            } else {
-                opt.style.display = '';
-            }
-        });
-        loadStudents(1);
-    });
-    
-    courseFilter.addEventListener('change', () => loadStudents(1));
-    yearLevelFilter.addEventListener('change', () => loadStudents(1));
-    
-    let searchTimeout;
-    searchInput.addEventListener('keyup', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => loadStudents(1), 500);
+    // REAL-TIME SEARCH - triggers on every keystroke
+    searchInput.addEventListener('input', function() {
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        const searchTerm = this.value;
+        
+        // If search is empty, load immediately
+        if (searchTerm === '') {
+            loadStudents(1);
+            return;
+        }
+        
+        // Show loading indicator
+        searchContainer.classList.add('loading');
+        tableContainer.classList.add('loading');
+        
+        // Debounce to avoid too many requests while typing fast
+        searchTimeout = setTimeout(() => {
+            loadStudents(1);
+        }, 300);
     });
     
     function loadStudents(page = 1) {
         currentPage = page;
-        loadingSpinner.style.display = 'block';
-        tableContainer.style.opacity = '0.5';
         
         const params = new URLSearchParams({
             page: page,
-            department_id: departmentFilter.value || '',
-            course_id: courseFilter.value || '',
-            year_level_id: yearLevelFilter.value || '',
             search: searchInput.value || ''
         });
         
         fetch(`{{ url_for('admin.all_students_data') }}?${params}`)
             .then(response => response.json())
             .then(data => {
-                loadingSpinner.style.display = 'none';
-                tableContainer.style.opacity = '1';
-                tableContainer.innerHTML = data.html;
+                // Update table
+                studentsTableContainer.innerHTML = data.html;
                 currentPage = data.current_page;
+                
+                // Update student count
+                const totalCount = data.total_count || 0;
+                studentCountSpan.textContent = totalCount.toLocaleString();
+                
+                // Hide loading
+                searchContainer.classList.remove('loading');
+                tableContainer.classList.remove('loading');
             })
             .catch(error => {
                 console.error('Error:', error);
-                loadingSpinner.style.display = 'none';
-                tableContainer.style.opacity = '1';
+                searchContainer.classList.remove('loading');
+                tableContainer.classList.remove('loading');
                 alert('Error loading students');
             });
     }
     
     function openDeleteModal(id, idNum, name, course) {
-        console.log('Opening delete modal for student ID:', id); // DEBUG
         currentStudentId = id;
         modalStudentId.textContent = idNum;
         modalStudentName.textContent = name;
         modalStudentCourse.textContent = course;
-        deleteModal.style.display = 'flex';  // Changed to 'flex' for centering
+        deleteModal.style.display = 'flex';
     }
     
     function closeDeleteModal() {
@@ -170,52 +279,41 @@
     
     function confirmDelete() {
         if (!currentStudentId) {
-            console.error('No student ID selected'); // DEBUG
+            console.error('No student ID selected');
             return;
         }
         
-        console.log('Attempting to delete student ID:', currentStudentId); // DEBUG
-        
         confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = 'Deleting...';
+        confirmDeleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
         
-        // DEBUG: Log the URL
         const url = `/ctumoalboal-comelec/delete-all-student/${currentStudentId}`;
-        console.log('Fetch URL:', url); // DEBUG
         
         fetch(url, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HERE
+                'X-CSRFToken': getCsrfToken()
             }
         })
         .then(response => {
-            console.log('Response status:', response.status); // DEBUG
-            console.log('Response headers:', response.headers); // DEBUG
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Response data:', data); // DEBUG
             if (data.success) {
                 closeDeleteModal();
                 loadStudents(currentPage);
-                alert('Student deleted successfully');
+                alert(data.message || 'Student deleted successfully');
             } else {
                 alert('Error: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
-            console.error('Fetch Error:', error); // DEBUG
-            console.error('Error details:', {
-                message: error.message,
-                stack: error.stack
-            });
-            alert('Error deleting student. Check console for details.');
+            console.error('Error:', error);
+            alert('Error deleting student. Please try again.');
         })
         .finally(() => {
             confirmDeleteBtn.disabled = false;
@@ -223,14 +321,16 @@
         });
     }
     
-    closeModalBtn.addEventListener('click', closeDeleteModal);
+    // Modal close handlers
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeDeleteModal);
+    }
     window.addEventListener('click', (e) => {
         if (e.target === deleteModal) closeDeleteModal();
     });
     
     // Initial load
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Page loaded'); // DEBUG
         loadStudents(1);
     });
 </script>

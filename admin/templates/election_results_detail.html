@@ -504,8 +504,8 @@
                                 </div>
                             </div>
                             <div class="winner-vote-count">{{ winner.vote_count }}</div>
-                            <div>
-                                <span class="winner-percentage-badge">{{ winner.voter_percentage }}%</span>
+                            <div class="winner-percentage-badge">
+                                {{ "%.2f"|format(winner.voter_percentage) }}%
                             </div>
                         </div>
                     {% else %}

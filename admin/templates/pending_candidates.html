@@ -4,6 +4,68 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/pending_candidates.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* Real-time search styles - just remove button and add loading indicator */
+    .search-form {
+        position: relative;
+    }
+    
+    .search-loading {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+        display: none;
+    }
+    
+    .search-form.loading .search-loading {
+        display: block;
+    }
+    
+    /* Hide the search button */
+    .search-btn {
+        display: none !important;
+    }
+    
+    /* Make clear button appear inside the search bar */
+    .clear-btn {
+        position: absolute;
+        right: 45px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 1rem;
+        padding: 5px;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .clear-btn:hover {
+        background: rgba(0,0,0,0.1);
+        color: #e74c3c;
+    }
+    
+    /* Dark mode support */
+    :root.dark-mode .clear-btn:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    /* Make search input full width with more padding */
+    .search-input {
+        padding-right: 80px !important;
+        width: 100%;
+        box-sizing: border-box;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -24,7 +86,7 @@
             </div>
             <div class="stat-info">
                 <h3>Pending</h3>
-                <p>{{ stats.pending }}</p>
+                <p id="statsPending">{{ stats.pending }}</p>
             </div>
         </div>
         <div class="stat-card">
@@ -33,7 +95,7 @@
             </div>
             <div class="stat-info">
                 <h3>Approved</h3>
-                <p>{{ stats.approved }}</p>
+                <p id="statsApproved">{{ stats.approved }}</p>
             </div>
         </div>
         <div class="stat-card">
@@ -42,7 +104,7 @@
             </div>
             <div class="stat-info">
                 <h3>Rejected</h3>
-                <p>{{ stats.rejected }}</p>
+                <p id="statsRejected">{{ stats.rejected }}</p>
             </div>
         </div>
         <div class="stat-card">
@@ -51,7 +113,7 @@
             </div>
             <div class="stat-info">
                 <h3>Total</h3>
-                <p>{{ stats.total }}</p>
+                <p id="statsTotal">{{ stats.total }}</p>
             </div>
         </div>
     </div>
@@ -64,24 +126,33 @@
         <a href="{{ url_for('admin.pending_candidates', status='rejected') }}" class="tab {% if status_filter == 'rejected' %}active{% endif %}">Rejected</a>
     </div>
 
-    <!-- Search Bar -->
+    <!-- Search Bar - Real Time (No Submit Button) -->
     <div class="search-bar">
-        <form method="GET" class="search-form">
+        <form method="GET" class="search-form" id="searchForm" onsubmit="return false;">
             <input type="hidden" name="status" value="{{ status_filter }}">
-            <input type="text" name="search" placeholder="Search by name, position, or election..." value="{{ search }}" class="search-input">
-            <button type="submit" class="search-btn">
+            <input type="text" 
+                   name="search" 
+                   id="searchInput"
+                   placeholder="Search by name, position, or election..." 
+                   value="{{ search }}" 
+                   class="search-input"
+                   autocomplete="off">
+            <span class="search-loading">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+            </span>
+            <button type="submit" class="search-btn" style="display:none;">
                 <i class="fa-solid fa-search"></i> Search
             </button>
             {% if search %}
-            <a href="{{ url_for('admin.pending_candidates', status=status_filter) }}" class="clear-btn">
-                <i class="fa-solid fa-times"></i> Clear
+            <a href="#" class="clear-btn" id="clearSearchBtn">
+                <i class="fa-solid fa-times"></i>
             </a>
             {% endif %}
         </form>
     </div>
 
     <!-- Applications Table -->
-    <div class="table-container">
+    <div class="table-container" id="tableContainer">
         <table class="applications-table">
             <thead>
                 <tr>
@@ -93,9 +164,9 @@
                     <th>Applied Date</th>
                     <th>Status</th>
                     <th>Actions</th>
-                  </tr>
+                   </tr>
             </thead>
-            <tbody>
+            <tbody id="applicationsBody">
                 {% if applications and applications|length > 0 %}
                     {% for app in applications %}
                     <tr id="app-{{ app.id }}">
@@ -265,6 +336,94 @@
     }
     
     let currentApplicationId = null;
+    let searchTimeout = null;
+    
+    // DOM Elements
+    const searchInput = document.getElementById('searchInput');
+    const searchForm = document.getElementById('searchForm');
+    const applicationsBody = document.getElementById('applicationsBody');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    
+    // Real-time search - triggers on every keystroke
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            const searchTerm = this.value;
+            
+            // Show/hide clear button
+            if (clearSearchBtn) {
+                if (searchTerm) {
+                    clearSearchBtn.style.display = 'flex';
+                } else {
+                    clearSearchBtn.style.display = 'none';
+                }
+            }
+            
+            // Show loading indicator
+            searchForm.classList.add('loading');
+            applicationsBody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="loading-spinner"></div><p>Searching...</p></td></tr>';
+            
+            // Debounce to avoid too many requests
+            searchTimeout = setTimeout(() => {
+                submitSearch();
+            }, 300);
+        });
+    }
+    
+    // Clear search
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        });
+    }
+    
+    function submitSearch() {
+        const form = searchForm;
+        const formData = new FormData(form);
+        const searchValue = searchInput.value;
+        
+        let url = window.location.pathname + '?';
+        if (searchValue) url += `search=${encodeURIComponent(searchValue)}&`;
+        url += `status={{ status_filter }}`;
+        
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Extract the table body content from the response
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newBody = doc.getElementById('applicationsBody');
+            const newStats = doc.querySelectorAll('.stats-grid .stat-card p');
+            
+            if (newBody) {
+                applicationsBody.innerHTML = newBody.innerHTML;
+            }
+            
+            // Update stats
+            if (newStats && newStats.length === 4) {
+                document.getElementById('statsPending').textContent = newStats[0].textContent;
+                document.getElementById('statsApproved').textContent = newStats[1].textContent;
+                document.getElementById('statsRejected').textContent = newStats[2].textContent;
+                document.getElementById('statsTotal').textContent = newStats[3].textContent;
+            }
+            
+            searchForm.classList.remove('loading');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            searchForm.classList.remove('loading');
+            showToast('Error searching applications', 'error');
+        });
+    }
     
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
@@ -291,12 +450,7 @@
                 'X-CSRFToken': getCsrfToken()
             }
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const app = data.application;
@@ -385,12 +539,7 @@
                 'X-CSRFToken': getCsrfToken()
             }
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.message || 'Server error'); });
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 showToast('✅ Application approved successfully!', 'success');
@@ -440,12 +589,7 @@
             },
             body: JSON.stringify({ reason: reason })
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.message || 'Server error'); });
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 showToast('✅ Application rejected.', 'success');

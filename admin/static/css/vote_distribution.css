@@ -669,3 +669,37 @@ html {
 .no-transition * {
     transition: none !important;
 }
+
+
+
+/* Candidate photo styling */
+.candidate-photo-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 15px;
+}
+
+.candidate-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.candidate-avatar {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}

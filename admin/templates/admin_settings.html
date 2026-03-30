@@ -188,88 +188,88 @@
                 </div>
 
                 <!-- PROFILE INFORMATION CARD - WITH EMAIL VERIFICATION LIKE STUDENT'S -->
-<div class="settings-card" id="profileFormCard">
-    <div class="profile-header">
-        <h3><i class="fa-solid fa-user"></i> Profile Information</h3>
-        <button class="btn-edit-toggle" id="editProfileBtn" onclick="toggleProfileEdit()">
-            <i class="fa-solid fa-pencil"></i> Edit Profile
-        </button>
-    </div>
-    
-    <!-- Display Mode -->
-    <div id="profileDisplayMode" class="profile-info">
-        <div class="form-group">
-            <label for="username">
-                <i class="fa-solid fa-user-tag"></i> Username
-            </label>
-            <div class="info-value disabled" id="currentUsername">{{ admin.username }}</div>
-        </div>
-        
-        <div class="form-group">
-            <label for="email">
-                <i class="fa-solid fa-envelope"></i> Email Address
-            </label>
-            <div class="info-value disabled" id="currentEmail">{{ admin.email }}</div>
-        </div>
-        
-        <div class="form-group">
-            <label>
-                <i class="fa-solid fa-key"></i> Password
-            </label>
-            <div class="info-value disabled">********</div>
-        </div>
-    </div>
+                <div class="settings-card" id="profileFormCard">
+                    <div class="profile-header">
+                        <h3><i class="fa-solid fa-user"></i> Profile Information</h3>
+                        <button class="btn-edit-toggle" id="editProfileBtn" onclick="toggleProfileEdit()">
+                            <i class="fa-solid fa-pencil"></i> Edit Profile
+                        </button>
+                    </div>
+                    
+                    <!-- Display Mode -->
+                    <div id="profileDisplayMode" class="profile-info">
+                        <div class="form-group">
+                            <label for="username">
+                                <i class="fa-solid fa-user-tag"></i> Username
+                            </label>
+                            <div class="info-value disabled" id="currentUsername">{{ admin.username }}</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">
+                                <i class="fa-solid fa-envelope"></i> Email Address
+                            </label>
+                            <div class="info-value disabled" id="currentEmail">{{ admin.email }}</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fa-solid fa-key"></i> Password
+                            </label>
+                            <div class="info-value disabled">********</div>
+                        </div>
+                    </div>
 
-    <!-- Edit Mode (Hidden by default) -->
-    <div id="profileEditMode" class="profile-info" style="display: none;">
-        <form id="editProfileForm" method="POST" action="{{ url_for('admin.settings_profile_update') }}">
-            <!-- CSRF Token -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div class="form-group">
-                <label for="newUsername">
-                    <i class="fa-solid fa-user-tag"></i> Username
-                </label>
-                <input type="text" id="newUsername" name="username" value="{{ admin.username }}" class="profile-input" required>
-                <p class="info-help">Choose a unique username</p>
-            </div>
+                    <!-- Edit Mode (Hidden by default) -->
+                    <div id="profileEditMode" class="profile-info" style="display: none;">
+                        <form id="editProfileForm" method="POST" action="{{ url_for('admin.settings_profile_update') }}">
+                            <!-- CSRF Token -->
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            
+                            <div class="form-group">
+                                <label for="newUsername">
+                                    <i class="fa-solid fa-user-tag"></i> Username
+                                </label>
+                                <input type="text" id="newUsername" name="username" value="{{ admin.username }}" class="profile-input" required>
+                                <p class="info-help">Choose a unique username</p>
+                            </div>
 
-            <div class="form-group">
-                <label for="newEmail">
-                    <i class="fa-solid fa-envelope"></i> Email Address
-                </label>
-                <input type="email" id="newEmail" name="email" value="{{ admin.email }}" class="profile-input" required>
-                <p class="info-help">Changing email requires verification</p>
-            </div>
+                            <div class="form-group">
+                                <label for="newEmail">
+                                    <i class="fa-solid fa-envelope"></i> Email Address
+                                </label>
+                                <input type="email" id="newEmail" name="email" value="{{ admin.email }}" class="profile-input" required>
+                                <p class="info-help">Changing email requires verification</p>
+                            </div>
 
-            <div class="form-group">
-                <label>
-                    <i class="fa-solid fa-key"></i> Password
-                </label>
-                <div class="password-field-wrapper">
-                    <div class="info-value disabled" style="padding: 12px 16px; background: var(--bg-tertiary); border-radius: var(--border-radius);">********</div>
-                    <button type="button" class="btn-forgot-password" id="forgotPasswordBtn" onclick="handleForgotPassword()">
-                        <i class="fa-solid fa-question-circle"></i> Change Password
-                    </button>
+                            <div class="form-group">
+                                <label>
+                                    <i class="fa-solid fa-key"></i> Password
+                                </label>
+                                <div class="password-field-wrapper">
+                                    <div class="info-value disabled" style="padding: 12px 16px; background: var(--bg-tertiary); border-radius: var(--border-radius);">********</div>
+                                    <button type="button" class="btn-forgot-password" id="forgotPasswordBtn" onclick="handleForgotPassword()">
+                                        <i class="fa-solid fa-question-circle"></i> Change Password
+                                    </button>
+                                </div>
+                                <p class="info-help">Click "Change Password" to reset via email</p>
+                            </div>
+
+                            <!-- Profile Action Buttons -->
+                            <div class="profile-actions" id="profileActions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-save"></i> Save Changes
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="cancelEditBtn">
+                                    <i class="fa-solid fa-times"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <p class="info-help">Click "Change Password" to reset via email</p>
-            </div>
 
-            <!-- Profile Action Buttons -->
-            <div class="profile-actions" id="profileActions">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-save"></i> Save Changes
-                </button>
-                <button type="button" class="btn btn-secondary" id="cancelEditBtn">
-                    <i class="fa-solid fa-times"></i> Cancel
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Include the Email Change Modal -->
-{% include 'partials/email_change_modal.html' %}
+                <!-- Include the Email Change Modal -->
+                {% include 'partials/email_change_modal.html' %}
 
                 <!-- ACCESS CODE SETTINGS CARD - NEW -->
                 <div class="settings-card access-code-card">
@@ -279,14 +279,8 @@
                     {% include 'partials/access_code_settings.html' %}
                 </div>
 
-                <div class="form-actions">
-                    <button class="btn btn-primary" onclick="saveGeneralSettings()">
-                        <i class="fa-solid fa-save"></i> Save Changes
-                    </button>
-                    <button class="btn btn-secondary" onclick="resetGeneralSettings()">
-                        <i class="fa-solid fa-rotate-left"></i> Reset
-                    </button>
-                </div>
+                <!-- REMOVED: Redundant global Save Changes and Reset buttons -->
+                <!-- No more confusing duplicate save buttons here! -->
             </div>
 
             <!-- 2FA Settings -->

@@ -117,7 +117,7 @@ function attachEditButtonListeners() {
     });
 }
 
-// Handle edit button click - ADD YEAR LEVEL HANDLING
+// Handle edit button click - WITH PLATFORM HANDLING
 function handleEditClick(e) {
     e.preventDefault();
     
@@ -136,7 +136,7 @@ function handleEditClick(e) {
         document.getElementById('edit_year_level').value = btn.dataset.year_level_id;
     }
     
-    // Set platform if available
+    // Set platform if available - FIXED: Handle platform correctly
     if (btn.dataset.platform) {
         document.getElementById('edit_platform').value = btn.dataset.platform;
     } else {
@@ -166,7 +166,7 @@ function handleEditClick(e) {
     } else {
         // Clear course dropdown if no department
         const courseSelect = document.getElementById('edit_course');
-        courseSelect.innerHTML = '<option value="">Select course (optional)</option>';
+        courseSelect.innerHTML = '<option value="">Select course</option>';
     }
     
     // Get the election select element
@@ -262,37 +262,46 @@ function closeLightbox() {
 }
 
 /* ADD MODAL */
-document.getElementById('openAddCandidate').onclick = e => {
-    e.preventDefault();
-    document.getElementById('addCandidateModal').style.display = 'flex';
-    
-    // Reset form and clear any notifications
-    document.getElementById('addCandidateForm').reset();
-    
-    // Hide any existing notifications
-    const addNotification = document.getElementById('addCandidateNotification');
-    if (addNotification) {
-        addNotification.style.display = 'none';
-    }
-    
-    // Clear course dropdown
-    const addCourse = document.getElementById('add_course');
-    addCourse.innerHTML = '<option value="">Select course (optional)</option>';
-    
-    // Hide ALL election options initially
-    const addElection = document.getElementById('add_election');
-    for (let i = 0; i < addElection.options.length; i++) {
-        addElection.options[i].style.display = 'none';
-    }
-    
-    // Show the placeholder option only
-    for (let i = 0; i < addElection.options.length; i++) {
-        if (addElection.options[i].value === "") {
-            addElection.options[i].style.display = 'block';
-            break;
+const openAddBtn = document.getElementById('openAddCandidate');
+if (openAddBtn) {
+    openAddBtn.onclick = e => {
+        e.preventDefault();
+        document.getElementById('addCandidateModal').style.display = 'flex';
+        
+        // Reset form and clear any notifications
+        document.getElementById('addCandidateForm').reset();
+        
+        // Hide any existing notifications
+        const addNotification = document.getElementById('addCandidateNotification');
+        if (addNotification) {
+            addNotification.style.display = 'none';
         }
-    }
-};
+        
+        // Clear course dropdown
+        const addCourse = document.getElementById('add_course');
+        addCourse.innerHTML = '<option value="">Select course</option>';
+        
+        // Clear platform field
+        const addPlatform = document.getElementById('add_platform');
+        if (addPlatform) {
+            addPlatform.value = '';
+        }
+        
+        // Hide ALL election options initially
+        const addElection = document.getElementById('add_election');
+        for (let i = 0; i < addElection.options.length; i++) {
+            addElection.options[i].style.display = 'none';
+        }
+        
+        // Show the placeholder option only
+        for (let i = 0; i < addElection.options.length; i++) {
+            if (addElection.options[i].value === "") {
+                addElection.options[i].style.display = 'block';
+                break;
+            }
+        }
+    };
+}
 
 function closeAddCandidateModal() {
     document.getElementById('addCandidateModal').style.display = 'none';
@@ -342,7 +351,7 @@ function loadCourses(mode, departmentId) {
         const courseSelect = document.getElementById(mode + '_course');
         
         // Clear current options
-        courseSelect.innerHTML = '<option value="">Select course (optional)</option>';
+        courseSelect.innerHTML = '<option value="">Select course</option>';
         
         if (!departmentId) {
             resolve();
@@ -370,7 +379,7 @@ function loadCourses(mode, departmentId) {
             })
             .then(data => {
                 // Clear loading option
-                courseSelect.innerHTML = '<option value="">Select course (optional)</option>';
+                courseSelect.innerHTML = '<option value="">Select course</option>';
                 
                 if (data.courses && data.courses.length > 0) {
                     data.courses.forEach(course => {
@@ -442,6 +451,25 @@ function filterElectionsByScope(mode) {
             }
         }
     }
+}
+
+/* Validate department and course before submission - REQUIRED FOR ALL */
+function validateDepartmentAndCourse(mode) {
+    const deptSelect = document.getElementById(mode + '_department');
+    const courseSelect = document.getElementById(mode + '_course');
+    
+    if (!deptSelect.value) {
+        showFloatingNotification('Please select a department', 'error');
+        deptSelect.focus();
+        return false;
+    }
+    if (!courseSelect.value) {
+        showFloatingNotification('Please select a course', 'error');
+        courseSelect.focus();
+        return false;
+    }
+    
+    return true;
 }
 
 // Add change listeners for department dropdowns
@@ -942,13 +970,18 @@ function showFloatingNotification(message, type) {
     }, 4000);
 }
 
-/* ---------- AJAX SUBMIT FOR ADD CANDIDATE WITH STUDENT VALIDATION ---------- */
+/* ---------- AJAX SUBMIT FOR ADD CANDIDATE WITH PLATFORM SUPPORT ---------- */
 const addCandidateForm = document.getElementById('addCandidateForm');
 const addSubmitBtn = document.getElementById('addCandidateSubmitBtn');
 
 if (addCandidateForm) {
     addCandidateForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        // Validate department and course (required for ALL)
+        if (!validateDepartmentAndCourse('add')) {
+            return; // Stop form submission
+        }
 
         // Validate student first using the function from student_validation.js
         if (typeof validateBeforeSubmit === 'function') {
@@ -1005,7 +1038,13 @@ if (addCandidateForm) {
                 
                 // Clear course dropdown
                 const addCourse = document.getElementById('add_course');
-                addCourse.innerHTML = '<option value="">Select course (optional)</option>';
+                addCourse.innerHTML = '<option value="">Select course</option>';
+                
+                // Clear platform field
+                const addPlatform = document.getElementById('add_platform');
+                if (addPlatform) {
+                    addPlatform.value = '';
+                }
                 
                 // Reset election dropdown - hide all and show placeholder only
                 const addElection = document.getElementById('add_election');
@@ -1041,13 +1080,18 @@ if (addCandidateForm) {
     });
 }
 
-/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - WITH FLOATING NOTIFICATIONS ---------- */
+/* ---------- AJAX SUBMIT FOR EDIT CANDIDATE - WITH PLATFORM SUPPORT ---------- */
 const editCandidateForm = document.getElementById('editCandidateForm');
 const editSubmitBtn = document.getElementById('editCandidateSubmitBtn');
 
 if (editCandidateForm) {
     editCandidateForm.addEventListener('submit', function(e) {
         e.preventDefault();
+
+        // Validate department and course (required for ALL)
+        if (!validateDepartmentAndCourse('edit')) {
+            return; // Stop form submission
+        }
 
         // Show loading state - change button text to "Updating..."
         editSubmitBtn.disabled = true;
