@@ -83,7 +83,7 @@
     color: var(--text-secondary);
 }
 
-/* ==================== NEW STYLES FOR STATS TABS ==================== */
+/* ==================== STATS TABS STYLES ==================== */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -171,135 +171,67 @@
     font-size: 1rem;
 }
 
-/* Remove old filter group for status */
-.filter-group.status-filter {
-    display: none;
+/* ==================== SEARCH BAR STYLES ==================== */
+.search-section {
+    margin-bottom: 20px;
 }
 
-/* Update filter bar layout */
-.filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 15px;
-    padding: 20px;
-    background: var(--card-bg);
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.filter-group {
-    flex: 1;
-    min-width: 200px;
-}
-
-.filter-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.filter-input {
+.search-wrapper {
+    position: relative;
     width: 100%;
-    padding: 12px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 0.95rem;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 14px 20px 14px 45px;
+    border: 2px solid var(--border-color);
+    border-radius: 50px;
+    font-size: 1rem;
     background: var(--input-bg);
     color: var(--text-color);
     transition: all 0.3s ease;
+    outline: none;
 }
 
-.filter-input:focus {
+.search-input:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
-.filter-actions {
-    display: flex;
-    gap: 10px;
-    margin-left: auto;
-    align-items: flex-end;
+.search-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
 }
 
-.btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+.search-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: left;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: white;
+.searching-indicator {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 0.75rem;
+    color: var(--primary);
+    animation: pulse 1s infinite;
 }
 
-.btn-primary:hover {
-    opacity: 0.9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
-}
-
-.btn-secondary {
-    background: var(--light);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-    background: var(--light-hover);
-}
-
-/* Responsive design for stats tabs */
-@media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
-    
-    .stat-card {
-        padding: 15px;
-    }
-    
-    .stat-number {
-        font-size: 1.5rem;
-    }
-    
-    .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .filter-group {
-        width: 100%;
-    }
-    
-    .filter-actions {
-        margin-left: 0;
-        width: 100%;
-    }
-    
-    .btn {
-        flex: 1;
-        justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
 }
 
 /* Table styles */
@@ -308,7 +240,6 @@
     border-radius: 16px;
     padding: 20px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
     overflow-x: auto;
 }
 
@@ -321,7 +252,7 @@
     text-align: left;
     padding: 15px 10px;
     background: var(--table-header-bg);
-    color: var(--text-secondary);
+    color: var(--table-header-text);
     font-weight: 600;
     font-size: 0.85rem;
     text-transform: uppercase;
@@ -631,6 +562,38 @@
     max-height: 300px;
     overflow-y: auto;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .search-input {
+        padding: 12px 16px 12px 40px;
+        font-size: 0.9rem;
+    }
+    
+    .search-wrapper i {
+        left: 14px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
 {% endblock %}
 
@@ -653,7 +616,7 @@
         </div>
     </div>
 
-    <!-- Stats Cards - Now Clickable Tabs -->
+    <!-- Stats Cards - Clickable Tabs -->
     <div class="stats-grid" id="statsContainer">
         <!-- Will be populated by JavaScript -->
         <div class="stat-card loading">
@@ -663,31 +626,12 @@
         </div>
     </div>
 
-    <!-- Filter Bar - No Status Dropdown -->
-    <div class="filter-card">
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label for="searchInput"><i class="fa-solid fa-search"></i> Search by Name</label>
-                <input type="text" id="searchInput" class="filter-input" placeholder="Enter student name...">
-            </div>
-            
-            <div class="filter-group">
-                <label for="dateFilter"><i class="fa-solid fa-calendar"></i> Request Date</label>
-                <input type="date" id="dateFilter" class="filter-input">
-            </div>
-            
-            <div class="filter-actions">
-                <button onclick="loadRequests(1)" class="btn btn-primary">
-                    <i class="fa-solid fa-filter"></i> Apply Filters
-                </button>
-                <button onclick="resetFilters()" class="btn btn-secondary">
-                    <i class="fa-solid fa-undo"></i> Reset
-                </button>
-            </div>
+    <!-- Search Bar - Full Width -->
+    <div class="search-section">
+        <div class="search-wrapper">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search by student name..." autocomplete="off">
         </div>
-        <p class="filter-hint" style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);">
-            <i class="fa-solid fa-info-circle"></i> Click on the stats cards above to filter by status. Press Enter in search field to apply.
-        </p>
     </div>
 
     <!-- Table Container -->
@@ -716,9 +660,6 @@
             </div>
             <h3>No Deletion Requests Found</h3>
             <p>There are no account deletion requests matching your criteria.</p>
-            <button onclick="resetFilters()" class="btn btn-primary">
-                <i class="fa-solid fa-undo"></i> Clear Filters
-            </button>
         </div>
 
         <!-- Loading Spinner -->
@@ -779,7 +720,7 @@
     </div>
 </div>
 
-<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
+<!-- =============== MAIN SCRIPT WITH REAL-TIME SEARCH =============== -->
 <script>
     // =============== CSRF TOKEN HELPER ===============
     function getCsrfToken() {
@@ -844,6 +785,8 @@
     let currentRequestId = null;
     let currentAction = null;
     let currentStatus = 'all'; // Track current status filter
+    let searchTimeout = null; // For debouncing search
+    let isLoading = false; // Prevent multiple simultaneous loads
     
     // Load requests on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -851,26 +794,63 @@
         loadStats();
         applyThemeToMainContent();
         
-        // Add Enter key listener to search input
+        // Set up real-time search with debouncing
         const searchInput = document.getElementById('searchInput');
+        
         if (searchInput) {
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    loadRequests(1);
+            searchInput.addEventListener('input', function(e) {
+                // Clear previous timeout
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
                 }
+                
+                // Show searching indicator
+                showSearchingIndicator();
+                
+                // Set new timeout to trigger search after 300ms of no typing
+                searchTimeout = setTimeout(() => {
+                    loadRequests(1); // Reset to page 1 when searching
+                    hideSearchingIndicator();
+                }, 300);
             });
         }
     });
     
+    // Show searching indicator
+    function showSearchingIndicator() {
+        let indicator = document.querySelector('.searching-indicator');
+        if (!indicator) {
+            const searchHint = document.querySelector('.search-hint');
+            if (searchHint) {
+                indicator = document.createElement('span');
+                indicator.className = 'searching-indicator';
+                indicator.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching...';
+                searchHint.appendChild(indicator);
+            }
+        } else {
+            indicator.style.display = 'inline-block';
+        }
+    }
+    
+    // Hide searching indicator
+    function hideSearchingIndicator() {
+        const indicator = document.querySelector('.searching-indicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+    
     // Load requests with filters
     function loadRequests(page = 1) {
+        // Prevent multiple simultaneous loads
+        if (isLoading) return;
+        
         currentPage = page;
         
         const search = document.getElementById('searchInput').value;
-        const date = document.getElementById('dateFilter').value;
         
         // Show loading
+        isLoading = true;
         document.getElementById('loadingSpinner').style.display = 'block';
         document.getElementById('requestsTable').style.display = 'none';
         document.getElementById('emptyState').style.display = 'none';
@@ -878,13 +858,13 @@
         let url = `/ctumoalboal-comelec/deletion-requests/data?page=${page}`;
         if (currentStatus !== 'all') url += `&status=${currentStatus}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
-        if (date) url += `&date=${date}`;
         
         // GET request - no CSRF token needed
         fetch(url)
             .then(res => res.json())
             .then(data => {
                 document.getElementById('loadingSpinner').style.display = 'none';
+                isLoading = false;
                 
                 const tbody = document.getElementById('requestsBody');
                 const pagination = document.getElementById('pagination');
@@ -911,27 +891,28 @@
                     const reasonPreview = req.reason.length > 50 ? req.reason.substring(0, 50) + '...' : req.reason;
                     
                     tbody.innerHTML += `
-                    <tr>
-                        <td class="student-name">${req.student_name}</td>
-                        <td class="reason-cell" title="${req.reason}">${reasonPreview}</td>
-                        <td>${requestDate}</td>
-                        <td><span class="status-badge ${req.status}">${req.status}</span></td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                                ${req.status === 'pending' ? `
-                                    <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
-                                        <i class="fa-solid fa-check"></i>
+                        <tr>
+                            <td class="student-name">${escapeHtml(req.student_name)}</td>
+                            <td class="reason-cell" title="${escapeHtml(req.reason)}">${escapeHtml(reasonPreview)}</td>
+                            <td>${requestDate}</td>
+                            <td><span class="status-badge ${req.status}">${req.status}</span></td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
+                                        <i class="fa-solid fa-eye"></i>
                                     </button>
-                                    <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
-                                        <i class="fa-solid fa-times"></i>
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>`;
+                                    ${req.status === 'pending' ? `
+                                        <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
+                                            <i class="fa-solid fa-check"></i>
+                                        </button>
+                                        <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
                 
                 // Pagination
@@ -947,8 +928,16 @@
             .catch(error => {
                 console.error('Error loading requests:', error);
                 document.getElementById('loadingSpinner').style.display = 'none';
+                isLoading = false;
                 alert('Error loading requests. Please try again.');
             });
+    }
+    
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     // Load statistics
@@ -1005,7 +994,7 @@
             document.querySelector('.stat-card.rejected').classList.add('active');
         }
         
-        // Reload requests with new status filter
+        // Reload requests with new status filter (reset to page 1)
         loadRequests(1);
     }
     
@@ -1022,11 +1011,15 @@
                 modalDetails.innerHTML = `
                     <div class="detail-group">
                         <label>Student:</label>
-                        <p>${data.student_name}</p>
+                        <p>${escapeHtml(data.student_name)}</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Student ID Number:</label>
+                        <p>${escapeHtml(data.student_id_number || 'N/A')}</p>
                     </div>
                     <div class="detail-group">
                         <label>Reason for Deletion:</label>
-                        <p class="reason-full">${data.reason}</p>
+                        <p class="reason-full">${escapeHtml(data.reason)}</p>
                     </div>
                     <div class="detail-group">
                         <label>Request Date:</label>
@@ -1039,13 +1032,13 @@
                     ${data.admin_notes ? `
                     <div class="detail-group">
                         <label>Admin Notes:</label>
-                        <p>${data.admin_notes}</p>
+                        <p>${escapeHtml(data.admin_notes)}</p>
                     </div>
                     ` : ''}
                     ${data.processed_by_name ? `
                     <div class="detail-group">
                         <label>Processed By:</label>
-                        <p>${data.processed_by_name}</p>
+                        <p>${escapeHtml(data.processed_by_name)}</p>
                     </div>
                     ` : ''}
                     ${data.processed_date ? `
@@ -1107,7 +1100,7 @@
                 closeModal('processModal');
                 loadRequests(currentPage);
                 loadStats();
-                alert(`Request ${currentAction}ed successfully!`);
+                alert(`Request ${currentAction}d successfully!`);
             } else {
                 alert('Error processing request: ' + data.message);
             }
@@ -1116,22 +1109,6 @@
             console.error('Error:', error);
             alert('Error processing request. Please try again.');
         });
-    }
-    
-    // Reset filters
-    function resetFilters() {
-        currentStatus = 'all';
-        document.getElementById('searchInput').value = '';
-        document.getElementById('dateFilter').value = '';
-        
-        // Update active state on stats cards
-        const statCards = document.querySelectorAll('.stat-card');
-        statCards.forEach(card => {
-            card.classList.remove('active');
-        });
-        document.querySelector('.stat-card.total').classList.add('active');
-        
-        loadRequests(1);
     }
     
     // Modal functions

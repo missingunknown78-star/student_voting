@@ -3280,6 +3280,12 @@ def export_students_excel():
     mustard_fill = PatternFill(start_color='F1C40F', end_color='F1C40F', fill_type='solid')
     header_font = Font(name='Calibri', bold=True, color='FFFFFF')
     center_alignment = Alignment(horizontal='center', vertical='center')
+    
+    # FIXED: Add proper text alignment for data cells
+    left_alignment = Alignment(horizontal='left', vertical='center')
+    
+    # FIXED: Add indent to create padding/gap
+    left_alignment_with_indent = Alignment(horizontal='left', vertical='center', indent=2)
 
     max_col = 6  # A–F
 
@@ -3346,6 +3352,9 @@ def export_students_excel():
         cell.alignment = center_alignment
 
     # ------------------- ADD STUDENTS ------------------- #
+    # FIXED: Store column data to calculate proper widths
+    column_data = {i: [] for i in range(1, max_col + 1)}
+    
     for idx, s in enumerate(students, start=5):
         has_voted = False
         if election:
@@ -3357,34 +3366,71 @@ def export_students_excel():
         if s.year_level:
             year_level_name = s.year_level.year_name
 
+        # FIXED: Clean up student ID - remove any extra spaces
+        student_id = str(s.id_number).strip() if s.id_number else ""
+        
         row_values = [
-            s.id_number,
-            s.first_name,
-            s.last_name,
-            s.course,
+            student_id,
+            s.first_name.strip() if s.first_name else "",
+            s.last_name.strip() if s.last_name else "",
+            s.course.strip() if s.course else "",
             year_level_name,
             status_text
         ]
 
         for col_num, value in enumerate(row_values, start=1):
             cell = ws.cell(row=idx, column=col_num, value=value)
-            cell.alignment = Alignment(horizontal='left', vertical='center')
+            
+            # FIXED: Use left alignment with indent for all data cells
             if col_num == 6:  # Status column
+                cell.alignment = center_alignment
                 if has_voted:
                     cell.fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
                     cell.font = Font(color='006100')
                 else:
                     cell.fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
                     cell.font = Font(color='9C0006')
+            else:
+                # FIXED: Add indent (padding) to all data cells
+                cell.alignment = Alignment(horizontal='left', vertical='center', indent=2)
+            
+            # Store data for width calculation
+            column_data[col_num].append(str(value) if value else "")
 
-    # ------------------- AUTO FIT COLUMNS ------------------- #
-    for col in ws.columns:
-        max_length = 0
-        col_letter = get_column_letter(col[0].column)
-        for cell in col:
-            if cell.value:
-                max_length = max(max_length, len(str(cell.value)) + 2)
-        ws.column_dimensions[col_letter].width = max_length
+    # ------------------- AUTO FIT COLUMNS WITH EXTRA GAP ------------------- #
+    from openpyxl.utils import get_column_letter
+    
+    # FIXED: Calculate column widths with proper padding
+    for col_num in range(1, max_col + 1):
+        # Get column letter
+        col_letter = get_column_letter(col_num)
+        
+        # Find the maximum length in this column (including header)
+        max_length = len(str(headers[col_num - 1]))  # Start with header length
+        
+        for value in column_data[col_num]:
+            if value:
+                # FIXED: Use proper length calculation without counting extra spaces
+                value_length = len(str(value))
+                if value_length > max_length:
+                    max_length = value_length
+        
+        # FIXED: Set width with proper padding (max_length + 3 for better spacing)
+        # Add 3-5 characters of padding for comfortable reading
+        adjusted_width = max_length + 5
+        
+        # Set a minimum width of 12 for Student ID and other columns
+        if col_num == 1:  # Student ID column
+            adjusted_width = max(adjusted_width, 15)  # Minimum 15 for student ID
+        elif col_num == 4:  # Course column
+            adjusted_width = max(adjusted_width, 20)  # Minimum 20 for course names
+        elif col_num == 5:  # Year Level column
+            adjusted_width = max(adjusted_width, 12)  # Minimum 12 for year level
+        
+        # Cap at maximum 50 to avoid overly wide columns
+        adjusted_width = min(adjusted_width, 50)
+        
+        ws.column_dimensions[col_letter].width = adjusted_width
 
     # ✅ KEEP THIS AUDIT LOG (EXPORT - creates file, counts as action)
     username = getattr(current_user, 'username', 'Unknown')
@@ -3408,6 +3454,7 @@ def export_students_excel():
         headers={"Content-Disposition": "attachment; filename=students.xlsx"}
     )
 
+    
 # ---------------------- DELETE STUDENT ---------------------- #
 @admin_bp.route('/students/delete/<int:id>', methods=['POST'])
 @admin_required
@@ -3607,9 +3654,6 @@ def delete_all_student(id):
 
     
 from student.models import DeletionRequest
-
-# Add these routes to your admin routes file
-
 @admin_bp.route('/deletion-requests')
 def account_deletion_requests():
     """Render the account deletion requests page"""
@@ -5897,58 +5941,74 @@ def configure_election_positions(election_id):
         # Get form data
         selected_positions = request.form.getlist('positions')
         
-        # Delete existing configurations
-        ElectionPosition.query.filter_by(election_id=election_id).delete()
+        # Validate: At least one position must be selected
+        if not selected_positions:
+            flash('Please select at least one position for this election.', 'error')
+            return redirect(url_for('admin.configure_election_positions', election_id=election_id))
         
-        # Add new configurations
-        display_order = 0
-        for position_id_str in selected_positions:
-            position_id = int(position_id_str)
-            max_votes = request.form.get(f'max_votes_{position_id}', type=int, default=1)
+        try:
+            # Delete existing configurations
+            ElectionPosition.query.filter_by(election_id=election_id).delete()
             
-            # Get course restriction
-            course_id = request.form.get(f'course_{position_id}', type=int)
+            # Add new configurations
+            display_order = 0
+            for position_id_str in selected_positions:
+                position_id = int(position_id_str)
+                max_votes = request.form.get(f'max_votes_{position_id}', type=int, default=1)
+                
+                # Validate max votes range
+                if max_votes < 1:
+                    max_votes = 1
+                elif max_votes > 50:
+                    flash(f'Maximum votes cannot exceed 50 for a position. Please check your configuration.', 'error')
+                    return redirect(url_for('admin.configure_election_positions', election_id=election_id))
+                
+                # Get course restriction
+                course_id = request.form.get(f'course_{position_id}', type=int)
+                
+                # Get program type restriction
+                program_type_id = request.form.get(f'program_type_{position_id}', type=int)
+                
+                ep = ElectionPosition(
+                    election_id=election_id,
+                    position_id=position_id,
+                    max_votes=max_votes,
+                    min_votes=1,  # Default minimum
+                    course_id=course_id if course_id else None,
+                    program_type_id=program_type_id if program_type_id else None,
+                    department_id=None,  # Always None - department restriction removed
+                    display_order=display_order
+                )
+                db.session.add(ep)
+                display_order += 1
             
-            # Get program type restriction
-            program_type_id = request.form.get(f'program_type_{position_id}', type=int)
+            db.session.commit()
             
-            # Department restriction is removed - always None for all election types
-            ep = ElectionPosition(
-                election_id=election_id,
-                position_id=position_id,
-                max_votes=max_votes,
-                min_votes=1,  # Default minimum
-                course_id=course_id if course_id else None,
-                program_type_id=program_type_id if program_type_id else None,
-                department_id=None,  # Always None - department restriction removed
-                display_order=display_order
+            # Audit log
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            # Get position names for better audit description
+            position_names = []
+            for pid in selected_positions:
+                position = Position.query.get(int(pid))
+                if position:
+                    position_names.append(position.name)
+            
+            position_summary = ', '.join(position_names[:3])
+            if len(position_names) > 3:
+                position_summary += f" and {len(position_names) - 3} more"
+            
+            log_audit(
+                action='CONFIGURE_ELECTION_POSITIONS',
+                description=f"Admin user '{username}' configured {len(selected_positions)} positions for election '{election.title}' (ID: {election_id}) from IP: {ip} | Positions: {position_summary}"
             )
-            db.session.add(ep)
-            display_order += 1
-        
-        db.session.commit()
-        
-        # ✅ KEEP THIS AUDIT LOG (CONFIGURE POSITIONS - data modification)
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        # Get position names for better audit description
-        position_names = []
-        for pid in selected_positions:
-            position = Position.query.get(int(pid))
-            if position:
-                position_names.append(position.name)
-        
-        position_summary = ', '.join(position_names[:3])
-        if len(position_names) > 3:
-            position_summary += f" and {len(position_names) - 3} more"
-        
-        log_audit(
-            action='CONFIGURE_ELECTION_POSITIONS',
-            description=f"Admin user '{username}' configured {len(selected_positions)} positions for election '{election.title}' (ID: {election_id}) from IP: {ip} | Positions: {position_summary}"
-        )
-        
-        flash('Election positions configured successfully!', 'success')
+            
+            flash('Election positions configured successfully!', 'success')
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error configuring positions: {str(e)}', 'error')
         
         # Redirect back to the same page
         return redirect(url_for('admin.configure_election_positions', election_id=election_id))
@@ -6545,6 +6605,7 @@ def election_results(election_id):
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
     
+    # Handle timezone for start_date and end_date
     if election.start_date.tzinfo is None:
         election.start_date = tz.localize(election.start_date)
     if election.end_date.tzinfo is None:
@@ -6575,18 +6636,10 @@ def election_results(election_id):
     
     # GET POSITION LIMITS AND RESTRICTIONS
     position_limits = {}
-    position_restrictions = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
-    for ep in election_positions:
-        position_limits[ep.position_id] = ep.max_votes
-        position_restrictions[ep.position_id] = {
-            'course_id': ep.course_id,
-            'program_type_id': ep.program_type_id
-        }
     
-    # GET ALL VOTES AND COUNT UNIQUE VOTERS
+    # GET ALL VOTES
     all_votes = Vote.query.filter_by(election_id=election_id).all()
-    unique_voters = len(set(vote.student_id for vote in all_votes))
     
     # ===== GET VOTE COUNTS =====
     if is_tallied and TALLY_VOTE_AVAILABLE:
@@ -6600,43 +6653,59 @@ def election_results(election_id):
         print("📊 Using finder_hashes for live results")
         vote_counts = get_admin_live_vote_counts(election_id)
     
-    # ===== CALCULATE ELIGIBLE VOTERS PER POSITION =====
-    position_eligible_voters = {}
+    # ===== CALCULATE VOTERS PER POSITION (students who actually voted for this position) =====
+    position_voter_counts = {}
     
-    # Get all students
-    all_students = Student.query.all()
+    # First, create a mapping of candidate_id to position_id for quick lookup
+    candidate_position_map = {c.id: c.position_id for c in candidates}
     
-    # For each position, find eligible voters among those who actually voted
     for ep in election_positions:
         position_id = ep.position_id
         position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
         
-        # Count voters who are eligible for this position
-        eligible_voter_ids = set()
+        # Track unique voters who voted for this position
+        voters_for_position = set()
         
         for vote in all_votes:
-            student = Student.query.get(vote.student_id)
-            if not student:
+            if not vote.finder_hash:
                 continue
-            
-            # Check course restriction
-            if ep.course_id:
-                if student.course_id != ep.course_id:
-                    continue
-            
-            # Check program type restriction
-            if ep.program_type_id:
-                if student.program_type_id != ep.program_type_id:
-                    continue
-            
-            # Student is eligible
-            eligible_voter_ids.add(vote.student_id)
+                
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                candidate_ids = []
+                
+                # Extract candidate IDs from finder_hash
+                if isinstance(finder_data, dict):
+                    if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_ids.append(item['candidate_id'])
+                    elif 'candidate_ids' in finder_data:
+                        candidate_ids = finder_data['candidate_ids']
+                elif isinstance(finder_data, list):
+                    for item in finder_data:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            candidate_ids.append(item['candidate_id'])
+                
+                # Check if any of the voted candidates belong to this position
+                for cid in candidate_ids:
+                    cand_position_id = candidate_position_map.get(cid)
+                    if cand_position_id == position_id:
+                        # This vote is for this position
+                        if vote.student_id:
+                            voters_for_position.add(vote.student_id)
+                        else:
+                            # For anonymized votes, use vote.id as unique identifier
+                            voters_for_position.add(f"anon_{vote.id}")
+                        break
+                        
+            except (json.JSONDecodeError, Exception) as e:
+                print(f"Error parsing vote {vote.id}: {e}")
+                continue
         
-        position_eligible_voters[position_id] = {
-            'count': len(eligible_voter_ids),
-            'name': position_name,
-            'max_votes': ep.max_votes
-        }
+        position_voter_counts[position_id] = len(voters_for_position)
+        
+        print(f"📊 Position {position_name}: Voters who voted = {len(voters_for_position)}")
     
     # ===== GROUP CANDIDATES BY POSITION =====
     candidates_by_position = {}
@@ -6646,22 +6715,34 @@ def election_results(election_id):
         position_name = candidate.position.name if candidate.position else "Unknown"
         
         if position_name not in candidates_by_position:
+            # Get max_votes safely
+            max_votes = position_limits.get(position_id, 1)
+            if max_votes is None:
+                max_votes = 1
+                
+            # Get voter count safely
+            voter_count = position_voter_counts.get(position_id, 0)
+            if voter_count is None:
+                voter_count = 0
+                
             candidates_by_position[position_name] = {
                 'id': position_id,
                 'name': position_name,
-                'max_votes': position_limits.get(position_id, 1),
-                'eligible_voters': position_eligible_voters.get(position_id, {}).get('count', 0),
+                'max_votes': max_votes,
+                'voter_count': voter_count,
                 'candidates': []
             }
         
         vote_count = vote_counts.get(candidate.id, 0)
+        if vote_count is None:
+            vote_count = 0
         
         candidates_by_position[position_name]['candidates'].append({
             'id': candidate.id,
-            'first_name': candidate.first_name,
-            'last_name': candidate.last_name,
-            'photo': candidate.photo,
-            'party_list': candidate.party_list,
+            'first_name': candidate.first_name or "",
+            'last_name': candidate.last_name or "",
+            'photo': candidate.photo or "",
+            'party_list': candidate.party_list or "",
             'position': position_name,
             'position_id': position_id,
             'vote_count': vote_count,
@@ -6669,29 +6750,34 @@ def election_results(election_id):
             'is_winner': False
         })
     
-    # ===== CALCULATE PERCENTAGES PER POSITION =====
+    # ===== CALCULATE PERCENTAGES PER POSITION USING ACTUAL VOTERS =====
     for position_name, pos_data in candidates_by_position.items():
-        eligible_voters = pos_data['eligible_voters']
+        voter_count = pos_data['voter_count']
         
-        if eligible_voters == 0:
+        print(f"📊 {position_name}: Total voters who voted = {voter_count}")
+        
+        if not voter_count or voter_count == 0:
             for candidate in pos_data['candidates']:
                 candidate['voter_percentage'] = 0
         else:
             for candidate in pos_data['candidates']:
-                candidate['voter_percentage'] = round((candidate['vote_count'] / eligible_voters) * 100, 2)
+                # Percentage = (votes received ÷ total voters who voted for this position) × 100
+                percentage = (candidate['vote_count'] / voter_count) * 100
+                candidate['voter_percentage'] = round(percentage, 2)
+                print(f"  {candidate['first_name']} {candidate['last_name']}: {candidate['vote_count']} votes / {voter_count} voters = {candidate['voter_percentage']}%")
         
         # Sort candidates by vote count
         pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
     
-    # ===== DETERMINE WINNERS (only for tallied results) =====
-    if is_tallied:
-        for position_name, pos_data in candidates_by_position.items():
-            max_winners = pos_data['max_votes']
-            candidates_list = pos_data['candidates']
-            
-            for i, candidate in enumerate(candidates_list):
-                if i < max_winners and candidate['vote_count'] > 0:
-                    candidate['is_winner'] = True
+    # ===== DETERMINE WINNERS =====
+    for position_name, pos_data in candidates_by_position.items():
+        max_winners = pos_data['max_votes']
+        candidates_list = pos_data['candidates']
+        
+        # Only mark as winner if vote count > 0 and within max_winners limit
+        for i, candidate in enumerate(candidates_list):
+            if i < max_winners and candidate['vote_count'] > 0:
+                candidate['is_winner'] = True
     
     # Convert to list for template, sorted by position_id
     position_order = []
@@ -6711,20 +6797,41 @@ def election_results(election_id):
     
     # Build winners_by_position for template
     winners_by_position = {}
-    if is_tallied:
-        for pos_name, pos_data in sorted_candidate_results_by_position.items():
-            winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
-            if winners:
-                winners_by_position[pos_name] = winners
+    for pos_name, pos_data in sorted_candidate_results_by_position.items():
+        winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
+        if winners:
+            winners_by_position[pos_name] = winners
     
-    # Calculate voter statistics (overall)
+    # ===== CALCULATE OVERALL STATISTICS =====
+    total_votes_cast = len(all_votes)
+    
+    # For overall statistics, we still need eligible voters
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
         total_eligible_voters = Student.query.count()
     
-    voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
-    students_not_voted = total_eligible_voters - unique_voters
+    # Apply year level filtering for campus elections
+    if election.scope == 'campus' and election.year_levels and election.year_levels != 'all':
+        allowed_years = election.year_levels.split(',')
+        total_eligible_voters = Student.query.filter(Student.year_level_id.in_(allowed_years)).count()
+    
+    voter_turnout = round((total_votes_cast / total_eligible_voters * 100), 2) if total_eligible_voters and total_eligible_voters > 0 else 0
+    students_not_voted = (total_eligible_voters or 0) - total_votes_cast
+    if students_not_voted < 0:
+        students_not_voted = 0
+    
+    # ===== CREATE ELIGIBLE VOTERS DICTIONARY FOR TEMPLATE =====
+    # Build position_eligible_voters from position_voter_counts to maintain compatibility
+    position_eligible_voters = {}
+    for ep in election_positions:
+        position_id = ep.position_id
+        position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
+        position_eligible_voters[position_id] = {
+            'count': position_voter_counts.get(position_id, 0),
+            'name': position_name,
+            'max_votes': position_limits.get(position_id, 1)
+        }
     
     # ===== REGISTER HELPER FUNCTIONS FOR TEMPLATE =====
     app = current_app._get_current_object()
@@ -6745,14 +6852,15 @@ def election_results(election_id):
         candidate_results=flat_candidate_results,
         candidate_results_by_position=sorted_candidate_results_by_position,
         winners_by_position=winners_by_position,
-        total_voters=unique_voters,
-        total_eligible_voters=total_eligible_voters,
+        total_voters=total_votes_cast,
+        total_eligible_voters=total_eligible_voters or 0,
         voter_turnout=voter_turnout,
         students_not_voted=students_not_voted,
         status=status,
         now=now,
         is_tallied=is_tallied,
-        tally_timestamp=tally_timestamp
+        tally_timestamp=tally_timestamp,
+        position_eligible_voters=position_eligible_voters  # Keep the original variable name
     )
 
 
@@ -6825,6 +6933,8 @@ def get_admin_live_vote_counts(election_id):
 def check_new_votes(election_id):
     """Check if there are new votes since last view - tracks per-candidate changes"""
     try:
+        election = Election.query.get_or_404(election_id)
+        
         # Get current total voters (unique students who voted)
         unique_voters = db.session.query(Vote.student_id).filter_by(
             election_id=election_id
@@ -6837,7 +6947,6 @@ def check_new_votes(election_id):
         current_vote_counts = get_admin_live_vote_counts(election_id)
         
         # Get previous vote counts from session or use defaults
-        # You might want to store this in the user session
         previous_vote_counts = session.get(f'prev_vote_counts_{election_id}', {})
         
         # Calculate which candidates got new votes
@@ -6857,11 +6966,35 @@ def check_new_votes(election_id):
         # Store current counts for next comparison
         session[f'prev_vote_counts_{election_id}'] = current_vote_counts
         
-        # Build candidate results with percentages for UI update
+        # ===== GET POSITION-SPECIFIC ELIGIBLE VOTERS =====
+        election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+        
+        if election.department_id:
+            all_eligible_students = Student.query.filter_by(department_id=election.department_id).all()
+        else:
+            all_eligible_students = Student.query.all()
+        
+        position_eligible_counts = {}
+        for ep in election_positions:
+            position_id = ep.position_id
+            eligible_count = 0
+            
+            for student in all_eligible_students:
+                if ep.course_id and student.course_id != ep.course_id:
+                    continue
+                if ep.program_type_id and student.program_type_id != ep.program_type_id:
+                    continue
+                eligible_count += 1
+            
+            position_eligible_counts[position_id] = eligible_count
+        
+        # Build candidate results with percentages using position-specific eligible voters
         candidate_results = []
         for candidate in candidates:
             vote_count = current_vote_counts.get(candidate.id, 0)
-            voter_percentage = round((vote_count / unique_voters * 100), 2) if unique_voters > 0 else 0
+            eligible_voters = position_eligible_counts.get(candidate.position_id, 1)  # Default to 1 to avoid division by zero
+            
+            voter_percentage = round((vote_count / eligible_voters * 100), 2) if eligible_voters > 0 else 0
             
             candidate_results.append({
                 'id': candidate.id,
@@ -6869,8 +7002,7 @@ def check_new_votes(election_id):
                 'voter_percentage': voter_percentage
             })
         
-        # Get total eligible voters
-        election = Election.query.get(election_id)
+        # Get total eligible voters for overall stats
         if election.department_id:
             total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
         else:
@@ -6879,7 +7011,6 @@ def check_new_votes(election_id):
         voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
         students_not_voted = total_eligible_voters - unique_voters
         
-        # Calculate total new votes
         total_new_votes = sum([c['new_votes'] for c in candidates_with_new_votes])
         
         return jsonify({
@@ -6889,7 +7020,8 @@ def check_new_votes(election_id):
             'students_not_voted': students_not_voted,
             'candidate_results': candidate_results,
             'candidates_with_new_votes': candidates_with_new_votes,
-            'total_new_votes': total_new_votes
+            'total_new_votes': total_new_votes,
+            'position_eligible_counts': position_eligible_counts  # ← ADD THIS LINE
         })
         
     except Exception as e:
@@ -7265,7 +7397,6 @@ def get_tally_results(election_id):
 
 
 
-
 @admin_bp.route('/results/<int:election_id>/pdf')
 @admin_required
 def election_results_pdf(election_id):
@@ -7329,23 +7460,23 @@ def election_results_pdf(election_id):
     
     # GET POSITION LIMITS AND RESTRICTIONS
     position_limits = {}
+    position_restrictions_dict = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+    
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
+        position_restrictions_dict[ep.position_id] = {
+            'course_id': ep.course_id,
+            'program_type_id': ep.program_type_id
+        }
     
     # ===== USE TALLY TABLE ONLY =====
     tally_records = TallyVote.query.filter_by(election_id=election_id).all()
     tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
     
-    # ===== CALCULATE ELIGIBLE VOTERS PER POSITION =====
+    # ===== CALCULATE ELIGIBLE VOTERS PER POSITION BASED ON RESTRICTIONS =====
     position_eligible_voters = {}
     
-    # Get all students
-    all_students = Student.query.all()
-    student_courses = {s.id: s.course_id for s in all_students}
-    student_programs = {s.id: s.program_type_id for s in all_students}
-    
-    # For each position, find eligible voters among those who actually voted
     for ep in election_positions:
         position_id = ep.position_id
         position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
@@ -7354,8 +7485,12 @@ def election_results_pdf(election_id):
         eligible_voter_ids = set()
         
         for vote in all_votes:
+            # Get the student who cast this vote
             student = Student.query.get(vote.student_id)
             if not student:
+                # If student is deleted (student_id = NULL), we can't determine eligibility
+                # For deleted students, include them as they have voted
+                eligible_voter_ids.add(vote.id)  # Use vote.id as unique identifier
                 continue
             
             # Check course restriction
@@ -7369,13 +7504,15 @@ def election_results_pdf(election_id):
                     continue
             
             # Student is eligible
-            eligible_voter_ids.add(vote.student_id)
+            eligible_voter_ids.add(vote.id)
         
         position_eligible_voters[position_id] = {
             'count': len(eligible_voter_ids),
             'name': position_name,
             'max_votes': ep.max_votes
         }
+        
+        print(f"📊 PDF - Position {position_name}: Eligible voters = {len(eligible_voter_ids)}")
     
     # ===== BUILD CANDIDATE RESULTS WITH POSITION-SPECIFIC PERCENTAGES =====
     candidate_results = []
@@ -7385,6 +7522,8 @@ def election_results_pdf(election_id):
         position_id = candidate.position_id
         position_name = candidate.position.name if candidate.position else "Unknown"
         vote_count = tally_dict.get(candidate.id, 0)
+        
+        # Get eligible voters for this position
         eligible_voters = position_eligible_voters.get(position_id, {}).get('count', 0)
         
         # Calculate percentage based on eligible voters for this position
@@ -7403,6 +7542,7 @@ def election_results_pdf(election_id):
             'department': candidate.department.name if candidate.department else "All Departments",
             'vote_count': vote_count,
             'voter_percentage': voter_percentage,
+            'eligible_voters': eligible_voters,  # Add this for debugging
             'is_tallied': True,
             'is_winner': False
         }
@@ -7415,6 +7555,7 @@ def election_results_pdf(election_id):
                 'id': position_id,
                 'name': position_name,
                 'max_votes': position_limits.get(position_id, 1),
+                'eligible_voters': eligible_voters,  # Add to position data
                 'candidates': []
             }
         candidates_by_position[position_name]['candidates'].append(candidate_data)
@@ -7467,6 +7608,7 @@ def election_results_pdf(election_id):
         'election_results_pdf.html',
         election=election,
         candidate_results=sorted_candidate_results,
+        candidates_by_position=candidates_by_position,  # Pass this for better display
         winners_by_position=winners_by_position,
         total_voters=unique_voters,
         total_votes_cast=total_votes_cast,
@@ -7478,6 +7620,7 @@ def election_results_pdf(election_id):
         is_tallied=is_tallied,
         tally_timestamp=tally_timestamp,
         position_limits=position_limits,
+        position_eligible_voters=position_eligible_voters,  # Pass eligible voters data
         chairman_name=chairman_name
     )
     

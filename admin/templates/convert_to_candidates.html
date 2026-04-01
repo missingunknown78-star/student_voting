@@ -7,8 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
     /* Real-time search styles - FULL WIDTH + ROUNDED */
-    .filter-bar {
-        width: 100%;
+    .search-section {
         margin-bottom: 25px;
     }
     
@@ -17,7 +16,7 @@
         width: 100%;
     }
     
-    .search-input-compact {
+    .search-input {
         width: 100%;
         padding: 14px 50px 14px 24px;
         border: 2px solid var(--border-color);
@@ -30,12 +29,12 @@
         box-sizing: border-box;
     }
     
-    .search-input-compact:focus {
+    .search-input:focus {
         border-color: var(--accent-color);
         box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
     }
     
-    .search-input-compact::placeholder {
+    .search-input::placeholder {
         color: var(--text-muted);
     }
     
@@ -53,26 +52,56 @@
         display: block;
     }
     
-    /* Remove old filter styles - hide dropdowns */
-    .filter-select-compact,
-    .reset-btn-compact {
-        display: none !important;
-    }
-    
     /* Table container loading state */
     .table-container.loading {
         opacity: 0.5;
         pointer-events: none;
     }
     
-    /* Stats card stays as is */
+    /* Stats card styling */
     .stats-card {
         margin-bottom: 25px;
+        background: var(--gradient-info);
+        border-radius: 16px;
+        padding: 25px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+    }
+    
+    .stats-info {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .stats-info h3 {
+        font-size: 0.9rem;
+        margin: 0 0 5px 0;
+        opacity: 0.9;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+    
+    .stats-info p {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+    }
+    
+    :root.dark-mode .stats-card {
+        background: linear-gradient(135deg, #7c2d12, #991b1b);
+        border-color: rgba(245, 158, 11, 0.3);
     }
     
     /* Responsive adjustments */
     @media (max-width: 768px) {
-        .search-input-compact {
+        .search-input {
             padding: 12px 45px 12px 20px;
             font-size: 0.9rem;
         }
@@ -111,14 +140,14 @@
         </div>
     </div>
 
-    <!-- Search Bar - Full Width with Rounded Corners -->
-    <div class="filter-bar">
+    <!-- Search Bar - No Container, Just Search -->
+    <div class="search-section">
         <div class="search-wrapper" id="searchWrapper">
             <input type="text" 
                    placeholder="Search by ID or name..." 
                    value="{{ search }}" 
                    id="searchInput" 
-                   class="search-input-compact"
+                   class="search-input"
                    autocomplete="off">
             <span class="search-loading">
                 <i class="fa-solid fa-spinner fa-spin"></i>

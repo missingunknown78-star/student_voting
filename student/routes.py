@@ -1668,6 +1668,9 @@ from collections import defaultdict
 @student_bp.route('/vote/<int:election_id>', methods=['GET'])
 @login_required
 def vote_page(election_id):
+    # Import inside the function to avoid circular imports
+    from admin.models import ElectionPosition, Position, Course
+    
     local_tz = pytz.timezone("Asia/Manila")
     now = datetime.now(local_tz).replace(tzinfo=None)
 
@@ -1676,10 +1679,60 @@ def vote_page(election_id):
         flash("Election not found.", "danger")
         return redirect(url_for('student.available_elections'))
 
+    # ===== ADD THIS: CHECK IF STUDENT IS ELIGIBLE FOR THIS ELECTION =====
+    # Check if student is eligible based on election scope
+    is_eligible = False
+    
+    if election.scope == 'department' or election.election_type == 'Department':
+        # Department election - check if student belongs to the election's department
+        if election.department_id and current_user.department_id == election.department_id:
+            is_eligible = True
+        # Also check if election has course_id restriction (for course-specific elections)
+        elif election.course_id and current_user.course_id == election.course_id:
+            is_eligible = True
+        else:
+            # Check if any position in this election is restricted to the student's course/department
+            # This is more thorough - maybe the election is department-wide but positions have restrictions
+            election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
+            for ep in election_positions:
+                # Check course restriction
+                if ep.course_id and current_user.course_id == ep.course_id:
+                    is_eligible = True
+                    break
+                # Check department restriction  
+                if ep.department_id and current_user.department_id == ep.department_id:
+                    is_eligible = True
+                    break
+                # If no restrictions at position level, check election level
+                if not ep.course_id and not ep.department_id:
+                    # This position is open to all, so if election is department scope
+                    # and student is in that department, they're eligible
+                    if election.department_id and current_user.department_id == election.department_id:
+                        is_eligible = True
+                        break
+    else:
+        # Campus-wide election (SSG)
+        # Check year level eligibility if specified
+        if election.year_levels and election.year_levels != 'all':
+            student_year = str(current_user.year_level_id) if current_user.year_level_id else None
+            year_levels_list = election.year_levels.split(',')
+            if student_year in year_levels_list:
+                is_eligible = True
+        else:
+            # No year level restriction, all students can vote
+            is_eligible = True
+    
+    # If not eligible, redirect with message
+    if not is_eligible:
+        flash("You are not eligible to vote in this election.", "warning")
+        return redirect(url_for('student.available_elections'))
+    
+    # Check if election is open
     if not (election.start_date <= now <= election.end_date):
         flash("This election is not currently open.", "warning")
         return redirect(url_for('student.available_elections'))
 
+    # Check if already voted
     existing_vote = Vote.query.filter_by(student_id=current_user.id, election_id=election.id).first()
     if existing_vote:
         flash("You have already voted in this election.", "info")
@@ -4046,11 +4099,16 @@ def apply_as_candidate_page():
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
     
-    # Check if student is qualified
+    # Check if student is qualified (exists in QualifiedCandidate table)
     qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
     is_qualified = qualification is not None
     
-    # ===== Get ALL applications from PendingCandidate table ONLY =====
+    # ===== IF NOT QUALIFIED, REDIRECT =====
+    if not is_qualified:
+        flash("You are not qualified to apply as a candidate. Please contact the admin for eligibility requirements.", "warning")
+        return redirect(url_for('student.dashboard'))
+    
+    # ===== Get ALL applications from PendingCandidate table =====
     all_applications = PendingCandidate.query.filter_by(
         student_id=current_user.id
     ).order_by(PendingCandidate.applied_at.desc()).all()
@@ -4104,7 +4162,7 @@ def apply_as_candidate_page():
     
     return render_template('apply_as_candidate.html',
         student=current_user,
-        student_year_level=student_year_level,  # ADD THIS
+        student_year_level=student_year_level,
         is_qualified=is_qualified,
         all_applications=all_applications,
         has_pending_application=has_pending_application,
@@ -4121,22 +4179,26 @@ from student.models import PendingCandidate, QualifiedCandidate
 def apply_as_candidate():
     """Allow qualified students to submit candidate application"""
     try:
+        # ===== CHECK: Verify the student is qualified (exists in QualifiedCandidate table) =====
+        from student.models import QualifiedCandidate
+        
+        # Just check if the student exists in QualifiedCandidate table
+        # No status check needed - just being in the table means they're qualified
+        qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
+        if not qualification:
+            return jsonify({'success': False, 'message': 'You are not qualified to apply as a candidate. Please complete the eligibility requirements first.'}), 403
+        
         # Get form data
         party_list = request.form.get('party_list')
         platform = request.form.get('platform')
         scope = request.form.get('scope')
         election_id = request.form.get('election_id')
         position_id = request.form.get('position_id')
-        year_level_id = request.form.get('year_level_id')  # ADD THIS - from hidden field
+        year_level_id = request.form.get('year_level_id')
         
         # Validate required fields
         if not all([scope, election_id, position_id]):
             return jsonify({'success': False, 'message': 'Please fill in all required fields'}), 400
-        
-        # Check if student is qualified
-        qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
-        if not qualification:
-            return jsonify({'success': False, 'message': 'You are not qualified to apply as a candidate'}), 403
         
         # Check if already has pending application for THIS SPECIFIC ELECTION
         existing_pending = PendingCandidate.query.filter_by(
@@ -4156,6 +4218,42 @@ def apply_as_candidate():
         
         if existing_candidate:
             return jsonify({'success': False, 'message': 'You are already a candidate in this election'}), 400
+        
+        # Verify the student is eligible for the selected election
+        election = Election.query.get(election_id)
+        if not election:
+            return jsonify({'success': False, 'message': 'Election not found'}), 400
+        
+        # Check if student is eligible for this election
+        if election.scope == 'department' and election.department_id != current_user.department_id:
+            return jsonify({'success': False, 'message': 'You are not eligible to apply for this department election'}), 400
+        
+        if election.scope == 'campus' and not election.can_vote(current_user.year_level_id):
+            return jsonify({'success': False, 'message': 'You are not eligible to apply for this campus-wide election'}), 400
+        
+        # Check if election is active
+        tz = pytz.timezone('Asia/Manila')
+        now = datetime.now(tz)
+        
+        election_start = election.start_date
+        election_end = election.end_date
+        if election_start.tzinfo is None:
+            election_start = tz.localize(election_start)
+        if election_end.tzinfo is None:
+            election_end = tz.localize(election_end)
+        
+        if not (election_start <= now <= election_end):
+            return jsonify({'success': False, 'message': 'This election is not currently open for applications'}), 400
+        
+        # Verify the position is valid for this election
+        from admin.models import ElectionPosition
+        election_position = ElectionPosition.query.filter_by(
+            election_id=election_id,
+            position_id=position_id
+        ).first()
+        
+        if not election_position:
+            return jsonify({'success': False, 'message': 'This position is not available for the selected election'}), 400
         
         # Handle photo upload
         photo_file = request.files.get('photo')
@@ -4183,7 +4281,7 @@ def apply_as_candidate():
             platform=platform if platform else None,
             department_id=current_user.department_id,
             course_id=current_user.course_id,
-            year_level_id=year_level_id,  # ADD THIS
+            year_level_id=year_level_id,
             position_id=position_id,
             election_id=election_id,
             scope=scope,

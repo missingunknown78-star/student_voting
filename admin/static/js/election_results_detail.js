@@ -191,22 +191,34 @@ function updateLiveResults(data) {
         notVotedElement.textContent = data.students_not_voted;
     }
     
-    // Update candidate percentages and data attributes
+    // Update candidate percentages and data attributes - FIXED: Match by candidate ID, not index
     if (data.candidate_results) {
         const rows = document.querySelectorAll('.candidate-row');
-        data.candidate_results.forEach((candidate, index) => {
-            if (rows[index]) {
+        
+        // Create a map for quick lookup by candidate ID
+        const rowMap = {};
+        rows.forEach(row => {
+            const candidateId = row.dataset.candidateId;
+            if (candidateId) {
+                rowMap[candidateId] = row;
+            }
+        });
+        
+        // Update each candidate by matching ID
+        data.candidate_results.forEach((candidate) => {
+            const row = rowMap[candidate.id];
+            if (row) {
                 // Update the data-vote-count attribute
-                rows[index].dataset.voteCount = candidate.vote_count;
+                row.dataset.voteCount = candidate.vote_count;
                 
                 // Update percentage display
-                const percentageSpan = rows[index].querySelector('.vote-percentage');
+                const percentageSpan = row.querySelector('.vote-percentage');
                 if (percentageSpan) {
                     percentageSpan.textContent = candidate.voter_percentage + '%';
                 }
                 
                 // Update progress bar
-                const voteBar = rows[index].querySelector('.vote-bar');
+                const voteBar = row.querySelector('.vote-bar');
                 if (voteBar) {
                     voteBar.style.width = candidate.voter_percentage + '%';
                 }
@@ -741,3 +753,77 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 200);
     }
 });
+
+
+
+// Add this function to your election_results_detail.js
+function updatePositionEligibleVoters(data) {
+    // If the backend sends updated position eligibility data, update it
+    if (data.position_eligible_counts) {
+        window.positionEligibleVoters = data.position_eligible_counts;
+        console.log('Updated position eligible voters:', window.positionEligibleVoters);
+    }
+}
+
+// Then modify your checkForNewVotes function to handle it
+function checkForNewVotes() {
+    const electionId = templateData.electionId;
+    
+    console.log('Checking for new votes...');
+    
+    fetch(`/ctumoalboal-comelec/results/${electionId}/check-new-votes`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Received data:', data);
+        
+        if (data.success) {
+            const currentTotalVoters = data.total_voters;
+            const newVotes = currentTotalVoters - previousTotalVoters;
+            
+            if (newVotes > 0) {
+                // Find which candidates got new votes
+                const candidatesWithNewVotes = [];
+                
+                if (data.candidate_results) {
+                    data.candidate_results.forEach(currentCandidate => {
+                        const prevCandidate = previousCandidateVotes[currentCandidate.id];
+                        
+                        if (prevCandidate) {
+                            const newVotesForCandidate = currentCandidate.vote_count - prevCandidate.votes;
+                            
+                            if (newVotesForCandidate > 0) {
+                                candidatesWithNewVotes.push({
+                                    id: currentCandidate.id,
+                                    name: prevCandidate.name,
+                                    position: prevCandidate.position,
+                                    new_votes: newVotesForCandidate
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                console.log('Candidates with new votes:', candidatesWithNewVotes);
+                
+                // Show vote badges on candidate profiles
+                showVoteBadges(candidatesWithNewVotes);
+                
+                // Update the stored counts
+                previousTotalVoters = currentTotalVoters;
+                
+                // Update the display without page reload
+                updateLiveResults(data);
+                
+                // Update stored candidate votes
+                updateStoredCandidateVotes(data.candidate_results);
+            }
+        }
+    })
+    .catch(error => console.error('Error checking for new votes:', error));
+}

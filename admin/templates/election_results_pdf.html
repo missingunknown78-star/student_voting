@@ -473,147 +473,142 @@
     </div>
     
     <!-- WINNERS SECTION - SORTED BY POSITION ID -->
-    <div class="winners-title-container">
-        <div class="winners-title">🏆 OFFICIAL ELECTION WINNERS</div>
-    </div>
+<div class="winners-title-container">
+    <div class="winners-title">🏆 OFFICIAL ELECTION WINNERS</div>
+</div>
+
+{% if is_tallied and winners_by_position %}
+    {% set sorted_winners = [] %}
+    {# First, collect winners with their position IDs #}
+    {% for position_name, winners in winners_by_position.items() %}
+        {# Get position ID from the first candidate in winners list #}
+        {% set position_id = winners[0].position_id if winners else 999 %}
+        {% set _ = sorted_winners.append({
+            'position_id': position_id,
+            'position_name': position_name,
+            'winners': winners
+        }) %}
+    {% endfor %}
     
-    {% if is_tallied and winners_by_position %}
-        {% set sorted_winners = [] %}
-        {# First, collect winners with their position IDs #}
-        {% for position_name, winners in winners_by_position.items() %}
-            {# Get position ID from the first candidate in winners list #}
-            {% set position_id = winners[0].position_id if winners else 999 %}
-            {% set _ = sorted_winners.append({
-                'position_id': position_id,
-                'position_name': position_name,
-                'winners': winners
-            }) %}
-        {% endfor %}
-        
-        {# Sort by position ID #}
-        {% set sorted_winners = sorted_winners|sort(attribute='position_id') %}
-        
-        <table>
-            <thead>
-                <tr>
-                    <th width="35%">Position</th>
-                    <th width="40%">Winner(s)</th>
-                    <th width="15%">Votes</th>
-                    <th width="10%">%</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in sorted_winners %}
-                    {% set position_name = item.position_name %}
-                    {% set winners = item.winners %}
-                    {% if winners %}
-                        {% if winners|length == 1 %}
-                            {% set winner = winners[0] %}
-                            <tr>
-                                <td><strong>{{ position_name }}</strong></td>
-                                <td>{{ winner.first_name }} {{ winner.last_name }}</td>
-                                <td>{{ winner.vote_count }}</td>
-                                <td>{{ winner.voter_percentage }}%</td>
-                            </tr>
-                        {% else %}
-                            <tr class="position-header">
-                                <td colspan="4"><strong>{{ position_name }} WINNERS ({{ winners|length }})</strong></td>
-                            </tr>
-                            {% for winner in winners %}
-                            <tr>
-                                <td class="rank-number">#{{ loop.index }}</td>
-                                <td>{{ winner.first_name }} {{ winner.last_name }}</td>
-                                <td>{{ winner.vote_count }}</td>
-                                <td>{{ winner.voter_percentage }}%</td>
-                            </tr>
-                            {% endfor %}
-                        {% endif %}
-                    {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p style="text-align: center; margin: 0.2in 0;">No winners determined yet.</p>
-    {% endif %}
+    {# Sort by position ID #}
+    {% set sorted_winners = sorted_winners|sort(attribute='position_id') %}
     
-    <!-- Page Break - Force next page for detailed results -->
-    <div class="page-break"></div>
-    
-    <!-- DETAILED RESULTS SECTION - SORTED BY POSITION ID -->
-    <div class="detailed-title-container">
-        <div class="detailed-title">📊 DETAILED RESULTS BY POSITION</div>
-    </div>
-    
-    {% if candidate_results %}
-        {% set position_groups = {} %}
-        {% for candidate in candidate_results %}
-            {% set pos_name = candidate.position %}
-            {% set pos_id = candidate.position_id %}
-            {% if pos_name not in position_groups %}
-                {% set _ = position_groups.update({pos_name: {
-                    'id': pos_id,
-                    'candidates': []
-                }}) %}
-            {% endif %}
-            {% set _ = position_groups[pos_name]['candidates'].append(candidate) %}
-        {% endfor %}
-        
-        {# Sort positions by ID #}
-        {% set sorted_positions = position_groups.items()|sort(attribute='1.id') %}
-        
-        {% for position_name, group in sorted_positions %}
-            {% set candidates_in_pos = group.candidates|sort(attribute='vote_count', reverse=true) %}
-            {% set max_winners = 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th width="40%">Position</th>
+                <th width="45%">Winner(s)</th>
+                <th width="15%">Votes</th>
+            </tr>
+        </thead>
+        <tbody>
             {% for item in sorted_winners %}
-                {% if item.position_name == position_name %}
-                    {% set max_winners = item.winners|length %}
+                {% set position_name = item.position_name %}
+                {% set winners = item.winners %}
+                {% if winners %}
+                    {% if winners|length == 1 %}
+                        {% set winner = winners[0] %}
+                        <tr>
+                            <td><strong>{{ position_name }}</strong></td>
+                            <td>{{ winner.first_name }} {{ winner.last_name }}</td>
+                            <td>{{ winner.vote_count }}</td>
+                        </tr>
+                    {% else %}
+                        <tr class="position-header">
+                            <td colspan="3"><strong>{{ position_name }} WINNERS ({{ winners|length }})</strong></td>
+                        </tr>
+                        {% for winner in winners %}
+                        <tr>
+                            <td class="rank-number">#{{ loop.index }}</td>
+                            <td>{{ winner.first_name }} {{ winner.last_name }}</td>
+                            <td>{{ winner.vote_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
                 {% endif %}
             {% endfor %}
-            
-            <div class="position-container">
-                <div style="font-size: 12pt; font-weight: bold; margin: 0.1in 0 0.05in 0;">
-                    {{ position_name }}{% if is_tallied and max_winners > 1 %} ({{ max_winners }} WINNERS){% endif %}
-                </div>
-                
-                <div class="long-table-container">
-                    <table class="detailed-results-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Candidate</th>
-                                <th>Votes</th>
-                                <th>Percentage</th>
-                                {% if is_tallied %}
-                                <th>Result</th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for candidate in candidates_in_pos %}
-                            <tr>
-                                <td>{{ loop.index }}</td>
-                                <td>{{ candidate.first_name }} {{ candidate.last_name }}</td>
-                                <td>{{ candidate.vote_count }}</td>
-                                <td>{{ candidate.voter_percentage }}%</td>
-                                {% if is_tallied %}
-                                <td>
-                                    {% if candidate.vote_count > 0 and loop.index <= max_winners %}
-                                        <span class="winner-badge">WINNER</span>
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </td>
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        </tbody>
+    </table>
+{% else %}
+    <p style="text-align: center; margin: 0.2in 0;">No winners determined yet.</p>
+{% endif %}
+
+<!-- Page Break - Force next page for detailed results -->
+<div class="page-break"></div>
+
+<!-- DETAILED RESULTS SECTION - SORTED BY POSITION ID -->
+<div class="detailed-title-container">
+    <div class="detailed-title">📊 DETAILED RESULTS BY POSITION</div>
+</div>
+
+{% if candidate_results %}
+    {% set position_groups = {} %}
+    {% for candidate in candidate_results %}
+        {% set pos_name = candidate.position %}
+        {% set pos_id = candidate.position_id %}
+        {% if pos_name not in position_groups %}
+            {% set _ = position_groups.update({pos_name: {
+                'id': pos_id,
+                'candidates': []
+            }}) %}
+        {% endif %}
+        {% set _ = position_groups[pos_name]['candidates'].append(candidate) %}
+    {% endfor %}
+    
+    {# Sort positions by ID #}
+    {% set sorted_positions = position_groups.items()|sort(attribute='1.id') %}
+    
+    {% for position_name, group in sorted_positions %}
+        {% set candidates_in_pos = group.candidates|sort(attribute='vote_count', reverse=true) %}
+        
+        {# GET MAX WINNERS FOR THIS POSITION - FIXED #}
+        {% set max_winners = 0 %}
+        {% set position_id = group.id %}
+        {% set position_max_votes = position_limits.get(position_id, 1) %}
+        {% set max_winners = position_max_votes %}
+        
+        <div class="position-container">
+            <div style="font-size: 12pt; font-weight: bold; margin: 0.1in 0 0.05in 0;">
+                {{ position_name }}{% if is_tallied and max_winners > 1 %} ({{ max_winners }} WINNERS){% endif %}
             </div>
-        {% endfor %}
-    {% else %}
-        <p style="text-align: center; margin: 0.2in 0;">No results available.</p>
-    {% endif %}
+            
+            <div class="long-table-container">
+                <table class="detailed-results-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Candidate</th>
+                            <th>Votes</th>
+                            {% if is_tallied %}
+                            <th>Result</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for candidate in candidates_in_pos %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ candidate.first_name }} {{ candidate.last_name }}</td>
+                            <td>{{ candidate.vote_count }}</td>
+                            {% if is_tallied %}
+                            <td>
+                                {% if candidate.vote_count > 0 and loop.index <= max_winners %}
+                                    <span class="winner-badge">✓ WINNER</span>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <p style="text-align: center; margin: 0.2in 0;">No results available.</p>
+{% endif %}
     
     <!-- ===== FOOTER AS RUNNING ELEMENT - NOT PART OF BODY FLOW ===== -->
     <!-- This div is hidden from the body flow and pulled into page margin -->

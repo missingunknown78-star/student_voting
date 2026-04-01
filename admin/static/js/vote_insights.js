@@ -3,39 +3,10 @@
 
 // Predefined color palette - Primary colors first, then secondary
 const COLOR_PALETTE = [
-    // Primary Colors
-    '#3b82f6', // Blue
-    '#ef4444', // Red
-    '#10b981', // Green
-    '#f59e0b', // Orange
-    '#8b5cf6', // Purple
-    '#ec489a', // Pink
-    '#06b6d4', // Cyan
-    '#84cc16', // Lime
-    '#f97316', // Dark Orange
-    '#d946ef', // Fuchsia
-    '#14b8a6', // Teal
-    '#6366f1', // Indigo
-    '#a855f7', // Violet
-    '#2dd4bf', // Emerald
-    '#eab308', // Yellow
-    
-    // Secondary Colors (darker variants)
-    '#2563eb', // Darker Blue
-    '#dc2626', // Darker Red
-    '#059669', // Darker Green
-    '#d97706', // Darker Orange
-    '#7c3aed', // Darker Purple
-    '#db2777', // Darker Pink
-    '#0891b2', // Darker Cyan
-    '#65a30d', // Darker Lime
-    '#ea580c', // Darker Dark Orange
-    '#c026d3', // Darker Fuchsia
-    '#0d9488', // Darker Teal
-    '#4f46e5', // Darker Indigo
-    '#9333ea', // Darker Violet
-    '#10b981', // Emerald
-    '#ca8a04'  // Darker Yellow
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec489a', '#06b6d4',
+    '#84cc16', '#f97316', '#d946ef', '#14b8a6', '#6366f1', '#a855f7', '#2dd4bf', '#eab308',
+    '#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2',
+    '#65a30d', '#ea580c', '#c026d3', '#0d9488', '#4f46e5', '#9333ea', '#10b981', '#ca8a04'
 ];
 
 function getPositionColorByOrder(index) {
@@ -65,7 +36,7 @@ function renderGroupedVoteChart() {
     const allCandidates = [];
     const positionColors = {};
     
-    // Generate a color for each position based on order (primary colors first)
+    // Generate a color for each position based on order
     validPositions.forEach((position, posIndex) => {
         const color = getPositionColorByOrder(posIndex);
         positionColors[position.name] = color;
@@ -73,7 +44,7 @@ function renderGroupedVoteChart() {
         // Sort candidates within position by vote count (highest first)
         const sortedCandidates = [...position.candidates].sort((a, b) => b.votes - a.votes);
         
-        // Add each candidate with this color, preserving position order
+        // Add each candidate with this color
         sortedCandidates.forEach(candidate => {
             candidate.color = color;
             candidate.positionColor = color;
@@ -90,11 +61,8 @@ function renderGroupedVoteChart() {
     const candidateCount = allCandidates.length;
     console.log(`Total candidates: ${candidateCount}`);
     
-    // Prepare data for chart - REMOVE POSITION FROM LABEL
-    const candidateNames = allCandidates.map(c => {
-        return `${c.name}`;
-    });
-    
+    // Prepare data for chart
+    const candidateNames = allCandidates.map(c => `${c.name}`);
     const voteCounts = allCandidates.map(c => c.votes);
     const colors = allCandidates.map(c => c.color);
     
@@ -162,17 +130,18 @@ function renderGroupedVoteChart() {
                         label: function(context) {
                             const votes = context.raw;
                             const candidate = allCandidates[context.dataIndex];
-                            const totalVotes = voteCounts.reduce((a, b) => a + b, 0);
-                            const percentage = totalVotes > 0 ? ((votes / totalVotes) * 100).toFixed(1) : 0;
-                            const positionTotal = candidate.positionTotalVotes || 0;
-                            const positionPercentage = positionTotal > 0 ? 
-                                ((candidate.votes / positionTotal) * 100).toFixed(1) : 0;
+                            
+                            // Get eligible voters for this position
+                            const eligibleVoters = candidate.eligibleVoters || 0;
+                            
+                            // Calculate percentage based on eligible voters
+                            const percentage = eligibleVoters > 0 ? 
+                                ((candidate.votes / eligibleVoters) * 100).toFixed(1) : 0;
                             
                             return [
                                 `Votes: ${votes.toLocaleString()}`,
-                                `Overall: ${percentage}%`,
-                                `Position: ${candidate.position}`,
-                                `Within Position: ${positionPercentage}%`
+                                `Percentage: ${percentage}%`,
+                                `Position: ${candidate.position}`
                             ];
                         },
                         title: function(context) {
@@ -188,10 +157,7 @@ function renderGroupedVoteChart() {
                         display: true,
                         text: 'Number of Votes',
                         color: isDarkMode ? '#f0f0f0' : '#1e293b',
-                        font: {
-                            weight: 'bold',
-                            size: 12
-                        }
+                        font: { weight: 'bold', size: 12 }
                     },
                     ticks: {
                         stepSize: calculateStepSize(maxVotes),
@@ -207,35 +173,22 @@ function renderGroupedVoteChart() {
                 x: {
                     title: {
                         display: true,
-                        text: 'Candidates Vote Count',
+                        text: 'Candidates',
                         color: isDarkMode ? '#f0f0f0' : '#1e293b',
-                        font: {
-                            weight: 'bold',
-                            size: 12
-                        }
+                        font: { weight: 'bold', size: 12 }
                     },
                     ticks: {
                         maxRotation: 45,
                         minRotation: 45,
-                        font: {
-                            size: 11,
-                            weight: 'normal'
-                        },
+                        font: { size: 11, weight: 'normal' },
                         autoSkip: false,
                         color: isDarkMode ? '#f0f0f0' : '#1e293b'
                     },
-                    grid: {
-                        display: false
-                    }
+                    grid: { display: false }
                 }
             },
             layout: {
-                padding: {
-                    top: 10,
-                    bottom: 5,
-                    left: 10,
-                    right: 10
-                }
+                padding: { top: 10, bottom: 5, left: 10, right: 10 }
             },
             onClick: function(event, activeElements) {
                 if (activeElements && activeElements.length > 0) {
@@ -257,6 +210,9 @@ function extractCandidatesGroupedByPosition() {
     const candidateRows = document.querySelectorAll('#resultsContent .candidate-row');
     
     console.log(`Found ${candidateRows.length} candidate rows`);
+    
+    // Get eligible voters data from backend (passed via template)
+    const eligibleVotersData = window.positionEligibleVoters || {};
     
     candidateRows.forEach((row) => {
         const nameElement = row.querySelector('.candidate-name');
@@ -285,6 +241,7 @@ function extractCandidatesGroupedByPosition() {
             voteCount = parseInt(voteCountElement.textContent.replace(/,/g, '')) || 0;
         }
         
+        // Get the percentage displayed in the table (this is already correct from backend)
         let percentage = 0;
         const percentageElement = row.querySelector('.vote-percentage');
         if (percentageElement) {
@@ -296,6 +253,9 @@ function extractCandidatesGroupedByPosition() {
         
         const candidateId = row.dataset.candidateId;
         
+        // Get eligible voters for this position from backend data
+        const eligibleVoters = eligibleVotersData[positionId] ? eligibleVotersData[positionId].count : 0;
+        
         const mapKey = `${positionId}_${position}`;
         
         if (!positionsMap.has(mapKey)) {
@@ -304,6 +264,7 @@ function extractCandidatesGroupedByPosition() {
                 name: position,
                 candidates: [],
                 totalVotes: 0,
+                totalEligibleVoters: eligibleVoters,
                 winnerCount: 0
             });
         }
@@ -315,7 +276,8 @@ function extractCandidatesGroupedByPosition() {
             position: position,
             votes: voteCount,
             percentage: percentage,
-            isWinner: isWinner
+            isWinner: isWinner,
+            eligibleVoters: eligibleVoters
         });
         positionData.totalVotes += voteCount;
         if (isWinner) positionData.winnerCount++;
@@ -327,6 +289,7 @@ function extractCandidatesGroupedByPosition() {
         position.candidates.sort((a, b) => b.votes - a.votes);
         position.candidates.forEach(candidate => {
             candidate.positionTotalVotes = position.totalVotes;
+            candidate.eligibleVoters = position.totalEligibleVoters;
         });
     });
     
@@ -367,7 +330,6 @@ function updatePositionLegend(positionsData, positionColors) {
         const candidateCountSpan = document.createElement('span');
         candidateCountSpan.className = 'legend-badge';
         candidateCountSpan.innerHTML = `<i class="fa-solid fa-user"></i> ${position.candidates.length} candidate${position.candidates.length !== 1 ? 's' : ''}`;
-        
         statsContainer.appendChild(candidateCountSpan);
         
         if (position.winnerCount > 0) {
@@ -417,14 +379,14 @@ function calculateStepSize(maxValue) {
 }
 
 function showCandidateDetails(candidate) {
-    const withinPositionPercent = ((candidate.votes / candidate.positionTotalVotes) * 100).toFixed(1);
+    const eligibleVoters = candidate.eligibleVoters || 0;
+    const percentage = eligibleVoters > 0 ? ((candidate.votes / eligibleVoters) * 100).toFixed(1) : 0;
     
     const message = [
         `🏆 ${candidate.name}`,
         `📌 Position: ${candidate.position}`,
         `📊 Votes: ${candidate.votes.toLocaleString()}`,
-        `📈 Overall Percentage: ${candidate.percentage}%`,
-        `🎯 Within ${candidate.position}: ${withinPositionPercent}%`,
+        `📈 Percentage: ${percentage}%`,
         candidate.isWinner ? '✨ WINNER ✨' : ''
     ].filter(m => m).join('\n');
     
@@ -445,4 +407,7 @@ const observer = new MutationObserver(function(mutations) {
 document.addEventListener('DOMContentLoaded', function() {
     const htmlElement = document.documentElement;
     observer.observe(htmlElement, { attributes: true });
+    
+    // Initial render
+    renderGroupedVoteChart();
 });

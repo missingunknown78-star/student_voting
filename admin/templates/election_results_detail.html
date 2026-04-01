@@ -159,6 +159,22 @@
         font-size: 0.75rem;
     }
     
+    /* Fix for final table without percentage column */
+    .final-table .table-header.candidate-row {
+        display: grid;
+        grid-template-columns: 60px 1fr 1.5fr 80px 100px;
+        gap: 10px;
+        padding: 12px 16px;
+    }
+    
+    .final-table .candidate-row {
+        display: grid;
+        grid-template-columns: 60px 1fr 1.5fr 80px 100px;
+        gap: 10px;
+        padding: 12px 16px;
+        align-items: center;
+    }
+    
     @media (max-width: 768px) {
         .chart-wrapper {
             height: 400px;
@@ -172,6 +188,12 @@
         .legend-item {
             min-width: 150px;
             font-size: 0.7rem;
+        }
+        
+        .final-table .table-header.candidate-row,
+        .final-table .candidate-row {
+            grid-template-columns: 40px 1fr 1fr 60px 80px;
+            gap: 8px;
         }
     }
 </style>
@@ -478,7 +500,6 @@
                 <div class="winner-rank"></div>
                 <div class="winner-info">Winner</div>
                 <div class="winner-vote-count">Votes</div>
-                <div>Percentage</div>
             </div>
             
             {% for position, winners in winners_by_position.items() %}
@@ -504,9 +525,6 @@
                                 </div>
                             </div>
                             <div class="winner-vote-count">{{ winner.vote_count }}</div>
-                            <div class="winner-percentage-badge">
-                                {{ "%.2f"|format(winner.voter_percentage) }}%
-                            </div>
                         </div>
                     {% else %}
                         <div class="winner-position-header">
@@ -531,9 +549,6 @@
                                 <span class="winner-name-small">{{ winner.first_name }} {{ winner.last_name }}</span>
                             </div>
                             <div class="winner-vote-count-small">{{ winner.vote_count }}</div>
-                            <div>
-                                <span class="winner-percentage-small">{{ winner.voter_percentage }}%</span>
-                            </div>
                         </div>
                         {% endfor %}
                     {% endif %}
@@ -549,9 +564,6 @@
                             </div>
                         </div>
                         <div class="winner-vote-count">-</div>
-                        <div>
-                            <span class="winner-percentage-badge" style="background: #95a5a6 !important;">0%</span>
-                        </div>
                     </div>
                 {% endif %}
             {% endfor %}
@@ -573,7 +585,6 @@
                 <div>Candidate</div>
                 <div>Position</div>
                 <div>Votes</div>
-                <div>Percentage</div>
                 <div>Status</div>
             </div>
             
@@ -614,11 +625,6 @@
                 </div>
                 <div class="candidate-position">{{ candidate.position }}</div>
                 <div class="vote-count">{{ candidate.vote_count }}</div>
-                <div class="vote-percentage-cell">
-                    <span class="vote-percentage {% if is_winner %}winner-percentage{% else %}regular-percentage{% endif %}">
-                        {{ candidate.voter_percentage }}%
-                    </span>
-                </div>
                 <div class="status-cell">
                     {% if is_winner %}
                     <span class="winner-badge">
@@ -735,6 +741,11 @@
     "electionTitle": "{{ election.title }}",
     "generatedDate": "{{ now.strftime('%B %d, %Y at %I:%M %p') }}"
 }
+</script>
+
+<script>
+    // Pass eligible voters data from backend to JavaScript
+    window.positionEligibleVoters = {{ position_eligible_voters|tojson }};
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/election_results_detail.js') }}"></script>
