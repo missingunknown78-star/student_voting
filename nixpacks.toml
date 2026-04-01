@@ -1,24 +1,28 @@
+# nixpacks.toml for Flask + WeasyPrint on Railway
+
 [phases.setup]
+# Install Python + system libraries required by WeasyPrint
 nixPkgs = [
-  "python310",        # Python 3.10 with pip
-  "pango",
-  "cairo",
-  "gdk-pixbuf",
-  "libffi",
-  "libpng",
-  "libjpeg",
-  "zlib",
+  "python310",        # Python 3.10 with pip included
+  "pango",            # text layout
+  "cairo",            # PDF rendering
+  "gdk-pixbuf",       # image processing
+  "libffi",           # dependency for some Python packages
+  "libpng",           # PNG support
+  "libjpeg",          # JPEG support
+  "zlib",             # compression
   "gobject-introspection",
   "glib",
-  "fontconfig",
-  "freetype"
+  "fontconfig",       # font management
+  "freetype"          # fonts
 ]
 
 [phases.install]
 cmds = [
-  # just install packages from requirements.txt
-  "pip install -r requirements.txt"
+  # Install Python packages using python -m pip to avoid pip not found
+  "python -m pip install --no-cache-dir -r requirements.txt"
 ]
 
 [start]
+# Railway expects your web process to listen on $PORT
 cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120"
