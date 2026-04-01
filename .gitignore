@@ -4,5 +4,4 @@ __pycache__/
 .env
 *.log
 admin_access.log
-student_voting.sql
 .env
