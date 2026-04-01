@@ -6,11 +6,15 @@ function getCsrfToken() {
     return metaTag ? metaTag.getAttribute('content') : '';
 }
 
-// Set cast timestamp in Manila time and show loading when form is submitted
+// Set cast timestamp and click timestamp when form is submitted
 document.addEventListener('DOMContentLoaded', function() {
     const voteForm = document.getElementById('voteForm');
     if (voteForm) {
         voteForm.onsubmit = function() {
+            // Record the exact click time in SECONDS (not milliseconds)
+            const clickTimeSeconds = new Date().getTime() / 1000;
+            document.getElementById('click-timestamp').value = clickTimeSeconds;
+            
             // Get current time in Manila timezone
             const now = new Date();
             

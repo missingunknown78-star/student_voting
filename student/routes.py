@@ -1854,7 +1854,29 @@ def submit_vote(election_id):
     start_time = time.time()
     
     # Set timezone
-    local_tz = pytz.timezone("Asia/Manila")
+    manila_tz = pytz.timezone("Asia/Manila")
+    
+    # Get the click timestamp when submit button was clicked
+    click_timestamp_str = request.form.get('click_timestamp')
+    click_timestamp = None
+    
+    if click_timestamp_str:
+        try:
+            # Convert to float (should already be in seconds)
+            click_timestamp_float = float(click_timestamp_str)
+            
+            # Create datetime from the timestamp
+            click_timestamp_naive = datetime.fromtimestamp(click_timestamp_float)
+            
+            # Localize to Manila timezone
+            click_timestamp = manila_tz.localize(click_timestamp_naive)
+            print(f"✅ DEBUG: Click timestamp (Manila) = {click_timestamp}")
+            
+        except Exception as e:
+            print(f"❌ DEBUG: Error parsing click timestamp: {e}")
+            click_timestamp = datetime.now(manila_tz)
+    else:
+        click_timestamp = datetime.now(manila_tz)
     
     # Record the moment when "Cast Vote" was clicked (client-side)
     cast_timestamp_str = request.form.get('cast_timestamp')
@@ -1862,13 +1884,14 @@ def submit_vote(election_id):
     
     if cast_timestamp_str:
         try:
-            cast_timestamp = datetime.fromisoformat(cast_timestamp_str)
-            print(f"DEBUG: Received Manila time: {cast_timestamp}")
+            cast_timestamp_naive = datetime.fromisoformat(cast_timestamp_str)
+            cast_timestamp = manila_tz.localize(cast_timestamp_naive)
+            print(f"✅ DEBUG: Received cast_timestamp (Manila): {cast_timestamp}")
         except Exception as e:
-            print(f"DEBUG: Error parsing timestamp: {e}")
-            cast_timestamp = datetime.utcnow()
+            print(f"❌ DEBUG: Error parsing cast_timestamp: {e}")
+            cast_timestamp = datetime.now(manila_tz)
     else:
-        cast_timestamp = datetime.utcnow()
+        cast_timestamp = datetime.now(manila_tz)
     
     # GET ALL CANDIDATE IDs FROM HIDDEN INPUT FIRST!
     all_candidate_ids_str = request.form.get('all_candidate_ids', '')
@@ -1876,21 +1899,17 @@ def submit_vote(election_id):
         flash("Voting data error. Please try again.", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
     
-    # Convert string to list of integers (already in sorted order from vote_page)
+    # Convert string to list of integers
     all_candidate_ids = [int(id_str) for id_str in all_candidate_ids_str.split(',') if id_str.strip()]
     
-    # Get selected candidates - Use getlist() for checkboxes
+    # Get selected candidates
     selected_candidates = {}
     
-    # First, get all form keys that start with 'position_'
     for key in request.form.keys():
         if key.startswith('position_'):
             position_id = key.replace('position_', '')
-            
-            # Use getlist() to get ALL values for this key (for checkboxes)
             values = request.form.getlist(key)
             
-            # Convert each value to integer
             candidate_ids = []
             for val in values:
                 try:
@@ -1915,24 +1934,21 @@ def submit_vote(election_id):
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
 
-    # Record timestamp
-    recorded_timestamp = datetime.utcnow()
+    # Record timestamp when vote is saved to database
+    recorded_timestamp = datetime.now(manila_tz)
     
-    # ===== GENERATE SECRET NONCE FOR VERIFICATION =====
+    # ===== GENERATE SECRET NONCE =====
     secret_nonce = secrets.token_hex(8)
     print(f"🔐 DEBUG: Generated secret nonce for voter: {secret_nonce}")
     
-    # ===== CREATE FINDER HASHES FOR EACH SELECTED CANDIDATE =====
+    # ===== CREATE FINDER HASHES =====
     finder_hashes = []
     finder_hash_strings = []
     
-    # Create a mapping of candidate_id to its index in all_candidate_ids
     candidate_index_map = {candidate_id: idx for idx, candidate_id in enumerate(all_candidate_ids)}
     
-    # For each selected candidate, create a finder_hash
     for position_id, candidate_ids in selected_candidates.items():
         for candidate_id in candidate_ids:
-            # Create hash: SHA256(candidate_id + secret_nonce)
             hash_string = f"{candidate_id}{secret_nonce}"
             finder_hash = hashlib.sha256(hash_string.encode()).hexdigest()
             finder_hashes.append({
@@ -1942,13 +1958,11 @@ def submit_vote(election_id):
             finder_hash_strings.append(finder_hash)
             print(f"🔑 DEBUG: Created finder_hash for candidate {candidate_id}: {finder_hash[:16]}...")
     
-    # ===== OPTIMIZED: SINGLE VOTE VECTOR FOR ALL POSITIONS =====
+    # ===== ENCRYPT VOTE =====
     encrypt_start = time.time()
     
-    # Create a single vote vector for ALL candidates (in the same sorted order)
     vote_vector = [0] * len(all_candidate_ids)
     
-    # Mark selected candidates with 1
     selected_count = 0
     for position_id, candidate_ids in selected_candidates.items():
         for candidate_id in candidate_ids:
@@ -1959,22 +1973,18 @@ def submit_vote(election_id):
     
     print(f"DEBUG: Created vote vector with {selected_count} selected candidates out of {len(all_candidate_ids)} total")
     
-    # ===== OPTIMIZATION 1: Cache encryption results =====
     encryption_cache = {}
     
     def get_cached_encryption(value):
-        """Get encrypted value from cache or compute it"""
         if value not in encryption_cache:
             encryption_cache[value] = public_key.encrypt(value)
         return encryption_cache[value]
     
-    # ===== OPTIMIZATION 2: Use parallel processing for encryption =====
     import multiprocessing
     max_workers = min(8, multiprocessing.cpu_count() * 2)
     
     enc_vote = [None] * len(vote_vector)
     
-    # Use ThreadPoolExecutor for parallel encryption
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_index = {}
         for i, value in enumerate(vote_vector):
@@ -1989,39 +1999,37 @@ def submit_vote(election_id):
                 print(f"ERROR: Encryption failed for index {index}: {e}")
                 enc_vote[index] = public_key.encrypt(vote_vector[index])
     
-    # ===== OPTIMIZATION 3: Ensure no None values =====
     for i, enc in enumerate(enc_vote):
         if enc is None:
-            print(f"WARNING: Re-encrypting index {i} due to parallel processing failure")
+            print(f"WARNING: Re-encrypting index {i}")
             enc_vote[i] = public_key.encrypt(vote_vector[i])
     
-    # Serialize for storage
     encrypted_vote_json = json.dumps([
         {"ciphertext": str(e.ciphertext()), "exponent": e.exponent} 
         for e in enc_vote
     ])
     
     encrypt_time = time.time() - encrypt_start
-    print(f"🔥 DEBUG: Encrypted {len(vote_vector)} candidates in {encrypt_time:.2f} seconds using {max_workers} threads")
+    print(f"🔥 DEBUG: Encrypted {len(vote_vector)} candidates in {encrypt_time:.2f} seconds")
     
-    # Validate it's proper JSON
     try:
         json.loads(encrypted_vote_json)
     except json.JSONDecodeError as e:
-        print(f"ERROR: Invalid JSON in encrypted vote: {e}")
+        print(f"ERROR: Invalid JSON: {e}")
         flash("Voting encryption error. Please try again.", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
     
-    # ===== STORE FINDER HASHES PROPERLY =====
+    # ===== STORE FINDER HASHES =====
+    # DON'T calculate processing time here - we'll do it on the receipt page
     finder_data = {
         'nonce': secret_nonce,
         'hashes': finder_hashes,
         'hash_strings': finder_hash_strings,
-        'candidate_order': all_candidate_ids  # ← STORE THE CANDIDATE ORDER!
+        'candidate_order': all_candidate_ids
     }
     finder_json = json.dumps(finder_data)
     
-    # Create vote object with ALL finder data
+    # Create vote object
     vote = Vote(
         student_id=current_user.id, 
         election_id=election_id,
@@ -2032,14 +2040,14 @@ def submit_vote(election_id):
     )
     
     db.session.add(vote)
-    print(f"DEBUG: Added 1 vote record with {len(finder_hashes)} finder hashes")
 
     try:
         db.session.commit()
         total_time = time.time() - start_time
-        print(f"🎉 DEBUG: Vote successfully committed in {total_time:.2f} seconds")
+        print(f"🎉 DEBUG: Vote saved in {total_time:.2f} seconds")
         
-        # Store the secret nonce in session
+        # Store the click timestamp and secret nonce in session for receipt page
+        session['vote_click_timestamp'] = click_timestamp.isoformat()
         session['last_vote_secret'] = secret_nonce
         session['last_vote_election'] = election_id
         
@@ -2052,20 +2060,19 @@ def submit_vote(election_id):
         print(f"ERROR: Database commit failed: {str(e)}")
         flash(f"Error saving your vote: {str(e)}", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
+    
 
 @student_bp.route('/receipt')
 @login_required
 def receipt():
     """Show all voting receipts for the student"""
     
-    # FIRST: Check URL parameter (when user clicks from hamburger menu)
+    # Get school year filtering
     school_year = request.args.get('school_year')
     
-    # SECOND: If no URL parameter, try to get from session
     if not school_year:
         school_year = session.get('current_school_year')
     
-    # Parse school year to date range
     start_date = None
     end_date = None
     if school_year:
@@ -2078,22 +2085,18 @@ def receipt():
             start_date = None
             end_date = None
     
-    # Save to session for other pages
     if school_year:
         session['current_school_year'] = school_year
     
     # Get all votes for this student
     votes_query = Vote.query.filter_by(student_id=current_user.id)
     
-    # Filter votes by school year if selected
     if start_date and end_date:
-        # Join with Election to filter by election date
         votes_query = votes_query.join(Election).filter(
             Election.start_date >= start_date,
             Election.start_date <= end_date
         )
     
-    # Order by most recent first
     votes = votes_query.order_by(Vote.created_at.desc()).all()
     
     if not votes:
@@ -2102,27 +2105,25 @@ def receipt():
                              school_years=get_all_school_years(),
                              current_sy=school_year)
     
+    # Get the click timestamp from session (for the most recent vote)
+    click_timestamp_str = session.get('vote_click_timestamp')
+    manila_tz = pytz.timezone("Asia/Manila")
+    
     # Prepare data for each vote
     votes_data = []
     for vote in votes:
-        # Extract the secret nonce from the finder_hash
+        # Extract secret nonce
         secret_nonce = 'N/A'
+        processing_time = None
         candidate_details = []
         
         if vote.finder_hash:
             try:
-                # Try to parse as JSON first
                 finder_data = json.loads(vote.finder_hash)
-                print(f"DEBUG - Finder data for vote {vote.id}: {finder_data}")  # Debug print
-                
-                # Check if it's the new format with 'nonce' field
                 if isinstance(finder_data, dict):
-                    # Extract the nonce
                     if 'nonce' in finder_data:
                         secret_nonce = finder_data['nonce']
-                        print(f"DEBUG - Found nonce: {secret_nonce}")  # Debug print
                     
-                    # Get candidate hashes and details
                     if 'hashes' in finder_data:
                         for hash_item in finder_data['hashes']:
                             candidate_id = hash_item.get('candidate_id')
@@ -2130,7 +2131,6 @@ def receipt():
                                 candidate = Candidate.query.get(candidate_id)
                                 if candidate:
                                     position_name = candidate.position.name if candidate.position else "Unknown Position"
-                                    # Store full hash for verification, but display truncated
                                     full_hash = hash_item.get('hash', '')
                                     truncated_hash = full_hash[:16] + '...' if full_hash else 'N/A'
                                     
@@ -2139,38 +2139,56 @@ def receipt():
                                         'name': f"{candidate.first_name} {candidate.last_name}",
                                         'position': position_name,
                                         'hash': truncated_hash,
-                                        'full_hash': full_hash  # Store full hash for PDF/download
+                                        'full_hash': full_hash
                                     })
-                else:
-                    # If it's not a dict, use as is
-                    secret_nonce = str(finder_data)
-                    
-            except json.JSONDecodeError as e:
-                print(f"DEBUG - JSON decode error for vote {vote.id}: {e}")
-                # If it's not JSON, use the raw string
+            except json.JSONDecodeError:
                 secret_nonce = vote.finder_hash
-        else:
-            print(f"DEBUG - No finder_hash for vote {vote.id}")
         
-        # Get election details
+        # Calculate processing time for the most recent vote
+        if vote == votes[0] and click_timestamp_str:
+            try:
+                # Parse click timestamp from session
+                click_timestamp = datetime.fromisoformat(click_timestamp_str)
+                if click_timestamp.tzinfo is None:
+                    click_timestamp = manila_tz.localize(click_timestamp)
+                
+                # Get receipt load time (NOW)
+                receipt_load_time = datetime.now(manila_tz)
+                
+                # Calculate processing time (from click to receipt load)
+                time_difference = receipt_load_time - click_timestamp
+                processing_time_seconds = round(time_difference.total_seconds(), 2)
+                
+                # Format processing time
+                if processing_time_seconds < 1:
+                    processing_time = f"{processing_time_seconds * 1000:.0f} milliseconds"
+                else:
+                    processing_time = f"{processing_time_seconds} seconds"
+                
+                print(f"✅ DEBUG: Processing time from click to receipt: {processing_time}")
+                
+                # Clear from session after use
+                session.pop('vote_click_timestamp', None)
+                
+            except Exception as e:
+                print(f"❌ DEBUG: Error calculating processing time: {e}")
+                processing_time = None
+        
         election = Election.query.get(vote.election_id)
         
-        # Create the vote item data
         vote_item = {
             'vote': vote,
             'election': election,
             'secret_nonce': secret_nonce,
-            'candidate_details': candidate_details
+            'candidate_details': candidate_details,
+            'processing_time': processing_time
         }
         
         votes_data.append(vote_item)
-        print(f"DEBUG - Vote {vote.id} processed: nonce={secret_nonce}, candidates={len(candidate_details)}")  # Debug print
-    
-    print(f"DEBUG - Total votes processed: {len(votes_data)}")  # Debug print
     
     return render_template('receipt.html',
                          votes=votes_data,
-                         now=datetime.now(pytz.timezone("Asia/Manila")),
+                         now=datetime.now(manila_tz),
                          school_years=get_all_school_years(),
                          current_sy=school_year)
 

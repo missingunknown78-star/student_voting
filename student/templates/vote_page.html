@@ -76,8 +76,9 @@
         <!-- CSRF Token - CRITICAL for vote security -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <!-- Hidden inputs for PHE -->
+        <!-- Hidden inputs for timestamps -->
         <input type="hidden" name="cast_timestamp" id="cast-timestamp">
+        <input type="hidden" name="click_timestamp" id="click-timestamp">
         
         <!-- Store all candidate IDs for one-hot vector creation -->
         <input type="hidden" name="all_candidate_ids" id="all-candidate-ids" 

@@ -72,8 +72,6 @@
     flex-shrink: 0;
 }
 
-/* REMOVED: election-type-badge styles (since we're removing the badge beside title) */
-
 .course-badge {
     display: inline-flex;
     align-items: center;
@@ -105,8 +103,6 @@
     font-size: 0.85rem;
     color: var(--gray);
 }
-
-/* REMOVED: voting-progress styles */
 
 .vote-count {
     font-weight: 600;
@@ -200,42 +196,6 @@
     to {
         width: 0%;
     }
-}
-
-/* Timestamps container */
-.timestamps-container {
-    background: rgba(76, 201, 240, 0.05);
-    border-radius: 8px;
-    padding: 12px;
-    margin-top: 12px;
-    border-left: 3px solid var(--success);
-}
-
-.timestamp-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 0.75rem;
-}
-
-.timestamp-item:last-child {
-    margin-bottom: 0;
-}
-
-.timestamp-label {
-    color: var(--gray);
-    font-weight: 500;
-}
-
-.timestamp-value {
-    color: var(--dark);
-    font-family: monospace;
-    font-weight: 500;
-}
-
-.timestamp-value.processing-time {
-    color: var(--primary);
-    font-weight: 600;
 }
 
 .year-level-badge {
@@ -371,9 +331,7 @@
                     <h2 class="election-title">
                         {{ election.title }}
                         
-                        <!-- REMOVED: Election Type Badge (the small colored badge beside the title) -->
-                        
-                        <!-- Year level badge (kept) -->
+                        <!-- Year level badge -->
                         {% if election.scope == 'campus' or election.election_type == 'SSG' %}
                             {% if data.target_years_raw != 'all' %}
                                 <span class="year-level-badge">
@@ -390,7 +348,7 @@
                 </div>
             </div>
 
-            <!-- KEPT: Department Badge (below the description) - Shows "Wide Election" or department name -->
+            <!-- Department Badge -->
             <div class="department-badge {{ 'wide-election' if election.department_id is none or election.scope == 'campus' else 'department-election' }}">
                 <span class="badge-icon">
                     {% if election.department_id is none or election.scope == 'campus' %}
@@ -438,9 +396,7 @@
             </div>
             {% endif %}
 
-            <!-- REMOVED: Entire Voting Progress section with progress bar -->
-
-            <!-- Countdown Timer Only (without progress) -->
+            <!-- Countdown Timer Only -->
             <div class="time-indicator countdown" 
                  data-start="{{ election.start_date.isoformat() }}"
                  data-end="{{ election.end_date.isoformat() }}"
@@ -459,38 +415,12 @@
                 {% if data.student_has_voted %}
                     <!-- Student has already voted -->
                     <button class="btn btn-success vote-button" disabled style="width: 100%;">
-                        <span class="btn-icon">✅</span>
+                        <span class="btn-icon"></span>
                         Voted
                     </button>
                     <div class="voted-message">
                         <span class="detail-icon">✓</span> You have already voted in this election
                     </div>
-                    
-                    <!-- Timestamps Container - Shows submission to confirmation processing time -->
-                    {% if data.vote_timestamps %}
-                    <div class="timestamps-container">
-                        <div class="timestamp-item">
-                            <span class="timestamp-label">Vote Submitted:</span>
-                            <span class="timestamp-value">
-                                {{ data.vote_timestamps.cast_time_formatted or 'N/A' }}
-                            </span>
-                        </div>
-                        <div class="timestamp-item">
-                            <span class="timestamp-label">Confirmation Received:</span>
-                            <span class="timestamp-value">
-                                {{ data.vote_timestamps.recorded_time_formatted or 'N/A' }}
-                            </span>
-                        </div>
-                        {% if data.vote_timestamps.processing_seconds %}
-                        <div class="timestamp-item">
-                            <span class="timestamp-label">Processing Time:</span>
-                            <span class="timestamp-value processing-time">
-                                {{ data.vote_timestamps.processing_seconds }} seconds
-                            </span>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
                     
                 {% elif data.is_eligible_by_year %}
                     <!-- Student hasn't voted yet and is eligible by year -->

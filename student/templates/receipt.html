@@ -5,8 +5,6 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/receipt.css') }}">
-<!-- Add jsPDF library HERE - this was missing! -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- Link to external JavaScript -->
 <script src="{{ url_for('student.static', filename='js/receipt.js') }}" defer></script>
 <style>
@@ -234,6 +232,23 @@
         word-break: break-word;
     }
     
+    /* Processing Time Special Style */
+    .processing-time-row {
+        background: #eef2ff;
+        border-radius: 12px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .processing-time-row .detail-label {
+        color: #4f46e5;
+    }
+    
+    .processing-time-row .detail-value {
+        color: #4f46e5;
+        font-weight: bold;
+    }
+    
     /* Instructions Box */
     .instructions-box {
         background: #eef2ff;
@@ -300,17 +315,6 @@
         transform: scale(0.98);
     }
     
-    .btn-download {
-        background: #0f172a;
-        color: white;
-        border: none;
-    }
-    
-    .btn-download:active {
-        background: #1e293b;
-        transform: scale(0.98);
-    }
-    
     /* Receipts Counter */
     .receipts-counter {
         text-align: center;
@@ -353,12 +357,6 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
-        
-        .btn-download:hover {
-            background: #1e293b;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         
         .receipt-header:hover {
@@ -437,12 +435,7 @@
                             <i class="fa fa-shield-alt"></i> Keep this code private
                         </p>
                     </div>
-                    
-                    <div class="warning-box">
-                        <strong>⚠️ IMPORTANT:</strong> This code is your proof of voting. Save it now! 
-                        It cannot be recovered if lost.
-                    </div>
-                    
+
                     <div class="receipt-details">
                         <div class="detail-row">
                             <span class="detail-label">Election:</span>
@@ -460,10 +453,17 @@
                                 {{ vote_item.vote.created_at_manila.strftime('%I:%M %p') if vote_item.vote.created_at_manila else 'N/A' }}
                             </span>
                         </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Transaction ID:</span>
-                            <span class="detail-value">#{{ vote_item.vote.id }}</span>
+                        <!-- PROCESSING TIME DISPLAY -->
+                        {% if vote_item.processing_time %}
+                        <div class="detail-row processing-time-row">
+                            <span class="detail-label">
+                                <i class="fa fa-hourglass-half"></i> Processing Time:
+                            </span>
+                            <span class="detail-value">
+                                {{ vote_item.processing_time }}
+                            </span>
                         </div>
+                        {% endif %}
                         <div class="detail-row">
                             <span class="detail-label">Status:</span>
                             <span class="detail-value" style="color: #059669;">✓ Recorded</span>
@@ -476,7 +476,7 @@
                             <i class="fa fa-search"></i> How to Verify Your Vote
                         </h3>
                         <ol class="instructions-list">
-                            <li>Go to the <strong>Results</strong> page for this election</li>
+                            <li>Click the <strong>Verify Now</strong> button below for this election</li>
                             <li>Find the <strong>"Verify Your Vote"</strong> section</li>
                             <li>Enter your secret code: <strong>{{ vote_item.secret_nonce }}</strong></li>
                             <li>The system will show you which candidates your vote was counted for</li>
@@ -484,11 +484,8 @@
                         </ol>
                     </div>
                     
-                    <!-- Action Buttons -->
+                    <!-- Action Buttons - Only Verify Now remains -->
                     <div class="action-buttons">
-                        <button onclick="downloadReceiptAsPDF({{ vote_item.vote.id }})" class="btn btn-download">
-                            <i class="fa fa-receipt"></i> Download Receipt
-                        </button>
                         <a href="{{ url_for('student.results_detail', election_id=vote_item.vote.election_id) }}" class="btn btn-primary">
                             <i class="fa fa-check-circle"></i> Verify Now
                         </a>
