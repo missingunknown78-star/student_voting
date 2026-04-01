@@ -28,6 +28,7 @@ Flask-WTF==1.2.2
 fonttools==4.61.1
 freetype-py==2.5.1
 greenlet==3.2.4
+gunicorn==25.3.0
 html5lib==1.1
 idna==3.11
 itsdangerous==2.2.0
