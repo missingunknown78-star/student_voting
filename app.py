@@ -99,22 +99,22 @@ with app.app_context():
                 
                 for cmd in commands:
                     cmd = cmd.strip()
-                    if cmd and not cmd.startswith('--'):
+                    # ONLY RUN INSERT COMMANDS (skip CREATE, ALTER, DROP, etc.)
+                    if cmd and not cmd.startswith('--') and cmd.upper().startswith('INSERT'):
                         try:
                             db.session.execute(text(cmd))
                             imported += 1
-                            if imported % 100 == 0:
-                                print(f"   ... {imported} commands executed")
+                            if imported % 50 == 0:
+                                print(f"   ... {imported} data rows inserted")
                         except Exception as e:
-                            if "already exists" not in str(e) and "Duplicate" not in str(e):
-                                errors += 1
-                                if errors < 10:  # Show first few errors only
-                                    print(f"   ⚠️ Skip: {str(e)[:60]}")
+                            errors += 1
+                            if errors < 10:
+                                print(f"   ⚠️ Skip: {str(e)[:60]}")
                 
                 db.session.commit()
                 print("-" * 50)
                 print(f"✅ IMPORT COMPLETE!")
-                print(f"   📊 {imported} commands executed")
+                print(f"   📊 {imported} data rows inserted")
                 print(f"   📊 {Student.query.count()} students imported")
                 print("=" * 50)
             else:
