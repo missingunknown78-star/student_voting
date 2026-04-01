@@ -70,17 +70,63 @@ from student.routes import student_bp
 app.register_blueprint(admin_bp, url_prefix='/ctumoalboal-comelec')
 app.register_blueprint(student_bp, url_prefix='/student')
 
+# ---------------------- Database Setup & Auto-Import ---------------------- #
+with app.app_context():
+    try:
+        # Create tables if they don't exist
+        db.create_all()
+        print("=" * 50)
+        print("✅ Database tables created/verified!")
+        print("=" * 50)
+        
+        # Check if we need to import data
+        from sqlalchemy import text
+        student_count = Student.query.count()
+        
+        if student_count == 0:
+            print("📀 Database is empty. Importing your data...")
+            print("-" * 50)
+            
+            # Check if SQL file exists
+            sql_file = 'student_voting.sql'
+            if os.path.exists(sql_file):
+                with open(sql_file, 'r', encoding='utf-8') as f:
+                    sql_content = f.read()
+                
+                commands = sql_content.split(';')
+                imported = 0
+                errors = 0
+                
+                for cmd in commands:
+                    cmd = cmd.strip()
+                    if cmd and not cmd.startswith('--'):
+                        try:
+                            db.session.execute(text(cmd))
+                            imported += 1
+                            if imported % 100 == 0:
+                                print(f"   ... {imported} commands executed")
+                        except Exception as e:
+                            if "already exists" not in str(e) and "Duplicate" not in str(e):
+                                errors += 1
+                                if errors < 10:  # Show first few errors only
+                                    print(f"   ⚠️ Skip: {str(e)[:60]}")
+                
+                db.session.commit()
+                print("-" * 50)
+                print(f"✅ IMPORT COMPLETE!")
+                print(f"   📊 {imported} commands executed")
+                print(f"   📊 {Student.query.count()} students imported")
+                print("=" * 50)
+            else:
+                print(f"⚠️ SQL file not found: {sql_file}")
+                print("   Your database is empty. Please add data through admin panel.")
+        else:
+            print(f"✅ Database already has {student_count} students.")
+            print("   Skipping import to avoid duplicates.")
+            
+    except Exception as e:
+        print(f"⚠️ Database setup error: {e}")
+
 # ---------------------- Run App ---------------------- #
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-# Create database tables on application startup
-with app.app_context():
-    try:
-        db.create_all()
-        print("=" * 50)
-        print("✅ Database tables created/verified successfully!")
-        print("=" * 50)
-    except Exception as e:
-        print(f"⚠️ Database error: {e}")
