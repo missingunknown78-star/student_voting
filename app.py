@@ -73,3 +73,14 @@ app.register_blueprint(student_bp, url_prefix='/student')
 # ---------------------- Run App ---------------------- #
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+# Create database tables on application startup
+with app.app_context():
+    try:
+        db.create_all()
+        print("=" * 50)
+        print("✅ Database tables created/verified successfully!")
+        print("=" * 50)
+    except Exception as e:
+        print(f"⚠️ Database error: {e}")
