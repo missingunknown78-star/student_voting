@@ -6,7 +6,7 @@ from functools import wraps
 from admin.models import Admin, Candidate, Position, Election, Announcement, Department, Course, CtuStudent, TallyVote, ElectionPosition
 from student.models import Student, Vote
 import mysql.connector
-from settings import MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB
+from settings import DATABASE_URL, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DB, MYSQL_PORT
 import pytz
 from werkzeug.utils import secure_filename
 import os
