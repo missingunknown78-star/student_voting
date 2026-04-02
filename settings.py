@@ -1,7 +1,6 @@
 import os
 import re
 from dotenv import load_dotenv
-from settings import SECRET_KEY, DATABASE_URL, MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USE_SSL, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER
 
 load_dotenv()
 
