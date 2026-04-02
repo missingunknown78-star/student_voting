@@ -58,25 +58,40 @@ if not SECRET_KEY:
         SECRET_KEY = "sabanal"
         print("⚠️  WARNING: Using development SECRET_KEY!")
 
+# ============= RESEND CONFIGURATION (for Railway) =============
+if ON_RAILWAY:
+    USE_RESEND = True
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+    RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+else:
+    USE_RESEND = False
+    RESEND_API_KEY = None
+    RESEND_FROM_EMAIL = None
+
 # ============= EMAIL CONFIGURATION =============
-# Updated for better compatibility with Railway
+# Only used for local development (Gmail) or as fallback
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))  # Changed to 587
-MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'  # Changed to True
-MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'  # Changed to False
+MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
 
-# Print email config for debugging
+# Print config for debugging
 print("=" * 50)
 print("📧 Email Configuration:")
-print(f"   Server: {MAIL_SERVER}:{MAIL_PORT}")
-print(f"   TLS: {MAIL_USE_TLS}")
-print(f"   SSL: {MAIL_USE_SSL}")
-print(f"   Username: {MAIL_USERNAME}")
-print(f"   Password: {'✅ Set' if MAIL_PASSWORD else '❌ Missing'}")
-print(f"   Default Sender: {MAIL_DEFAULT_SENDER}")
+if ON_RAILWAY and USE_RESEND:
+    print("   Mode: Resend (Railway HTTPS API)")
+    print(f"   API Key: {'✅ Set' if RESEND_API_KEY else '❌ Missing'}")
+    print(f"   From Email: {RESEND_FROM_EMAIL}")
+else:
+    print("   Mode: Gmail SMTP (Local)")
+    print(f"   Server: {MAIL_SERVER}:{MAIL_PORT}")
+    print(f"   TLS: {MAIL_USE_TLS}")
+    print(f"   SSL: {MAIL_USE_SSL}")
+    print(f"   Username: {MAIL_USERNAME}")
+    print(f"   Password: {'✅ Set' if MAIL_PASSWORD else '❌ Missing'}")
 print("=" * 50)
 
 # ============= PRINT CONFIG FOR DEBUG (LOCAL ONLY) =============
@@ -86,5 +101,4 @@ if not ON_RAILWAY and not ON_PYTHONANYWHERE:
     print(f"   Environment: Local")
     print(f"   SECRET_KEY: {'✅ Set' if SECRET_KEY else '❌ Missing'}")
     print(f"   Database: {MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}")
-    print(f"   Email: {'✅ Configured' if MAIL_USERNAME else '❌ Missing'}")
     print("=" * 50)

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from settings import SECRET_KEY, DATABASE_URL, MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USE_SSL, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER
+from settings import SECRET_KEY, DATABASE_URL, MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USE_SSL, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER, USE_RESEND, RESEND_API_KEY, RESEND_FROM_EMAIL
 from extensions import db, bcrypt, login_manager, mail, csrf
 from datetime import timedelta
 
@@ -29,6 +29,7 @@ app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 
 # ---------------------- Mail Configuration (Updated) ---------------------- #
+# Regular Flask-Mail config (for local development)
 app.config['MAIL_SERVER'] = MAIL_SERVER
 app.config['MAIL_PORT'] = MAIL_PORT
 app.config['MAIL_USE_TLS'] = MAIL_USE_TLS
@@ -38,6 +39,21 @@ app.config['MAIL_PASSWORD'] = MAIL_PASSWORD
 app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
 app.config['MAIL_TIMEOUT'] = 30  # Reduced timeout
 app.config['MAIL_MAX_EMAILS'] = None
+
+# ---------------------- Resend Configuration (for Railway) ---------------------- #
+app.config['USE_RESEND'] = USE_RESEND
+app.config['RESEND_API_KEY'] = RESEND_API_KEY
+app.config['RESEND_FROM_EMAIL'] = RESEND_FROM_EMAIL
+
+# Print which email service is being used
+if USE_RESEND:
+    print("=" * 50)
+    print("📧 Using Resend for email (Railway HTTPS API)")
+    print(f"   API Key: {'✅ Set' if RESEND_API_KEY else '❌ Missing'}")
+    print(f"   From Email: {RESEND_FROM_EMAIL}")
+    print("=" * 50)
+else:
+    print("📧 Using Gmail SMTP for email (Local Development)")
 
 # ---------------------- Initialize Extensions ---------------------- #
 db.init_app(app)
@@ -82,6 +98,8 @@ def debug_email():
             'MAIL_PASSWORD': 'SET' if app.config.get('MAIL_PASSWORD') else 'NOT SET',
             'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
             'MAIL_TIMEOUT': app.config.get('MAIL_TIMEOUT'),
+            'USE_RESEND': app.config.get('USE_RESEND'),
+            'RESEND_API_KEY': 'SET' if app.config.get('RESEND_API_KEY') else 'NOT SET',
         }
         
         # Try to send a test email
@@ -94,6 +112,28 @@ def debug_email():
         return f"✅ Test email sent successfully!<br><br>Config: {config_info}"
     except Exception as e:
         return f"❌ Error sending email: {str(e)}<br><br>Config: {config_info}"
+
+@app.route('/test-resend')
+def test_resend():
+    """Test Resend email sending (for Railway)"""
+    if not app.config.get('USE_RESEND'):
+        return "❌ Resend is not configured. Set USE_RESEND=True in settings"
+    
+    try:
+        from email_helper import send_email
+        
+        result = send_email(
+            recipient='ctucomelecprototype@gmail.com',
+            subject='Resend Test from Railway',
+            body='If you receive this, Resend is working on Railway!'
+        )
+        
+        if result:
+            return "✅ Resend test email sent successfully! Check your inbox."
+        else:
+            return "❌ Resend test failed. Check logs for details."
+    except Exception as e:
+        return f"❌ Resend error: {str(e)}"
 
 @app.route('/test-gmail-connection')
 def test_gmail():
