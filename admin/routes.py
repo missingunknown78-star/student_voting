@@ -38,7 +38,13 @@ from datetime import datetime
 import pytz
 from admin.models import YearLevel, DeletionRequestAudit
 from student.models import PendingCandidate
-
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from io import BytesIO
 
 
 try:
@@ -7396,203 +7402,110 @@ def get_tally_results(election_id):
 
 
 
-
 @admin_bp.route('/results/<int:election_id>/pdf')
 @admin_required
 def election_results_pdf(election_id):
-    """Generate PDF - ONLY AVAILABLE AFTER OFFICIAL TALLY"""
+    """Generate PDF using ReportLab - Footer at bottom margin on last page only"""
     election = Election.query.get_or_404(election_id)
     
-    # Get chairman name from query parameter
+    # Get chairman name
     chairman_name = request.args.get('chairman', '').strip()
     if not chairman_name:
-        chairman_name = "COMELEC CHAIRMAN"  # Default fallback
+        chairman_name = "COMELEC CHAIRMAN"
     
     tz = pytz.timezone('Asia/Manila')
     now = datetime.now(tz)
     
     # Get election status
-    if election.start_date.tzinfo is None:
-        election.start_date = tz.localize(election.start_date)
-    if election.end_date.tzinfo is None:
-        election.end_date = tz.localize(election.end_date)
+    election_start = election.start_date
+    election_end = election.end_date
+    if election_start.tzinfo is None:
+        election_start = tz.localize(election_start)
+    if election_end.tzinfo is None:
+        election_end = tz.localize(election_end)
     
-    if election.end_date < now:
+    if election_end < now:
         status = "Completed"
-    elif election.start_date <= now <= election.end_date:
+    elif election_start <= now <= election_end:
         status = "Active"
     else:
         status = "Upcoming"
     
-    # ===== CRITICAL: CHECK IF TALLIED FIRST =====
+    # Check if tallied
     is_tallied = False
-    tally_timestamp = None
-    
-    if TALLY_VOTE_AVAILABLE:
+    try:
+        from admin.models import TallyVote
         tally_record = TallyVote.query.filter_by(election_id=election_id).first()
         is_tallied = tally_record is not None
-        if is_tallied:
-            latest_tally = TallyVote.query.filter_by(
-                election_id=election_id
-            ).order_by(TallyVote.tally_timestamp.desc()).first()
-            tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
+    except:
+        is_tallied = False
     
-    # ===== BLOCK PDF IF NOT TALLIED =====
     if not is_tallied:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
                 'success': False,
-                'message': 'PDF results are only available after official tally. Please tally the votes first.'
+                'message': 'PDF results are only available after official tally.'
             }), 403
-        else:
-            flash('PDF results are only available after official tally. Please tally the votes first.', 'warning')
-            return redirect(url_for('admin.election_results', election_id=election_id))
+        flash('PDF results are only available after official tally.', 'warning')
+        return redirect(url_for('admin.election_results', election_id=election_id))
     
-    print(f"📊 Generating PDF for election {election_id} using official tally results")
-    print(f"📝 COMELEC Chairman: {chairman_name}")
-    
-    # Get all votes for this election
+    # Get all data
     all_votes = Vote.query.filter_by(election_id=election_id).all()
     unique_voters = len(set(vote.student_id for vote in all_votes))
-    
-    # Get candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()
     
-    # GET POSITION LIMITS AND RESTRICTIONS
+    # Position limits
     position_limits = {}
-    position_restrictions_dict = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
-    
     for ep in election_positions:
         position_limits[ep.position_id] = ep.max_votes
-        position_restrictions_dict[ep.position_id] = {
-            'course_id': ep.course_id,
-            'program_type_id': ep.program_type_id
-        }
     
-    # ===== USE TALLY TABLE ONLY =====
+    # Get tally data
+    from admin.models import TallyVote
     tally_records = TallyVote.query.filter_by(election_id=election_id).all()
     tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
     
-    # ===== CALCULATE ELIGIBLE VOTERS PER POSITION BASED ON RESTRICTIONS =====
-    position_eligible_voters = {}
-    
-    for ep in election_positions:
-        position_id = ep.position_id
-        position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
-        
-        # Count voters who are eligible for this position
-        eligible_voter_ids = set()
-        
-        for vote in all_votes:
-            # Get the student who cast this vote
-            student = Student.query.get(vote.student_id)
-            if not student:
-                # If student is deleted (student_id = NULL), we can't determine eligibility
-                # For deleted students, include them as they have voted
-                eligible_voter_ids.add(vote.id)  # Use vote.id as unique identifier
-                continue
-            
-            # Check course restriction
-            if ep.course_id:
-                if student.course_id != ep.course_id:
-                    continue
-            
-            # Check program type restriction
-            if ep.program_type_id:
-                if student.program_type_id != ep.program_type_id:
-                    continue
-            
-            # Student is eligible
-            eligible_voter_ids.add(vote.id)
-        
-        position_eligible_voters[position_id] = {
-            'count': len(eligible_voter_ids),
-            'name': position_name,
-            'max_votes': ep.max_votes
-        }
-        
-        print(f"📊 PDF - Position {position_name}: Eligible voters = {len(eligible_voter_ids)}")
-    
-    # ===== BUILD CANDIDATE RESULTS WITH POSITION-SPECIFIC PERCENTAGES =====
+    # Build candidate results
     candidate_results = []
     candidates_by_position = {}
     
     for candidate in candidates:
-        position_id = candidate.position_id
         position_name = candidate.position.name if candidate.position else "Unknown"
         vote_count = tally_dict.get(candidate.id, 0)
-        
-        # Get eligible voters for this position
-        eligible_voters = position_eligible_voters.get(position_id, {}).get('count', 0)
-        
-        # Calculate percentage based on eligible voters for this position
-        if eligible_voters > 0:
-            voter_percentage = round((vote_count / eligible_voters) * 100, 2)
-        else:
-            voter_percentage = 0
         
         candidate_data = {
             'id': candidate.id,
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
-            'photo': candidate.photo,
             'position': position_name,
-            'position_id': position_id,
-            'department': candidate.department.name if candidate.department else "All Departments",
+            'position_id': candidate.position_id,
             'vote_count': vote_count,
-            'voter_percentage': voter_percentage,
-            'eligible_voters': eligible_voters,  # Add this for debugging
-            'is_tallied': True,
             'is_winner': False
         }
-        
         candidate_results.append(candidate_data)
         
-        # Group by position
         if position_name not in candidates_by_position:
             candidates_by_position[position_name] = {
-                'id': position_id,
-                'name': position_name,
-                'max_votes': position_limits.get(position_id, 1),
-                'eligible_voters': eligible_voters,  # Add to position data
+                'id': candidate.position_id,
+                'max_votes': position_limits.get(candidate.position_id, 1),
                 'candidates': []
             }
         candidates_by_position[position_name]['candidates'].append(candidate_data)
     
-    # Sort candidates within each position by vote count and determine winners
+    # Determine winners
     winners_by_position = {}
     for position_name, pos_data in candidates_by_position.items():
-        # Sort by vote count
         pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
-        
-        # Determine winners
         max_winners = pos_data['max_votes']
         winners = []
         for i, candidate in enumerate(pos_data['candidates']):
             if i < max_winners and candidate['vote_count'] > 0:
                 candidate['is_winner'] = True
                 winners.append(candidate)
-        
         if winners:
             winners_by_position[position_name] = winners
     
-    # Sort candidate_results by position_id for detailed table
-    candidates_by_pos_id = {}
-    for candidate in candidate_results:
-        pos_id = candidate['position_id']
-        if pos_id not in candidates_by_pos_id:
-            candidates_by_pos_id[pos_id] = []
-        candidates_by_pos_id[pos_id].append(candidate)
-    
-    for pos_id in candidates_by_pos_id:
-        candidates_by_pos_id[pos_id].sort(key=lambda x: x['vote_count'], reverse=True)
-    
-    sorted_candidate_results = []
-    for pos_id in sorted(candidates_by_pos_id.keys()):
-        sorted_candidate_results.extend(candidates_by_pos_id[pos_id])
-    
-    # Calculate overall statistics
+    # Calculate statistics
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
@@ -7601,80 +7514,264 @@ def election_results_pdf(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
-    total_votes_cast = sum(c['vote_count'] for c in candidate_results)
+    # ===== REPORTLAB PDF GENERATION WITH BOTTOM PUSHER =====
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import Image as RLImage
+    from io import BytesIO
+    from flask import make_response
+    import os
+    from flask import current_app
     
-    # Render HTML template for PDF
-    html = render_template(
-        'election_results_pdf.html',
-        election=election,
-        candidate_results=sorted_candidate_results,
-        candidates_by_position=candidates_by_position,  # Pass this for better display
-        winners_by_position=winners_by_position,
-        total_voters=unique_voters,
-        total_votes_cast=total_votes_cast,
-        total_eligible_voters=total_eligible_voters,
-        voter_turnout=voter_turnout,
-        students_not_voted=students_not_voted,
-        status=status,
-        now=now,
-        is_tallied=is_tallied,
-        tally_timestamp=tally_timestamp,
-        position_limits=position_limits,
-        position_eligible_voters=position_eligible_voters,  # Pass eligible voters data
-        chairman_name=chairman_name
-    )
+    AVAILABLE_WIDTH = 7.5 * inch
     
-    try:
-        # Generate PDF using WeasyPrint
-        from weasyprint import HTML, CSS
-        from weasyprint.text.fonts import FontConfiguration
+    buffer = BytesIO()
+    
+    # Create document
+    doc = SimpleDocTemplate(buffer,
+                           pagesize=letter,
+                           topMargin=0.6*inch,
+                           bottomMargin=0.5*inch,
+                           leftMargin=0.5*inch,
+                           rightMargin=0.5*inch)
+    
+    # Custom flowable to push content to bottom of page
+    class BottomPadder(Flowable):
+        def __init__(self, height):
+            super().__init__()
+            self.height = height
         
-        font_config = FontConfiguration()
+        def wrap(self, availWidth, availHeight):
+            return (0, self.height)
         
-        pdf = HTML(string=html, base_url=request.host_url).write_pdf(
-            stylesheets=[CSS(string='''
-                @page {
-                    size: letter;
-                    margin: 0.5in 0.5in 1.5in 0.5in;
-                }
-            ''')],
-            font_config=font_config
-        )
-        
-        # Generate filename
-        filename = f"{election.title}_Official_Results_{now.strftime('%Y%m%d_%H%M')}.pdf"
-        filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-        
-        response = make_response(pdf)
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        # Audit log
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        
-        log_audit(
-            action='PDF_GENERATED',
-            description=f"Admin user '{username}' from IP: {ip} generated PDF results for election: '{election.title}' (ID: {election_id}) | COMELEC Chairman: {chairman_name}"
-        )
-        
-        return response
-        
-    except Exception as e:
-        current_app.logger.error(f"PDF Generation Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({
-                'success': False,
-                'error': 'PDF generation failed. Please try again or contact support.',
-                'details': str(e)
-            }), 500
+        def draw(self):
+            pass
+    
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # ===== CUSTOM STYLES =====
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'],
+                                  fontSize=16, alignment=TA_CENTER, spaceAfter=5,
+                                  fontName='Helvetica-Bold')
+    
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'],
+                                     fontSize=14, alignment=TA_CENTER, spaceAfter=5,
+                                     fontName='Helvetica-Bold')
+    
+    date_style = ParagraphStyle('Date', parent=styles['Normal'],
+                                 fontSize=12, alignment=TA_CENTER, spaceAfter=15)
+    
+    # ===== HEADER LOGO =====
+    logo_path = os.path.join(current_app.root_path, 'admin', 'static', 'images', 'CTU HEADER.png')
+    if os.path.exists(logo_path):
+        try:
+            img = RLImage(logo_path, width=AVAILABLE_WIDTH, height=1.0*inch)
+            story.append(img)
+            story.append(Spacer(1, 0.05*inch))
+        except:
+            pass
+    
+    story.append(Paragraph("Cebu Technological University - Moalboal Campus", title_style))
+    story.append(Paragraph(f"{election.title} ELECTION", subtitle_style))
+    story.append(Paragraph(now.strftime('%B %d, %Y'), date_style))
+    story.append(Spacer(1, 0.1*inch))
+    
+    # ===== SUMMARY CARDS =====
+    summary_data = [
+        ['TOTAL VOTERS', 'TURNOUT RATE', 'CANDIDATES', 'STATUS'],
+        [str(unique_voters), f"{voter_turnout}%", str(len(candidate_results)), status]
+    ]
+    
+    col_width = AVAILABLE_WIDTH / 4
+    summary_table = Table(summary_data, colWidths=[col_width] * 4)
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('FONTSIZE', (0,1), (-1,1), 14),
+        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 0.1*inch))
+    
+    # ===== TURNOUT STATS =====
+    turnout_data = [
+        ['REGISTERED', 'VOTED', 'ABSENT'],
+        [str(total_eligible_voters), str(unique_voters), str(students_not_voted)]
+    ]
+    
+    col_width = AVAILABLE_WIDTH / 3
+    turnout_table = Table(turnout_data, colWidths=[col_width] * 3)
+    turnout_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e3f2fd')),
+        ('BACKGROUND', (0,1), (0,1), colors.HexColor('#e3f2fd')),
+        ('BACKGROUND', (1,1), (1,1), colors.HexColor('#e8f5e9')),
+        ('BACKGROUND', (2,1), (2,1), colors.HexColor('#fff3e0')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('FONTSIZE', (0,1), (-1,1), 14),
+        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+    ]))
+    story.append(turnout_table)
+    story.append(Spacer(1, 0.1*inch))
+    
+    # ===== ENCRYPTION NOTE =====
+    note_style = ParagraphStyle('Note', parent=styles['Normal'],
+                                 fontSize=8, alignment=TA_CENTER,
+                                 textColor=colors.HexColor('#444'),
+                                 fontName='Helvetica-Oblique')
+    story.append(Paragraph("Privacy Protected Results: These results are calculated using Paillier Homomorphic Encryption. Individual votes remain private while ensuring accurate totals.", note_style))
+    story.append(Spacer(1, 0.15*inch))
+    
+    # ===== WINNERS SECTION =====
+    story.append(Paragraph("🏆 OFFICIAL ELECTION WINNERS", 
+                           ParagraphStyle('WinnersTitle', parent=styles['Heading2'],
+                                         fontSize=14, alignment=TA_CENTER,
+                                         textColor=colors.HexColor('#1b5e20'),
+                                         backColor=colors.HexColor('#d0ebd0'),
+                                         spaceAfter=6, spaceBefore=6,
+                                         borderPadding=8, fontName='Helvetica-Bold')))
+    story.append(Spacer(1, 0.05*inch))
+    
+    # Winners table
+    winners_data = [['Position', 'Winner(s)', 'Votes']]
+    for position_name, winners in winners_by_position.items():
+        if len(winners) == 1:
+            winner = winners[0]
+            winners_data.append([position_name, 
+                                f"{winner['first_name']} {winner['last_name']}",
+                                str(winner['vote_count'])])
         else:
-            flash(f'PDF generation failed: {str(e)}', 'danger')
-            return redirect(url_for('admin.election_results', election_id=election_id))
-
+            winners_data.append([position_name, f"{len(winners)} WINNERS", ''])
+            for winner in winners:
+                winners_data.append(['', f"  • {winner['first_name']} {winner['last_name']}",
+                                    str(winner['vote_count'])])
+    
+    winners_table = Table(winners_data, colWidths=[AVAILABLE_WIDTH * 0.35, AVAILABLE_WIDTH * 0.45, AVAILABLE_WIDTH * 0.2])
+    winners_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1b5e20')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('ALIGN', (2,0), (2,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,0), 10),
+        ('FONTSIZE', (0,1), (-1,-1), 9),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+    ]))
+    story.append(winners_table)
+    story.append(PageBreak())
+    
+    # ===== DETAILED RESULTS SECTION =====
+    story.append(Paragraph("📊 DETAILED RESULTS BY POSITION",
+                           ParagraphStyle('DetailTitle', parent=styles['Heading2'],
+                                         fontSize=14, alignment=TA_CENTER,
+                                         textColor=colors.HexColor('#01579b'),
+                                         backColor=colors.HexColor('#b8d9f5'),
+                                         spaceAfter=6, spaceBefore=6,
+                                         borderPadding=8, fontName='Helvetica-Bold')))
+    story.append(Spacer(1, 0.05*inch))
+    
+    # Group by position
+    position_groups = {}
+    for candidate in candidate_results:
+        pos_name = candidate['position']
+        pos_id = candidate['position_id']
+        if pos_name not in position_groups:
+            position_groups[pos_name] = {'id': pos_id, 'candidates': []}
+        position_groups[pos_name]['candidates'].append(candidate)
+    
+    # Sort positions by ID
+    sorted_positions = sorted(position_groups.items(), key=lambda x: x[1]['id'])
+    
+    for position_name, group in sorted_positions:
+        candidates_list = group['candidates']
+        candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
+        max_winners = position_limits.get(group['id'], 1)
+        
+        story.append(Paragraph(f"{position_name}{' (' + str(max_winners) + ' WINNERS)' if max_winners > 1 else ''}",
+                               ParagraphStyle('PosTitle', parent=styles['Heading3'],
+                                             fontSize=11, spaceAfter=6, fontName='Helvetica-Bold')))
+        
+        detail_data = [['Rank', 'Candidate', 'Votes', 'Result']]
+        for idx, candidate in enumerate(candidates_list[:max_winners+5], 1):
+            result = "✓ WINNER" if idx <= max_winners and candidate['vote_count'] > 0 else "—"
+            detail_data.append([str(idx),
+                               f"{candidate['first_name']} {candidate['last_name']}",
+                               str(candidate['vote_count']),
+                               result])
+        
+        detail_table = Table(detail_data, colWidths=[AVAILABLE_WIDTH * 0.12, AVAILABLE_WIDTH * 0.53, AVAILABLE_WIDTH * 0.15, AVAILABLE_WIDTH * 0.20])
+        detail_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('ALIGN', (0,0), (0,-1), 'CENTER'),
+            ('ALIGN', (2,0), (3,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('FONTSIZE', (0,1), (-1,-1), 9),
+            ('TEXTCOLOR', (3,1), (3,max_winners), colors.HexColor('#1b5e20')),
+            ('FONTNAME', (3,1), (3,max_winners), 'Helvetica-Bold'),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ]))
+        story.append(detail_table)
+        story.append(Spacer(1, 0.12*inch))
+    
+    # ===== FOOTER WITH BOTTOM PUSHER =====
+    # This pushes the footer to the bottom margin of the last page
+    story.append(BottomPadder(2.0 * inch))  # Pushes content down
+    
+    story.append(Paragraph(chairman_name,
+                  ParagraphStyle('Signature', parent=styles['Normal'],
+                                alignment=TA_CENTER, spaceAfter=3, fontSize=11,
+                                fontName='Helvetica-Bold')))
+    story.append(Paragraph("COMELEC Chairperson",
+                  ParagraphStyle('SigTitle', parent=styles['Normal'],
+                                alignment=TA_CENTER, fontSize=9, fontName='Helvetica-Oblique')))
+    
+    # Footer logo
+    story.append(Spacer(1, 0.08*inch))
+    footer_logo_path = os.path.join(current_app.root_path, 'admin', 'static', 'images', 'CTU FOOTER.png')
+    if os.path.exists(footer_logo_path):
+        try:
+            footer_img = RLImage(footer_logo_path, width=AVAILABLE_WIDTH, height=0.5*inch)
+            story.append(footer_img)
+        except:
+            pass
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    
+    # Return PDF
+    filename = f"{election.title}_Official_Results_{now.strftime('%Y%m%d_%H%M')}.pdf"
+    filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+    
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
 
 
 @admin_bp.route('/results/<int:election_id>/test-tally')
@@ -8075,170 +8172,6 @@ def get_vote_distribution(election_id):
         'grouping_type': grouping_type
     })
 
-
-@admin_bp.route('/api/vote-distribution/export/<int:election_id>/<string:format>')
-@admin_required
-def export_vote_distribution(election_id, format):
-    """Export vote distribution data - PDF only"""
-    import csv
-    import io
-    from datetime import datetime
-    from weasyprint import HTML, CSS
-    from weasyprint.text.fonts import FontConfiguration
-    
-    election = Election.query.get_or_404(election_id)
-    
-    if format not in ['pdf']:
-        return jsonify({'success': False, 'error': 'Invalid format'}), 400
-    
-    if format == 'pdf':
-        # Get distribution data
-        first_record = VoteDistribution.query.filter_by(election_id=election_id).first()
-        grouping_type = first_record.grouping_type if first_record else 'department'
-        
-        # Get grouping label
-        if grouping_type == 'course':
-            group_label = 'Course'
-        elif grouping_type == 'program_type':
-            group_label = 'Program Type'
-        else:
-            group_label = 'Department'
-        
-        # Get data for PDF
-        distributions = VoteDistribution.query.filter_by(election_id=election_id)\
-            .join(Candidate)\
-            .order_by(VoteDistribution.position_name, Candidate.last_name)\
-            .all()
-        
-        # Group by position for better display
-        positions = {}
-        for dist in distributions:
-            pos_name = dist.position_name or (dist.position.name if dist.position else 'Unknown')
-            if pos_name not in positions:
-                positions[pos_name] = []
-            
-            # Get group name
-            group_name = None
-            if dist.department_id:
-                dept = Department.query.get(dist.department_id)
-                group_name = dept.name if dept else None
-            elif dist.course_id:
-                course = Course.query.get(dist.course_id)
-                group_name = course.course_name if course else None
-            elif dist.program_type_id:
-                from student.models import ProgramType
-                prog = ProgramType.query.get(dist.program_type_id)
-                group_name = prog.name if prog else None
-            else:
-                group_name = dist.grouping_name
-            
-            positions[pos_name].append({
-                'candidate': f"{dist.candidate.first_name} {dist.candidate.last_name}",
-                'group': group_name or 'Unknown',
-                'votes': dist.vote_count,
-                'percentage': dist.percentage or 0
-            })
-        
-        # Calculate statistics
-        total_votes = sum(d.vote_count for d in distributions)
-        total_candidates = Candidate.query.filter_by(election_id=election_id).count()
-        
-        # Get unique groups
-        if grouping_type == 'department':
-            unique_groups = db.session.query(VoteDistribution.department_id)\
-                .filter_by(election_id=election_id)\
-                .filter(VoteDistribution.department_id.isnot(None))\
-                .distinct().count()
-        elif grouping_type == 'course':
-            unique_groups = db.session.query(VoteDistribution.course_id)\
-                .filter_by(election_id=election_id)\
-                .filter(VoteDistribution.course_id.isnot(None))\
-                .distinct().count()
-        elif grouping_type == 'program_type':
-            unique_groups = db.session.query(VoteDistribution.program_type_id)\
-                .filter_by(election_id=election_id)\
-                .filter(VoteDistribution.program_type_id.isnot(None))\
-                .distinct().count()
-        else:
-            unique_groups = 0
-        
-        # Get voter turnout
-        total_students = Student.query.count()
-        voted_students = db.session.query(Vote.student_id)\
-            .filter_by(election_id=election_id)\
-            .distinct().count()
-        turnout = round((voted_students / total_students * 100), 1) if total_students > 0 else 0
-        
-        tz = pytz.timezone('Asia/Manila')
-        now = datetime.now(tz)
-        
-        # Render PDF template
-        html = render_template(
-            'vote_distribution_pdf.html',
-            election=election,
-            positions=positions,
-            total_votes=total_votes,
-            total_candidates=total_candidates,
-            unique_groups=unique_groups,
-            group_label=group_label,
-            turnout=turnout,
-            now=now,
-            grouping_type=grouping_type
-        )
-        
-        try:
-            # Generate PDF
-            font_config = FontConfiguration()
-            
-            pdf = HTML(string=html, base_url=request.host_url).write_pdf(
-                stylesheets=[CSS(string='''
-                    @page {
-                        size: letter;
-                        margin: 0.75in;
-                        @bottom-center {
-                            content: "Page " counter(page) " of " counter(pages);
-                            font-family: Arial, sans-serif;
-                            font-size: 9pt;
-                            color: #666;
-                        }
-                    }
-                ''')],
-                font_config=font_config
-            )
-            
-            # Generate filename
-            filename = f"vote_distribution_{election.title}_{now.strftime('%Y%m%d_%H%M')}.pdf"
-            filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-            
-            response = make_response(pdf)
-            response.headers['Content-Type'] = 'application/pdf'
-            response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-            
-            # Audit log
-            username = getattr(current_user, 'username', 'Unknown')
-            ip = request.remote_addr
-            
-            log_audit(
-                action='EXPORT_VOTE_DISTRIBUTION_PDF',
-                description=f"Admin user '{username}' exported vote distribution for election '{election.title}' (ID: {election_id}) as PDF from IP: {ip} | Records: {len(distributions)} | Grouping: {grouping_type}"
-            )
-            
-            return response
-            
-        except Exception as e:
-            current_app.logger.error(f"PDF Generation Error: {str(e)}")
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({
-                    'success': False,
-                    'error': 'PDF generation failed. Please try again or contact support.',
-                    'details': str(e)
-                }), 500
-            else:
-                flash(f'PDF generation failed: {str(e)}', 'danger')
-                return redirect(url_for('admin.vote_distribution'))
-    
-    return jsonify({'success': False, 'error': 'Format not implemented yet'}), 400
 
 
 @admin_bp.route('/api/vote-distribution/populate/<int:election_id>', methods=['POST'])

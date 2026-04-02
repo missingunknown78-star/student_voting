@@ -1,7 +1,6 @@
 # student/routes.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from student.models import Student, Vote, DeletionRequest, ProgramType
-from email_helper import send_email
 from admin.models import Candidate, Election, Course, Department, Announcement, YearLevel, Position, ElectionPosition
 from extensions import db, bcrypt, mail
 from flask_login import login_user, logout_user, login_required, current_user
@@ -271,7 +270,7 @@ def send_email_change_notification(student, old_email, new_email):
         </div>
         """
         
-        send_email(old_email, 'Your Email Has Been Changed', msg.html)
+        mail.send(msg)
         print(f"Email change notification sent to {old_email}")
     except Exception as e:
         print(f"Failed to send email change notification: {e}")
@@ -4012,7 +4011,7 @@ def send_email_change_notification(student, old_email, new_email):
         </div>
         """
         
-        send_email(old_email, 'Your Email Has Been Changed', msg.html)
+        mail.send(msg)
         print(f"Email change notification sent to {old_email}")
     except Exception as e:
         print(f"Failed to send email change notification: {e}")

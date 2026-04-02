@@ -56,20 +56,8 @@ if not SECRET_KEY:
         raise ValueError("No SECRET_KEY set in environment variables!")
     else:
         SECRET_KEY = "sabanal"
-        print("⚠️  WARNING: Using development SECRET_KEY!")
-
-# ============= RESEND CONFIGURATION (for Railway) =============
-if ON_RAILWAY:
-    USE_RESEND = True
-    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
-    RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
-else:
-    USE_RESEND = False
-    RESEND_API_KEY = None
-    RESEND_FROM_EMAIL = None
 
 # ============= EMAIL CONFIGURATION =============
-# Only used for local development (Gmail) or as fallback
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
 MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
@@ -77,28 +65,3 @@ MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
-
-# Print config for debugging
-print("=" * 50)
-print("📧 Email Configuration:")
-if ON_RAILWAY and USE_RESEND:
-    print("   Mode: Resend (Railway HTTPS API)")
-    print(f"   API Key: {'✅ Set' if RESEND_API_KEY else '❌ Missing'}")
-    print(f"   From Email: {RESEND_FROM_EMAIL}")
-else:
-    print("   Mode: Gmail SMTP (Local)")
-    print(f"   Server: {MAIL_SERVER}:{MAIL_PORT}")
-    print(f"   TLS: {MAIL_USE_TLS}")
-    print(f"   SSL: {MAIL_USE_SSL}")
-    print(f"   Username: {MAIL_USERNAME}")
-    print(f"   Password: {'✅ Set' if MAIL_PASSWORD else '❌ Missing'}")
-print("=" * 50)
-
-# ============= PRINT CONFIG FOR DEBUG (LOCAL ONLY) =============
-if not ON_RAILWAY and not ON_PYTHONANYWHERE:
-    print("=" * 50)
-    print("📝 Configuration Loaded:")
-    print(f"   Environment: Local")
-    print(f"   SECRET_KEY: {'✅ Set' if SECRET_KEY else '❌ Missing'}")
-    print(f"   Database: {MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}")
-    print("=" * 50)

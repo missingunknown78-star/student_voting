@@ -88,75 +88,13 @@
         font-size: 0.8rem;
     }
 
-    /* PDF Loading Overlay */
-    .pdf-loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
-
-    .pdf-loading-content {
-        background: white;
-        padding: 30px 40px;
-        border-radius: 16px;
-        text-align: center;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .pdf-loading-spinner {
-        width: 50px;
-        height: 50px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-right: 4px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 20px;
-    }
-
-    .pdf-loading-content p {
-        color: #2c3e50;
-        font-size: 16px;
-        margin: 0;
-        font-weight: 500;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    :root.dark-mode .pdf-loading-content {
-        background: #2d2d2d;
-    }
-
-    :root.dark-mode .pdf-loading-content p {
-        color: #f0f0f0;
-    }
+    /* REMOVED: PDF Loading Overlay styles - no longer needed */
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="distribution-container">
-    <!-- PDF Loading Overlay -->
-    <div class="pdf-loading-overlay" id="pdfLoadingOverlay">
-        <div class="pdf-loading-content">
-            <div class="pdf-loading-spinner"></div>
-            <p>Generating PDF... Please wait</p>
-        </div>
-    </div>
+    <!-- REMOVED: PDF Loading Overlay -->
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
@@ -184,10 +122,7 @@
             {% endif %}
         </div>
         <div class="header-actions">
-            <button class="export-btn" id="exportPDFBtn" disabled onclick="exportToPDF()">
-                <i class="fa-solid fa-file-pdf"></i>
-                Export PDF
-            </button>
+            <!-- REMOVED: Export PDF button -->
             <a href="#" class="back-btn" onclick="history.back(); return false;">
                 <i class="fa-solid fa-arrow-left"></i>
                 Back
@@ -287,19 +222,16 @@
         const electionSelect = document.getElementById('electionSelect');
         const viewBtn = document.getElementById('viewBtn');
         const populateBtn = document.getElementById('populateBtn');
-        const exportPDFBtn = document.getElementById('exportPDFBtn');
         
         // Election select change handler
         electionSelect.addEventListener('change', function() {
             if (this.value) {
                 viewBtn.disabled = false;
                 populateBtn.disabled = false;
-                exportPDFBtn.disabled = false;
                 addDebug(`Election selected: ${this.value} (Scope: ${this.options[this.selectedIndex].dataset.scope})`);
             } else {
                 viewBtn.disabled = true;
                 populateBtn.disabled = true;
-                exportPDFBtn.disabled = true;
             }
         });
         
@@ -310,7 +242,6 @@
             electionSelect.value = electionId;
             viewBtn.disabled = false;
             populateBtn.disabled = false;
-            exportPDFBtn.disabled = false;
             loadElectionData();
         }
     });
@@ -744,21 +675,7 @@
         return 'fa-user';
     }
     
-    function exportToPDF() {
-        if (!currentElectionId) {
-            alert('Please select an election first');
-            return;
-        }
-        
-        showPDFLoading();
-        addDebug('Exporting to PDF...');
-        
-        // Redirect to PDF export endpoint
-        window.location.href = `/ctumoalboal-comelec/api/vote-distribution/export/${currentElectionId}/pdf`;
-        
-        // Hide loading after a delay (since we're redirecting)
-        setTimeout(hidePDFLoading, 5000);
-    }
+    // REMOVED: exportToPDF function
     
     function showLoading() {
         document.getElementById('loadingOverlay').classList.add('active');
@@ -768,13 +685,7 @@
         document.getElementById('loadingOverlay').classList.remove('active');
     }
     
-    function showPDFLoading() {
-        document.getElementById('pdfLoadingOverlay').style.display = 'flex';
-    }
-    
-    function hidePDFLoading() {
-        document.getElementById('pdfLoadingOverlay').style.display = 'none';
-    }
+    // REMOVED: showPDFLoading and hidePDFLoading functions
     
     function hideNoDataMessage() {
         const noDataMsg = document.getElementById('noDataMessage');
