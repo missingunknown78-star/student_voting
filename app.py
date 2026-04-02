@@ -28,7 +28,7 @@ app.config['WTF_CSRF_SSL_STRICT'] = False
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 
-# ---------------------- Mail Configuration ---------------------- #
+# ---------------------- Mail Configuration (Updated) ---------------------- #
 app.config['MAIL_SERVER'] = MAIL_SERVER
 app.config['MAIL_PORT'] = MAIL_PORT
 app.config['MAIL_USE_TLS'] = MAIL_USE_TLS
@@ -36,7 +36,8 @@ app.config['MAIL_USE_SSL'] = MAIL_USE_SSL
 app.config['MAIL_USERNAME'] = MAIL_USERNAME
 app.config['MAIL_PASSWORD'] = MAIL_PASSWORD
 app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
-app.config['MAIL_TIMEOUT'] = 60  # Add timeout for email
+app.config['MAIL_TIMEOUT'] = 30  # Reduced timeout
+app.config['MAIL_MAX_EMAILS'] = None
 
 # ---------------------- Initialize Extensions ---------------------- #
 db.init_app(app)
@@ -64,6 +65,116 @@ def load_user(user_id):
 @app.route('/')
 def index():
     return redirect(url_for('student.login'))
+
+# ---------------------- DEBUG ROUTES FOR TESTING ---------------------- #
+
+@app.route('/debug-email')
+def debug_email():
+    """Test email configuration and sending"""
+    try:
+        # Show current email config
+        config_info = {
+            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+            'MAIL_PORT': app.config.get('MAIL_PORT'),
+            'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+            'MAIL_USE_SSL': app.config.get('MAIL_USE_SSL'),
+            'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
+            'MAIL_PASSWORD': 'SET' if app.config.get('MAIL_PASSWORD') else 'NOT SET',
+            'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
+            'MAIL_TIMEOUT': app.config.get('MAIL_TIMEOUT'),
+        }
+        
+        # Try to send a test email
+        from flask_mail import Message
+        msg = Message('Test Email from Railway',
+                      recipients=['ctucomelecprototype@gmail.com'],  # Send to yourself
+                      body=f'This is a test email from your Railway app\n\nConfig: {config_info}')
+        mail.send(msg)
+        
+        return f"✅ Test email sent successfully!<br><br>Config: {config_info}"
+    except Exception as e:
+        return f"❌ Error sending email: {str(e)}<br><br>Config: {config_info}"
+
+@app.route('/test-gmail-connection')
+def test_gmail():
+    """Test if Railway can connect to Gmail"""
+    import socket
+    import smtplib
+    
+    results = []
+    results.append("<h3>Testing Gmail Connection from Railway</h3>")
+    
+    # Test DNS resolution
+    try:
+        ip = socket.gethostbyname('smtp.gmail.com')
+        results.append(f"✅ DNS resolved: smtp.gmail.com -> {ip}")
+    except Exception as e:
+        results.append(f"❌ DNS failed: {e}")
+    
+    # Test port 587 connection (TLS)
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        result = sock.connect_ex(('smtp.gmail.com', 587))
+        sock.close()
+        if result == 0:
+            results.append("✅ Port 587 (TLS) is reachable")
+        else:
+            results.append(f"❌ Port 587 (TLS) is blocked (error: {result})")
+    except Exception as e:
+        results.append(f"❌ Port 587 test failed: {e}")
+    
+    # Test port 465 connection (SSL)
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        result = sock.connect_ex(('smtp.gmail.com', 465))
+        sock.close()
+        if result == 0:
+            results.append("✅ Port 465 (SSL) is reachable")
+        else:
+            results.append(f"❌ Port 465 (SSL) is blocked (error: {result})")
+    except Exception as e:
+        results.append(f"❌ Port 465 test failed: {e}")
+    
+    # Test actual SMTP connection on port 587
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
+        server.starttls()
+        results.append("✅ SMTP connection on port 587 successful")
+        server.quit()
+    except Exception as e:
+        results.append(f"❌ SMTP connection on port 587 failed: {e}")
+    
+    return "<br>".join(results)
+
+@app.route('/test-simple-email')
+def test_simple_email():
+    """Simple email test without Flask-Mail"""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    try:
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = app.config['MAIL_USERNAME']
+        msg['To'] = 'ctucomelecprototype@gmail.com'
+        msg['Subject'] = 'Simple Test Email from Railway'
+        
+        body = "This is a test email sent directly with smtplib"
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Connect and send
+        server = smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT'], timeout=30)
+        server.starttls()
+        server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+        server.send_message(msg)
+        server.quit()
+        
+        return "✅ Simple email sent successfully using smtplib!"
+    except Exception as e:
+        return f"❌ Simple email failed: {str(e)}"
 
 # ---------------------- Register Blueprints ---------------------- #
 from admin.routes import admin_bp

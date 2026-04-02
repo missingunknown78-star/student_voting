@@ -59,13 +59,25 @@ if not SECRET_KEY:
         print("⚠️  WARNING: Using development SECRET_KEY!")
 
 # ============= EMAIL CONFIGURATION =============
-MAIL_SERVER = os.environ.get('MAIL_SERVER', '142.250.150.108')
-MAIL_PORT = int(os.environ.get('MAIL_PORT', 465))
-MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'
-MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'
+# Updated for better compatibility with Railway
+MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))  # Changed to 587
+MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'  # Changed to True
+MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'  # Changed to False
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+
+# Print email config for debugging
+print("=" * 50)
+print("📧 Email Configuration:")
+print(f"   Server: {MAIL_SERVER}:{MAIL_PORT}")
+print(f"   TLS: {MAIL_USE_TLS}")
+print(f"   SSL: {MAIL_USE_SSL}")
+print(f"   Username: {MAIL_USERNAME}")
+print(f"   Password: {'✅ Set' if MAIL_PASSWORD else '❌ Missing'}")
+print(f"   Default Sender: {MAIL_DEFAULT_SENDER}")
+print("=" * 50)
 
 # ============= PRINT CONFIG FOR DEBUG (LOCAL ONLY) =============
 if not ON_RAILWAY and not ON_PYTHONANYWHERE:
