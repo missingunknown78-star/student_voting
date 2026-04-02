@@ -7,6 +7,10 @@ from extensions import mail, db
 from flask import url_for
 import secrets
 from datetime import datetime
+import socket
+
+# Set default timeout for all socket connections
+socket.setdefaulttimeout(30)
 
 def generate_device_fingerprint():
     """
@@ -35,7 +39,9 @@ def generate_verification_token():
 
 
 def send_new_device_email(student, trusted_device):
-    from datetime import datetime
+    """Send email when new device is detected"""
+    import socket
+    socket.setdefaulttimeout(30)
 
     token = generate_verification_token()
     trusted_device.verification_token = token

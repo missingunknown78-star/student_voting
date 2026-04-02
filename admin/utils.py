@@ -5,6 +5,10 @@ import os
 import json
 import pickle
 from phe import paillier
+import socket
+
+# Set default timeout for all socket connections
+socket.setdefaulttimeout(30)
 
 # Helper function to check if election has been tallied
 def check_if_tallied(election_id):
@@ -158,7 +162,7 @@ def get_candidate_vote_count(candidate_id, election_id, use_tallied=False):
 # Helper to check if election can be tallied
 def can_tally_election(election_id, force=False):
     """Check if election can be tallied (ended or force allowed)"""
-    from models import Election
+    from admin.models import Election
     import pytz
     from datetime import datetime
     
@@ -210,8 +214,6 @@ def log_audit(action, description=None):
     
     return log
 
-
-
 # Add to admin/utils.py or create a new file admin/sync_utils.py
 
 def sync_registered_students_with_ctu():
@@ -256,16 +258,15 @@ def sync_registered_students_with_ctu():
         'kept_with_votes': kept_with_votes
     }
 
-
-
-
-
 from flask import url_for
 from flask_mail import Message
 from extensions import mail
 
 def send_admin_device_verification_email(admin, device, token):
     """Send device verification email to admin"""
+    import socket
+    socket.setdefaulttimeout(30)
+    
     verify_url = url_for('admin.verify_admin_device', token=token, _external=True)
     
     msg = Message(
@@ -340,16 +341,17 @@ def send_admin_device_verification_email(admin, device, token):
         """
     )
     
-    mail.send(msg)
-
-
-
-from flask import url_for
-from flask_mail import Message
-from extensions import mail
+    try:
+        mail.send(msg)
+        print(f"✅ Device verification email sent to {admin.email}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
 
 def send_device_removal_confirmation(admin, device, token):
     """Send email confirmation for device removal"""
+    import socket
+    socket.setdefaulttimeout(30)
+    
     confirm_url = url_for('admin.confirm_remove_device', token=token, _external=True)
     cancel_url = url_for('admin.cancel_remove_device', token=token, _external=True)
     
@@ -431,106 +433,17 @@ def send_device_removal_confirmation(admin, device, token):
         """
     )
     
-    mail.send(msg)
-
-
-
-    from flask import url_for
-from flask_mail import Message
-from extensions import mail
-from datetime import datetime
-
-def send_device_removal_confirmation(admin, device, token):
-    """Send email confirmation for device removal"""
-    confirm_url = url_for('admin.confirm_remove_device', token=token, _external=True)
-    cancel_url = url_for('admin.cancel_remove_device', token=token, _external=True)
-    
-    msg = Message(
-        subject="🔐 Confirm Device Removal - COMELEC Admin",
-        recipients=[admin.email],
-        html=f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
-            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <!-- Header -->
-                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Confirm Device Removal</h1>
-                </div>
-                
-                <!-- Content -->
-                <div style="padding: 40px 30px;">
-                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
-                    
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
-                        We received a request to remove this trusted device from your account:
-                    </p>
-                    
-                    <!-- Device Info Card -->
-                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #e2e8f0;">
-                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                            <div style="background: #fee2e2; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 24px;">💻</span>
-                            </div>
-                            <div style="flex: 1;">
-                                <p style="margin: 0 0 5px 0; color: #1f2937; font-weight: 600;">{device.device_name or 'Unknown Device'}</p>
-                                <p style="margin: 0; color: #6b7280; font-size: 14px;">IP: {device.ip_address}</p>
-                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Browser: {device.browser}</p>
-                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Trusted until: {device.expires_at.strftime('%Y-%m-%d %H:%M') if device.expires_at else 'N/A'}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
-                        If you want to remove this device from your trusted devices list, click the button below:
-                    </p>
-                    
-                    <!-- Confirm Button -->
-                    <div style="text-align: center; margin: 35px 0;">
-                        <a href="{confirm_url}" style="display: inline-block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; text-decoration: none; padding: 15px 40px; border-radius: 40px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">✅ Yes, Remove Device</a>
-                    </div>
-                    
-                    <!-- Cancel Link -->
-                    <div style="text-align: center; margin: 20px 0;">
-                        <a href="{cancel_url}" style="color: #6b7280; text-decoration: none; font-size: 14px;">❌ No, keep this device</a>
-                    </div>
-                    
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
-                        If you didn't request this, please secure your account immediately.
-                    </p>
-                    
-                    <!-- Security Notice -->
-                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                        <p style="margin: 0; color: #991b1b; font-size: 14px;">
-                            <strong>⚠️ Security Notice:</strong> This link will expire in 15 minutes. 
-                            If you didn't request this, someone may be trying to access your account.
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Footer -->
-                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
-                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-    )
-    
-    mail.send(msg)
-
-
-
-
+    try:
+        mail.send(msg)
+        print(f"✅ Device removal email sent to {admin.email}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
 
 def send_admin_new_device_email(admin, device):
     """Send email when new device is detected"""
+    import socket
+    socket.setdefaulttimeout(30)
+    
     token = device.generate_verification_token()
     db.session.commit()
     
@@ -636,12 +549,11 @@ def send_admin_new_device_email(admin, device):
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 
-
-
-
 def send_2fa_disable_confirmation(admin, token):
     """Send email to confirm 2FA disabling"""
-    from flask import url_for
+    import socket
+    socket.setdefaulttimeout(30)
+    from datetime import datetime
     
     confirm_url = url_for('admin.confirm_disable_2fa', token=token.token, _external=True)
     cancel_url = url_for('admin.cancel_disable_2fa', token=token.token, _external=True)
