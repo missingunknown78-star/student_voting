@@ -59,7 +59,7 @@ if not SECRET_KEY:
         print("⚠️  WARNING: Using development SECRET_KEY!")
 
 # ============= EMAIL CONFIGURATION =============
-MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+MAIL_SERVER = os.environ.get('MAIL_SERVER', '142.250.150.108')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
 MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
 MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
