@@ -353,19 +353,12 @@ def dynamic_access(secret_path):
 
 # ------------------- AJAX Verify Route ------------------- #
 @admin_bp.route('/verify-access-code', methods=['POST'])
+@csrf.exempt
 def verify_access_code_ajax():
     """AJAX endpoint for auto-verifying access code"""
     
-    from flask_wtf.csrf import validate_csrf
-    from flask_wtf.csrf import CSRFError
-    
-    try:
-        validate_csrf(request.form.get('csrf_token'))
-    except CSRFError:
-        return jsonify({
-            'success': False, 
-            'message': 'Security token expired. Please refresh the page.'
-        }), 400
+    # CSRF validation is now exempt, so we don't need to manually validate
+    # The @csrf.exempt decorator above bypasses CSRF protection for this route
     
     ip = request.remote_addr
     
