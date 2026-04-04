@@ -14,15 +14,33 @@ app = Flask(__name__)
 # ---------------------- Configuration ---------------------- #
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# Database configuration - works with Railway MySQL
+# Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Detect PythonAnywhere
+ON_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
 
 # ---- CSRF Configuration ----
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['WTF_CSRF_SECRET_KEY'] = SECRET_KEY
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
 app.config['WTF_CSRF_SSL_STRICT'] = False
+
+# ---- PythonAnywhere Proxy Fix (ADD THIS BLOCK) ----
+if ON_PYTHONANYWHERE:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+    
+    app.config['WTF_CSRF_TRUSTED_ORIGINS'] = [
+        'evotingprototype.pythonanywhere.com',
+        'https://evotingprototype.pythonanywhere.com'
+    ]
+    app.config['SESSION_COOKIE_DOMAIN'] = '.pythonanywhere.com'
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    
+    print("✅ PythonAnywhere proxy fix applied")
 
 # ---- Session Security ----
 app.config['SESSION_PERMANENT'] = True
