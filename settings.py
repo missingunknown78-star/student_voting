@@ -39,6 +39,7 @@ elif ON_PYTHONANYWHERE:
     MYSQL_PORT = "3306"
     MYSQL_DB = "evotingprototype$student_voting"
     DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}"
+    print(f"✅ Using PythonAnywhere database: {MYSQL_DB}")
     
 else:
     # Local XAMPP MySQL
