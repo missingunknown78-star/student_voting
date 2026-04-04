@@ -152,8 +152,7 @@
         {% endif %}
     </div>
 
-    <!-- FIXED: Added data-all-positions attribute to form -->
-    <form method="POST" id="configForm" action="{{ url_for('admin.configure_election_positions', election_id=election.id) }}" data-all-positions="{{ all_positions|map(attribute='id')|list|tojson }}">
+    <form method="POST" id="configForm" action="{{ url_for('admin.configure_election_positions', election_id=election.id) }}">
         <!-- CSRF Token - CRITICAL for security -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
@@ -363,11 +362,9 @@ function updateSelectedCount() {
     document.getElementById('selected-count').textContent = selectedCount;
 }
 
-// FIXED: Get positions from data attribute instead of direct JavaScript
 function toggleAllPositions(isChecked) {
     const hiddenContainer = document.getElementById('hidden-positions-container');
-    // Safe way to get positions - from data attribute
-    const allPositions = JSON.parse(document.getElementById('configForm').getAttribute('data-all-positions'));
+    const allPositions = {{ all_positions|map(attribute='id')|list|tojson }};
     
     // Clear existing hidden inputs
     hiddenContainer.innerHTML = '';

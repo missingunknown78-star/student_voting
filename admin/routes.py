@@ -5857,8 +5857,28 @@ def configure_election_positions(election_id):
     position_program_types = {ep.position_id: ep.program_type_id for ep in configured_positions if ep.program_type_id}
     
     if request.method == 'POST':
+        # ========== DEBUGGING: Print everything ==========
+        import sys
+        print("=" * 60, file=sys.stderr)
+        print("CONFIGURE POSITIONS - POST REQUEST RECEIVED", file=sys.stderr)
+        print("=" * 60, file=sys.stderr)
+        print(f"Election ID: {election_id}", file=sys.stderr)
+        print(f"Election Title: {election.title}", file=sys.stderr)
+        print(f"Form keys: {list(request.form.keys())}", file=sys.stderr)
+        print(f"Selected positions: {request.form.getlist('positions')}", file=sys.stderr)
+        
         # Get form data
         selected_positions = request.form.getlist('positions')
+        
+        # Print each position's data
+        for pos_id in selected_positions:
+            max_votes = request.form.get(f'max_votes_{pos_id}')
+            course_id = request.form.get(f'course_{pos_id}')
+            program_type_id = request.form.get(f'program_type_{pos_id}')
+            print(f"Position {pos_id}: max_votes={max_votes}, course_id={course_id}, program_type_id={program_type_id}", file=sys.stderr)
+        
+        print("=" * 60, file=sys.stderr)
+        # ========== END DEBUGGING ==========
         
         # Validate: At least one position must be selected
         if not selected_positions:
@@ -5924,9 +5944,11 @@ def configure_election_positions(election_id):
             )
             
             flash('Election positions configured successfully!', 'success')
+            print("SUCCESS: Configuration saved!", file=sys.stderr)
             
         except Exception as e:
             db.session.rollback()
+            print(f"ERROR: {str(e)}", file=sys.stderr)
             flash(f'Error configuring positions: {str(e)}', 'error')
         
         # Redirect back to the same page
