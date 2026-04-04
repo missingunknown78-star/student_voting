@@ -7,8 +7,139 @@
     
     <!-- CSRF Token Meta Tag - For JavaScript if needed -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_2fa_verify.css') }}">
-
+    
+    <!-- Use existing admin_login.css -->
+    <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_login.css') }}">
+    
+    <style>
+        /* Override container size for 2FA verification page */
+        .login-container {
+            width: 380px !important;
+            padding: 35px 30px !important;
+        }
+        
+        /* Header styling matching old structure but with admin_login theme */
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .header h2 {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            line-height: 1.4;
+        }
+        
+        /* Digits counter styling - positioned like old CSS */
+        .digits-counter {
+            text-align: center;
+            font-size: 12px;
+            margin-top: -10px;
+            margin-bottom: 20px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        #digitCount {
+            font-weight: 700 !important;
+            font-size: 14px;
+            color: #000000 !important;  /* Changed to BLACK */
+            background: rgba(255, 255, 255, 0.8);  /* Light background for contrast */
+            padding: 2px 8px;
+            border-radius: 20px;
+            display: inline-block;
+            min-width: 28px;
+        }
+        
+        /* Success message styling */
+        .success-msg {
+            margin-top: 12px;
+            text-align: center;
+            color: #ccffcc;
+            font-size: 13px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 8px;
+            transition: opacity 0.5s ease;
+        }
+        
+        .success-msg.fade-out {
+            opacity: 0;
+        }
+        
+        /* Back link styling - matching old structure */
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .back-link a {
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .back-link a:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+        
+        /* Helper text styling - matching old structure */
+        .helper-text {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Override input styling for 2FA code */
+        .input-group input {
+            font-size: 28px;
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+            letter-spacing: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        /* Error message styling */
+        .error-msg {
+            margin-top: 12px;
+            text-align: center;
+            color: #ffcccc;
+            font-size: 13px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        /* Shake animation for error */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .error-msg {
+            animation: shake 0.45s ease;
+        }
+    </style>
 </head>
 <body>
     <div class="login-container">
@@ -88,12 +219,9 @@
                     const length = codeInput.value.length;
                     digitCountSpan.textContent = length;
                     
-                    // Add visual feedback when reaching 6 digits
-                    if (length === 6) {
-                        digitCountSpan.style.color = '#10b981';
-                    } else {
-                        digitCountSpan.style.color = '#3b82f6';
-                    }
+                    // Keep color black always (no color change on 6 digits)
+                    digitCountSpan.style.color = '#000000';
+                    digitCountSpan.style.background = 'rgba(255, 255, 255, 0.8)';
                 };
                 
                 codeInput.addEventListener('input', updateDigitCount);

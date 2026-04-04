@@ -58,10 +58,18 @@ if not SECRET_KEY:
         SECRET_KEY = "sabanal"
 
 # ============= EMAIL CONFIGURATION =============
+# SSL Configuration (for Gmail with port 465)
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
-MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
+MAIL_PORT = int(os.environ.get('MAIL_PORT', 465))  # Changed to 465 for SSL
+MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true'  # SSL defaults to True
+MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true'  # TLS defaults to False
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+
+# Debug: Print email settings (remove this after testing)
+print(f"📧 Email Settings Loaded:")
+print(f"   Server: {MAIL_SERVER}:{MAIL_PORT}")
+print(f"   SSL: {MAIL_USE_SSL}, TLS: {MAIL_USE_TLS}")
+print(f"   Username: {MAIL_USERNAME}")
+print(f"   Password: {'✓ Set' if MAIL_PASSWORD else '✗ Missing'}")

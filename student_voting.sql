@@ -11167,7 +11167,7 @@ ALTER TABLE `voter_tracking`
 --
 ALTER TABLE `votes`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `finder_hash` (`finder_hash`) USING HASH,
+  ADD UNIQUE KEY `finder_hash` (`finder_hash`(255)) USING HASH,
   ADD KEY `idx_votes_student` (`student_id`),
   ADD KEY `idx_votes_election` (`election_id`),
   ADD KEY `idx_votes_created` (`created_at`),

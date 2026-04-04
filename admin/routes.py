@@ -725,7 +725,8 @@ def generate_2fa_secret(admin):
 def setup_2fa():
     # Check if user is in pre-2fa session
     if 'pre_2fa_admin_id' not in session:
-        flash('Please login first.', 'warning')
+        # REMOVED the flash message to avoid notification
+        # flash('Please login first.', 'warning')  # <-- COMMENT THIS OUT
         return redirect(url_for('admin.login'))
     
     admin_id = session['pre_2fa_admin_id']
@@ -743,84 +744,7 @@ def setup_2fa():
     secret = admin.totp_secret
     totp = pyotp.TOTP(secret)
 
-    if request.method == 'POST':
-        code = request.form.get('code')
-        if totp.verify(code):
-            db.session.commit()  # Secret already saved
-            
-            # Log the user in
-            login_user(admin)
-            session.permanent = True
-            
-            # ✅ KEEP THIS AUDIT LOG (2FA ENABLED - important security action)
-            username = getattr(admin, 'username', 'Unknown')
-            ip = request.remote_addr
-            log_audit(
-                action='2FA_ENABLED',
-                description=f"Admin user '{username}' enabled two-factor authentication from IP: {ip}"
-            )
-            
-            # ===== CONSISTENT FINGERPRINT GENERATION =====
-            device_info = AdminTrustedDevice.get_device_info(request)
-            
-            # Use the EXACT same method as the model's generate_fingerprint()
-            # Format: admin_id + ip_address + user_agent + browser + os
-            fingerprint_data = f"{admin.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
-            device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
-            
-            print(f"🔑 Setup generated fingerprint: {device_fingerprint[:20]}...")
-            
-            # Store in session
-            session['admin_device_fingerprint'] = device_fingerprint
-            
-            # CHECK IF THIS DEVICE ALREADY EXISTS
-            existing_device = AdminTrustedDevice.query.filter_by(
-                admin_id=admin.id,
-                device_fingerprint=device_fingerprint
-            ).first()
-            
-            if existing_device:
-                # Update existing device
-                existing_device.trusted = True
-                existing_device.last_used = datetime.utcnow()
-                existing_device.expires_at = datetime.utcnow() + timedelta(days=30)
-                # Update device info
-                existing_device.ip_address = device_info['ip_address']
-                existing_device.user_agent = device_info['user_agent']
-                existing_device.browser = device_info['browser']
-                existing_device.os = device_info['os']
-                existing_device.device_type = device_info['device_type']
-                existing_device.device_name = f"{device_info['browser']} on {device_info['os']}"
-                db.session.commit()
-                print(f"✅ Updated existing device: {existing_device.id}")
-            else:
-                # Create new trusted device
-                new_device = AdminTrustedDevice(
-                    admin_id=admin.id,
-                    device_name=f"{device_info['browser']} on {device_info['os']}",
-                    ip_address=device_info['ip_address'],
-                    user_agent=device_info['user_agent'],
-                    browser=device_info['browser'],
-                    os=device_info['os'],
-                    device_type=device_info['device_type'],
-                    trusted=True,
-                    expires_at=datetime.utcnow() + timedelta(days=30)
-                )
-                # Set fingerprint using the same method
-                new_device.device_fingerprint = device_fingerprint
-                db.session.add(new_device)
-                db.session.commit()
-                print(f"✅ Created new device: {new_device.id}")
-            
-            # Clean up session
-            session.pop('pre_2fa_admin_id', None)
-            session.pop('2fa_setup_complete', None)
-            
-            flash("2FA setup successful! Welcome, Admin.", "success")
-            return redirect(url_for('admin.dashboard'))
-        else:
-            flash("Invalid code. Try again.", "error")
-
+    # Only GET request - no POST processing since you removed the form
     totp_uri = totp.provisioning_uri(
         name=admin.email,
         issuer_name="CTU-COMELEC Admin"
@@ -883,7 +807,6 @@ def request_disable_2fa():
 
 
 @admin_bp.route('/2fa/disable/confirm/<token>')
-@login_required
 def confirm_disable_2fa(token):
     """Step 2: User clicks YES in email - actually disable 2FA"""
     try:
@@ -898,10 +821,8 @@ def confirm_disable_2fa(token):
         if not disable_token:
             title = "Invalid Link"
             message = "This confirmation link is invalid or has already been used. Please request a new one."
-        elif disable_token.admin_id != current_user.id:
-            title = "Invalid Link"
-            message = "This confirmation link is for a different user account."
         else:
+            # Check if token expired
             from datetime import datetime
             if datetime.utcnow() > disable_token.expires_at:
                 title = "Link Expired"
@@ -910,25 +831,26 @@ def confirm_disable_2fa(token):
                 # Get the admin
                 admin = Admin.query.get(disable_token.admin_id)
                 
-                # Disable 2FA
-                admin.totp_secret = None
-                disable_token.used = True
-                
-                # 🔥 SET SESSION FLAG for refresh
-                session['2fa_status_changed'] = True
-                session['2fa_new_status'] = 'disabled'
-                
-                db.session.commit()
-                
-                # Log this action
-                log_audit(
-                    action='2FA_DISABLED',
-                    description=f"Admin user '{admin.username}' disabled two-factor authentication via email confirmation from IP: {request.remote_addr}"
-                )
-                
-                title = "2FA Disabled Successfully"
-                message = "Two-Factor Authentication has been disabled on your account."
-                success = True
+                if not admin:
+                    title = "Invalid Link"
+                    message = "Admin account not found."
+                else:
+                    # Disable 2FA
+                    admin.totp_secret = None
+                    disable_token.used = True
+                    
+                    db.session.commit()
+                    
+                    # Only log audit if user is authenticated (has id)
+                    if current_user.is_authenticated and hasattr(current_user, 'id'):
+                        log_audit(
+                            action='2FA_DISABLED',
+                            description=f"Admin user '{admin.username}' disabled two-factor authentication via email confirmation from IP: {request.remote_addr}"
+                        )
+                    
+                    title = "2FA Disabled Successfully"
+                    message = "Two-Factor Authentication has been disabled on your account."
+                    success = True
         
         # Render result page
         return render_template('admin_2fa_disable_result.html',
@@ -938,6 +860,7 @@ def confirm_disable_2fa(token):
         
     except Exception as e:
         print(f"Error in confirm_disable_2fa: {str(e)}")
+        db.session.rollback()
         return render_template('admin_2fa_disable_result.html',
                              success=False,
                              title="Error",
@@ -945,7 +868,6 @@ def confirm_disable_2fa(token):
 
 
 @admin_bp.route('/2fa/disable/cancel/<token>')
-@login_required
 def cancel_disable_2fa(token):
     """Step 3: User clicks NO in email - cancel the request"""
     try:
@@ -956,17 +878,14 @@ def cancel_disable_2fa(token):
             # Mark as used so it can't be used later
             disable_token.used = True
             
-            # 🔥 SET SESSION FLAG for refresh (even for cancel)
-            session['2fa_status_changed'] = True
-            session['2fa_new_status'] = 'still enabled (cancelled)'
+            # Only log audit if user is authenticated
+            if current_user.is_authenticated and hasattr(current_user, 'id'):
+                log_audit(
+                    action='2FA_DISABLE_CANCELLED',
+                    description=f"Admin user '{current_user.username}' cancelled 2FA disable request from IP: {request.remote_addr}"
+                )
             
             db.session.commit()
-            
-            # Log this cancellation
-            log_audit(
-                action='2FA_DISABLE_CANCELLED',
-                description=f"Admin user '{current_user.username}' cancelled 2FA disable request from IP: {request.remote_addr}"
-            )
         
         # Render cancellation result
         return render_template('admin_2fa_disable_result.html',
@@ -976,6 +895,7 @@ def cancel_disable_2fa(token):
         
     except Exception as e:
         print(f"Error in cancel_disable_2fa: {str(e)}")
+        db.session.rollback()
         return render_template('admin_2fa_disable_result.html',
                              success=False,
                              title="Error",
@@ -6644,6 +6564,10 @@ def election_results(election_id):
     position_limits = {}
     election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     
+    # Get max votes for each position
+    for ep in election_positions:
+        position_limits[ep.position_id] = ep.max_votes
+    
     # GET ALL VOTES
     all_votes = Vote.query.filter_by(election_id=election_id).all()
     
@@ -6659,17 +6583,14 @@ def election_results(election_id):
         print("📊 Using finder_hashes for live results")
         vote_counts = get_admin_live_vote_counts(election_id)
     
-    # ===== CALCULATE VOTERS PER POSITION (students who actually voted for this position) =====
+    # ===== CALCULATE VOTERS PER POSITION =====
     position_voter_counts = {}
-    
-    # First, create a mapping of candidate_id to position_id for quick lookup
     candidate_position_map = {c.id: c.position_id for c in candidates}
     
     for ep in election_positions:
         position_id = ep.position_id
         position_name = Position.query.get(position_id).name if Position.query.get(position_id) else "Unknown"
         
-        # Track unique voters who voted for this position
         voters_for_position = set()
         
         for vote in all_votes:
@@ -6680,7 +6601,6 @@ def election_results(election_id):
                 finder_data = json.loads(vote.finder_hash)
                 candidate_ids = []
                 
-                # Extract candidate IDs from finder_hash
                 if isinstance(finder_data, dict):
                     if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
                         for item in finder_data['hashes']:
@@ -6693,15 +6613,12 @@ def election_results(election_id):
                         if isinstance(item, dict) and 'candidate_id' in item:
                             candidate_ids.append(item['candidate_id'])
                 
-                # Check if any of the voted candidates belong to this position
                 for cid in candidate_ids:
                     cand_position_id = candidate_position_map.get(cid)
                     if cand_position_id == position_id:
-                        # This vote is for this position
                         if vote.student_id:
                             voters_for_position.add(vote.student_id)
                         else:
-                            # For anonymized votes, use vote.id as unique identifier
                             voters_for_position.add(f"anon_{vote.id}")
                         break
                         
@@ -6710,8 +6627,7 @@ def election_results(election_id):
                 continue
         
         position_voter_counts[position_id] = len(voters_for_position)
-        
-        print(f"📊 Position {position_name}: Voters who voted = {len(voters_for_position)}")
+        print(f"📊 Position {position_name}: Voters = {len(voters_for_position)}")
     
     # ===== GROUP CANDIDATES BY POSITION =====
     candidates_by_position = {}
@@ -6721,16 +6637,9 @@ def election_results(election_id):
         position_name = candidate.position.name if candidate.position else "Unknown"
         
         if position_name not in candidates_by_position:
-            # Get max_votes safely
             max_votes = position_limits.get(position_id, 1)
-            if max_votes is None:
-                max_votes = 1
-                
-            # Get voter count safely
             voter_count = position_voter_counts.get(position_id, 0)
-            if voter_count is None:
-                voter_count = 0
-                
+            
             candidates_by_position[position_name] = {
                 'id': position_id,
                 'name': position_name,
@@ -6740,8 +6649,6 @@ def election_results(election_id):
             }
         
         vote_count = vote_counts.get(candidate.id, 0)
-        if vote_count is None:
-            vote_count = 0
         
         candidates_by_position[position_name]['candidates'].append({
             'id': candidate.id,
@@ -6756,68 +6663,59 @@ def election_results(election_id):
             'is_winner': False
         })
     
-    # ===== CALCULATE PERCENTAGES PER POSITION USING ACTUAL VOTERS =====
+    # ===== CALCULATE PERCENTAGES AND DETERMINE WINNERS =====
     for position_name, pos_data in candidates_by_position.items():
         voter_count = pos_data['voter_count']
+        max_winners = pos_data['max_votes']
         
-        print(f"📊 {position_name}: Total voters who voted = {voter_count}")
+        print(f"📊 {position_name}: Max winners = {max_winners}, Voters = {voter_count}")
         
+        # Calculate percentages
         if not voter_count or voter_count == 0:
             for candidate in pos_data['candidates']:
                 candidate['voter_percentage'] = 0
         else:
             for candidate in pos_data['candidates']:
-                # Percentage = (votes received ÷ total voters who voted for this position) × 100
                 percentage = (candidate['vote_count'] / voter_count) * 100
                 candidate['voter_percentage'] = round(percentage, 2)
-                print(f"  {candidate['first_name']} {candidate['last_name']}: {candidate['vote_count']} votes / {voter_count} voters = {candidate['voter_percentage']}%")
         
-        # Sort candidates by vote count
+        # Sort candidates by vote count (descending)
         pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
-    
-    # ===== DETERMINE WINNERS =====
-    for position_name, pos_data in candidates_by_position.items():
-        max_winners = pos_data['max_votes']
-        candidates_list = pos_data['candidates']
         
-        # Only mark as winner if vote count > 0 and within max_winners limit
-        for i, candidate in enumerate(candidates_list):
+        # Determine winners - THIS IS THE CRITICAL PART FOR MULTI-WINNER
+        for i, candidate in enumerate(pos_data['candidates']):
+            # Mark as winner if:
+            # 1. Index is within max_winners limit
+            # 2. Vote count is greater than 0
             if i < max_winners and candidate['vote_count'] > 0:
                 candidate['is_winner'] = True
+                print(f"  ✓ WINNER: {candidate['first_name']} {candidate['last_name']} - {candidate['vote_count']} votes")
+            else:
+                candidate['is_winner'] = False
     
-    # Convert to list for template, sorted by position_id
-    position_order = []
-    for pos_name, pos_data in candidates_by_position.items():
-        position_order.append((pos_data['id'], pos_name))
-    position_order.sort(key=lambda x: x[0])
-    
-    sorted_candidate_results_by_position = {}
-    for pos_id, pos_name in position_order:
-        sorted_candidate_results_by_position[pos_name] = candidates_by_position[pos_name]
-    
-    # ===== CREATE FLAT CANDIDATE RESULTS LIST FOR DETAILED TABLE =====
-    flat_candidate_results = []
-    for position_name, pos_data in sorted_candidate_results_by_position.items():
-        for candidate in pos_data['candidates']:
-            flat_candidate_results.append(candidate)
-    
-    # Build winners_by_position for template
+    # ===== BUILD WINNERS BY POSITION (MULTI-WINNER SUPPORT) =====
     winners_by_position = {}
-    for pos_name, pos_data in sorted_candidate_results_by_position.items():
+    for position_name, pos_data in candidates_by_position.items():
+        # Get all winners for this position (not just first one)
         winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
         if winners:
-            winners_by_position[pos_name] = winners
+            winners_by_position[position_name] = winners
+            print(f"🏆 {position_name}: {len(winners)} winner(s) - {[w['first_name'] + ' ' + w['last_name'] for w in winners]}")
+    
+    # ===== CREATE FLAT CANDIDATE RESULTS LIST =====
+    flat_candidate_results = []
+    for position_name, pos_data in candidates_by_position.items():
+        for candidate in pos_data['candidates']:
+            flat_candidate_results.append(candidate)
     
     # ===== CALCULATE OVERALL STATISTICS =====
     total_votes_cast = len(all_votes)
     
-    # For overall statistics, we still need eligible voters
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
         total_eligible_voters = Student.query.count()
     
-    # Apply year level filtering for campus elections
     if election.scope == 'campus' and election.year_levels and election.year_levels != 'all':
         allowed_years = election.year_levels.split(',')
         total_eligible_voters = Student.query.filter(Student.year_level_id.in_(allowed_years)).count()
@@ -6827,8 +6725,7 @@ def election_results(election_id):
     if students_not_voted < 0:
         students_not_voted = 0
     
-    # ===== CREATE ELIGIBLE VOTERS DICTIONARY FOR TEMPLATE =====
-    # Build position_eligible_voters from position_voter_counts to maintain compatibility
+    # ===== BUILD POSITION ELIGIBLE VOTERS DICTIONARY =====
     position_eligible_voters = {}
     for ep in election_positions:
         position_id = ep.position_id
@@ -6839,7 +6736,16 @@ def election_results(election_id):
             'max_votes': position_limits.get(position_id, 1)
         }
     
-    # ===== REGISTER HELPER FUNCTIONS FOR TEMPLATE =====
+    # ===== DEBUG OUTPUT =====
+    print("\n" + "="*50)
+    print("FINAL WINNERS BY POSITION:")
+    for pos, winners in winners_by_position.items():
+        print(f"  {pos}: {len(winners)} winner(s)")
+        for w in winners:
+            print(f"    - {w['first_name']} {w['last_name']}: {w['vote_count']} votes")
+    print("="*50 + "\n")
+    
+    # Register helper functions for template
     app = current_app._get_current_object()
     app.jinja_env.globals.update(get_position_color=get_position_color)
     
@@ -6856,7 +6762,7 @@ def election_results(election_id):
         'election_results_detail.html',
         election=election,
         candidate_results=flat_candidate_results,
-        candidate_results_by_position=sorted_candidate_results_by_position,
+        candidate_results_by_position=candidates_by_position,
         winners_by_position=winners_by_position,
         total_voters=total_votes_cast,
         total_eligible_voters=total_eligible_voters or 0,
@@ -6866,7 +6772,7 @@ def election_results(election_id):
         now=now,
         is_tallied=is_tallied,
         tally_timestamp=tally_timestamp,
-        position_eligible_voters=position_eligible_voters  # Keep the original variable name
+        position_eligible_voters=position_eligible_voters
     )
 
 
@@ -7405,7 +7311,7 @@ def get_tally_results(election_id):
 @admin_bp.route('/results/<int:election_id>/pdf')
 @admin_required
 def election_results_pdf(election_id):
-    """Generate PDF using ReportLab - Footer at bottom margin on last page only"""
+    """Generate PDF using ReportLab - Footer in page footer area on last page only"""
     election = Election.query.get_or_404(election_id)
     
     # Get chairman name
@@ -7514,14 +7420,15 @@ def election_results_pdf(election_id):
     voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
     students_not_voted = total_eligible_voters - unique_voters
     
-    # ===== REPORTLAB PDF GENERATION WITH BOTTOM PUSHER =====
+    # ===== REPORTLAB PDF GENERATION WITH FOOTER IN PAGE MARGIN =====
     from reportlab.lib.pagesizes import letter
     from reportlab.lib import colors
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER
     from reportlab.platypus import Image as RLImage
+    from reportlab.pdfgen import canvas
     from io import BytesIO
     from flask import make_response
     import os
@@ -7531,45 +7438,95 @@ def election_results_pdf(election_id):
     
     buffer = BytesIO()
     
-    # Create document
+    # Create custom canvas with footer on last page only
+    class FooterCanvas(canvas.Canvas):
+        def __init__(self, *args, **kwargs):
+            self.chairman_name = kwargs.pop('chairman_name', 'COMELEC CHAIRMAN')
+            canvas.Canvas.__init__(self, *args, **kwargs)
+            self.page_count = 0
+            self.footer_drawn = False
+        
+        def showPage(self):
+            self.page_count += 1
+            canvas.Canvas.showPage(self)
+        
+        def draw_footer(self):
+            """Draw footer on the last page only - in the page footer area"""
+            if self.footer_drawn:
+                return
+            
+            page_width = letter[0]
+            # Position at bottom of page
+            footer_y = 0.6 * inch
+            
+            # Draw chairman name
+            self.setFont('Helvetica-Bold', 11)
+            self.drawCentredString(page_width / 2, footer_y + 0.25 * inch, self.chairman_name)
+            
+            # Draw signature line (short length, not full width)
+            self.setFont('Helvetica', 8)
+            line_length = 2.5 * inch
+            line_x = (page_width - line_length) / 2
+            self.line(line_x, footer_y + 0.17 * inch, line_x + line_length, footer_y + 0.17 * inch)
+            
+            # Draw title - IMPROVED SPACING (moved down from line)
+            self.setFont('Helvetica-Oblique', 9)
+            self.drawCentredString(page_width / 2, footer_y + 0.06 * inch, "COMELEC Chairperson")
+            
+            # Draw footer logo - SAME WIDTH AS HEADER, 0.5 INCH HEIGHT
+            footer_logo_path = os.path.join(current_app.root_path, 'admin', 'static', 'images', 'CTU FOOTER.png')
+            if os.path.exists(footer_logo_path):
+                try:
+                    from reportlab.lib.utils import ImageReader
+                    img = ImageReader(footer_logo_path)
+                    # Width matches header (7.5 inches), height is 0.5 inches
+                    img_width = AVAILABLE_WIDTH  # 7.5 inches
+                    img_height = 0.5 * inch      # 0.5 inches tall
+                    x = (page_width - img_width) / 2
+                    y = footer_y - img_height - 0.05 * inch
+                    # Set preserveAspectRatio=False to force exact dimensions
+                    self.drawImage(img, x, y, width=img_width, height=img_height, preserveAspectRatio=False)
+                except:
+                    pass
+            
+            self.footer_drawn = True
+        
+        def save(self):
+            # Draw footer on the last page before saving
+            if self.page_count > 0:
+                self.draw_footer()
+            canvas.Canvas.save(self)
+    
+    # Create document with standard margins
     doc = SimpleDocTemplate(buffer,
                            pagesize=letter,
                            topMargin=0.6*inch,
-                           bottomMargin=0.5*inch,
+                           bottomMargin=0.8*inch,
                            leftMargin=0.5*inch,
                            rightMargin=0.5*inch)
-    
-    # Custom flowable to push content to bottom of page
-    class BottomPadder(Flowable):
-        def __init__(self, height):
-            super().__init__()
-            self.height = height
-        
-        def wrap(self, availWidth, availHeight):
-            return (0, self.height)
-        
-        def draw(self):
-            pass
     
     styles = getSampleStyleSheet()
     story = []
     
     # ===== CUSTOM STYLES =====
+    # Adjusted font sizes - smaller
     title_style = ParagraphStyle('Title', parent=styles['Heading1'],
-                                  fontSize=16, alignment=TA_CENTER, spaceAfter=5,
+                                  fontSize=14, alignment=TA_CENTER, spaceAfter=5,  # Reduced from 16 to 14
                                   fontName='Helvetica-Bold')
     
     subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'],
-                                     fontSize=14, alignment=TA_CENTER, spaceAfter=5,
+                                     fontSize=12, alignment=TA_CENTER, spaceAfter=5,  # Reduced from 14 to 12
                                      fontName='Helvetica-Bold')
     
     date_style = ParagraphStyle('Date', parent=styles['Normal'],
-                                 fontSize=12, alignment=TA_CENTER, spaceAfter=15)
+                                 fontSize=10, alignment=TA_CENTER, spaceAfter=15)  # Reduced from 12 to 10
     
-    # ===== HEADER LOGO =====
+    # ===== HEADER LOGO - Keep it but make it appear in margin by reducing top margin spacing =====
     logo_path = os.path.join(current_app.root_path, 'admin', 'static', 'images', 'CTU HEADER.png')
     if os.path.exists(logo_path):
         try:
+            # Add negative space before logo to pull it up into the margin
+            story.append(Spacer(1, -0.2*inch))  # Pull logo up into margin
             img = RLImage(logo_path, width=AVAILABLE_WIDTH, height=1.0*inch)
             story.append(img)
             story.append(Spacer(1, 0.05*inch))
@@ -7590,8 +7547,8 @@ def election_results_pdf(election_id):
     col_width = AVAILABLE_WIDTH / 4
     summary_table = Table(summary_data, colWidths=[col_width] * 4)
     summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.grey),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e0e0e0')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.black),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('FONTSIZE', (0,0), (-1,0), 9),
@@ -7600,6 +7557,14 @@ def election_results_pdf(election_id):
         ('GRID', (0,0), (-1,-1), 0.5, colors.black),
         ('TOPPADDING', (0,0), (-1,-1), 8),
         ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('BACKGROUND', (0,1), (0,1), colors.HexColor('#e3f2fd')),
+        ('TEXTCOLOR', (0,1), (0,1), colors.HexColor('#01579b')),
+        ('BACKGROUND', (1,1), (1,1), colors.HexColor('#e8f5e9')),
+        ('TEXTCOLOR', (1,1), (1,1), colors.HexColor('#1b5e20')),
+        ('BACKGROUND', (2,1), (2,1), colors.HexColor('#f3e5f5')),
+        ('TEXTCOLOR', (2,1), (2,1), colors.HexColor('#4a148c')),
+        ('BACKGROUND', (3,1), (3,1), colors.HexColor('#fff3e0')),
+        ('TEXTCOLOR', (3,1), (3,1), colors.HexColor('#bf360c')),
     ]))
     story.append(summary_table)
     story.append(Spacer(1, 0.1*inch))
@@ -7613,10 +7578,7 @@ def election_results_pdf(election_id):
     col_width = AVAILABLE_WIDTH / 3
     turnout_table = Table(turnout_data, colWidths=[col_width] * 3)
     turnout_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e3f2fd')),
-        ('BACKGROUND', (0,1), (0,1), colors.HexColor('#e3f2fd')),
-        ('BACKGROUND', (1,1), (1,1), colors.HexColor('#e8f5e9')),
-        ('BACKGROUND', (2,1), (2,1), colors.HexColor('#fff3e0')),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e0e0e0')),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('FONTSIZE', (0,0), (-1,0), 9),
@@ -7625,6 +7587,12 @@ def election_results_pdf(election_id):
         ('GRID', (0,0), (-1,-1), 0.5, colors.black),
         ('TOPPADDING', (0,0), (-1,-1), 8),
         ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('BACKGROUND', (0,1), (0,1), colors.HexColor('#e3f2fd')),
+        ('TEXTCOLOR', (0,1), (0,1), colors.HexColor('#01579b')),
+        ('BACKGROUND', (1,1), (1,1), colors.HexColor('#e8f5e9')),
+        ('TEXTCOLOR', (1,1), (1,1), colors.HexColor('#1b5e20')),
+        ('BACKGROUND', (2,1), (2,1), colors.HexColor('#fff3e0')),
+        ('TEXTCOLOR', (2,1), (2,1), colors.HexColor('#bf360c')),
     ]))
     story.append(turnout_table)
     story.append(Spacer(1, 0.1*inch))
@@ -7632,19 +7600,19 @@ def election_results_pdf(election_id):
     # ===== ENCRYPTION NOTE =====
     note_style = ParagraphStyle('Note', parent=styles['Normal'],
                                  fontSize=8, alignment=TA_CENTER,
-                                 textColor=colors.HexColor('#444'),
+                                 textColor=colors.HexColor('#666666'),
                                  fontName='Helvetica-Oblique')
     story.append(Paragraph("Privacy Protected Results: These results are calculated using Paillier Homomorphic Encryption. Individual votes remain private while ensuring accurate totals.", note_style))
     story.append(Spacer(1, 0.15*inch))
     
     # ===== WINNERS SECTION =====
-    story.append(Paragraph("🏆 OFFICIAL ELECTION WINNERS", 
-                           ParagraphStyle('WinnersTitle', parent=styles['Heading2'],
+    winners_title_style = ParagraphStyle('WinnersTitle', parent=styles['Heading2'],
                                          fontSize=14, alignment=TA_CENTER,
                                          textColor=colors.HexColor('#1b5e20'),
                                          backColor=colors.HexColor('#d0ebd0'),
-                                         spaceAfter=6, spaceBefore=6,
-                                         borderPadding=8, fontName='Helvetica-Bold')))
+                                         spaceAfter=8, spaceBefore=8,
+                                         borderPadding=8, fontName='Helvetica-Bold')
+    story.append(Paragraph("OFFICIAL ELECTION WINNERS", winners_title_style))
     story.append(Spacer(1, 0.05*inch))
     
     # Winners table
@@ -7680,13 +7648,13 @@ def election_results_pdf(election_id):
     story.append(PageBreak())
     
     # ===== DETAILED RESULTS SECTION =====
-    story.append(Paragraph("📊 DETAILED RESULTS BY POSITION",
-                           ParagraphStyle('DetailTitle', parent=styles['Heading2'],
+    detail_title_style = ParagraphStyle('DetailTitle', parent=styles['Heading2'],
                                          fontSize=14, alignment=TA_CENTER,
                                          textColor=colors.HexColor('#01579b'),
                                          backColor=colors.HexColor('#b8d9f5'),
-                                         spaceAfter=6, spaceBefore=6,
-                                         borderPadding=8, fontName='Helvetica-Bold')))
+                                         spaceAfter=8, spaceBefore=8,
+                                         borderPadding=8, fontName='Helvetica-Bold')
+    story.append(Paragraph("📊 DETAILED RESULTS BY POSITION", detail_title_style))
     story.append(Spacer(1, 0.05*inch))
     
     # Group by position
@@ -7706,9 +7674,11 @@ def election_results_pdf(election_id):
         candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
         max_winners = position_limits.get(group['id'], 1)
         
-        story.append(Paragraph(f"{position_name}{' (' + str(max_winners) + ' WINNERS)' if max_winners > 1 else ''}",
-                               ParagraphStyle('PosTitle', parent=styles['Heading3'],
-                                             fontSize=11, spaceAfter=6, fontName='Helvetica-Bold')))
+        pos_title_style = ParagraphStyle('PosTitle', parent=styles['Heading3'],
+                                         fontSize=11, spaceAfter=6, 
+                                         textColor=colors.HexColor('#000000'),
+                                         fontName='Helvetica-Bold')
+        story.append(Paragraph(f"{position_name}{' (' + str(max_winners) + ' WINNERS)' if max_winners > 1 else ''}", pos_title_style))
         
         detail_data = [['Rank', 'Candidate', 'Votes', 'Result']]
         for idx, candidate in enumerate(candidates_list[:max_winners+5], 1):
@@ -7720,7 +7690,7 @@ def election_results_pdf(election_id):
         
         detail_table = Table(detail_data, colWidths=[AVAILABLE_WIDTH * 0.12, AVAILABLE_WIDTH * 0.53, AVAILABLE_WIDTH * 0.15, AVAILABLE_WIDTH * 0.20])
         detail_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e0e0e0')),
             ('GRID', (0,0), (-1,-1), 0.5, colors.black),
             ('ALIGN', (0,0), (0,-1), 'CENTER'),
             ('ALIGN', (2,0), (3,-1), 'CENTER'),
@@ -7737,30 +7707,8 @@ def election_results_pdf(election_id):
         story.append(detail_table)
         story.append(Spacer(1, 0.12*inch))
     
-    # ===== FOOTER WITH BOTTOM PUSHER =====
-    # This pushes the footer to the bottom margin of the last page
-    story.append(BottomPadder(2.0 * inch))  # Pushes content down
-    
-    story.append(Paragraph(chairman_name,
-                  ParagraphStyle('Signature', parent=styles['Normal'],
-                                alignment=TA_CENTER, spaceAfter=3, fontSize=11,
-                                fontName='Helvetica-Bold')))
-    story.append(Paragraph("COMELEC Chairperson",
-                  ParagraphStyle('SigTitle', parent=styles['Normal'],
-                                alignment=TA_CENTER, fontSize=9, fontName='Helvetica-Oblique')))
-    
-    # Footer logo
-    story.append(Spacer(1, 0.08*inch))
-    footer_logo_path = os.path.join(current_app.root_path, 'admin', 'static', 'images', 'CTU FOOTER.png')
-    if os.path.exists(footer_logo_path):
-        try:
-            footer_img = RLImage(footer_logo_path, width=AVAILABLE_WIDTH, height=0.5*inch)
-            story.append(footer_img)
-        except:
-            pass
-    
-    # Build PDF
-    doc.build(story)
+    # Build PDF with custom canvas for footer on last page only
+    doc.build(story, canvasmaker=lambda filename, pagesize=letter, **kwargs: FooterCanvas(filename, pagesize, chairman_name=chairman_name, **kwargs))
     buffer.seek(0)
     
     # Return PDF
