@@ -45,7 +45,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
-
+from extensions import csrf 
 
 try:
     from admin.models import TallyVote
@@ -745,7 +745,7 @@ def setup_2fa():
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
 
 
-from extensions import csrf  # Make sure to import csrf
+ # Make sure to import csrf
 
 # ==================== 2FA DISABLE WITH EMAIL CONFIRMATION ====================
 
