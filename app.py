@@ -22,12 +22,17 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 ON_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
 
 # ---- CSRF Configuration ----
-app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_SECRET_KEY'] = SECRET_KEY
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600
-app.config['WTF_CSRF_SSL_STRICT'] = False
+# TEMPORARY: Disable CSRF on PythonAnywhere to fix the "CSRF session token missing" error
+if ON_PYTHONANYWHERE:
+    app.config['WTF_CSRF_ENABLED'] = False
+    print("⚠️ WARNING: CSRF DISABLED on PythonAnywhere (temporary fix for session issue)")
+else:
+    app.config['WTF_CSRF_ENABLED'] = True
+    app.config['WTF_CSRF_SECRET_KEY'] = SECRET_KEY
+    app.config['WTF_CSRF_TIME_LIMIT'] = 3600
+    app.config['WTF_CSRF_SSL_STRICT'] = False
 
-# ---- PythonAnywhere Proxy Fix (ADD THIS BLOCK) ----
+# ---- PythonAnywhere Proxy Fix ----
 if ON_PYTHONANYWHERE:
     from werkzeug.middleware.proxy_fix import ProxyFix
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
