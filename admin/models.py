@@ -195,6 +195,40 @@ class Election(db.Model):
         else:
             return "Open"
     
+    # ========== NEW PROPERTIES FOR TIMEZONE-AWARE DATES ==========
+    @property
+    def start_date_manila(self):
+        """Get start_date as Manila timezone-aware"""
+        import pytz
+        if self.start_date:
+            manila = pytz.timezone('Asia/Manila')
+            if self.start_date.tzinfo is None:
+                return manila.localize(self.start_date)
+            return self.start_date.astimezone(manila)
+        return None
+    
+    @property
+    def end_date_manila(self):
+        """Get end_date as Manila timezone-aware"""
+        import pytz
+        if self.end_date:
+            manila = pytz.timezone('Asia/Manila')
+            if self.end_date.tzinfo is None:
+                return manila.localize(self.end_date)
+            return self.end_date.astimezone(manila)
+        return None
+    
+    @property
+    def is_ongoing(self):
+        """Check if election is currently ongoing"""
+        from datetime import datetime
+        import pytz
+        if self.start_date_manila and self.end_date_manila:
+            now = datetime.now(pytz.timezone('Asia/Manila'))
+            return self.start_date_manila <= now <= self.end_date_manila
+        return False
+    # ========== END OF NEW PROPERTIES ==========
+    
     @property
     def year_levels_list(self):
         """Return year levels as a list for easier checking"""
@@ -214,7 +248,7 @@ class Election(db.Model):
         year_levels = self.year_levels.split(',')
         return str(student_year) in year_levels
     
-    # ===== NEW: Helper methods for cache management =====
+    # ===== Helper methods for cache management =====
     def is_cache_valid(self, max_age_hours=1):
         """Check if cached results are still valid"""
         if not self.cached_at:

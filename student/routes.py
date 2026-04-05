@@ -2644,7 +2644,9 @@ from sqlalchemy import func
 @student_bp.route('/results')
 @login_required
 def results():
-    """Show elections that the current student has voted in"""
+    """Show elections that the current student has voted in (both ongoing and completed)"""
+    from datetime import datetime
+    
     # FIRST: Check URL parameter (when user clicks from hamburger menu)
     school_year = request.args.get('school_year')
     
@@ -2670,17 +2672,18 @@ def results():
         session['current_school_year'] = school_year
     
     student_id = current_user.id
+    
+    # Use naive datetime for database comparison (your dates are naive)
     now = datetime.now()
     
-    # Get all elections the student has voted in
+    # Get ALL elections the student has voted in
     voted_elections_ids = db.session.query(Vote.election_id).filter_by(
         student_id=student_id
     ).distinct().subquery()
     
-    # Base query
+    # Base query - get all elections the student voted in
     query = Election.query.filter(
-        Election.id.in_(voted_elections_ids),
-        Election.start_date <= now  # Only show elections that have started
+        Election.id.in_(voted_elections_ids)
     )
     
     # Apply school year filter if selected
@@ -2690,6 +2693,7 @@ def results():
             Election.start_date <= end_date
         )
     
+    # Order by end_date descending (most recent/completed first)
     voted_elections = query.order_by(Election.end_date.desc()).all()
     
     return render_template('results.html',
