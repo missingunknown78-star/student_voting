@@ -74,8 +74,10 @@ document.addEventListener('DOMContentLoaded', function() {
         editForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const newUsername = document.getElementById('newUsername')?.value.trim();
             const newEmail = document.getElementById('newEmail')?.value.trim();
             
+            // Check if email is being changed
             if (newEmail && newEmail !== originalEmail) {
                 // Show waiting for confirmation modal
                 pendingNewEmail = newEmail;
@@ -94,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Start polling for confirmation
                 startPolling();
             } else {
+                // Only username change or no changes - submit directly
                 submitForm();
             }
         });
@@ -121,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 },
                 body: JSON.stringify({ 
                     old_email: originalEmail,
@@ -151,15 +153,23 @@ document.addEventListener('DOMContentLoaded', function() {
         let seconds = 30;
         
         const countdown = setInterval(() => {
-            resendEmailBtn.textContent = `Resend available in ${seconds}s`;
-            timerText.textContent = 'Please wait before requesting another email.';
+            if (resendEmailBtn) {
+                resendEmailBtn.textContent = `Resend available in ${seconds}s`;
+            }
+            if (timerText) {
+                timerText.textContent = 'Please wait before requesting another email.';
+            }
             seconds--;
             
             if (seconds < 0) {
                 clearInterval(countdown);
-                resendEmailBtn.disabled = false;
-                resendEmailBtn.textContent = 'Resend Verification Email';
-                timerText.textContent = 'You can now request another verification email.';
+                if (resendEmailBtn) {
+                    resendEmailBtn.disabled = false;
+                    resendEmailBtn.textContent = 'Resend Verification Email';
+                }
+                if (timerText) {
+                    timerText.textContent = 'You can now request another verification email.';
+                }
                 resendCooldown = false;
             }
         }, 1000);
@@ -215,7 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(`/ctumoalboal-comelec/email-change-status/${changeRequestId}`, {
                 headers: {
                     'Content-Type': 'application/json'
-                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 }
             });
             const data = await response.json();
@@ -255,7 +264,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 },
                 body: JSON.stringify({ 
                     email: pendingNewEmail,
@@ -302,7 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                        // REMOVED: 'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({ 
                         email: pendingNewEmail,
@@ -398,19 +405,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Submit form function (CSRF header removed)
+    // ==================== FIXED SUBMIT FORM FUNCTION ====================
+    // Submit form function - FIXED: Removed incorrect Content-Type header
     function submitForm() {
         const formData = new FormData(editForm);
         
+        // Don't set Content-Type header - let the browser set it automatically for FormData
         fetch(editForm.action, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
-            },
+            // REMOVED: 'Content-Type': 'application/json' - This was causing the issue!
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => Promise.reject(err));
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showNotification('Profile updated successfully!', 'success');
@@ -419,23 +430,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 const currentUsername = document.getElementById('currentUsername');
                 const currentEmail = document.getElementById('currentEmail');
                 
-                if (currentUsername) currentUsername.textContent = data.new_username || currentUsername.textContent;
-                if (currentEmail) {
-                    currentEmail.textContent = data.new_email || pendingNewEmail || originalEmail;
-                    originalEmail = data.new_email || pendingNewEmail || originalEmail;
+                if (currentUsername && data.new_username) {
+                    currentUsername.textContent = data.new_username;
                 }
+                if (currentEmail && data.new_email) {
+                    currentEmail.textContent = data.new_email;
+                    originalEmail = data.new_email;
+                } else if (currentEmail && pendingNewEmail) {
+                    currentEmail.textContent = pendingNewEmail;
+                    originalEmail = pendingNewEmail;
+                }
+                
+                // Update form input values
+                const usernameInput = document.getElementById('newUsername');
+                const emailInput = document.getElementById('newEmail');
+                if (usernameInput && data.new_username) usernameInput.value = data.new_username;
+                if (emailInput && data.new_email) emailInput.value = data.new_email;
                 
                 showDisplayMode();
                 
+                // Reload after 1.5 seconds to refresh any dependent data
                 setTimeout(() => {
                     location.reload();
-                }, 1000);
+                }, 1500);
             } else {
-                showNotification('Error: ' + data.error, 'error');
+                showNotification('Error: ' + (data.error || data.message || 'Unknown error'), 'error');
             }
         })
         .catch(error => {
-            showNotification('An error occurred: ' + error.message, 'error');
+            console.error('Fetch error:', error);
+            showNotification('An error occurred: ' + (error.error || error.message || 'Please try again'), 'error');
         });
     }
     
@@ -444,17 +468,47 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof window.showNotification === 'function') {
             window.showNotification(message, type);
         } else {
-            alert(message);
+            // Create a temporary notification if the global function doesn't exist
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease;
+            `;
+            notification.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
     }
 });
-
 
 // ==================== FORGOT PASSWORD HANDLER ====================
 
 // Make functions globally available
 window.toggleProfileEdit = function() {
-    showEditMode();
+    // This function is called from HTML onclick
+    const displayMode = document.getElementById('profileDisplayMode');
+    const editMode = document.getElementById('profileEditMode');
+    if (displayMode && editMode) {
+        displayMode.style.display = 'none';
+        editMode.style.display = 'block';
+        window.scrollTo({
+            top: document.getElementById('profileFormCard')?.offsetTop - 20,
+            behavior: 'smooth'
+        });
+    }
 };
 
 window.handleForgotPassword = function() {
@@ -513,7 +567,7 @@ function handleForgotPasswordWithButton(btn) {
     console.log('Current email:', currentEmail);
     
     if (!currentEmail) {
-        showNotification('Could not find your email address', 'error');
+        showNotificationFallback('Could not find your email address', 'error');
         btn.innerHTML = originalText;
         btn.disabled = false;
         return;
@@ -524,7 +578,6 @@ function handleForgotPasswordWithButton(btn) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
-            // REMOVED: 'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
             email: currentEmail
@@ -537,17 +590,77 @@ function handleForgotPasswordWithButton(btn) {
     .then(data => {
         console.log('Response data:', data);
         if (data.success) {
-            showNotification('Password reset link sent to your email!', 'success');
+            showNotificationFallback('Password reset link sent to your email!', 'success');
         } else {
-            showNotification(data.message || 'Failed to send reset link', 'error');
+            showNotificationFallback(data.message || 'Failed to send reset link', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showNotification('Network error. Please try again.', 'error');
+        showNotificationFallback('Network error. Please try again.', 'error');
     })
     .finally(() => {
         btn.innerHTML = originalText;
         btn.disabled = false;
     });
+}
+
+function showNotificationFallback(message, type = 'info') {
+    // Check if global notification function exists
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+    } else {
+        // Fallback notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        `;
+        notification.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease forwards';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+}
+
+// Add animation styles if they don't exist
+if (!document.querySelector('#notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 }

@@ -1,18 +1,22 @@
+// election_results_detail.js - Complete working version
+
 // Get template data
 const templateData = JSON.parse(document.getElementById('template-data').textContent);
 // CSRF token removed - CSRF protection disabled
 
 // ==================== VOTE BADGE TRACKING ====================
-let previousCandidateVotes = {}; // Store per-candidate vote counts
+let previousCandidateVotes = {};
 let previousTotalVoters = 0;
+let previousVoterTurnout = 0;
+let previousEligibleVoters = 0;
 let newVotesCheckInterval = null;
-let activeBadges = {}; // Track active badges and their timeouts
+let activeBadges = {};
 
 // Store vote counts when page loads
 document.addEventListener('DOMContentLoaded', function() {
     // Store initial per-candidate vote counts from data attributes
     const candidateRows = document.querySelectorAll('.candidate-row');
-    candidateRows.forEach((row, index) => {
+    candidateRows.forEach((row) => {
         const candidateId = row.dataset.candidateId;
         const candidateName = row.dataset.candidateName;
         const candidatePosition = row.dataset.candidatePosition;
@@ -24,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 name: candidateName,
                 position: candidatePosition,
                 votes: voteCount,
-                index: index,
                 row: row
             };
         }
@@ -32,22 +35,40 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Initial candidate votes:', previousCandidateVotes);
     
-    // Store total voters
-    const totalVotersElement = document.querySelector('.summary-card.voters .summary-number');
+    // Store initial voter stats
+    const totalVotersElement = document.querySelector('.voter-stat .voter-stat-value');
     if (totalVotersElement) {
-        previousTotalVoters = parseInt(totalVotersElement.textContent) || 0;
+        // Get all three stat values
+        const statValues = document.querySelectorAll('.voter-stat .voter-stat-value');
+        if (statValues.length >= 2) {
+            previousTotalVoters = parseInt(statValues[1].textContent) || 0; // Students Voted
+            previousVoterTurnout = parseFloat(statValues[2].textContent) || 0; // Turnout Rate
+        }
     }
+    
+    // Store eligible voters
+    const eligibleElement = document.querySelector('.voter-stat .voter-stat-value');
+    if (eligibleElement) {
+        previousEligibleVoters = parseInt(eligibleElement.textContent) || 0;
+    }
+    
+    // Store total voters from summary card as backup
+    const summaryTotalVoters = document.querySelector('.summary-card.voters .summary-number');
+    if (summaryTotalVoters) {
+        if (!previousTotalVoters) {
+            previousTotalVoters = parseInt(summaryTotalVoters.textContent) || 0;
+        }
+    }
+    
+    console.log('Initial voter stats - Total:', previousTotalVoters, 'Turnout:', previousVoterTurnout);
     
     // Check for new votes every 10 seconds only if not tallied
     if (!templateData.isTallied) {
-        // Clear any existing interval
         if (newVotesCheckInterval) {
             clearInterval(newVotesCheckInterval);
         }
-        // Check immediately
         checkForNewVotes();
-        // Then set interval
-        newVotesCheckInterval = setInterval(checkForNewVotes, 10000); // Check every 10 seconds
+        newVotesCheckInterval = setInterval(checkForNewVotes, 10000);
     }
 });
 
@@ -60,7 +81,6 @@ function checkForNewVotes() {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-            // REMOVED: 'X-CSRFToken': csrfToken
         }
     })
     .then(response => response.json())
@@ -71,7 +91,7 @@ function checkForNewVotes() {
             const currentTotalVoters = data.total_voters;
             const newVotes = currentTotalVoters - previousTotalVoters;
             
-            if (newVotes > 0) {
+            if (newVotes > 0 || Math.abs(data.voter_turnout - previousVoterTurnout) > 0.01) {
                 // Find which candidates got new votes
                 const candidatesWithNewVotes = [];
                 
@@ -96,11 +116,12 @@ function checkForNewVotes() {
                 
                 console.log('Candidates with new votes:', candidatesWithNewVotes);
                 
-                // Show vote badges on candidate profiles
+                // Show vote badges
                 showVoteBadges(candidatesWithNewVotes);
                 
                 // Update the stored counts
                 previousTotalVoters = currentTotalVoters;
+                previousVoterTurnout = data.voter_turnout;
                 
                 // Update the display without page reload
                 updateLiveResults(data);
@@ -118,40 +139,31 @@ function showVoteBadges(candidatesWithNewVotes) {
         const badgeContainer = document.getElementById(`vote-badge-${candidate.id}`);
         
         if (badgeContainer) {
-            // Clear any existing badge and its timeout
             if (activeBadges[candidate.id]) {
                 clearTimeout(activeBadges[candidate.id].timeout);
                 badgeContainer.innerHTML = '';
             }
             
-            // Create new badge
             const badge = document.createElement('div');
             badge.className = 'vote-badge';
             badge.innerHTML = `+${candidate.new_votes}`;
-            
-            // Add to container
             badgeContainer.appendChild(badge);
             
-            // Trigger animation
             setTimeout(() => {
                 badge.classList.add('show');
             }, 10);
             
-            // Set timeout to remove after 20 seconds
             const timeout = setTimeout(() => {
                 badge.classList.remove('show');
                 badge.classList.add('hide');
-                
-                // Remove from DOM after animation
                 setTimeout(() => {
                     if (badgeContainer) {
                         badgeContainer.innerHTML = '';
                     }
                     delete activeBadges[candidate.id];
                 }, 300);
-            }, 20000); // 20 seconds
+            }, 20000);
             
-            // Store active badge and timeout
             activeBadges[candidate.id] = {
                 element: badge,
                 timeout: timeout
@@ -161,42 +173,55 @@ function showVoteBadges(candidatesWithNewVotes) {
 }
 
 function updateLiveResults(data) {
-    // Update total voters in summary
-    const totalVotersElement = document.querySelector('.summary-card.voters .summary-number');
-    if (totalVotersElement) {
-        totalVotersElement.textContent = data.total_voters;
+    console.log('Updating live results with:', data);
+    
+    // ==================== UPDATE SUMMARY CARDS ====================
+    // Update Total Voters in summary card
+    const summaryTotalVoters = document.querySelector('.summary-card.voters .summary-number');
+    if (summaryTotalVoters) {
+        summaryTotalVoters.textContent = data.total_voters;
+        console.log('Updated summary total voters to:', data.total_voters);
     }
     
-    // Update turnout percentage
-    const turnoutElement = document.querySelector('.summary-card.turnout .summary-number');
-    if (turnoutElement) {
-        turnoutElement.textContent = data.voter_turnout + '%';
+    // Update Voter Turnout in summary card
+    const summaryTurnout = document.querySelector('.summary-card.turnout .summary-number');
+    if (summaryTurnout) {
+        summaryTurnout.textContent = data.voter_turnout + '%';
+        console.log('Updated summary turnout to:', data.voter_turnout + '%');
     }
     
-    // Update turnout bar
+    // ==================== UPDATE LIVE VOTER PARTICIPATION SECTION ====================
+    // Get all three stat values in the voter-stats
+    const statValues = document.querySelectorAll('.voter-stat .voter-stat-value');
+    
+    if (statValues.length >= 3) {
+        // statValues[0] = Registered Students (doesn't change)
+        // statValues[1] = Students Voted
+        // statValues[2] = Turnout Rate
+        statValues[1].textContent = data.total_voters;
+        statValues[2].textContent = data.voter_turnout + '%';
+        console.log('Updated voter stats - Students Voted:', data.total_voters, 'Turnout:', data.voter_turnout + '%');
+    }
+    
+    // Update the turnout bar
     const turnoutBar = document.querySelector('.turnout-bar');
     if (turnoutBar) {
         turnoutBar.style.width = data.voter_turnout + '%';
+        console.log('Updated turnout bar width to:', data.voter_turnout + '%');
     }
     
-    // Update voted count
-    const votedElement = document.querySelector('.turnout-stat.voted .number');
-    if (votedElement) {
-        votedElement.textContent = data.total_voters;
-    }
-    
-    // Update not voted count
-    const notVotedElement = document.querySelector('.turnout-stat.absent .number');
+    // Update the "Not Voted" count
+    const notVotedElement = document.querySelector('.turnout-item .turnout-value');
     if (notVotedElement) {
-        notVotedElement.textContent = data.students_not_voted;
+        notVotedElement.textContent = data.students_not_voted + ' students';
+        console.log('Updated not voted to:', data.students_not_voted + ' students');
     }
     
-    // Update candidate percentages and data attributes - FIXED: Match by candidate ID, not index
+    // ==================== UPDATE CANDIDATE RESULTS ====================
     if (data.candidate_results) {
         const rows = document.querySelectorAll('.candidate-row');
-        
-        // Create a map for quick lookup by candidate ID
         const rowMap = {};
+        
         rows.forEach(row => {
             const candidateId = row.dataset.candidateId;
             if (candidateId) {
@@ -204,20 +229,16 @@ function updateLiveResults(data) {
             }
         });
         
-        // Update each candidate by matching ID
         data.candidate_results.forEach((candidate) => {
             const row = rowMap[candidate.id];
             if (row) {
-                // Update the data-vote-count attribute
                 row.dataset.voteCount = candidate.vote_count;
                 
-                // Update percentage display
                 const percentageSpan = row.querySelector('.vote-percentage');
                 if (percentageSpan) {
                     percentageSpan.textContent = candidate.voter_percentage + '%';
                 }
                 
-                // Update progress bar
                 const voteBar = row.querySelector('.vote-bar');
                 if (voteBar) {
                     voteBar.style.width = candidate.voter_percentage + '%';
@@ -228,14 +249,16 @@ function updateLiveResults(data) {
 }
 
 function updateStoredCandidateVotes(candidateResults) {
-    candidateResults.forEach(currentCandidate => {
-        if (previousCandidateVotes[currentCandidate.id]) {
-            previousCandidateVotes[currentCandidate.id].votes = currentCandidate.vote_count;
-        }
-    });
+    if (candidateResults) {
+        candidateResults.forEach(currentCandidate => {
+            if (previousCandidateVotes[currentCandidate.id]) {
+                previousCandidateVotes[currentCandidate.id].votes = currentCandidate.vote_count;
+            }
+        });
+    }
 }
 
-// Initialize event listeners
+// ==================== INITIALIZE EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tally button
     const tallyBtn = document.getElementById('tallyVotesBtn');
@@ -249,19 +272,16 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshBtn.addEventListener('click', refreshResults);
     }
 
-    // Initialize PDF export button with modal
+    // Initialize PDF export button
     const pdfBtn = document.getElementById('exportPdfBtn');
     if (pdfBtn) {
-        // Remove any existing listeners and add our modal listener
-        pdfBtn.replaceWith(pdfBtn.cloneNode(true));
-        const newPdfBtn = document.getElementById('exportPdfBtn');
-        newPdfBtn.addEventListener('click', function(e) {
+        pdfBtn.addEventListener('click', function(e) {
             e.preventDefault();
             showComelecModal();
         });
     }
 
-    // Initialize vote badge styles
+    // Initialize badge styles
     initializeBadgeStyles();
 
     // Initialize file input for PDF upload
@@ -320,7 +340,6 @@ function initializeBadgeStyles() {
                 opacity: 0;
             }
             
-            /* Dark mode support */
             :root.dark-mode .vote-badge {
                 color: #fbbf24;
                 text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -330,7 +349,7 @@ function initializeBadgeStyles() {
     }
 }
 
-// Tally Votes Function
+// ==================== TALLY VOTES ====================
 async function tallyVotes() {
     const electionId = templateData.electionId;
     const tallyBtn = document.getElementById('tallyVotesBtn');
@@ -345,7 +364,6 @@ async function tallyVotes() {
         return;
     }
     
-    // Show loading
     tallyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Tallying Votes...';
     tallyBtn.disabled = true;
     
@@ -356,7 +374,6 @@ async function tallyVotes() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ force: true })
         });
@@ -365,17 +382,14 @@ async function tallyVotes() {
         
         if (result.success) {
             showNotification('success', `✅ ${isTallied ? 'Re-tally complete!' : 'Official tally complete!'}`);
-            
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
-            
         } else {
             showNotification('error', `❌ ${result.message || 'Failed to tally votes.'}`);
             tallyBtn.innerHTML = originalText;
             tallyBtn.disabled = false;
         }
-        
     } catch (error) {
         console.error('Error tallying votes:', error);
         showNotification('error', '❌ Network error. Please try again.');
@@ -384,26 +398,20 @@ async function tallyVotes() {
     }
 }
 
-// Refresh Results
 function refreshResults() {
     const refreshBtn = document.querySelector('.refresh-btn');
     const originalText = refreshBtn.innerHTML;
-    
     refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Refreshing...';
     refreshBtn.disabled = true;
-    
     window.location.reload();
 }
 
-// ==================== COMELEC CHAIRMAN MODAL FUNCTIONS ====================
-
+// ==================== COMELEC MODAL FUNCTIONS ====================
 function showComelecModal() {
     const modal = document.getElementById('comelecModal');
     if (modal) {
         modal.style.display = 'flex';
-        // Clear any previous value
         document.getElementById('chairmanName').value = '';
-        // Focus on input
         setTimeout(() => {
             document.getElementById('chairmanName').focus();
         }, 100);
@@ -419,17 +427,12 @@ function closeComelecModal() {
 
 function submitChairmanName() {
     const chairmanName = document.getElementById('chairmanName').value.trim();
-    
     if (!chairmanName) {
         showNotification('error', '❌ Please enter the COMELEC Chairman\'s name');
         document.getElementById('chairmanName').focus();
         return;
     }
-    
-    // Close modal
     closeComelecModal();
-    
-    // Generate PDF with chairman name
     exportToPDFWithChairman(chairmanName);
 }
 
@@ -437,7 +440,6 @@ function exportToPDFWithChairman(chairmanName) {
     const electionId = templateData.electionId;
     const isTallied = templateData.isTallied;
     
-    // Check if tallied first
     if (!isTallied) {
         showNotification('error', '❌ PDF results are only available after official tally. Please tally the votes first.');
         return;
@@ -445,24 +447,18 @@ function exportToPDFWithChairman(chairmanName) {
     
     const pdfBtn = document.getElementById('exportPdfBtn');
     const originalText = pdfBtn.innerHTML;
-    
-    // Show loading state
     pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating PDF...';
     pdfBtn.disabled = true;
     
-    // Show loading overlay
     const overlay = document.getElementById('pdfLoadingOverlay');
     if (overlay) overlay.style.display = 'flex';
     
-    // Include chairman name in the request
     const url = `/ctumoalboal-comelec/results/${electionId}/pdf?chairman=${encodeURIComponent(chairmanName)}`;
     
-    // Fetch PDF
     fetch(url, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-            // REMOVED: 'X-CSRFToken': csrfToken
         }
     })
     .then(response => {
@@ -475,22 +471,16 @@ function exportToPDFWithChairman(chairmanName) {
         return response.blob();
     })
     .then(blob => {
-        // Download PDF
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        
-        // Create filename with chairman name
         const safeTitle = templateData.electionTitle.replace(/[^a-z0-9]/gi, '_');
         const safeChairman = chairmanName.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
         link.download = `${safeTitle}_${safeChairman}_Official_Results.pdf`;
-        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
         setTimeout(() => window.URL.revokeObjectURL(url), 100);
-        
         showNotification('success', '✅ Official results PDF downloaded successfully!');
     })
     .catch(error => {
@@ -512,7 +502,6 @@ window.addEventListener('click', function(event) {
     }
 });
 
-// Close modal with Escape key
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         closeComelecModal();
@@ -520,7 +509,6 @@ document.addEventListener('keydown', function(event) {
 });
 
 // ==================== NOTIFICATION FUNCTIONS ====================
-
 function showNotification(type, message) {
     const existing = document.querySelector('.custom-notification');
     if (existing) existing.remove();
@@ -550,7 +538,6 @@ function showNotification(type, message) {
 }
 
 // ==================== PDF UPLOAD FUNCTIONS ====================
-
 function handleFileInputChange(e) {
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     if (this.files.length > 0) {
@@ -561,7 +548,7 @@ function handleFileInputChange(e) {
         } else {
             fileNameDisplay.innerHTML = '❌ Please select a valid PDF file';
             fileNameDisplay.style.color = '#ef4444';
-            this.value = ''; // Clear the input
+            this.value = '';
         }
     } else {
         fileNameDisplay.innerHTML = 'No file chosen';
@@ -596,52 +583,39 @@ async function uploadPdfResult(e) {
         return;
     }
     
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
         showNotification('error', '❌ File size exceeds 10MB limit.');
         return;
     }
     
-    // Optional: Add description prompt
     const description = prompt('Enter a description for this PDF (optional):', '');
-    
-    // Check if user cancelled the prompt
     if (description === null) {
         showNotification('info', '📄 Upload cancelled.');
         return;
     }
     
-    // Create form data (CSRF token removed)
     const formData = new FormData();
     formData.append('pdf_file', file);
-    // REMOVED: formData.append('csrf_token', csrfToken);
-    
     if (description.trim() !== '') {
         formData.append('description', description.trim());
     }
     
-    // Show loading state
     uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
     uploadBtn.disabled = true;
     
     try {
         const response = await fetch(`/ctumoalboal-comelec/results/${electionId}/upload-pdf`, {
-            method: 'POST'
-            // REMOVED: headers with CSRF - FormData sets its own Content-Type
-            // REMOVED: 'X-CSRFToken': csrfToken
+            method: 'POST',
+            body: formData
         });
         
         const result = await response.json();
         
         if (result.success) {
             showNotification('success', '✅ PDF uploaded successfully!');
-            
-            // Clear file input
             fileInput.value = '';
             document.getElementById('fileNameDisplay').innerHTML = 'No file chosen';
             document.getElementById('fileNameDisplay').style.color = 'var(--text-secondary)';
-            
-            // Reload the page after 1 second to show the new PDF
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -664,8 +638,6 @@ async function deletePdfResult(pdfId) {
     
     const deleteBtn = document.querySelector(`#pdf-item-${pdfId} .pdf-delete-btn`);
     const originalHtml = deleteBtn.innerHTML;
-    
-    // Show loading
     deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     deleteBtn.disabled = true;
     
@@ -674,7 +646,6 @@ async function deletePdfResult(pdfId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({})
         });
@@ -683,17 +654,12 @@ async function deletePdfResult(pdfId) {
         
         if (result.success) {
             showNotification('success', '✅ PDF deleted successfully!');
-            
-            // Remove the PDF item from DOM with animation
             const pdfItem = document.getElementById(`pdf-item-${pdfId}`);
             pdfItem.style.transition = 'all 0.3s ease';
             pdfItem.style.opacity = '0';
             pdfItem.style.transform = 'translateX(20px)';
-            
             setTimeout(() => {
                 pdfItem.remove();
-                
-                // Check if there are no more PDFs
                 const pdfList = document.querySelector('.pdf-list');
                 if (pdfList && pdfList.children.length === 0) {
                     const existingPdfs = document.querySelector('.existing-pdfs');
@@ -714,7 +680,6 @@ async function deletePdfResult(pdfId) {
     }
 }
 
-// Make delete function globally available
 window.deletePdfResult = deletePdfResult;
 
 // Clean up interval when page unloads
@@ -722,8 +687,6 @@ window.addEventListener('beforeunload', function() {
     if (newVotesCheckInterval) {
         clearInterval(newVotesCheckInterval);
     }
-    
-    // Clear all active badge timeouts
     Object.values(activeBadges).forEach(badge => {
         if (badge.timeout) {
             clearTimeout(badge.timeout);
@@ -731,15 +694,10 @@ window.addEventListener('beforeunload', function() {
     });
 });
 
-
 // ==================== INITIALIZE INSIGHT CHARTS ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // Only render if we're in tallied state
-    const isTallied = templateData.isTallied;
-    
-    if (isTallied) {
+    if (templateData.isTallied) {
         console.log('📊 Initializing vote distribution chart');
-        // Small delay to ensure DOM is fully loaded
         setTimeout(() => {
             if (typeof renderGroupedVoteChart === 'function') {
                 renderGroupedVoteChart();
@@ -750,9 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Update position eligible voters function
 function updatePositionEligibleVoters(data) {
-    // If the backend sends updated position eligibility data, update it
     if (data.position_eligible_counts) {
         window.positionEligibleVoters = data.position_eligible_counts;
         console.log('Updated position eligible voters:', window.positionEligibleVoters);

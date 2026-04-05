@@ -6789,10 +6789,12 @@ def get_admin_live_vote_counts(election_id):
     ULTRA FAST: Get vote counts using finder_hashes for admin live results
     NO DECRYPTION! Takes 2-3 seconds even for thousands of voters
     """
-    vote_counts = {}
+    from collections import defaultdict
+    
+    vote_counts = defaultdict(int)
     
     # Stream votes in chunks to avoid memory issues
-    batch_size = 500
+    batch_size = 1000
     offset = 0
     
     while True:
@@ -6814,28 +6816,23 @@ def get_admin_live_vote_counts(election_id):
                 finder_data = json.loads(vote.finder_hash)
                 
                 # Extract candidate IDs based on format
-                candidate_ids = []
-                
                 if isinstance(finder_data, dict):
                     # New format with 'hashes' array
                     if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
                         for item in finder_data['hashes']:
                             if isinstance(item, dict) and 'candidate_id' in item:
-                                candidate_ids.append(item['candidate_id'])
+                                vote_counts[item['candidate_id']] += 1
                     
-                    # Even better: if candidate_ids stored directly
+                    # Alternative format with candidate_ids directly
                     elif 'candidate_ids' in finder_data and isinstance(finder_data['candidate_ids'], list):
-                        candidate_ids = finder_data['candidate_ids']
+                        for cid in finder_data['candidate_ids']:
+                            vote_counts[cid] += 1
                 
                 elif isinstance(finder_data, list):
                     # Old format
                     for item in finder_data:
                         if isinstance(item, dict) and 'candidate_id' in item:
-                            candidate_ids.append(item['candidate_id'])
-                
-                # Count the votes
-                for cid in candidate_ids:
-                    vote_counts[cid] = vote_counts.get(cid, 0) + 1
+                            vote_counts[item['candidate_id']] += 1
                     
             except json.JSONDecodeError:
                 continue
@@ -6844,7 +6841,7 @@ def get_admin_live_vote_counts(election_id):
         
         offset += batch_size
     
-    return vote_counts
+    return dict(vote_counts)
     
 
 
@@ -6853,6 +6850,9 @@ def get_admin_live_vote_counts(election_id):
 def check_new_votes(election_id):
     """Check if there are new votes since last view - tracks per-candidate changes"""
     try:
+        import json
+        from collections import defaultdict
+        
         election = Election.query.get_or_404(election_id)
         
         # Get current total voters (unique students who voted)
@@ -6868,6 +6868,55 @@ def check_new_votes(election_id):
         
         # Get previous vote counts from session or use defaults
         previous_vote_counts = session.get(f'prev_vote_counts_{election_id}', {})
+        
+        # ===== GET ALL VOTES TO CALCULATE POSITION VOTER COUNTS =====
+        all_votes = Vote.query.filter_by(election_id=election_id).all()
+        
+        # Build candidate position map
+        candidate_position_map = {c.id: c.position_id for c in candidates}
+        
+        # Calculate ACTUAL voters per position (students who voted in that position)
+        position_voter_counts = defaultdict(int)
+        position_voters_set = defaultdict(set)
+        
+        for vote in all_votes:
+            if not vote.finder_hash:
+                continue
+                
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                candidate_ids = []
+                
+                if isinstance(finder_data, dict):
+                    if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_ids.append(item['candidate_id'])
+                    elif 'candidate_ids' in finder_data:
+                        candidate_ids = finder_data['candidate_ids']
+                elif isinstance(finder_data, list):
+                    for item in finder_data:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            candidate_ids.append(item['candidate_id'])
+                
+                # Track which positions this voter voted in
+                voter_positions = set()
+                for cid in candidate_ids:
+                    pos_id = candidate_position_map.get(cid)
+                    if pos_id:
+                        voter_positions.add(pos_id)
+                
+                # Add voter to position sets
+                voter_key = vote.student_id if vote.student_id else f"anon_{vote.id}"
+                for pos_id in voter_positions:
+                    position_voters_set[pos_id].add(voter_key)
+                    
+            except (json.JSONDecodeError, Exception):
+                continue
+        
+        # Convert sets to counts
+        for pos_id, voters in position_voters_set.items():
+            position_voter_counts[pos_id] = len(voters)
         
         # Calculate which candidates got new votes
         candidates_with_new_votes = []
@@ -6886,35 +6935,15 @@ def check_new_votes(election_id):
         # Store current counts for next comparison
         session[f'prev_vote_counts_{election_id}'] = current_vote_counts
         
-        # ===== GET POSITION-SPECIFIC ELIGIBLE VOTERS =====
-        election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
-        
-        if election.department_id:
-            all_eligible_students = Student.query.filter_by(department_id=election.department_id).all()
-        else:
-            all_eligible_students = Student.query.all()
-        
-        position_eligible_counts = {}
-        for ep in election_positions:
-            position_id = ep.position_id
-            eligible_count = 0
-            
-            for student in all_eligible_students:
-                if ep.course_id and student.course_id != ep.course_id:
-                    continue
-                if ep.program_type_id and student.program_type_id != ep.program_type_id:
-                    continue
-                eligible_count += 1
-            
-            position_eligible_counts[position_id] = eligible_count
-        
-        # Build candidate results with percentages using position-specific eligible voters
+        # Build candidate results with CORRECT percentages using ACTUAL position voters
         candidate_results = []
         for candidate in candidates:
             vote_count = current_vote_counts.get(candidate.id, 0)
-            eligible_voters = position_eligible_counts.get(candidate.position_id, 1)  # Default to 1 to avoid division by zero
+            # FIXED: Use ACTUAL voters for this position, not total eligible
+            actual_voters = position_voter_counts.get(candidate.position_id, 1)
             
-            voter_percentage = round((vote_count / eligible_voters * 100), 2) if eligible_voters > 0 else 0
+            # Calculate percentage based on ACTUAL voters who voted in this position
+            voter_percentage = round((vote_count / actual_voters * 100), 2) if actual_voters > 0 else 0
             
             candidate_results.append({
                 'id': candidate.id,
@@ -6928,8 +6957,12 @@ def check_new_votes(election_id):
         else:
             total_eligible_voters = Student.query.count()
         
+        if election.scope == 'campus' and election.year_levels and election.year_levels != 'all':
+            allowed_years = election.year_levels.split(',')
+            total_eligible_voters = Student.query.filter(Student.year_level_id.in_(allowed_years)).count()
+        
         voter_turnout = round((unique_voters / total_eligible_voters * 100), 2) if total_eligible_voters > 0 else 0
-        students_not_voted = total_eligible_voters - unique_voters
+        students_not_voted = max(0, total_eligible_voters - unique_voters)
         
         total_new_votes = sum([c['new_votes'] for c in candidates_with_new_votes])
         
@@ -6941,11 +6974,13 @@ def check_new_votes(election_id):
             'candidate_results': candidate_results,
             'candidates_with_new_votes': candidates_with_new_votes,
             'total_new_votes': total_new_votes,
-            'position_eligible_counts': position_eligible_counts  # ← ADD THIS LINE
+            'position_voter_counts': dict(position_voter_counts)  # Send actual voter counts
         })
         
     except Exception as e:
         print(f"Error checking new votes: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
     
     
