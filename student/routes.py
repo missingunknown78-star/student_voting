@@ -1871,46 +1871,43 @@ def vote_page(election_id):
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
 def submit_vote(election_id):
-    from datetime import timezone
+    import pytz
+    import time
+    import secrets
+    import hashlib
+    import json
+    from datetime import datetime
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     
-    # ========== ADD THESE 2 LINES AT THE VERY TOP ==========
+    # ========== SETUP ==========
     session.permanent = True
-    # ========== END OF CHANGE ==========
     
-    start_time = time.time()
-    
-    # Set timezone
+    # 🔥 Use ONLY Manila timezone
     manila_tz = pytz.timezone("Asia/Manila")
-    utc_tz = pytz.UTC
     
-    # 🔥 FIX: Get the click timestamp and store in UTC
+    # Get click timestamp from JavaScript
     click_timestamp_str = request.form.get('click_timestamp')
-    click_timestamp_utc = None
+    click_timestamp_manila = None
     
     if click_timestamp_str:
         try:
-            # Convert to float (should already be in seconds)
+            # Convert seconds to datetime
             click_timestamp_float = float(click_timestamp_str)
             
-            # Create datetime from the timestamp (this is in local Manila time)
-            click_timestamp_naive = datetime.fromtimestamp(click_timestamp_float)
+            # Create UTC datetime then convert to Manila
+            utc_dt = datetime.utcfromtimestamp(click_timestamp_float)
+            utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
+            click_timestamp_manila = utc_dt.astimezone(manila_tz)
             
-            # Localize to Manila timezone first
-            click_timestamp_manila = manila_tz.localize(click_timestamp_naive)
-            
-            # 🔥 CRITICAL: Convert to UTC for storage
-            click_timestamp_utc = click_timestamp_manila.astimezone(utc_tz)
-            
-            print(f"✅ DEBUG: Click timestamp (Manila) = {click_timestamp_manila}")
-            print(f"✅ DEBUG: Click timestamp (UTC for storage) = {click_timestamp_utc}")
+            print(f"✅ Click timestamp (Manila) = {click_timestamp_manila}")
             
         except Exception as e:
-            print(f"❌ DEBUG: Error parsing click timestamp: {e}")
-            click_timestamp_utc = datetime.now(utc_tz)
+            print(f"❌ Error parsing click timestamp: {e}")
+            click_timestamp_manila = datetime.now(manila_tz)
     else:
-        click_timestamp_utc = datetime.now(utc_tz)
+        click_timestamp_manila = datetime.now(manila_tz)
     
-    # Record the moment when "Cast Vote" was clicked (client-side)
+    # Get cast timestamp from client
     cast_timestamp_str = request.form.get('cast_timestamp')
     cast_timestamp_manila = None
     
@@ -1918,44 +1915,40 @@ def submit_vote(election_id):
         try:
             cast_timestamp_naive = datetime.fromisoformat(cast_timestamp_str)
             cast_timestamp_manila = manila_tz.localize(cast_timestamp_naive)
-            print(f"✅ DEBUG: Received cast_timestamp (Manila): {cast_timestamp_manila}")
+            print(f"✅ Cast timestamp (Manila): {cast_timestamp_manila}")
         except Exception as e:
-            print(f"❌ DEBUG: Error parsing cast_timestamp: {e}")
+            print(f"❌ Error parsing cast_timestamp: {e}")
             cast_timestamp_manila = datetime.now(manila_tz)
     else:
         cast_timestamp_manila = datetime.now(manila_tz)
     
-    # GET ALL CANDIDATE IDs FROM HIDDEN INPUT FIRST!
+    # Get all candidate IDs
     all_candidate_ids_str = request.form.get('all_candidate_ids', '')
     if not all_candidate_ids_str:
         flash("Voting data error. Please try again.", "danger")
         return redirect(url_for('student.vote_page', election_id=election_id))
     
-    # Convert string to list of integers
     all_candidate_ids = [int(id_str) for id_str in all_candidate_ids_str.split(',') if id_str.strip()]
     
     # Get selected candidates
     selected_candidates = {}
-    
     for key in request.form.keys():
         if key.startswith('position_'):
             position_id = key.replace('position_', '')
             values = request.form.getlist(key)
-            
             candidate_ids = []
             for val in values:
                 try:
                     candidate_ids.append(int(val))
                 except ValueError:
                     continue
-            
             if candidate_ids:
                 selected_candidates[position_id] = candidate_ids
-
+    
     if not selected_candidates:
         flash("Please select at least one candidate before submitting.", "warning")
         return redirect(url_for('student.vote_page', election_id=election_id))
-
+    
     # Prevent duplicate voting
     existing_vote = Vote.query.filter_by(
         student_id=current_user.id, 
@@ -1965,18 +1958,17 @@ def submit_vote(election_id):
     if existing_vote:
         flash("You have already voted in this election.", "info")
         return redirect(url_for('student.available_elections'))
-
-    # Record timestamp when vote is saved to database (store in UTC)
-    recorded_timestamp_utc = datetime.now(utc_tz)
     
-    # ===== GENERATE SECRET NONCE =====
+    # Record timestamp when vote is saved (Manila time)
+    recorded_timestamp_manila = datetime.now(manila_tz)
+    
+    # Generate secret nonce
     secret_nonce = secrets.token_hex(8)
-    print(f"🔐 DEBUG: Generated secret nonce for voter: {secret_nonce}")
+    print(f"🔐 Generated secret nonce: {secret_nonce}")
     
-    # ===== CREATE FINDER HASHES =====
+    # Create finder hashes
     finder_hashes = []
     finder_hash_strings = []
-    
     candidate_index_map = {candidate_id: idx for idx, candidate_id in enumerate(all_candidate_ids)}
     
     for position_id, candidate_ids in selected_candidates.items():
@@ -1988,13 +1980,12 @@ def submit_vote(election_id):
                 'hash': finder_hash
             })
             finder_hash_strings.append(finder_hash)
-            print(f"🔑 DEBUG: Created finder_hash for candidate {candidate_id}: {finder_hash[:16]}...")
+            print(f"🔑 Finder hash for candidate {candidate_id}: {finder_hash[:16]}...")
     
-    # ===== ENCRYPT VOTE =====
+    # Encrypt vote
     encrypt_start = time.time()
     
     vote_vector = [0] * len(all_candidate_ids)
-    
     selected_count = 0
     for position_id, candidate_ids in selected_candidates.items():
         for candidate_id in candidate_ids:
@@ -2003,7 +1994,7 @@ def submit_vote(election_id):
                 vote_vector[idx] = 1
                 selected_count += 1
     
-    print(f"DEBUG: Created vote vector with {selected_count} selected candidates out of {len(all_candidate_ids)} total")
+    print(f"Vote vector: {selected_count} selected out of {len(all_candidate_ids)}")
     
     encryption_cache = {}
     
@@ -2028,12 +2019,11 @@ def submit_vote(election_id):
             try:
                 enc_vote[index] = future.result()
             except Exception as e:
-                print(f"ERROR: Encryption failed for index {index}: {e}")
+                print(f"Encryption failed for index {index}: {e}")
                 enc_vote[index] = public_key.encrypt(vote_vector[index])
     
     for i, enc in enumerate(enc_vote):
         if enc is None:
-            print(f"WARNING: Re-encrypting index {i}")
             enc_vote[i] = public_key.encrypt(vote_vector[i])
     
     encrypted_vote_json = json.dumps([
@@ -2042,16 +2032,9 @@ def submit_vote(election_id):
     ])
     
     encrypt_time = time.time() - encrypt_start
-    print(f"🔥 DEBUG: Encrypted {len(vote_vector)} candidates in {encrypt_time:.2f} seconds")
+    print(f"🔥 Encryption completed in {encrypt_time:.2f} seconds")
     
-    try:
-        json.loads(encrypted_vote_json)
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Invalid JSON: {e}")
-        flash("Voting encryption error. Please try again.", "danger")
-        return redirect(url_for('student.vote_page', election_id=election_id))
-    
-    # ===== STORE FINDER HASHES =====
+    # Store finder hashes
     finder_data = {
         'nonce': secret_nonce,
         'hashes': finder_hashes,
@@ -2060,30 +2043,29 @@ def submit_vote(election_id):
     }
     finder_json = json.dumps(finder_data)
     
-    # Create vote object (store timestamps in UTC)
+    # Create vote object (ALL timestamps in Manila timezone)
     vote = Vote(
-        student_id=current_user.id, 
+        student_id=current_user.id,
         election_id=election_id,
         encrypted_vote=encrypted_vote_json,
         finder_hash=finder_json,
-        cast_timestamp=cast_timestamp_manila,  # Store as Manila (or convert to UTC if you prefer)
-        recorded_timestamp=recorded_timestamp_utc  # Store in UTC
+        cast_timestamp=cast_timestamp_manila,
+        recorded_timestamp=recorded_timestamp_manila
     )
     
     db.session.add(vote)
-
+    
     try:
         db.session.commit()
-        total_time = time.time() - start_time
-        print(f"🎉 DEBUG: Vote saved in {total_time:.2f} seconds")
+        total_time = time.time() - encrypt_start
+        print(f"🎉 Vote saved in {total_time:.2f} seconds")
         
-        # 🔥 FIX: Store click timestamp in UTC (not Manila)
-        session['vote_click_timestamp'] = click_timestamp_utc.isoformat()
+        # 🔥 Store click timestamp in session as Manila timezone (with +08:00)
+        session['vote_click_timestamp'] = click_timestamp_manila.isoformat()
         session['last_vote_secret'] = secret_nonce
         session['last_vote_election'] = election_id
         
-        flash(f"Your vote has been submitted and encrypted successfully! Your secret verification code is: {secret_nonce}", "success")
-        
+        flash(f"Your vote has been submitted! Your secret code is: {secret_nonce}", "success")
         return redirect(url_for('student.receipt'))
         
     except Exception as e:
@@ -2098,7 +2080,7 @@ def submit_vote(election_id):
 def receipt():
     """Show all voting receipts for the student"""
     import pytz
-    from datetime import datetime, timezone
+    from datetime import datetime
     
     # Get school year filtering
     school_year = request.args.get('school_year')
@@ -2132,8 +2114,8 @@ def receipt():
     
     votes = votes_query.order_by(Vote.created_at.desc()).all()
     
+    # 🔥 Use ONLY Manila timezone
     manila_tz = pytz.timezone("Asia/Manila")
-    utc_tz = pytz.UTC
     
     if not votes:
         return render_template('receipt.html', 
@@ -2141,7 +2123,7 @@ def receipt():
                              school_years=get_all_school_years(),
                              current_sy=school_year)
     
-    # Get the click timestamp from session (stored in UTC)
+    # Get the click timestamp from session (stored as Manila with +08:00)
     click_timestamp_str = session.get('vote_click_timestamp')
     
     # Prepare data for each vote
@@ -2182,22 +2164,15 @@ def receipt():
         # Calculate processing time for the most recent vote
         if vote == votes[0] and click_timestamp_str:
             try:
-                # 🔥 FIX 1: Parse click timestamp from session (it's stored in UTC)
-                click_timestamp_utc = datetime.fromisoformat(click_timestamp_str)
+                # 🔥 Parse click timestamp - it already has +08:00 timezone
+                click_timestamp_manila = datetime.fromisoformat(click_timestamp_str)
                 
-                # 🔥 FIX 2: Make it timezone-aware UTC if it's naive
-                if click_timestamp_utc.tzinfo is None:
-                    click_timestamp_utc = utc_tz.localize(click_timestamp_utc)
+                # 🔥 Get current time in Manila
+                now_manila = datetime.now(manila_tz)
                 
-                # 🔥 FIX 3: Convert to Manila time for display
-                click_timestamp_manila = click_timestamp_utc.astimezone(manila_tz)
-                
-                # 🔥 FIX 4: Get receipt load time (current time in Manila)
-                receipt_load_time_manila = datetime.now(manila_tz)
-                
-                # 🔥 FIX 5: Calculate processing time using UTC to avoid timezone issues
-                time_difference_utc = datetime.now(utc_tz) - click_timestamp_utc
-                processing_time_seconds = round(time_difference_utc.total_seconds(), 2)
+                # 🔥 Calculate difference (both are Manila timezone with +08:00)
+                time_difference = now_manila - click_timestamp_manila
+                processing_time_seconds = round(time_difference.total_seconds(), 2)
                 
                 # Format processing time
                 if processing_time_seconds < 1:
@@ -2205,16 +2180,16 @@ def receipt():
                 else:
                     processing_time = f"{processing_time_seconds} seconds"
                 
-                print(f"✅ DEBUG: Processing time from click to receipt: {processing_time}")
-                print(f"   Click (UTC): {click_timestamp_utc}")
+                print(f"✅ Processing time: {processing_time}")
                 print(f"   Click (Manila): {click_timestamp_manila}")
-                print(f"   Receipt load (Manila): {receipt_load_time_manila}")
+                print(f"   Now (Manila): {now_manila}")
+                print(f"   Difference: {time_difference}")
                 
                 # Clear from session after use
                 session.pop('vote_click_timestamp', None)
                 
             except Exception as e:
-                print(f"❌ DEBUG: Error calculating processing time: {e}")
+                print(f"❌ Error calculating processing time: {e}")
                 processing_time = None
         
         election = Election.query.get(vote.election_id)
