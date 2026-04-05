@@ -18,10 +18,32 @@ app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# ---- Detect PythonAnywhere ----
+ON_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
+
+# ---- Proxy Fix for PythonAnywhere (CRITICAL!) ----
+if ON_PYTHONANYWHERE:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
+    print("✅ PythonAnywhere ProxyFix applied")
 
 # ---- Session Security ----
 app.config['SESSION_PERMANENT'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)  # ← BACK TO 20 MINUTES
+
+# ---- PythonAnywhere Session Fixes ----
+if ON_PYTHONANYWHERE:
+    # Fix for proxy/HTTPS
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    # Don't set domain - let it default to the current domain
+    app.config['SESSION_COOKIE_DOMAIN'] = None
+    
+    # Also ensure REMEMBER_COOKIE works
+    app.config['REMEMBER_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 
 # ---------------------- Mail Configuration ---------------------- #
 app.config['MAIL_SERVER'] = MAIL_SERVER
@@ -39,7 +61,6 @@ db.init_app(app)
 bcrypt.init_app(app)
 login_manager.init_app(app)
 mail.init_app(app)
-
 
 # ---------------------- Import Models ---------------------- #
 from student.models import Student
