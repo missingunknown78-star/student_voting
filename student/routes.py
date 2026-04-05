@@ -4406,8 +4406,6 @@ def support():
 
 
 # ===================== WEBAUTHN / BIOMETRIC ROUTES =====================
-
-
 @student_bp.route("/webauthn/register/options")
 def webauthn_register_options():
     username = request.args.get("username")

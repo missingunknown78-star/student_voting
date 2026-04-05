@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Handle form submission
+    // Handle form submission - FIXED VERSION
     const applicationForm = document.getElementById('candidateApplicationForm');
     if (applicationForm) {
         applicationForm.addEventListener('submit', function(e) {
@@ -125,12 +125,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             // CSRF token removed - no longer needed
             
+            // IMPORTANT: Do NOT set Content-Type header for FormData!
+            // The browser will automatically set multipart/form-data with boundary
             fetch('/student/apply-as-candidate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                    // REMOVED: 'X-CSRFToken': csrfToken
-                },
+                // REMOVED the headers completely - let browser handle it
                 body: formData
             })
             .then(response => response.json())
@@ -148,7 +147,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                showApplicationNotification('Error submitting application', 'error');
+                console.error('Error:', error);
+                showApplicationNotification('Error submitting application: ' + error.message, 'error');
                 submitBtn.disabled = false;
                 buttonText.style.opacity = '1';
                 spinner.style.display = 'none';
