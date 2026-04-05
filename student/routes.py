@@ -2631,10 +2631,10 @@ def get_candidate_api(candidate_id):
     
     return jsonify(data)                        
 
+
 from datetime import datetime
 from sqlalchemy import func
-
-
+from sqlalchemy import select  # Add this at the top of your file with other imports
 @student_bp.route('/results')
 @login_required
 def results():
@@ -2671,8 +2671,8 @@ def results():
     now = datetime.now()
     
     # Get ALL elections the student has voted in
-    voted_elections_ids = db.session.query(Vote.election_id).filter_by(
-        student_id=student_id
+    voted_elections_ids = select(Vote.election_id).where(
+        Vote.student_id == student_id
     ).distinct().subquery()
     
     # Base query - get all elections the student voted in

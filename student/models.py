@@ -55,7 +55,7 @@ class Student(db.Model, UserMixin):
     # Relationships - FIXED: Removed the conflicting backref
     department = db.relationship('Department', backref='students')
     course_rel = db.relationship('Course', backref='students')
-    program_type = db.relationship('ProgramType', backref='program_type_rel')  # FIXED: matches the backref in ProgramType
+    program_type = db.relationship('ProgramType', backref='program_type_rel', overlaps="program_type_rel,students")  # FIXED: matches the backref in ProgramType
     
     @property
     def full_name(self):
