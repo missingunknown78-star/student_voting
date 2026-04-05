@@ -734,7 +734,6 @@ def resend_otp():
 
 
 # ==================== LOGIN (merged traditional + WebAuthn page) ====================
-# ==================== LOGIN (merged traditional + WebAuthn page) ====================
 @student_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -812,6 +811,10 @@ def login():
             
             login_user(student)
             flash('Login successful!', 'success')
+            
+            # ================================================
+            # 🔥 FIX: Always redirect students to student dashboard
+            # ================================================
             return redirect(url_for('student.dashboard'))
         
         # If we get here, this is not a trusted device
@@ -892,6 +895,10 @@ def login():
             # Login normally
             login_user(student)
             flash('Login successful! This device has been trusted.', 'success')
+            
+            # ================================================
+            # 🔥 FIX: Always redirect students to student dashboard
+            # ================================================
             return redirect(url_for('student.dashboard', trust_prompt=True))
 
     return render_template('student_login.html')
@@ -1352,7 +1359,7 @@ def reset_password(token):
 
 
 # ==================== DASHBOARD ====================
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, redirect, url_for, request, session
 from flask_login import login_required, current_user
 from collections import defaultdict
 from datetime import datetime
@@ -1364,6 +1371,17 @@ from student.utils import generate_device_fingerprint
 @student_bp.route('/dashboard')
 @login_required
 def dashboard():
+    # ================================================
+    # 🔥 FIX #1: Redirect Admins to Admin Dashboard
+    # ================================================
+    # Check if user is admin (has 'role' attribute or no 'department_id')
+    if hasattr(current_user, 'role') or not hasattr(current_user, 'department_id'):
+        # This is an admin user - redirect to admin dashboard
+        return redirect(url_for('admin.dashboard'))
+    
+    # ================================================
+    # 🔥 FIX #2: Safe announcement filter for students only
+    # ================================================
     # ---------------- School Year Filter ----------------
     # FIRST: Check URL parameter (when user clicks from hamburger menu)
     school_year = request.args.get('school_year')
@@ -1441,7 +1459,9 @@ def dashboard():
         has_voted = Vote.query.filter_by(student_id=current_user.id).first() is not None
         elections = Election.query.all()
 
-    # ---------------- FIXED: Filter announcements by school year ----------------
+    # ================================================
+    # 🔥 FIX #3: Safe announcement filter (already safe, but keeping it)
+    # ================================================
     announcements_query = Announcement.query.filter(
         (Announcement.department_id == current_user.department_id) | 
         (Announcement.department_id == None)
@@ -3481,6 +3501,20 @@ email_change_requests = {}
 @student_bp.route('/profile')
 @login_required
 def profile():
+    # ================================================
+    # 🔥 FIX #1: Redirect Admins to Admin Profile
+    # ================================================
+    # Check if user is admin (has 'role' attribute or no 'department_id')
+    if hasattr(current_user, 'role') or not hasattr(current_user, 'department_id'):
+        # This is an admin user - redirect to admin profile
+        return redirect(url_for('admin.profile'))
+    
+    # ================================================
+    # 🔥 FIX #2: Safe passkey/fingerprint check for students
+    # ================================================
+    # Check if student has fingerprint registered (safe because we know it's a student)
+    has_fingerprint = current_user.passkey_id is not None and current_user.public_key is not None
+    
     # FIRST: Check URL parameter (when user clicks from hamburger menu)
     school_year = request.args.get('school_year')
     
@@ -3503,9 +3537,6 @@ def profile():
         student_id=current_user.id,
         status='pending'
     ).first() is not None
-    
-    # Check if student has fingerprint registered
-    has_fingerprint = current_user.passkey_id is not None and current_user.public_key is not None
 
     # ============= Candidate Qualification Data =============
     from student.models import QualifiedCandidate, PendingCandidate
