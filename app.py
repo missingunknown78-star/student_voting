@@ -7,6 +7,7 @@ load_dotenv()
 from settings import SECRET_KEY, DATABASE_URL, MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USE_SSL, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER
 from extensions import db, bcrypt, login_manager, mail  
 from datetime import timedelta
+from sqlalchemy.pool import NullPool
 
 # ---------------------- Initialize Flask app ---------------------- #
 app = Flask(__name__)
@@ -14,12 +15,26 @@ app = Flask(__name__)
 # ---------------------- Configuration ---------------------- #
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# Database configuration - works with Railway MySQL
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# ---- Detect PythonAnywhere ----
+# Database configuration - WITH CONNECTION POOL FIXES FOR PYTHONANYWHERE
 ON_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
+
+if ON_PYTHONANYWHERE:
+    # Use NullPool to avoid connection timeouts
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'poolclass': NullPool,  # Don't keep connections alive
+        'pool_pre_ping': True,   # Check connection before using
+        'pool_recycle': 280,      # Recycle connections every 280 seconds
+        'connect_args': {
+            'connect_timeout': 10,
+            'read_timeout': 30,
+            'write_timeout': 30
+        }
+    }
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # ---- Proxy Fix for PythonAnywhere (CRITICAL!) ----
 if ON_PYTHONANYWHERE:
@@ -29,7 +44,7 @@ if ON_PYTHONANYWHERE:
 
 # ---- Session Security ----
 app.config['SESSION_PERMANENT'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)  # ← BACK TO 20 MINUTES
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 
 # ---- PythonAnywhere Session Fixes ----
 if ON_PYTHONANYWHERE:
@@ -37,7 +52,6 @@ if ON_PYTHONANYWHERE:
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    # Don't set domain - let it default to the current domain
     app.config['SESSION_COOKIE_DOMAIN'] = None
     
     # Also ensure REMEMBER_COOKIE works
