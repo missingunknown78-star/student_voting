@@ -7,8 +7,7 @@
     <!-- School Year Meta Tag - Used across all admin pages -->
     <meta name="current-school-year" content="{{ session.get('admin_current_school_year', '') }}">
     
-    <!-- CSRF Token Meta Tag - Used for AJAX requests -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- CSRF Token Meta Tag - REMOVED -->
 
     <!-- Base Admin CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -141,35 +140,15 @@
 <!-- Single theme management script -->
 <script src="{{ url_for('admin.static', filename='js/theme-manager.js') }}"></script>
 
-<!-- Global CSRF Helper Script -->
+<!-- Global CSRF Helper Script - REMOVED (CSRF protection disabled) -->
 <script>
     (function() {
-        // Helper function to get CSRF token from meta tag
-        window.getCsrfToken = function() {
-            const metaTag = document.querySelector('meta[name="csrf-token"]');
-            return metaTag ? metaTag.getAttribute('content') : '';
-        };
-        
-        // Helper function to add CSRF token to fetch requests
-        window.fetchWithCsrf = function(url, options = {}) {
-            const token = window.getCsrfToken();
-            
-            // Set up headers
-            options.headers = options.headers || {};
-            options.headers['X-CSRFToken'] = token;
-            
-            // For POST/PUT/DELETE requests, ensure method is set
-            if (!options.method) {
-                options.method = 'POST';
-            }
-            
-            return fetch(url, options);
-        };
+        // CSRF helper functions removed - CSRF protection disabled
         
         // Auto-add CSRF token to all AJAX forms
         document.addEventListener('DOMContentLoaded', function() {
-            // For any forms that submit via AJAX, you can use this
-            console.log('CSRF protection initialized');
+            // CSRF protection is disabled
+            console.log('CSRF protection is disabled');
         });
     })();
 </script>

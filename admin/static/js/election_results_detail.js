@@ -1,6 +1,6 @@
 // Get template data
 const templateData = JSON.parse(document.getElementById('template-data').textContent);
-const csrfToken = templateData.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+// CSRF token removed - CSRF protection disabled
 
 // ==================== VOTE BADGE TRACKING ====================
 let previousCandidateVotes = {}; // Store per-candidate vote counts
@@ -59,8 +59,8 @@ function checkForNewVotes() {
     fetch(`/ctumoalboal-comelec/results/${electionId}/check-new-votes`, {
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': csrfToken  // Add CSRF token even for GET (optional but good practice)
+            'X-Requested-With': 'XMLHttpRequest'
+            // REMOVED: 'X-CSRFToken': csrfToken
         }
     })
     .then(response => response.json())
@@ -355,8 +355,8 @@ async function tallyVotes() {
         const response = await fetch(`/ctumoalboal-comelec/results/${electionId}/tally`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ force: true })
         });
@@ -461,8 +461,8 @@ function exportToPDFWithChairman(chairmanName) {
     fetch(url, {
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': csrfToken  // Add CSRF token (optional but good practice)
+            'X-Requested-With': 'XMLHttpRequest'
+            // REMOVED: 'X-CSRFToken': csrfToken
         }
     })
     .then(response => {
@@ -611,10 +611,10 @@ async function uploadPdfResult(e) {
         return;
     }
     
-    // Create form data
+    // Create form data (CSRF token removed)
     const formData = new FormData();
     formData.append('pdf_file', file);
-    formData.append('csrf_token', csrfToken);
+    // REMOVED: formData.append('csrf_token', csrfToken);
     
     if (description.trim() !== '') {
         formData.append('description', description.trim());
@@ -626,11 +626,9 @@ async function uploadPdfResult(e) {
     
     try {
         const response = await fetch(`/ctumoalboal-comelec/results/${electionId}/upload-pdf`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE (FormData sets its own Content-Type)
-            },
-            body: formData
+            method: 'POST'
+            // REMOVED: headers with CSRF - FormData sets its own Content-Type
+            // REMOVED: 'X-CSRFToken': csrfToken
         });
         
         const result = await response.json();
@@ -675,8 +673,8 @@ async function deletePdfResult(pdfId) {
         const response = await fetch(`/ctumoalboal-comelec/pdf-result/${pdfId}/delete`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken  // ADD CSRF TOKEN HERE
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({})
         });
@@ -734,8 +732,6 @@ window.addEventListener('beforeunload', function() {
 });
 
 
-// At the bottom of your election_results_detail.js, add:
-
 // ==================== INITIALIZE INSIGHT CHARTS ====================
 document.addEventListener('DOMContentLoaded', function() {
     // Only render if we're in tallied state
@@ -754,76 +750,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-
-
-// Add this function to your election_results_detail.js
+// Update position eligible voters function
 function updatePositionEligibleVoters(data) {
     // If the backend sends updated position eligibility data, update it
     if (data.position_eligible_counts) {
         window.positionEligibleVoters = data.position_eligible_counts;
         console.log('Updated position eligible voters:', window.positionEligibleVoters);
     }
-}
-
-// Then modify your checkForNewVotes function to handle it
-function checkForNewVotes() {
-    const electionId = templateData.electionId;
-    
-    console.log('Checking for new votes...');
-    
-    fetch(`/ctumoalboal-comelec/results/${electionId}/check-new-votes`, {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': csrfToken
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Received data:', data);
-        
-        if (data.success) {
-            const currentTotalVoters = data.total_voters;
-            const newVotes = currentTotalVoters - previousTotalVoters;
-            
-            if (newVotes > 0) {
-                // Find which candidates got new votes
-                const candidatesWithNewVotes = [];
-                
-                if (data.candidate_results) {
-                    data.candidate_results.forEach(currentCandidate => {
-                        const prevCandidate = previousCandidateVotes[currentCandidate.id];
-                        
-                        if (prevCandidate) {
-                            const newVotesForCandidate = currentCandidate.vote_count - prevCandidate.votes;
-                            
-                            if (newVotesForCandidate > 0) {
-                                candidatesWithNewVotes.push({
-                                    id: currentCandidate.id,
-                                    name: prevCandidate.name,
-                                    position: prevCandidate.position,
-                                    new_votes: newVotesForCandidate
-                                });
-                            }
-                        }
-                    });
-                }
-                
-                console.log('Candidates with new votes:', candidatesWithNewVotes);
-                
-                // Show vote badges on candidate profiles
-                showVoteBadges(candidatesWithNewVotes);
-                
-                // Update the stored counts
-                previousTotalVoters = currentTotalVoters;
-                
-                // Update the display without page reload
-                updateLiveResults(data);
-                
-                // Update stored candidate votes
-                updateStoredCandidateVotes(data.candidate_results);
-            }
-        }
-    })
-    .catch(error => console.error('Error checking for new votes:', error));
 }

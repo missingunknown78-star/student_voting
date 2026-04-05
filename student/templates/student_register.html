@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Registration</title>
 
-<!-- CSRF Token Meta Tag - For JavaScript AJAX calls -->
-<meta name="csrf-token" content="{{ csrf_token() }}">
+<!-- CSRF Token Meta Tag - REMOVED -->
 
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -108,8 +107,7 @@
         {% endwith %}
 
         <form id="registrationForm" method="POST" novalidate>
-            <!-- CSRF Token - CRITICAL for security -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- CSRF Token - REMOVED -->
 
             <!-- FIRST NAME -->
             <div class="input-group floating">
@@ -248,11 +246,7 @@
 </div>
 
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
 
 // Function to trim input values (remove leading/trailing spaces, preserve internal spaces)
 function trimInputValue(input) {
@@ -350,13 +344,14 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 
     const form = this;
     const formData = new FormData(form);
-    const csrfToken = getCsrfToken();
+    // CSRF token removed - no longer needed
 
     try {
         const response = await fetch("{{ url_for('student.ajax_validate_register') }}", {
             method: "POST",
             headers: {
-                'X-CSRFToken': csrfToken
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: formData
         });

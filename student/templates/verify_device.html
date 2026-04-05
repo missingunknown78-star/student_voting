@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verify New Device</title>
 
-<!-- CSRF Token Meta Tag - For JavaScript AJAX calls -->
-<meta name="csrf-token" content="{{ csrf_token() }}">
+<!-- CSRF Token Meta Tag - REMOVED -->
 
 <style>
 * {
@@ -170,11 +169,7 @@ button:disabled {
 <div id="toastReject" class="toast reject">❌ Device rejected. Redirecting to login...</div>
 
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
 
 function resendVerification() {
     const btn = document.getElementById('resendBtn');
@@ -205,14 +200,14 @@ function resendVerification() {
     // Get the correct URL using Flask's url_for
     const url = "{{ url_for('student.resend_verify_device') }}";
 
-    // Send AJAX request
+    // Send AJAX request (CSRF header removed)
     fetch(url, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCsrfToken(),
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
     .then(async response => {
@@ -256,13 +251,14 @@ function resendVerification() {
     });
 }
 
-// Polling for device verification or rejection
+// Polling for device verification or rejection (CSRF header removed)
 function checkVerification() {
     const statusUrl = "{{ url_for('student.verify_device_status') }}";
     
     fetch(statusUrl, {
         headers: {
-            'X-CSRFToken': getCsrfToken()
+            'Content-Type': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
     .then(response => response.json())

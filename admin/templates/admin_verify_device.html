@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify New Device - COMELEC Admin</title>
     
-    <!-- CSRF Token Meta Tag - For JavaScript AJAX calls -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- CSRF Token Meta Tag - REMOVED -->
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -175,11 +174,7 @@
 <div id="toastReject" class="toast reject">❌ Device rejected. Redirecting to login...</div>
 
 <script>
-    // CSRF Token Helper Function
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.getAttribute('content') : '';
-    }
+    // CSRF Token Helper Function - REMOVED (CSRF protection disabled)
     
     const btn = document.getElementById('resendBtn');
     const timerText = document.getElementById('timerText');
@@ -204,12 +199,12 @@
             }
         }, 1000);
     
-        // Send email in background with CSRF token
+        // Send email in background (CSRF token removed)
         fetch('/ctumoalboal-comelec/verify-device/resend', { 
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': getCsrfToken()
             }
         })
         .then(response => response.json())
@@ -239,7 +234,8 @@
     function checkVerification() {
         fetch("/ctumoalboal-comelec/verify-device/status", {
             headers: {
-                'X-CSRFToken': getCsrfToken()  // Add CSRF token to status check as well
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': getCsrfToken()
             }
         })
         .then(r => r.json())
@@ -267,6 +263,6 @@
     
     // poll every 3 seconds
     setInterval(checkVerification, 3000);
-    </script>
+</script>
 </body>
 </html>

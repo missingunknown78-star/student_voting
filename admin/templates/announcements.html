@@ -55,8 +55,7 @@
             <span class="close-btn" id="closeAddModalBtn">&times;</span>
             <h3><i class="fa-solid fa-bullhorn"></i> Add New Announcement</h3>
             <form id="addAnnouncementForm" method="POST" action="{{ url_for('admin.announcements') }}" class="desktop-form">
-                <!-- CSRF Token - CRITICAL for security -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- CSRF Token - REMOVED -->
                 
                 <div class="form-left">
                     <div class="form-group">
@@ -104,8 +103,7 @@
             <span class="close-btn" id="closeEditModalBtn">&times;</span>
             <h3><i class="fa-solid fa-pen"></i> Edit Announcement</h3>
             <form id="editAnnouncementForm" method="POST" action="" class="desktop-form">
-                <!-- CSRF Token - CRITICAL for security -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- CSRF Token - REMOVED -->
                 <input type="hidden" id="edit_id" name="id">
                 
                 <div class="form-left">
@@ -160,8 +158,7 @@
             <p class="delete-warning">This action cannot be undone.</p>
             
             <form id="deleteAnnouncementForm" method="POST" action="">
-                <!-- CSRF Token - CRITICAL for security -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- CSRF Token - REMOVED -->
                 <input type="hidden" id="delete_id" name="id">
                 <div class="delete-actions">
                     <button type="button" class="cancel-delete-btn" id="cancelDeleteBtn">
@@ -231,11 +228,7 @@
 
 <!-- THEME SYNCHRONIZATION FIX -->
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
 
 // This ensures the theme applies immediately without refresh
 function applyThemeToMainContent() {
@@ -420,10 +413,11 @@ function openEditModal(announcementId, event) {
         editBtn.disabled = true;
     }
     
-    // Fetch announcement data via AJAX
+    // Fetch announcement data via AJAX (CSRF token removed)
     fetch(`/ctumoalboal-comelec/get-announcement/${announcementId}`, {
         headers: {
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+            'Content-Type': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
         .then(response => {

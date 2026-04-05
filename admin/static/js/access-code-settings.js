@@ -1,10 +1,7 @@
 // access-code-settings.js - Access Code Management (Simplified)
 
-// ==================== CSRF TOKEN HELPER ====================
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// ==================== CSRF TOKEN HELPER - REMOVED ====================
+// CSRF protection has been disabled
 
 // ==================== ACCESS CODE MANAGER ====================
 const AccessCodeManager = {
@@ -134,8 +131,8 @@ const AccessCodeManager = {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
+                    'Content-Type': 'application/json'
+                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 },
                 body: JSON.stringify(data)
             });

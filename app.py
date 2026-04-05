@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from settings import SECRET_KEY, DATABASE_URL, MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USE_SSL, MAIL_USERNAME, MAIL_PASSWORD, MAIL_DEFAULT_SENDER
-from extensions import db, bcrypt, login_manager, mail, csrf
+from extensions import db, bcrypt, login_manager, mail  
 from datetime import timedelta
 
 # ---------------------- Initialize Flask app ---------------------- #
@@ -18,11 +18,6 @@ app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ---- CSRF Configuration ----
-app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_SECRET_KEY'] = SECRET_KEY
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600
-app.config['WTF_CSRF_SSL_STRICT'] = False
 
 # ---- Session Security ----
 app.config['SESSION_PERMANENT'] = True
@@ -44,7 +39,7 @@ db.init_app(app)
 bcrypt.init_app(app)
 login_manager.init_app(app)
 mail.init_app(app)
-csrf.init_app(app)
+
 
 # ---------------------- Import Models ---------------------- #
 from student.models import Student

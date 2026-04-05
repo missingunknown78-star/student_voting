@@ -1,10 +1,7 @@
 // candidate-application.js
 
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// ==================== CSRF TOKEN HELPER - REMOVED ====================
+// CSRF protection has been disabled - removed getCsrfToken() function
 
 // Function to filter elections by scope
 function filterElectionsForApply() {
@@ -126,12 +123,13 @@ document.addEventListener('DOMContentLoaded', function() {
             spinner.style.display = 'inline-block';
             
             const formData = new FormData(this);
-            const csrfToken = getCsrfToken(); // Get CSRF token
+            // CSRF token removed - no longer needed
             
             fetch('/student/apply-as-candidate', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': csrfToken // ADD CSRF TOKEN HEADER
+                    'Content-Type': 'application/json'
+                    // REMOVED: 'X-CSRFToken': csrfToken
                 },
                 body: formData
             })

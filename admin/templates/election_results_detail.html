@@ -306,7 +306,6 @@
     <div class="export-actions-container">
         <div class="upload-pdf-section">
             <form id="uploadPdfForm" enctype="multipart/form-data" class="upload-pdf-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="file-upload-wrapper">
                     <label for="pdfFile" class="file-upload-label">
                         <i class="fa-solid fa-cloud-upload-alt"></i>
@@ -737,7 +736,6 @@
     "electionId": {{ election.id }},
     "isTallied": {{ 'true' if is_tallied else 'false' }},
     "status": "{{ status }}",
-    "csrfToken": "{{ csrf_token() }}",
     "electionTitle": "{{ election.title }}",
     "generatedDate": "{{ now.strftime('%B %d, %Y at %I:%M %p') }}"
 }

@@ -185,8 +185,7 @@
         <!-- Edit Mode (Hidden by default) - UPDATED: Course and Year Level made non-editable -->
         <div id="profileEditMode" class="profile-info" style="display: none;">
             <form id="editProfileForm" method="POST" action="{{ url_for('student.edit_profile') }}">
-                <!-- CSRF Token - CRITICAL for security -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- CSRF Token - REMOVED -->
                 
                 <div class="info-group">
                     <label class="info-label">Student ID</label>
@@ -284,8 +283,7 @@
                     </div>
                 </div>
                 <form method="POST" action="{{ url_for('student.toggle_trust_device') }}" class="trust-form">
-                    <!-- CSRF Token -->
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <!-- CSRF Token - REMOVED -->
                     <button type="submit" class="btn btn-small {% if device_trusted %}btn-secondary{% else %}btn-primary{% endif %}">
                         {% if device_trusted %}
                             Remove Trust
@@ -495,8 +493,7 @@
         </div>
         
         <form id="deletionForm">
-            <!-- CSRF Token -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- CSRF Token - REMOVED -->
             
             <div class="form-group">
                 <label class="form-label">
@@ -548,10 +545,6 @@
 <div id="toastReject" class="toast reject" style="display: none; position: fixed; top: 20px; right: 20px; background: #e53935; color: white; padding: 12px 16px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; font-size: 0.9rem;">❌ Error</div>
 
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
 </script>
 {% endblock %}

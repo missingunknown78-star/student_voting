@@ -138,9 +138,6 @@
     </div>
     
     <form method="POST" action="{{ url_for('admin.help_settings') }}">
-        <!-- CSRF Token - CRITICAL for security -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
         <!-- Contact Information Card -->
         <div class="settings-card">
             <h3><i class="fa-solid fa-address-card"></i> Contact Information</h3>
@@ -189,12 +186,6 @@
 </div>
 
 <script>
-// CSRF Token Helper Function (if needed for future AJAX)
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
-
 // Auto-dismiss flash messages
 document.addEventListener('DOMContentLoaded', function() {
     const flashMessages = document.querySelectorAll('.flash-message');

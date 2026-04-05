@@ -1,10 +1,7 @@
 // ==================== QUALIFY STUDENTS JS ====================
 
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// ==================== CSRF TOKEN HELPER - REMOVED ====================
+// CSRF protection has been disabled - removed getCsrfToken() function
 
 // Go to page
 function goToPage(page) {
@@ -64,8 +61,8 @@ function qualifyStudent(studentId) {
     fetch('/ctumoalboal-comelec/qualify-student', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HERE
+            'Content-Type': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({ student_id: studentId })
     })
@@ -118,8 +115,8 @@ function removeQualification(studentId) {
     fetch('/ctumoalboal-comelec/remove-qualification', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN HERE
+            'Content-Type': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({ student_id: studentId })
     })

@@ -340,8 +340,6 @@
         </div>
         <div class="modal-body">
             <form method="POST" id="electionForm">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
                 <div class="form-row">
                     <div class="form-column">
                         <div class="election-form-group">
@@ -473,7 +471,6 @@ const submitElectionBtn = document.getElementById('submitElectionBtn');
 function openModal() {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
-    // Add ripple and spin to the button that opened modal
     if (openModalBtn) {
         openModalBtn.classList.add('spinning');
         setTimeout(() => {
@@ -582,6 +579,14 @@ function toggleFields() {
     } else {
         departmentRow.style.display = 'none';
         yearLevelRow.style.display = 'none';
+        departmentSelect.required = false;
+        departmentSelect.disabled = true;
+        departmentSelect.value = '';
+        
+        yearCheckboxes.forEach(cb => {
+            cb.disabled = true;
+            cb.checked = false;
+        });
     }
 }
 
@@ -640,15 +645,12 @@ function handleFormSubmit(e) {
         return;
     }
     
-    // Add circular spinner to submit button
     if (submitElectionBtn) {
         submitElectionBtn.classList.add('submitting');
-        // Replace content with spinner and text
         submitElectionBtn.innerHTML = '<span class="spinner"></span> Creating Election...';
         submitElectionBtn.disabled = true;
     }
     
-    // Allow form to submit
     return true;
 }
 
@@ -744,17 +746,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     setTimeout(highlightCreateElectionLink, 50);
     
-    // Add form validation with spinning effect
     const form = document.getElementById('electionForm');
     if (form) {
         form.addEventListener('submit', handleFormSubmit);
     }
     
-    // Check for success flash and close modal
     const flashMessages = document.querySelectorAll('.flash-message.success, .flash-message.election-success');
     if (flashMessages.length > 0) {
         closeModal();
-        // Reset submit button if it was in submitting state
         if (submitElectionBtn) {
             submitElectionBtn.classList.remove('submitting');
             submitElectionBtn.innerHTML = '<span class="btn-icon"></span> Create Election';

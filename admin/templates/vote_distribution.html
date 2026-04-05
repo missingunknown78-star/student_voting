@@ -87,15 +87,11 @@
     .grouping-info i {
         font-size: 0.8rem;
     }
-
-    /* REMOVED: PDF Loading Overlay styles - no longer needed */
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="distribution-container">
-    <!-- REMOVED: PDF Loading Overlay -->
-
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
@@ -122,7 +118,6 @@
             {% endif %}
         </div>
         <div class="header-actions">
-            <!-- REMOVED: Export PDF button -->
             <a href="#" class="back-btn" onclick="history.back(); return false;">
                 <i class="fa-solid fa-arrow-left"></i>
                 Back
@@ -200,15 +195,9 @@
             document.documentElement.classList.add('dark-mode');
         }
     })();
-    </script>
-    
-    <script>
-    // CSRF Token Helper Function
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.getAttribute('content') : '';
-    }
-    
+</script>
+
+<script>
     let currentElectionId = null;
     let currentData = null;
     let currentElectionScope = null;
@@ -263,11 +252,7 @@
         addDebug(`Loading data for election ID: ${electionId} (Scope: ${currentElectionScope})`);
         
         try {
-            const response = await fetch(`/ctumoalboal-comelec/api/vote-distribution/${electionId}`, {
-                headers: {
-                    'X-CSRFToken': getCsrfToken()
-                }
-            });
+            const response = await fetch(`/ctumoalboal-comelec/api/vote-distribution/${electionId}`);
             const data = await response.json();
             
             addDebug(`Response status: ${response.status}`);
@@ -345,10 +330,7 @@
         
         try {
             const response = await fetch(`/ctumoalboal-comelec/api/vote-distribution/populate/${electionId}`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken()
-                }
+                method: 'POST'
             });
             const data = await response.json();
             
@@ -675,8 +657,6 @@
         return 'fa-user';
     }
     
-    // REMOVED: exportToPDF function
-    
     function showLoading() {
         document.getElementById('loadingOverlay').classList.add('active');
     }
@@ -684,8 +664,6 @@
     function hideLoading() {
         document.getElementById('loadingOverlay').classList.remove('active');
     }
-    
-    // REMOVED: showPDFLoading and hidePDFLoading functions
     
     function hideNoDataMessage() {
         const noDataMsg = document.getElementById('noDataMessage');
@@ -712,5 +690,5 @@
             debugDiv.classList.toggle('visible');
         }
     }
-    </script>
+</script>
 {% endblock %}

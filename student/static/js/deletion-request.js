@@ -1,4 +1,8 @@
 // deletion-request.js
+
+// ==================== CSRF TOKEN HELPER - REMOVED ====================
+// CSRF protection has been disabled - removed getCsrfToken() function
+
 document.addEventListener('DOMContentLoaded', function() {
     const deletionBtn = document.getElementById('requestDeletionBtn');
     const deletionModal = document.getElementById('deletionModal');
@@ -21,32 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const MAX_CHARS = 5000;
     const MIN_CHARS_FOR_SUBMIT = 10; // At least 10 characters to enable submit
 
-    // Helper function to get CSRF token
-    function getCsrfToken() {
-        // Try to get from meta tag first
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        if (metaTag) {
-            return metaTag.getAttribute('content');
-        }
-        
-        // Try to get from hidden input in the form
-        const csrfInput = document.querySelector('input[name="csrf_token"]');
-        if (csrfInput) {
-            return csrfInput.value;
-        }
-        
-        // Try to get from cookie (if you're using Flask-WTF's CSRFProtect)
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const [name, value] = cookie.trim().split('=');
-            if (name === 'csrf_token') {
-                return value;
-            }
-        }
-        
-        console.warn('CSRF token not found');
-        return '';
-    }
+    // Helper function to get CSRF token - REMOVED (CSRF protection disabled)
 
     // Format number with commas
     function formatNumber(num) {
@@ -186,13 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.innerHTML = '<span class="button-icon"><span class="spinner"></span> <span>Submitting...</span></span>';
 
         try {
-            const csrfToken = getCsrfToken();
+            // CSRF token removed - no longer needed
             
             const response = await fetch('/student/request-deletion', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken  // Add CSRF token header
+                    'Content-Type': 'application/json'
+                    // REMOVED: 'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     reason: reason
@@ -429,11 +408,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add CSRF meta tag if it doesn't exist
-    if (!document.querySelector('meta[name="csrf-token"]')) {
-        const meta = document.createElement('meta');
-        meta.name = 'csrf-token';
-        meta.content = '{{ csrf_token() }}'; // This will be rendered by Jinja
-        document.head.appendChild(meta);
-    }
+    // CSRF meta tag addition - REMOVED (CSRF protection disabled)
+    // No longer needed to add CSRF meta tag
 });

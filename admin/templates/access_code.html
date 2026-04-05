@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access Page</title>
     
-    <!-- CSRF Token Meta Tag -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- CSRF Token Meta Tag - REMOVED -->
     
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/access_code.css') }}">
@@ -26,8 +25,7 @@
     <!-- Access Code Form -->
     <form action="{{ url_for('admin.dynamic_access', secret_path=request.view_args.get('secret_path', '')) }}" method="POST" class="access-form" autocomplete="off" id="accessForm">
         
-        <!-- CSRF Token -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- CSRF Token - REMOVED -->
 
         <div class="input-container">
             <input 
@@ -116,13 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingIndicator.style.display = 'flex';
         accessInput.disabled = true;
         
-        // Get CSRF token from meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        // CSRF token removed - no longer needed
         
-        // Create form data
+        // Create form data (CSRF token removed)
         const formData = new FormData();
         formData.append('access_code', code);
-        formData.append('csrf_token', csrfToken);
+        // REMOVED: formData.append('csrf_token', csrfToken);
         
         // Send AJAX request
         fetch('{{ url_for("admin.verify_access_code_ajax") }}', {

@@ -228,11 +228,7 @@
 </div>
 
 <script>
-    // CSRF Token Helper Function
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.getAttribute('content') : '';
-    }
+    // CSRF Token Helper Function - REMOVED (CSRF protection disabled)
 
     let searchTimeout = null;
     let currentPage = {{ current_page|default(1) }};
@@ -374,8 +370,8 @@
         fetch('/ctumoalboal-comelec/qualify-student', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ student_id: studentId })
         })
@@ -416,8 +412,8 @@
         fetch('/ctumoalboal-comelec/remove-qualification', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ student_id: studentId })
         })

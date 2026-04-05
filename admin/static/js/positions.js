@@ -1,7 +1,6 @@
 // ================= POSITIONS MODAL FUNCTIONS =================
 
-// Get CSRF token
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+// CSRF token removed - CSRF protection disabled
 
 // Initialize event listeners for positions modals
 document.addEventListener('DOMContentLoaded', function() {
@@ -187,8 +186,8 @@ async function handleAddPosition(event) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRF-Token': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
+                // REMOVED: 'X-CSRF-Token': csrfToken
             },
             body: new URLSearchParams({
                 'position_name': positionName
@@ -247,8 +246,8 @@ async function handleEditPosition(event) {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
+                // REMOVED: 'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({
                 position_name: positionName
@@ -291,8 +290,8 @@ async function deletePosition(positionId, positionName) {
         const response = await fetch(`/ctumoalboal-comelec/manage_positions/${positionId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-Token': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
+                // REMOVED: 'X-CSRF-Token': csrfToken
             }
         });
         

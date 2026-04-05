@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login</title>
 
-    <!-- CSRF Token Meta Tag -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- CSRF Token Meta Tag - REMOVED -->
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_login.css') }}">
@@ -30,8 +29,7 @@
     <!-- Login Form -->
     <form action="{{ url_for('admin.login') }}" method="POST" class="login-form" autocomplete="off" id="loginForm">
         
-        <!-- CSRF Token - CRITICAL for security -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- CSRF Token - REMOVED -->
 
         <h3>Admin Login</h3>
 

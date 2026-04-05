@@ -164,7 +164,7 @@
                     <th>Applied Date</th>
                     <th>Status</th>
                     <th>Actions</th>
-                   </tr>
+                </tr>
             </thead>
             <tbody id="applicationsBody">
                 {% if applications and applications|length > 0 %}
@@ -329,12 +329,6 @@
 <div id="toast" class="toast" style="display: none;"></div>
 
 <script>
-    // CSRF Token Helper Function
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.getAttribute('content') : '';
-    }
-    
     let currentApplicationId = null;
     let searchTimeout = null;
     
@@ -446,8 +440,7 @@
         
         fetch(`/ctumoalboal-comelec/pending-candidate/${id}`, {
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCsrfToken()
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
         .then(response => response.json())
@@ -535,8 +528,7 @@
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCsrfToken()
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
         .then(response => response.json())
@@ -584,8 +576,7 @@
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCsrfToken()
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ reason: reason })
         })

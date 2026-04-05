@@ -1,10 +1,7 @@
 // student_validation.js - Student validation for candidate management
 
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// ==================== CSRF TOKEN HELPER - REMOVED ====================
+// CSRF protection has been disabled - removed getCsrfToken() function
 
 // Initialize student validation
 function initStudentValidation() {
@@ -64,8 +61,8 @@ function validateStudent() {
     return fetch(url, {
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCsrfToken()
+            'X-Requested-With': 'XMLHttpRequest'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
     .then(res => {

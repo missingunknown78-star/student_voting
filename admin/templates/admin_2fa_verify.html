@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin 2FA Verification</title>
     
-    <!-- CSRF Token Meta Tag - For JavaScript if needed -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- CSRF Token Meta Tag - REMOVED -->
     
     <!-- Use existing admin_login.css -->
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_login.css') }}">
@@ -149,8 +148,7 @@
         </div>
 
         <form method="POST" class="login-form" id="verifyForm">
-            <!-- CSRF Token - CRITICAL for security -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- CSRF Token - REMOVED -->
             
             <div class="input-group">
                 <input type="text" 

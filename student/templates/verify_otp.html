@@ -5,17 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Verify OTP</title>
 
-<!-- CSRF Token Meta Tag - For any potential future AJAX calls -->
-<meta name="csrf-token" content="{{ csrf_token() }}">
+<!-- CSRF Token Meta Tag - REMOVED -->
 
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/otp.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-/* Hide CSRF token input visually */
-input[name="csrf_token"] {
-    display: none;
-}
+/* Hide CSRF token input visually - REMOVED */
 
 /* Spinner styles - matching registration form */
 .btn-spinner {
@@ -124,8 +120,7 @@ input[name="csrf_token"] {
         {% endwith %}
 
         <form method="POST" id="otpForm">
-            <!-- CSRF Token - CRITICAL for security -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- CSRF Token - REMOVED -->
             
             <div class="otp-container" id="otpContainer">
                 {% for i in range(6) %}
@@ -159,11 +154,7 @@ input[name="csrf_token"] {
 </div>
 
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
+// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
 
 (function() {
     const inputs = document.querySelectorAll('.otp-container input');

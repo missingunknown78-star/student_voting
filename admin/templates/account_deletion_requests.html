@@ -722,11 +722,8 @@
 
 <!-- =============== MAIN SCRIPT WITH REAL-TIME SEARCH =============== -->
 <script>
-    // =============== CSRF TOKEN HELPER ===============
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.getAttribute('content') : '';
-    }
+    // =============== CSRF TOKEN HELPER - REMOVED ===============
+    // CSRF protection has been disabled
     
     // This ensures the theme applies immediately without refresh
     function applyThemeToMainContent() {
@@ -1076,18 +1073,18 @@
             .catch(error => console.error('Error loading request:', error));
     }
     
-    // Process request (approve/reject) - THIS IS A POST REQUEST - NEEDS CSRF
+    // Process request (approve/reject) - THIS IS A POST REQUEST
+    // CSRF token header removed since CSRF is disabled
     function processRequest() {
         if (!currentRequestId || !currentAction) return;
         
         const notes = document.getElementById('adminNotes').value;
-        const csrfToken = getCsrfToken(); // Get CSRF token from meta tag
         
         fetch(`/ctumoalboal-comelec/deletion-requests/${currentRequestId}/process`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken  // Add CSRF token header
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 action: currentAction,

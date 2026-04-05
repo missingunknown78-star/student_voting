@@ -1851,6 +1851,10 @@ def vote_page(election_id):
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])
 @login_required
 def submit_vote(election_id):
+    # ========== ADD THESE 2 LINES AT THE VERY TOP ==========
+    session.permanent = True
+    # ========== END OF CHANGE ==========
+    
     start_time = time.time()
     
     # Set timezone
@@ -4403,10 +4407,8 @@ def support():
 
 # ===================== WEBAUTHN / BIOMETRIC ROUTES =====================
 
-from extensions import csrf
 
 @student_bp.route("/webauthn/register/options")
-@csrf.exempt  # Exempt WebAuthn routes
 def webauthn_register_options():
     username = request.args.get("username")
     if not username:
@@ -4444,7 +4446,6 @@ def webauthn_register_options():
 
 
 @student_bp.route("/webauthn/register/verify", methods=["POST"])
-@csrf.exempt  # Exempt WebAuthn routes
 def webauthn_register_verify():
     data = request.get_json()
     username = data.get("username")
@@ -4476,10 +4477,7 @@ def webauthn_register_verify():
 
 
 
-from extensions import csrf  # Import csrf from extensions
-
 @student_bp.route("/webauthn/login/options")
-@csrf.exempt  # Exempt WebAuthn routes from CSRF protection
 def webauthn_login_options():
     """
     Phase 2: True one-click passkey login
@@ -4512,7 +4510,6 @@ from base64 import b64decode
 from flask_login import login_user
 
 @student_bp.route("/webauthn/login/verify", methods=["POST"])
-@csrf.exempt  # Exempt WebAuthn routes from CSRF protection
 def webauthn_login_verify():
     """
     Phase 2: True one-click passkey login

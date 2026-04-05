@@ -153,9 +153,6 @@
     </div>
 
     <form method="POST" id="configForm" action="{{ url_for('admin.configure_election_positions', election_id=election.id) }}">
-        <!-- CSRF Token - CRITICAL for security -->
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
         <!-- Select All Bar -->
         <div class="select-all-bar">
             <label>

@@ -1,11 +1,5 @@
 // vote_page.js - Handles voting page interactions
 
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
-
 // Set cast timestamp and click timestamp when form is submitted
 document.addEventListener('DOMContentLoaded', function() {
     const voteForm = document.getElementById('voteForm');
@@ -19,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const now = new Date();
             
             // Format as ISO string WITHOUT the Z (which indicates UTC)
-            // This sends the local time (Manila) to the server
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
@@ -95,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const positionId = positionGroup.dataset.positionId;
                 
                 if (this.type === 'radio') {
-                    // Single selection - remove all selected, add to this
                     positionGroup.querySelectorAll('.candidate-row').forEach(r => {
                         r.classList.remove('selected');
                     });
@@ -103,14 +95,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         row.classList.add('selected');
                     }
                 } else {
-                    // Multiple selection - toggle blue class
                     if (this.checked) {
                         row.classList.add('selected-multi');
                     } else {
                         row.classList.remove('selected-multi');
                     }
                     
-                    // Enforce max limit
                     const checkboxes = positionGroup.querySelectorAll('input[type="checkbox"]:checked');
                     if (checkboxes.length > maxVotes) {
                         this.checked = false;
@@ -121,14 +111,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateSelectionCounter(positionId, maxVotes);
                 }
                 
-                // Stop propagation to prevent double events
                 e.stopPropagation();
             });
         }
         
-        // Make entire row clickable
         row.addEventListener('click', function(e) {
-            // Prevent clicking on the input itself to avoid double triggering
             if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
                 const radio = this.querySelector('.candidate-radio');
                 if (radio && !radio.disabled) {
@@ -138,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         radio.checked = !radio.checked;
                     }
-                    // Trigger change event manually
                     const event = new Event('change', { bubbles: true });
                     radio.dispatchEvent(event);
                 }
@@ -147,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Update selection counter for multi-select positions
+// Update selection counter
 function updateSelectionCounter(positionId, maxVotes) {
     const checkboxes = document.querySelectorAll(`input[name="position_${positionId}"]:checked`);
     const counter = document.getElementById(`counter-${positionId}`);
@@ -158,31 +144,29 @@ function updateSelectionCounter(positionId, maxVotes) {
     }
 }
 
-// Initialize counters from window object
+// Initialize counters
 function initializeCounter(positionId, maxVotes) {
     updateSelectionCounter(positionId, maxVotes);
 }
 
 // Initialize all counters
 function initializeAllCounters() {
-    document.querySelectorAll('.position-group[data-max-votes="2"], .position-group[data-max-votes="3"], .position-group[data-max-votes="4"], .position-group[data-max-votes="5"], .position-group[data-max-votes="6"], .position-group[data-max-votes="7"], .position-group[data-max-votes="8"], .position-group[data-max-votes="9"], .position-group[data-max-votes="10"], .position-group[data-max-votes="11"], .position-group[data-max-votes="12"]').forEach(group => {
+    document.querySelectorAll('.position-group[data-max-votes]').forEach(group => {
         const positionId = group.dataset.positionId;
         const maxVotes = parseInt(group.dataset.maxVotes);
         updateSelectionCounter(positionId, maxVotes);
     });
 }
 
-// Validate vote before submission
+// Validate vote
 function validateVote() {
     const positionGroups = document.querySelectorAll('.position-group');
     let allPositionsVoted = true;
     
     positionGroups.forEach(group => {
-        const positionName = group.querySelector('.position-title').textContent;
         const maxVotes = parseInt(group.dataset.maxVotes);
         
         if (maxVotes === 1) {
-            // Single selection - check radios
             const radios = group.querySelectorAll('input[type="radio"]:checked');
             if (radios.length === 0) {
                 allPositionsVoted = false;
@@ -194,7 +178,6 @@ function validateVote() {
                 group.style.padding = "";
             }
         } else {
-            // Multiple selection - check checkboxes
             const checkboxes = group.querySelectorAll('input[type="checkbox"]:checked');
             if (checkboxes.length === 0) {
                 allPositionsVoted = false;

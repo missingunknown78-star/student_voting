@@ -1,10 +1,5 @@
 // admin_settings.js - All settings functionality moved here
 
-// ==================== CSRF TOKEN HELPER ====================
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
 
 // ==================== SETTINGS NAVIGATION ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -100,8 +95,7 @@ function saveSettings(section) {
     fetch('/ctumoalboal-comelec/settings/save', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             section: section,
@@ -223,8 +217,7 @@ function disable2FA() {
         fetch('/ctumoalboal-comelec/2fa/disable', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
+                'Content-Type': 'application/json'
             }
         })
         .then(response => response.json())
@@ -278,8 +271,7 @@ function generateNewBackupCodes() {
         fetch('/ctumoalboal-comelec/2fa/backup-codes', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken()
+                'Content-Type': 'application/json'
             }
         })
         .then(response => response.json())
@@ -309,8 +301,7 @@ function trustCurrentDevice() {
     fetch('/ctumoalboal-comelec/trusted-devices/add', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
+            'Content-Type': 'application/json'
         }
     })
     .then(response => response.json())
@@ -358,8 +349,7 @@ function revokeTrustedDevice(deviceId, event) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': getCsrfToken()
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({})
     })
@@ -417,9 +407,7 @@ function simpleRevokeDevice(deviceId) {
     // FIXED: Added /ctumoalboal-comelec prefix
     fetch(`/ctumoalboal-comelec/trusted-devices/test-remove/${deviceId}`, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': getCsrfToken()
-        }
+        headers: {}
     })
     .then(response => response.json())
     .then(data => {
@@ -656,8 +644,8 @@ function saveGeneralSettings() {
     fetch('/ctumoalboal-comelec/settings/save', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
+            'Content-Type': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
             section: 'profile',
@@ -765,7 +753,6 @@ function cancelProfileEdit() {
     profileActions.style.display = 'none';
 }
 
-// 🔴 THIS IS THE CRITICAL FUNCTION - MAKE SURE IT HAS THE CORRECT URL
 function saveProfileChanges() {
     const usernameInput = document.getElementById('username');
     const emailInput = document.getElementById('email');
@@ -796,15 +783,15 @@ function saveProfileChanges() {
     saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
     saveBtn.disabled = true;
     
-    // 🔴 FIXED: This MUST be /ctumoalboal-comelec/settings/profile/update
+    // FIXED: This MUST be /ctumoalboal-comelec/settings/profile/update
     const url = '/ctumoalboal-comelec/settings/profile/update';
     console.log('Fetching URL:', url);
     
     fetch(url, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
+            'Content-Type': 'application/json'
+            // REMOVED: 'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({
             username: username,

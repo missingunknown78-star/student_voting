@@ -45,7 +45,6 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
-from extensions import csrf 
 
 try:
     from admin.models import TallyVote
@@ -353,12 +352,8 @@ def dynamic_access(secret_path):
 
 # ------------------- AJAX Verify Route ------------------- #
 @admin_bp.route('/verify-access-code', methods=['POST'])
-@csrf.exempt
 def verify_access_code_ajax():
     """AJAX endpoint for auto-verifying access code"""
-    
-    # CSRF validation is now exempt, so we don't need to manually validate
-    # The @csrf.exempt decorator above bypasses CSRF protection for this route
     
     ip = request.remote_addr
     
@@ -744,8 +739,6 @@ def setup_2fa():
     )
     return render_template('admin_2fa_setup.html', totp_uri=totp_uri, secret=secret)
 
-
- # Make sure to import csrf
 
 # ==================== 2FA DISABLE WITH EMAIL CONFIRMATION ====================
 

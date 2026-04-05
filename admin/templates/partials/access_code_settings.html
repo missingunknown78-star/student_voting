@@ -30,7 +30,7 @@
         <h4><i class="fa-solid fa-pen-to-square"></i> Set New Access Code</h4>
         
         <form id="accessCodeForm" onsubmit="return updateAccessCode(event)">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- CSRF TOKEN REMOVED -->
             
             <div class="form-group">
                 <label for="newAccessCode">New Access Code</label>

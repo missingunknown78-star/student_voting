@@ -1,4 +1,8 @@
 // profile-edit.js
+
+// ==================== CSRF TOKEN HELPER - REMOVED ====================
+// CSRF protection has been disabled - removed getCsrfToken() function
+
 document.addEventListener('DOMContentLoaded', function() {
     const displayMode = document.getElementById('profileDisplayMode');
     const editMode = document.getElementById('profileEditMode');
@@ -30,11 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let pollInterval = null;
     let resendCooldown = false;
     
-    // CSRF Token Helper Function
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.getAttribute('content') : '';
-    }
+    // CSRF Token Helper Function - REMOVED (CSRF protection disabled)
     
     // Toggle edit mode
     function showEditMode() {
@@ -96,14 +96,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return email;
     }
     
-    // Send verification email with CSRF token
+    // Send verification email (CSRF header removed)
     async function sendVerificationEmail() {
         try {
             const response = await fetch('/student/send-email-change-verification', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                    'Content-Type': 'application/json'
+                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 },
                 body: JSON.stringify({ 
                     old_email: originalEmail,
@@ -185,14 +185,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Check email confirmation status
+    // Check email confirmation status (CSRF header removed)
     async function checkEmailConfirmationStatus() {
         if (!changeRequestId) return;
         
         try {
             const response = await fetch(`/student/email-change-status/${changeRequestId}`, {
                 headers: {
-                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                    'Content-Type': 'application/json'
+                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 }
             });
             const data = await response.json();
@@ -228,14 +229,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Send OTP to new email with CSRF token
+    // Send OTP to new email (CSRF header removed)
     async function sendOtpToNewEmail() {
         try {
             const response = await fetch('/student/send-otp-to-new-email', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                    'Content-Type': 'application/json'
+                    // REMOVED: 'X-CSRFToken': getCsrfToken()
                 },
                 body: JSON.stringify({ 
                     email: pendingNewEmail,
@@ -310,14 +311,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Submit form function
+    // Submit form function (CSRF header removed)
     function submitForm() {
         const formData = new FormData(editForm);
         
         fetch(editForm.action, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCsrfToken()  // ADD CSRF TOKEN
+                'Content-Type': 'application/json'
+                // REMOVED: 'X-CSRFToken': getCsrfToken()
             },
             body: formData
         })

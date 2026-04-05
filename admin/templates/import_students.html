@@ -109,9 +109,6 @@
         <!-- Excel Import Form -->
         <div class="import-form-wrapper">
             <form method="POST" enctype="multipart/form-data" class="import-form">
-                <!-- CSRF Token - CRITICAL for file upload security -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
                 <div class="form-group">
                     <label for="excel_file"><strong>Select Excel file:</strong></label>
                     <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
@@ -197,12 +194,6 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// CSRF Token Helper Function
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
-
 $(document).ready(function(){
     // AJAX search and pagination
     function loadStudents(page=1, query="") {
@@ -215,9 +206,6 @@ $(document).ready(function(){
             url: "{{ url_for('admin.import_students_table') }}",
             method: "GET",
             data: {page: page, q: query},
-            headers: {
-                'X-CSRFToken': getCsrfToken()  // Add CSRF token to AJAX request
-            },
             success: function(data){
                 $("#students-table-container").html(data);
             },

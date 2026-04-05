@@ -247,8 +247,7 @@
             <div id="candidateApplicationNotification" class="modal-notification"></div>
             
             <form id="candidateApplicationForm" enctype="multipart/form-data">
-                <!-- CSRF Token - CRITICAL for security -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- CSRF Token - REMOVED -->
                 
                 <!-- Hidden field for year level - auto-populated from student record -->
                 <input type="hidden" name="year_level_id" id="apply_year_level_id" value="{{ student.year_level_id or '' }}">
