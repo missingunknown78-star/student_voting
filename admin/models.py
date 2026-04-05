@@ -411,9 +411,9 @@ class ElectionPosition(db.Model):
     # Optional: Display order in ballot
     display_order = db.Column(db.Integer, default=0)
     
-    # Timestamps
+    # Timestamps - FIXED: Added default for updated_at
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # ← ADDED default
 
     # Relationships
     election = db.relationship('Election', backref=db.backref('election_positions', cascade='all, delete-orphan'))
