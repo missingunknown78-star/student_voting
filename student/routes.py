@@ -525,34 +525,43 @@ def register():
 # ==================== AJAX VALIDATION ====================
 @student_bp.route('/register/validate', methods=['POST'])
 def ajax_validate_register():
-    from student.models import Student, ProgramType  # Import ProgramType here too
+    from student.models import Student, ProgramType
     from sqlalchemy import func
     
     errors = {}
 
+    # Get data from FormData (not JSON)
+    # When using FormData, request.form works, but you need to remove the JSON header
     email = request.form.get('email', '').strip()
-    id_number = request.form.get('id_number')
-    username = request.form.get('username')
-    program_type_id = request.form.get('program_type')
+    id_number = request.form.get('id_number', '').strip()
+    username = request.form.get('username', '').strip()
+    program_type_id = request.form.get('program_type', '').strip()
 
-    if Student.query.filter(func.trim(Student.id_number) == id_number).first():
+    print(f"🔍 Validation check - Email: {email}, ID: {id_number}, Username: {username}, Program Type: {program_type_id}")
+
+    if id_number and Student.query.filter(func.trim(Student.id_number) == id_number).first():
         errors['id_number'] = 'ID Number already registered'
 
-    if Student.query.filter_by(email=email).first():
+    if email and Student.query.filter_by(email=email).first():
         errors['email'] = 'Email already registered'
 
-    if Student.query.filter_by(username=username).first():
+    if username and Student.query.filter_by(username=username).first():
         errors['username'] = 'Username already taken'
     
     # Validate program type
-    if not program_type_id:
+    if not program_type_id or program_type_id == '':
         errors['program_type'] = 'Program type is required'
     else:
-        program_type = ProgramType.query.get(program_type_id)
-        if not program_type:
+        try:
+            program_type_id_int = int(program_type_id)
+            program_type = ProgramType.query.get(program_type_id_int)
+            if not program_type:
+                errors['program_type'] = 'Invalid program type selected'
+        except ValueError:
             errors['program_type'] = 'Invalid program type selected'
 
     return jsonify(errors)
+
 
 # ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])

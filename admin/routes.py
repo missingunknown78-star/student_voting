@@ -2515,6 +2515,7 @@ from student.models import TrustedDevice
 def import_students():
     import time
     import pandas as pd
+    import numpy as np
     from sqlalchemy import text
     from datetime import datetime
     
@@ -2540,12 +2541,11 @@ def import_students():
             print(f"📊 STEP 0: File saved in {time.time() - start_time:.2f}s")
             
             # STEP 1: Read Excel with optimized settings
-            # Read necessary columns including YearLevel
             df = pd.read_excel(
                 temp_file_path, 
                 dtype={"StudentNo": str},
-                usecols=["StudentNo", "LastName", "FirstName", "YearLevel"],  # Added YearLevel
-                engine='openpyxl'  # Default Excel engine
+                usecols=["StudentNo", "LastName", "FirstName", "YearLevel"],
+                engine='openpyxl'
             )
             
             # Clean up temp file
@@ -2553,39 +2553,67 @@ def import_students():
             
             print(f"📊 STEP 1: Loaded Excel in {time.time() - start_time:.2f}s")
             
-            # STEP 2: Clean data using vectorized operations (MUCH faster than loops)
+            # STEP 2: Clean data using vectorized operations
+            # First, replace all NaN values with None (this is the key fix!)
+            df = df.where(pd.notnull(df), None)
+            df = df.replace([np.nan], [None])
+            
             df['StudentNo'] = df['StudentNo'].astype(str).str.strip()
             df['StudentNo'] = df['StudentNo'].str.replace(r'\.0$', '', regex=True)
             df['FirstName'] = df['FirstName'].astype(str).str.strip()
             df['LastName'] = df['LastName'].astype(str).str.strip()
             
-            # Handle YearLevel - convert numbers to text format
+            # Handle YearLevel - convert to proper format, handling None values
             if 'YearLevel' in df.columns:
-                # Convert to string first, then clean
-                df['YearLevel'] = df['YearLevel'].astype(str).str.strip()
+                # Define a function to safely convert year level
+                def convert_year_level(val):
+                    if val is None or pd.isna(val) or str(val).lower() in ['nan', 'none', '']:
+                        return None
+                    
+                    # Convert to string and clean
+                    val_str = str(val).strip()
+                    
+                    # Define mapping from numbers to text
+                    year_mapping = {
+                        '1': '1st Year',
+                        '2': '2nd Year', 
+                        '3': '3rd Year',
+                        '4': '4th Year',
+                        '1.0': '1st Year',
+                        '2.0': '2nd Year',
+                        '3.0': '3rd Year',
+                        '4.0': '4th Year'
+                    }
+                    
+                    # Check if it's a number
+                    if val_str in year_mapping:
+                        return year_mapping[val_str]
+                    
+                    # Handle numeric values that might be floats
+                    try:
+                        num_val = float(val_str)
+                        if num_val.is_integer():
+                            int_val = int(num_val)
+                            if int_val == 1:
+                                return "1st Year"
+                            elif int_val == 2:
+                                return "2nd Year"
+                            elif int_val == 3:
+                                return "3rd Year"
+                            elif int_val == 4:
+                                return "4th Year"
+                            else:
+                                return f"{int_val}th Year"
+                        else:
+                            return None
+                    except (ValueError, TypeError):
+                        # If it's already a text like "1st Year", keep as is
+                        if 'st' in val_str or 'nd' in val_str or 'rd' in val_str or 'th' in val_str:
+                            return val_str
+                        return None
                 
-                # Define mapping from numbers to text
-                year_mapping = {
-                    '1': '1st Year',
-                    '2': '2nd Year', 
-                    '3': '3rd Year',
-                    '4': '4th Year',
-                    '1.0': '1st Year',
-                    '2.0': '2nd Year',
-                    '3.0': '3rd Year',
-                    '4.0': '4th Year'
-                }
-                
-                # Apply mapping
-                df['YearLevel'] = df['YearLevel'].map(year_mapping).fillna(df['YearLevel'])
-                
-                # Handle any remaining numeric values that might be floats
-                df['YearLevel'] = df['YearLevel'].apply(lambda x: 
-                    f"{int(float(x))}st Year" if str(x).replace('.', '').isdigit() and float(x) == 1 else
-                    f"{int(float(x))}nd Year" if str(x).replace('.', '').isdigit() and float(x) == 2 else
-                    f"{int(float(x))}rd Year" if str(x).replace('.', '').isdigit() and float(x) == 3 else
-                    f"{int(float(x))}th Year" if str(x).replace('.', '').isdigit() and float(x) == 4 else x
-                )
+                # Apply the conversion function
+                df['YearLevel'] = df['YearLevel'].apply(convert_year_level)
             else:
                 df['YearLevel'] = None
             
@@ -2601,7 +2629,6 @@ def import_students():
             print(f"📊 STEP 2: Cleaned data - {len(excel_data)} unique students in {time.time() - start_time:.2f}s")
 
             # ===== OPTIMIZATION 1: Use RAW SQL for bulk operations =====
-            # Get connection for raw SQL (fastest for bulk operations)
             connection = db.session.connection()
             
             # STEP 3: Get existing CTU students in one query
@@ -2638,7 +2665,6 @@ def import_students():
             print(f"📊 STEP 4: Fetched {len(registered_map)} registered students in {time.time() - start_time:.2f}s")
 
             # ===== OPTIMIZATION 2: Prepare bulk operations =====
-            # Prepare lists for batch operations
             to_insert = []
             to_update = []
             
@@ -2650,6 +2676,10 @@ def import_students():
                 first_name = student['FirstName']
                 last_name = student['LastName']
                 year_level = student.get('YearLevel')
+                
+                # Ensure year_level is None if it's invalid (not a string)
+                if year_level and not isinstance(year_level, str):
+                    year_level = None
                 
                 if student_no in existing_ctu:
                     # Check if any field changed
@@ -2675,22 +2705,24 @@ def import_students():
 
             # ===== OPTIMIZATION 3: BULK INSERT using executemany =====
             if to_insert:
-                # Use SQLAlchemy's bulk insert (safer and still fast)
                 chunk_size = 1000
                 for i in range(0, len(to_insert), chunk_size):
                     chunk = to_insert[i:i+chunk_size]
                     
-                    # Prepare data for insertion
-                    insert_data = [{
-                        'student_number': s['student_number'],
-                        'first_name': s['first_name'],
-                        'last_name': s['last_name'],
-                        'year_level': s['year_level']
-                    } for s in chunk]
+                    # Prepare data for insertion - ensure year_level is None not nan
+                    insert_data = []
+                    for s in chunk:
+                        insert_record = {
+                            'student_number': s['student_number'],
+                            'first_name': s['first_name'],
+                            'last_name': s['last_name'],
+                            'year_level': s['year_level'] if s['year_level'] is not None else None
+                        }
+                        insert_data.append(insert_record)
                     
                     # Use SQLAlchemy's bulk insert
                     db.session.bulk_insert_mappings(CtuStudent, insert_data)
-                    db.session.flush()  # Flush but don't commit yet
+                    db.session.flush()
                     
                     print(f"   Inserted chunk {i//chunk_size + 1}/{(len(to_insert)-1)//chunk_size + 1}")
             
@@ -2708,8 +2740,10 @@ def import_students():
                             'first_name': student_data['first_name'],
                             'last_name': student_data['last_name']
                         }
-                        if student_data['year_level'] is not None:
+                        if student_data['year_level'] is not None and student_data['year_level']:
                             update_data['year_level'] = student_data['year_level']
+                        else:
+                            update_data['year_level'] = None
                             
                         db.session.query(CtuStudent)\
                             .filter(CtuStudent.student_number == student_data['student_number'])\
@@ -2728,7 +2762,7 @@ def import_students():
                     excel_row = next((s for s in excel_data if s['StudentNo'] == student_no), None)
                     if excel_row and excel_row.get('YearLevel'):
                         year_level_str = excel_row['YearLevel']
-                        if year_level_str in year_levels:
+                        if year_level_str and year_level_str in year_levels:
                             new_year_level_id = year_levels[year_level_str]
                             if registered_map[student_no]['year_level_id'] != new_year_level_id:
                                 # Update student's year level
@@ -2742,7 +2776,6 @@ def import_students():
                 print(f"📊 STEP 7.5: Updated {year_level_updates} students' year levels in {time.time() - start_time:.2f}s")
 
             # ===== OPTIMIZATION 6: Handle deletions =====
-            # Find students to delete (in DB but not in Excel)
             to_delete_ctu = []
             to_delete_registered = []
             
@@ -2799,7 +2832,7 @@ def import_students():
             total_time = time.time() - start_time
             print(f"✅ TOTAL TIME: {total_time:.2f} seconds for {len(excel_data)} students")
             
-            # ✅ KEEP THIS AUDIT LOG (IMPORT - major data modification)
+            # Audit log
             username = getattr(current_user, 'username', 'Unknown') if current_user.is_authenticated else 'Unknown'
             ip = request.remote_addr
             filename = file.filename if file else 'Unknown'
@@ -2825,6 +2858,8 @@ def import_students():
             db.session.rollback()
             print(f"❌ ERROR: {str(e)}")
             print(f"❌ ERROR after {time.time() - start_time:.2f} seconds")
+            import traceback
+            traceback.print_exc()
             
             # Clean up temp file if it exists
             if temp_file_path and os.path.exists(temp_file_path):
@@ -2852,7 +2887,6 @@ def import_students():
     students = students_query.order_by(CtuStudent.last_name.asc()) \
         .paginate(page=page, per_page=20, error_out=False)
 
-    # ------------------ TOTAL STUDENTS ------------------
     total_students = CtuStudent.query.count()
 
     return render_template(
@@ -3947,23 +3981,60 @@ def get_deletion_requests_stats():
 
 
 @admin_bp.route('/deletion-requests/<int:request_id>')
+@admin_required
 def get_deletion_request(request_id):
-    """Get details of a specific deletion request"""
-    req = DeletionRequest.query.get_or_404(request_id)
-    
-    # 🚫 REMOVED: Single request fetch audit log (not a data modification)
-    
-    return jsonify({
-        'id': req.id,
-        'student_name': f"{req.student.first_name} {req.student.last_name}",
-        'student_id_number': req.student.id_number,
-        'reason': req.reason,
-        'request_date': req.request_date.isoformat(),
-        'status': req.status,
-        'admin_notes': req.admin_notes,
-        'processed_by_name': req.admin.username if req.admin else None,
-        'processed_date': req.processed_date.isoformat() if req.processed_date else None
-    })
+    """Get details of a specific deletion request - handles both pending and processed requests"""
+    try:
+        req = DeletionRequest.query.get_or_404(request_id)
+        
+        # Handle student info - for approved requests, the student may be deleted
+        student_name = "Unknown"
+        student_id_number = "N/A"
+        
+        # Try to get student info safely
+        if req.student:
+            student_name = f"{req.student.first_name} {req.student.last_name}"
+            student_id_number = req.student.id_number if req.student.id_number else "N/A"
+        else:
+            # For approved/deleted requests, try to get info from audit log
+            from models import DeletionRequestAudit
+            audit = DeletionRequestAudit.query.filter_by(original_request_id=req.id).first()
+            if audit:
+                student_name = audit.student_name
+                student_id_number = audit.student_id_number
+        
+        # Get processed by admin name
+        processed_by_name = None
+        if req.admin:
+            processed_by_name = req.admin.username
+        elif req.processed_by_id:
+            # Try to get admin even if relationship is lazy
+            from models import Admin
+            admin = Admin.query.get(req.processed_by_id)
+            if admin:
+                processed_by_name = admin.username
+        
+        return jsonify({
+            'success': True,
+            'id': req.id,
+            'student_name': student_name,
+            'student_id_number': student_id_number,
+            'reason': req.reason,
+            'request_date': req.request_date.isoformat() if req.request_date else None,
+            'status': req.status,
+            'admin_notes': req.admin_notes,
+            'processed_by_name': processed_by_name,
+            'processed_date': req.processed_date.isoformat() if req.processed_date else None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting deletion request {request_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 @admin_bp.route('/deletion-requests/<int:request_id>/process', methods=['POST'])
@@ -6701,19 +6772,35 @@ def election_results(election_id):
             else:
                 candidate['is_winner'] = False
     
+    # ===== SORT CANDIDATES_BY_POSITION BY POSITION ID =====
+    # Sort the candidates_by_position dictionary by position_id
+    sorted_candidates_by_position = {}
+    sorted_position_items = sorted(candidates_by_position.items(), key=lambda x: x[1].get('id', 999))
+    for position_name, pos_data in sorted_position_items:
+        sorted_candidates_by_position[position_name] = pos_data
+    
     # ===== BUILD WINNERS BY POSITION (MULTI-WINNER SUPPORT) =====
     winners_by_position = {}
-    for position_name, pos_data in candidates_by_position.items():
+    for position_name, pos_data in sorted_candidates_by_position.items():  # Use sorted version
         # Get all winners for this position (not just first one)
         winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
         if winners:
             winners_by_position[position_name] = winners
             print(f"🏆 {position_name}: {len(winners)} winner(s) - {[w['first_name'] + ' ' + w['last_name'] for w in winners]}")
     
-    # ===== CREATE FLAT CANDIDATE RESULTS LIST =====
+    # ===== SORT WINNERS BY POSITION ID (already sorted from above, but ensure) =====
+    ordered_winners_by_position = {}
+    for position_name, pos_data in sorted_candidates_by_position.items():
+        winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
+        if winners:
+            ordered_winners_by_position[position_name] = winners
+    
+    # ===== CREATE FLAT CANDIDATE RESULTS LIST (SORTED BY POSITION ID) =====
     flat_candidate_results = []
-    for position_name, pos_data in candidates_by_position.items():
-        for candidate in pos_data['candidates']:
+    for position_name, pos_data in sorted_candidates_by_position.items():
+        # Sort candidates within each position by vote count (descending) for display
+        sorted_candidates = sorted(pos_data['candidates'], key=lambda x: x['vote_count'], reverse=True)
+        for candidate in sorted_candidates:
             flat_candidate_results.append(candidate)
     
     # ===== CALCULATE OVERALL STATISTICS =====
@@ -6746,11 +6833,13 @@ def election_results(election_id):
     
     # ===== DEBUG OUTPUT =====
     print("\n" + "="*50)
-    print("FINAL WINNERS BY POSITION:")
-    for pos, winners in winners_by_position.items():
-        print(f"  {pos}: {len(winners)} winner(s)")
-        for w in winners:
-            print(f"    - {w['first_name']} {w['last_name']}: {w['vote_count']} votes")
+    print("FINAL SORTED RESULTS BY POSITION ID:")
+    for position_name, pos_data in sorted_candidates_by_position.items():
+        print(f"\n📌 {position_name} (ID: {pos_data.get('id')}):")
+        print(f"   Winners: {len([c for c in pos_data['candidates'] if c.get('is_winner')])}")
+        for candidate in pos_data['candidates']:
+            winner_status = "✓ WINNER" if candidate.get('is_winner') else "  Candidate"
+            print(f"   {winner_status}: {candidate['first_name']} {candidate['last_name']} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
     print("="*50 + "\n")
     
     # Register helper functions for template
@@ -6770,8 +6859,8 @@ def election_results(election_id):
         'election_results_detail.html',
         election=election,
         candidate_results=flat_candidate_results,
-        candidate_results_by_position=candidates_by_position,
-        winners_by_position=winners_by_position,
+        candidate_results_by_position=sorted_candidates_by_position,  # Sorted by position ID
+        winners_by_position=ordered_winners_by_position,  # Sorted by position ID
         total_voters=total_votes_cast,
         total_eligible_voters=total_eligible_voters or 0,
         voter_turnout=voter_turnout,

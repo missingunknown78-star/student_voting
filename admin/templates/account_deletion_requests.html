@@ -787,6 +787,7 @@
     
     // Load requests on page load
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing...');
         loadRequests(1);
         loadStats();
         applyThemeToMainContent();
@@ -848,35 +849,46 @@
         
         // Show loading
         isLoading = true;
-        document.getElementById('loadingSpinner').style.display = 'block';
-        document.getElementById('requestsTable').style.display = 'none';
-        document.getElementById('emptyState').style.display = 'none';
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const requestsTable = document.getElementById('requestsTable');
+        const emptyState = document.getElementById('emptyState');
+        
+        if (loadingSpinner) loadingSpinner.style.display = 'block';
+        if (requestsTable) requestsTable.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
         
         let url = `/ctumoalboal-comelec/deletion-requests/data?page=${page}`;
         if (currentStatus !== 'all') url += `&status=${currentStatus}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
         
+        console.log('Fetching requests from:', url);
+        
         // GET request - no CSRF token needed
         fetch(url)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                return res.json();
+            })
             .then(data => {
-                document.getElementById('loadingSpinner').style.display = 'none';
+                if (loadingSpinner) loadingSpinner.style.display = 'none';
                 isLoading = false;
                 
                 const tbody = document.getElementById('requestsBody');
                 const pagination = document.getElementById('pagination');
                 
-                tbody.innerHTML = '';
-                pagination.innerHTML = '';
+                if (tbody) tbody.innerHTML = '';
+                if (pagination) pagination.innerHTML = '';
                 
-                if (data.requests.length === 0) {
-                    document.getElementById('requestsTable').style.display = 'none';
-                    document.getElementById('emptyState').style.display = 'block';
+                if (!data.requests || data.requests.length === 0) {
+                    if (requestsTable) requestsTable.style.display = 'none';
+                    if (emptyState) emptyState.style.display = 'block';
                     return;
                 }
                 
-                document.getElementById('requestsTable').style.display = 'table';
-                document.getElementById('emptyState').style.display = 'none';
+                if (requestsTable) requestsTable.style.display = 'table';
+                if (emptyState) emptyState.style.display = 'none';
                 
                 // Populate table
                 data.requests.forEach(req => {
@@ -887,35 +899,40 @@
                     });
                     const reasonPreview = req.reason.length > 50 ? req.reason.substring(0, 50) + '...' : req.reason;
                     
-                    tbody.innerHTML += `
-                        <tr>
-                            <td class="student-name">${escapeHtml(req.student_name)}</td>
-                            <td class="reason-cell" title="${escapeHtml(req.reason)}">${escapeHtml(reasonPreview)}</td>
-                            <td>${requestDate}</td>
-                            <td><span class="status-badge ${req.status}">${req.status}</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
-                                        <i class="fa-solid fa-eye"></i>
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td class="student-name">${escapeHtml(req.student_name)}</td>
+                        <td class="reason-cell" title="${escapeHtml(req.reason)}">${escapeHtml(reasonPreview)}</td>
+                        <td>${requestDate}</td>
+                        <td><span class="status-badge ${req.status}">${req.status}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-icon view" onclick="viewDetails(${req.id})" title="View Details">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                ${req.status === 'pending' ? `
+                                    <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
+                                        <i class="fa-solid fa-check"></i>
                                     </button>
-                                    ${req.status === 'pending' ? `
-                                        <button class="btn-icon approve" onclick="openProcessModal(${req.id}, 'approve')" title="Approve">
-                                            <i class="fa-solid fa-check"></i>
-                                        </button>
-                                        <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
-                                            <i class="fa-solid fa-times"></i>
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            </td>
-                        </tr>
+                                    <button class="btn-icon reject" onclick="openProcessModal(${req.id}, 'reject')" title="Reject">
+                                        <i class="fa-solid fa-times"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
                     `;
                 });
                 
                 // Pagination
-                if (data.total_pages > 1) {
+                if (data.total_pages > 1 && pagination) {
                     for (let i = 1; i <= data.total_pages; i++) {
-                        pagination.innerHTML += `<button class="page-btn ${i === data.current_page ? 'active' : ''}" onclick="loadRequests(${i})">${i}</button>`;
+                        const pageBtn = document.createElement('button');
+                        pageBtn.className = `page-btn ${i === data.current_page ? 'active' : ''}`;
+                        pageBtn.textContent = i;
+                        pageBtn.onclick = (function(pageNum) {
+                            return function() { loadRequests(pageNum); };
+                        })(i);
+                        pagination.appendChild(pageBtn);
                     }
                 }
                 
@@ -924,14 +941,15 @@
             })
             .catch(error => {
                 console.error('Error loading requests:', error);
-                document.getElementById('loadingSpinner').style.display = 'none';
+                if (loadingSpinner) loadingSpinner.style.display = 'none';
                 isLoading = false;
-                alert('Error loading requests. Please try again.');
+                alert('Error loading requests: ' + error.message);
             });
     }
     
     // Escape HTML to prevent XSS
     function escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -939,30 +957,31 @@
     
     // Load statistics
     function loadStats() {
-        // GET request - no CSRF token needed
         fetch('/ctumoalboal-comelec/deletion-requests/stats')
             .then(res => res.json())
             .then(data => {
                 const statsContainer = document.getElementById('statsContainer');
+                if (!statsContainer) return;
+                
                 statsContainer.innerHTML = `
                     <div class="stat-card total ${currentStatus === 'all' ? 'active' : ''}" onclick="filterByStatus('all')">
                         <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
-                        <div class="stat-number">${data.total}</div>
+                        <div class="stat-number">${data.total || 0}</div>
                         <div class="stat-label">Total Requests</div>
                     </div>
                     <div class="stat-card pending ${currentStatus === 'pending' ? 'active' : ''}" onclick="filterByStatus('pending')">
                         <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
-                        <div class="stat-number">${data.pending}</div>
+                        <div class="stat-number">${data.pending || 0}</div>
                         <div class="stat-label">Pending</div>
                     </div>
                     <div class="stat-card approved ${currentStatus === 'approved' ? 'active' : ''}" onclick="filterByStatus('approved')">
                         <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
-                        <div class="stat-number">${data.approved}</div>
+                        <div class="stat-number">${data.approved || 0}</div>
                         <div class="stat-label">Approved</div>
                     </div>
                     <div class="stat-card rejected ${currentStatus === 'rejected' ? 'active' : ''}" onclick="filterByStatus('rejected')">
                         <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
-                        <div class="stat-number">${data.rejected}</div>
+                        <div class="stat-number">${data.rejected || 0}</div>
                         <div class="stat-label">Rejected</div>
                     </div>
                 `;
@@ -971,7 +990,8 @@
     }
     
     // Filter by status (called when clicking stats cards)
-    function filterByStatus(status) {
+    window.filterByStatus = function(status) {
+        console.log('Filtering by status:', status);
         currentStatus = status;
         
         // Update active state on stats cards
@@ -982,27 +1002,44 @@
         
         // Add active class to the clicked card
         if (status === 'all') {
-            document.querySelector('.stat-card.total').classList.add('active');
+            const totalCard = document.querySelector('.stat-card.total');
+            if (totalCard) totalCard.classList.add('active');
         } else if (status === 'pending') {
-            document.querySelector('.stat-card.pending').classList.add('active');
+            const pendingCard = document.querySelector('.stat-card.pending');
+            if (pendingCard) pendingCard.classList.add('active');
         } else if (status === 'approved') {
-            document.querySelector('.stat-card.approved').classList.add('active');
+            const approvedCard = document.querySelector('.stat-card.approved');
+            if (approvedCard) approvedCard.classList.add('active');
         } else if (status === 'rejected') {
-            document.querySelector('.stat-card.rejected').classList.add('active');
+            const rejectedCard = document.querySelector('.stat-card.rejected');
+            if (rejectedCard) rejectedCard.classList.add('active');
         }
         
         // Reload requests with new status filter (reset to page 1)
         loadRequests(1);
-    }
+    };
     
     // View details
-    function viewDetails(id) {
-        // GET request - no CSRF token needed
+    window.viewDetails = function(id) {
+        console.log('Viewing details for request ID:', id);
+        
         fetch(`/ctumoalboal-comelec/deletion-requests/${id}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                return res.json();
+            })
             .then(data => {
+                console.log('Request details received:', data);
+                
                 const modalDetails = document.getElementById('modalDetails');
-                const requestDate = new Date(data.request_date).toLocaleString();
+                if (!modalDetails) {
+                    console.error('Modal details element not found');
+                    return;
+                }
+                
+                const requestDate = data.request_date ? new Date(data.request_date).toLocaleString() : '-';
                 const processedDate = data.processed_date ? new Date(data.processed_date).toLocaleString() : '-';
                 
                 modalDetails.innerHTML = `
@@ -1048,50 +1085,74 @@
                 
                 openModal('viewModal');
             })
-            .catch(error => console.error('Error loading details:', error));
-    }
+            .catch(error => {
+                console.error('Error loading details:', error);
+                alert('Error loading request details: ' + error.message);
+            });
+    };
     
     // Open process modal
-    function openProcessModal(id, action) {
+    window.openProcessModal = function(id, action) {
+        console.log('Opening process modal for request ID:', id, 'Action:', action);
         currentRequestId = id;
         currentAction = action;
         
-        // GET request - no CSRF token needed
         fetch(`/ctumoalboal-comelec/deletion-requests/${id}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                return res.json();
+            })
             .then(data => {
-                document.getElementById('processModalTitle').innerHTML = action === 'approve' ? 
-                    '<i class="fa-solid fa-check-circle"></i> Approve Deletion Request' : 
-                    '<i class="fa-solid fa-times-circle"></i> Reject Deletion Request';
+                const modalTitle = document.getElementById('processModalTitle');
+                const studentNameEl = document.getElementById('processStudentName');
+                const reasonEl = document.getElementById('processReason');
+                const adminNotesEl = document.getElementById('adminNotes');
                 
-                document.getElementById('processStudentName').textContent = data.student_name;
-                document.getElementById('processReason').textContent = data.reason;
-                document.getElementById('adminNotes').value = '';
+                if (modalTitle) {
+                    modalTitle.innerHTML = action === 'approve' ? 
+                        '<i class="fa-solid fa-check-circle"></i> Approve Deletion Request' : 
+                        '<i class="fa-solid fa-times-circle"></i> Reject Deletion Request';
+                }
+                
+                if (studentNameEl) studentNameEl.textContent = data.student_name;
+                if (reasonEl) reasonEl.textContent = data.reason;
+                if (adminNotesEl) adminNotesEl.value = '';
                 
                 openModal('processModal');
             })
-            .catch(error => console.error('Error loading request:', error));
-    }
+            .catch(error => {
+                console.error('Error loading request:', error);
+                alert('Error loading request details: ' + error.message);
+            });
+    };
     
-    // Process request (approve/reject) - THIS IS A POST REQUEST
-    // CSRF token header removed since CSRF is disabled
-    function processRequest() {
-        if (!currentRequestId || !currentAction) return;
+    // Process request (approve/reject)
+    window.processRequest = function() {
+        if (!currentRequestId || !currentAction) {
+            console.error('No request ID or action set');
+            return;
+        }
         
-        const notes = document.getElementById('adminNotes').value;
+        const notes = document.getElementById('adminNotes')?.value || '';
         
         fetch(`/ctumoalboal-comelec/deletion-requests/${currentRequestId}/process`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 action: currentAction,
                 admin_notes: notes
             })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+        })
         .then(data => {
             if (data.success) {
                 closeModal('processModal');
@@ -1099,25 +1160,35 @@
                 loadStats();
                 alert(`Request ${currentAction}d successfully!`);
             } else {
-                alert('Error processing request: ' + data.message);
+                alert('Error processing request: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error processing request. Please try again.');
+            console.error('Error processing request:', error);
+            alert('Error processing request: ' + error.message);
         });
-    }
+    };
     
     // Modal functions
     function openModal(modalId) {
-        document.getElementById(modalId).style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            console.log('Modal opened:', modalId);
+        } else {
+            console.error('Modal element not found:', modalId);
+        }
     }
     
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-        document.body.style.overflow = '';
-    }
+    window.closeModal = function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            console.log('Modal closed:', modalId);
+        }
+    };
     
     // Close modal when clicking outside
     window.onclick = function(event) {
@@ -1125,6 +1196,28 @@
             event.target.style.display = 'none';
             document.body.style.overflow = '';
         }
-    }
+    };
+    
+    // Also close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (modal.style.display === 'flex') {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+    });
+    
+    // Make sure functions are globally available
+    window.loadRequests = loadRequests;
+    window.filterByStatus = filterByStatus;
+    window.viewDetails = viewDetails;
+    window.openProcessModal = openProcessModal;
+    window.processRequest = processRequest;
+    
+    console.log('Script loaded, all functions registered');
 </script>
 {% endblock %}
