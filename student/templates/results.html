@@ -41,6 +41,18 @@
     text-align: center;
 }
 
+/* Timezone Badge */
+.timezone-badge {
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+}
+
 /* Elections Grid - Mobile First */
 .elections-grid {
     display: flex;
@@ -477,9 +489,12 @@ body.dark-mode .department-badge.wide-election {
     <div class="results-header">
         <h1 class="results-title">
             <i class="fa-solid fa-square-poll-vertical"></i> My Results
+            <span class="timezone-badge">
+                <i class="fa-regular fa-clock"></i> PHT
+            </span>
         </h1>
         <p class="results-subtitle">
-            Elections you've participated in
+            Elections you've participated in (Philippine Time)
         </p>
     </div>
 
@@ -487,8 +502,10 @@ body.dark-mode .department-badge.wide-election {
         <!-- Elections Grid -->
         <div class="elections-grid">
             {% for election in voted_elections %}
-                {# Determine if election is ongoing #}
-                {% set is_ongoing = election.is_ongoing %}
+                {# Determine if election is ongoing using Manila time #}
+                {% set is_ongoing = election.status == 'ongoing' %}
+                {% set is_completed = election.status == 'completed' %}
+                {% set is_upcoming = election.status == 'upcoming' %}
                 
                 <div class="election-card {% if is_ongoing %}ongoing-election{% endif %}">
                     <div class="election-card-header">
@@ -528,25 +545,32 @@ body.dark-mode .department-badge.wide-election {
                             </span>
                         </div>
                         
+                        <!-- UPDATED: Use Manila dates -->
                         <div class="election-detail">
                             <i class="fa-regular fa-calendar"></i>
-                            <span>{{ election.start_date.strftime('%b %d, %Y') }} - {{ election.end_date.strftime('%b %d, %Y') }}</span>
+                            <span>
+                                {% if election.start_date_manila and election.end_date_manila %}
+                                    {{ election.start_date_manila.strftime('%b %d, %Y') }} - {{ election.end_date_manila.strftime('%b %d, %Y') }}
+                                {% else %}
+                                    {{ election.start_date.strftime('%b %d, %Y') }} - {{ election.end_date.strftime('%b %d, %Y') }}
+                                {% endif %}
+                            </span>
                         </div>
                         
+                        <!-- UPDATED: Use Manila time for status -->
                         <div class="election-detail">
                             <i class="fa-regular fa-clock"></i>
                             <span>
-                                {% if election.end_date < now %}
-                                    Ended {{ election.end_date.strftime('%b %d, %Y at %I:%M %p') }}
+                                {% if is_completed %}
+                                    Ended {{ election.end_date_manila.strftime('%b %d, %Y at %I:%M %p') if election.end_date_manila else 'N/A' }}
                                 {% elif is_ongoing %}
-                                    {% set days_left = (election.end_date - now).days %}
-                                    {% if days_left > 0 %}
-                                        Ends in {{ days_left }} day{% if days_left != 1 %}s{% endif %}
+                                    {% if election.days_left is not none and election.days_left > 0 %}
+                                        Ends in {{ election.days_left }} day{% if election.days_left != 1 %}s{% endif %}
                                     {% else %}
-                                        Ends today at {{ election.end_date.strftime('%I:%M %p') }}
+                                        Ends today at {{ election.end_date_manila.strftime('%I:%M %p') if election.end_date_manila else 'N/A' }}
                                     {% endif %}
                                 {% else %}
-                                    Starts {{ election.start_date.strftime('%b %d, %Y at %I:%M %p') }}
+                                    Starts {{ election.start_date_manila.strftime('%b %d, %Y at %I:%M %p') if election.start_date_manila else 'N/A' }}
                                 {% endif %}
                             </span>
                         </div>
@@ -557,14 +581,14 @@ body.dark-mode .department-badge.wide-election {
                         </div>
                         
                         <div class="election-status 
-                            {% if election.end_date < now %}
+                            {% if is_completed %}
                                 status-completed
                             {% elif is_ongoing %}
                                 status-active
                             {% else %}
                                 status-upcoming
                             {% endif %}">
-                            {% if election.end_date < now %}
+                            {% if is_completed %}
                                 <i class="fa-solid fa-check-circle"></i> Completed
                             {% elif is_ongoing %}
                                 <i class="fa-solid fa-hourglass-half"></i> Ongoing
@@ -602,7 +626,7 @@ body.dark-mode .department-badge.wide-election {
         <div class="info-card">
             <div class="info-content">
                 <span class="info-icon">ℹ️</span>
-                <p>Select an election to see detailed results. Ongoing elections show live results as votes come in.</p>
+                <p>All dates and times are shown in Philippine Time (PHT / UTC+8). Ongoing elections show live results as votes come in.</p>
             </div>
         </div>
     {% else %}
@@ -614,4 +638,8 @@ body.dark-mode .department-badge.wide-election {
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('student.static', filename='js/results.js') }}"></script>
 {% endblock %}

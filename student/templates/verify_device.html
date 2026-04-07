@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verify New Device</title>
 
-<!-- CSRF Token Meta Tag - REMOVED -->
-
 <style>
 * {
     box-sizing: border-box;
@@ -121,6 +119,33 @@ button:disabled {
     from { transform: translateX(50px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
+/* Loading spinner */
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.redirect-message {
+    margin-top: 20px;
+    padding: 12px;
+    background: #f0fdf4;
+    border-radius: 8px;
+    color: #166534;
+    font-size: 14px;
+    display: none;
+}
 </style>
 </head>
 
@@ -148,7 +173,7 @@ button:disabled {
     </p>
 
     <p>
-        Open the email and click <strong>Yes, it’s me</strong> or <strong>No, it’s not me</strong>.
+        Open the email and click <strong>Yes, it's me</strong>.
     </p>
 
     <div class="divider"></div>
@@ -158,6 +183,10 @@ button:disabled {
     <div id="timerText" class="timer"></div>
     <div id="messageText" class="timer" style="color: #10b981; margin-top: 5px;"></div>
     <div id="errorText" class="timer" style="color: #ef4444; margin-top: 5px; font-weight: bold;"></div>
+    
+    <div id="redirectMessage" class="redirect-message">
+        <span class="spinner"></span> Device verified! Redirecting to dashboard...
+    </div>
 
     <a class="back-link" href="{{ url_for('student.login') }}">
         Back to Login
@@ -169,7 +198,8 @@ button:disabled {
 <div id="toastReject" class="toast reject">❌ Device rejected. Redirecting to login...</div>
 
 <script>
-// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
+let pollingInterval = null;
+let redirectInProgress = false;
 
 function resendVerification() {
     const btn = document.getElementById('resendBtn');
@@ -197,44 +227,31 @@ function resendVerification() {
         }
     }, 1000);
 
-    // Get the correct URL using Flask's url_for
     const url = "{{ url_for('student.resend_verify_device') }}";
 
-    // Send AJAX request (CSRF header removed)
     fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
-            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
     .then(async response => {
         const text = await response.text();
         
         try {
-            // Try to parse as JSON
             const data = JSON.parse(text);
             return { ok: response.ok, data };
         } catch (e) {
-            // If not JSON, throw error
             throw new Error('Server returned an invalid response. Please try again.');
         }
     })
     .then(({ ok, data }) => {
         if (ok && data.success) {
-            // Show success message
             messageText.textContent = '✅ ' + data.message;
             messageText.style.color = '#10b981';
             errorText.textContent = '';
-            
-            // Check if redirect needed
-            if (data.redirect) {
-                setTimeout(() => {
-                    window.location.href = data.redirect;
-                }, 2000);
-            }
         } else {
             throw new Error(data.message || 'Failed to send email');
         }
@@ -243,7 +260,6 @@ function resendVerification() {
         console.error('Error:', err);
         errorText.textContent = '❌ ' + err.message;
         
-        // Re-enable button if there's an error
         clearInterval(countdown);
         btn.disabled = false;
         btn.textContent = 'Resend Verification Email';
@@ -251,42 +267,111 @@ function resendVerification() {
     });
 }
 
-// Polling for device verification or rejection (CSRF header removed)
+// Improved polling with exponential backoff and better error handling
+let pollCount = 0;
+let currentDelay = 3000; // Start with 3 seconds
+
 function checkVerification() {
+    if (redirectInProgress) return; // Don't poll if redirecting
+    
     const statusUrl = "{{ url_for('student.verify_device_status') }}";
     
     fetch(statusUrl, {
         headers: {
-            'Content-Type': 'application/json'
-            // REMOVED: 'X-CSRFToken': getCsrfToken()
-        }
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        },
+        credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        pollCount = 0; // Reset fail count on success
+        currentDelay = 3000; // Reset to normal delay
+        
         if (data.status === "verified") {
+            redirectInProgress = true;
+            
+            // Clear polling
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            
+            // Show redirect message
+            const redirectMsg = document.getElementById('redirectMessage');
+            redirectMsg.style.display = 'block';
+            
+            // Disable resend button
+            document.getElementById('resendBtn').disabled = true;
+            
+            // Show toast and redirect
             const toast = document.getElementById("toast");
             toast.style.display = "block";
-
+            
             setTimeout(() => {
                 window.location.href = "{{ url_for('student.dashboard') }}";
             }, 1500);
+            
         } else if (data.status === "rejected") {
+            redirectInProgress = true;
+            
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            
             const toastReject = document.getElementById("toastReject");
             toastReject.style.display = "block";
             document.getElementById('resendBtn').disabled = true;
-
+            
             setTimeout(() => {
                 window.location.href = "{{ url_for('student.login') }}";
             }, 2000);
         }
+        // If status is "pending" or "no_session", continue polling
     })
     .catch(err => {
         console.error('Status check error:', err);
+        pollCount++;
+        
+        // If we've failed multiple times, increase polling interval (exponential backoff)
+        if (pollCount > 5) {
+            currentDelay = Math.min(currentDelay * 1.5, 30000); // Max 30 seconds
+            console.log(`Increasing polling delay to ${currentDelay}ms`);
+            
+            // Restart polling with new delay
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = setInterval(checkVerification, currentDelay);
+            }
+        }
     });
 }
 
-// poll every 3 seconds
-setInterval(checkVerification, 3000);
+// Start polling
+pollingInterval = setInterval(checkVerification, currentDelay);
+
+// Also check immediately on page load
+setTimeout(checkVerification, 500);
+
+// Clean up polling when page unloads
+window.addEventListener('beforeunload', function() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+});
+
+// Also check visibility - when tab becomes visible again, check immediately
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && !redirectInProgress) {
+        checkVerification();
+    }
+});
 </script>
 
 </body>

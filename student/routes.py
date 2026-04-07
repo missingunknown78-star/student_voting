@@ -310,8 +310,10 @@ def register():
     import json
 
     # ✅ Clear form session only if not coming from failed POST
+    # Also clear on GET if no form data in session
     if request.method == 'GET':
-        if not session.pop('keep_form', False):
+        # Only clear if explicitly requested or session expired
+        if not session.get('registration_data'):
             session.pop('registration_data', None)
             session.pop('error_fields', None)
 
@@ -335,6 +337,29 @@ def register():
         password = request.form.get('password', '')  # Don't trim password
         birth_date = request.form.get('birth_date', '')
         
+        # ⚠️ IMPORTANT: Validate password presence on server side too
+        if not password or password.strip() == '':
+            flash("Password is required!", "danger")
+            session['error_fields'] = session.get('error_fields', [])
+            session['error_fields'].append('password')
+            
+            # Store cleaned data (excluding password for security)
+            session['registration_data'] = {
+                'first_name': first_name,
+                'middle_name': middle_name,
+                'last_name': last_name,
+                'suffix': suffix,
+                'email': email,
+                'id_number': id_number,
+                'username': username,
+                'birth_date': birth_date,
+                'course': request.form.get('course', ''),
+                'year_level': request.form.get('year_level', ''),
+                'program_type': request.form.get('program_type', '')
+            }
+            session['keep_form'] = True
+            return redirect(url_for('student.register'))
+        
         # Store cleaned data in session
         session['registration_data'] = {
             'first_name': first_name,
@@ -344,7 +369,7 @@ def register():
             'email': email,
             'id_number': id_number,
             'username': username,
-            'password': password,
+            'password': password,  # Store temporarily for OTP
             'birth_date': birth_date,
             'course': request.form.get('course', ''),
             'year_level': request.form.get('year_level', ''),
@@ -421,6 +446,9 @@ def register():
 
         # ---------------- HANDLE ERRORS ----------------
         if session['error_fields']:
+            # Remove password from session before redirect (security)
+            if 'password' in session['registration_data']:
+                del session['registration_data']['password']
             return redirect(url_for('student.register'))
 
         # ---------------- OTP GENERATION ----------------
@@ -445,7 +473,7 @@ def register():
                 'id_number': id_number
             }
             
-            # HTML email template (same as before)
+            # HTML email template
             msg.html = f"""
             <!DOCTYPE html>
             <html>
@@ -501,11 +529,18 @@ def register():
             """
             mail.send(msg)
 
+            # Remove password from session before OTP verification (security)
+            if 'password' in session['registration_data']:
+                del session['registration_data']['password']
+                
             flash("📧 OTP has been sent to your email. Please check your inbox (and spam folder).", "info")
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
             flash(f"Failed to send OTP email: {str(e)}", "danger")
+            # Remove password from session on error
+            if 'password' in session['registration_data']:
+                del session['registration_data']['password']
 
     # ---------------- LOAD COURSES AND PROGRAM TYPES ----------------
     departments = Department.query.order_by(Department.name).all()
@@ -958,6 +993,10 @@ def verify_device():
         return redirect(url_for('student.login'))
 
     student = Student.query.get(student_id)
+    
+    if not student:
+        flash("Student not found.", "danger")
+        return redirect(url_for('student.login'))
 
     device = TrustedDevice.query.filter_by(
         student_id=student.id,
@@ -976,27 +1015,15 @@ def verify_device():
         db.session.add(device)
         db.session.commit()
 
-    # ✅ NO EMAIL HERE
     return render_template('verify_device.html', student=student)
-
 
 
 @student_bp.route('/verify-device/resend', methods=['POST'])
 def resend_verify_device():
-    print("\n" + "="*50)
-    print("📨 RESEND VERIFICATION EMAIL ROUTE HIT")
-    print(f"📋 Headers: {dict(request.headers)}")
-    print(f"📋 Method: {request.method}")
-    print(f"📋 Content-Type: {request.content_type}")
-    
     student_id = session.get('pending_login_student')
     fingerprint = session.get('pending_device_fp')
-    
-    print(f"👤 Student ID from session: {student_id}")
-    print(f"🔑 Fingerprint from session: {fingerprint[:32] if fingerprint else 'None'}...")
 
     if not student_id or not fingerprint:
-        print("❌ No pending verification in session")
         return jsonify({
             'success': False, 
             'message': 'No pending verification to resend.'
@@ -1004,13 +1031,10 @@ def resend_verify_device():
 
     student = Student.query.get(student_id)
     if not student:
-        print(f"❌ Student not found for ID: {student_id}")
         return jsonify({
             'success': False, 
             'message': 'Student not found.'
         }), 404
-
-    print(f"✅ Student found: {student.email}")
 
     device = TrustedDevice.query.filter_by(
         student_id=student.id,
@@ -1019,211 +1043,257 @@ def resend_verify_device():
     ).first()
 
     if not device:
-        print(f"❌ Device not found or already trusted for fingerprint: {fingerprint[:32]}...")
         return jsonify({
             'success': False, 
             'message': 'Device already verified or missing.'
         }), 404
 
-    print(f"📱 Device found (ID: {device.id}), trusted={device.trusted}")
-
     try:
         from student.utils import send_new_device_email
-        print("📧 Attempting to send email...")
-        
         send_new_device_email(student, device)
         
-        print("✅ Email sent successfully!")
-        
-        # ✅ ALWAYS RETURN JSON FOR THIS ROUTE
         return jsonify({
             'success': True,
             'message': 'Verification email resent. Please check your inbox.'
         })
         
     except Exception as e:
-        print(f"❌ Error sending email: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
+        print(f"Error sending email: {str(e)}")
         return jsonify({
             'success': False,
             'message': f'Failed to send email: {str(e)}'
         }), 500
 
 
-
-from datetime import datetime, timedelta
-from flask import jsonify
-
-@student_bp.route('/verify-device/<token>', methods=['GET'])
-def verify_device_email(token):
-    device = TrustedDevice.query.filter_by(verification_token=token).first()
-    if not device:
-        flash("Invalid or expired verification link.", "danger")
-        return redirect(url_for('student.login'))
-
-    # Check if token expired (5 minutes)
-    if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=5):
-        db.session.delete(device)  # remove unverified device
-        db.session.commit()
-        flash("Verification link expired.", "danger")
-        return redirect(url_for('student.login'))
-
-    # ✅ Mark device as trusted
-    device.trusted = True
-    device.verification_token = None
-    db.session.commit()
-
-    student = device.student
-
-    # Render the verify_device.html page again with a success message
-    return render_template(
-        'verify_device.html',
-        student=student,
-        message="Device verified successfully! Redirecting to dashboard...",
-        redirect_after=3  # seconds
-    )
-
-
-
-@student_bp.route('/verify-device/confirm/<token>')
+@student_bp.route('/verify-device/confirm/<token>', methods=['GET'])
 def confirm_device(token):
+    """Single unified route for device confirmation"""
     from datetime import datetime, timedelta
-
+    from flask_login import login_user
+    
     device = TrustedDevice.query.filter_by(verification_token=token).first()
-
+    
     if not device:
-        return "Invalid or expired link", 400
-
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Invalid Link</title>
+            <style>
+                body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f6fb; }
+                .card { background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 400px; }
+                .icon { font-size: 50px; margin-bottom: 15px; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">❌</div>
+                <h2>Invalid or Expired Link</h2>
+                <p>This verification link is invalid or has expired.</p>
+                <a href="#" onclick="window.close()">Close Window</a>
+            </div>
+        </body>
+        </html>
+        """, 400
+    
     # Check expiry (5 minutes)
     if device.verification_sent_at and datetime.utcnow() > device.verification_sent_at + timedelta(minutes=5):
         db.session.delete(device)
         db.session.commit()
-        return "Link expired"
-
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Link Expired</title>
+            <style>
+                body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f4f6fb; }
+                .card { background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 400px; }
+                .icon { font-size: 50px; margin-bottom: 15px; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">⏰</div>
+                <h2>Link Expired</h2>
+                <p>This verification link has expired. Please request a new one.</p>
+                <a href="#" onclick="window.close()">Close Window</a>
+            </div>
+        </body>
+        </html>
+        """, 400
+    
     # Mark device as trusted
     device.trusted = True
     device.verification_token = None
     device.verification_sent_at = None
     db.session.commit()
-
-    # Return a styled confirmation page
+    
+    # Also update the session to mark that this device is verified
+    # This helps with the polling detection
+    pending_fp = session.get('pending_device_fp')
+    if pending_fp == device.device_fingerprint:
+        session['device_verified'] = True
+    
+    # Return a styled success page that also attempts to notify the original tab
     return """
     <!DOCTYPE html>
     <html lang="en">
     <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Verified</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f4f6fb;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .card {
-            background: #ffffff;
-            padding: 30px 25px;
-            border-radius: 16px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-            text-align: center;
-            max-width: 400px;
-        }
-        .icon {
-            font-size: 50px;
-            color: #16a34a;
-            margin-bottom: 15px;
-        }
-        h2 {
-            margin: 0 0 12px 0;
-            color: #111827;
-            font-size: 1.5rem;
-        }
-        p {
-            color: #4b5563;
-            font-size: 1rem;
-            line-height: 1.5;
-        }
-        a {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: background 0.2s ease;
-        }
-        a:hover {
-            background: #1d4ed8;
-        }
-    </style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Device Verified</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #f4f6fb;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+            .card {
+                background: #ffffff;
+                padding: 30px 25px;
+                border-radius: 16px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+                text-align: center;
+                max-width: 400px;
+            }
+            .icon {
+                font-size: 50px;
+                color: #16a34a;
+                margin-bottom: 15px;
+            }
+            h2 {
+                margin: 0 0 12px 0;
+                color: #111827;
+                font-size: 1.5rem;
+            }
+            p {
+                color: #4b5563;
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+            .note {
+                margin-top: 15px;
+                padding: 10px;
+                background: #fef3c7;
+                border-radius: 8px;
+                color: #92400e;
+                font-size: 0.85rem;
+            }
+            a {
+                display: inline-block;
+                margin-top: 20px;
+                padding: 10px 20px;
+                background: #2563eb;
+                color: white;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: 600;
+                transition: background 0.2s ease;
+            }
+            a:hover {
+                background: #1d4ed8;
+            }
+        </style>
     </head>
     <body>
         <div class="card">
             <div class="icon">✅</div>
             <h2>Device Verified!</h2>
-            <p>Your device has been successfully confirmed.<br>
-            You can now return to your browser to complete login.</p>
+            <p>Your device has been successfully confirmed.</p>
+            <div class="note">
+                💡 You can now close this window and return to your browser.<br>
+                The login page will automatically redirect you in a few seconds.
+            </div>
             <a href="#" onclick="window.close()">Close Window</a>
         </div>
+        
+        <script>
+            // Try to notify the original tab using localStorage
+            try {
+                localStorage.setItem('device_verified', Date.now().toString());
+                localStorage.removeItem('device_verified');
+            } catch(e) {
+                console.log('Could not notify via localStorage');
+            }
+            
+            // Also try to close this window after 3 seconds
+            setTimeout(function() {
+                window.close();
+            }, 3000);
+        </script>
     </body>
     </html>
     """
 
 
-
 @student_bp.route('/verify-device/status')
 def verify_device_status():
     from flask_login import login_user
+    
     student_id = session.get('pending_login_student')
     fingerprint = session.get('pending_device_fp')
-
+    
+    print(f"Status check - Student ID: {student_id}, Fingerprint: {fingerprint[:20] if fingerprint else 'None'}...")
+    
     if not student_id or not fingerprint:
+        print("No pending session data")
         return jsonify({"status": "no_session"})
 
-    # Check trusted
+    # Check if device is trusted
     device = TrustedDevice.query.filter_by(
         student_id=student_id,
         device_fingerprint=fingerprint,
         trusted=True
     ).first()
+    
     if device:
+        print(f"Device found and trusted! ID: {device.id}")
         student = device.student
+        
+        # Log the user in
         login_user(student)
+        
+        # Clear pending verification from session
+        session.pop('pending_login_student', None)
+        session.pop('pending_device_fp', None)
+        session.pop('device_verified', None)
+        
         return jsonify({"status": "verified"})
 
-    # Check if device record exists at all
+    # Check if device exists at all (if not, it was rejected/deleted)
     device_any = TrustedDevice.query.filter_by(
         student_id=student_id,
         device_fingerprint=fingerprint
     ).first()
+    
     if device_any is None:
-        return jsonify({"status": "rejected"})  # deleted = rejected
+        print("Device not found - was rejected")
+        return jsonify({"status": "rejected"})
 
+    print("Still pending")
     return jsonify({"status": "pending"})
-
-
-
-
 
 
 @student_bp.route('/verify-device/reject/<token>')
 def reject_device(token):
-    from datetime import datetime
     device = TrustedDevice.query.filter_by(verification_token=token).first()
     if device:
         db.session.delete(device)
         db.session.commit()
+    
+    # Clear pending session if this matches
+    pending_fp = session.get('pending_device_fp')
+    if pending_fp and device and device.device_fingerprint == pending_fp:
+        session.pop('pending_login_student', None)
+        session.pop('pending_device_fp', None)
 
-    # Return a small notification page (optional)
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -1252,7 +1322,7 @@ def reject_device(token):
             }
             .icon {
                 font-size: 50px;
-                color: #e53935; /* red */
+                color: #e53935;
                 margin-bottom: 15px;
             }
             h2 {
@@ -1281,7 +1351,7 @@ def reject_device(token):
         <div class="card">
             <div class="icon">❌</div>
             <h2>Device Rejected</h2>
-            <p>No device info was saved. Please return to your browser.</p>
+            <p>This device has been rejected and will not be trusted.</p>
             <a href="#" onclick="window.close()">Close Window</a>
         </div>
     </body>
@@ -2649,6 +2719,7 @@ from sqlalchemy import select  # Add this at the top of your file with other imp
 def results():
     """Show elections that the current student has voted in (both ongoing and completed)"""
     from datetime import datetime
+    import pytz
     
     # FIRST: Check URL parameter (when user clicks from hamburger menu)
     school_year = request.args.get('school_year')
@@ -2676,17 +2747,20 @@ def results():
     
     student_id = current_user.id
     
-    # Use naive datetime for database comparison (your dates are naive)
-    now = datetime.now()
+    # FORCE MANILA TIMEZONE for current time
+    manila_tz = pytz.timezone("Asia/Manila")
+    now_manila = datetime.now(manila_tz)
     
-    # Get ALL elections the student has voted in
-    voted_elections_ids = select(Vote.election_id).where(
+    # Get ALL elections the student has voted in using modern SQLAlchemy syntax
+    from sqlalchemy import select
+    
+    # ✅ Remove .subquery() - use select() directly
+    voted_elections_subquery = select(Vote.election_id).where(
         Vote.student_id == student_id
-    ).distinct().subquery()
-    
-    # Base query - get all elections the student voted in
+    ).distinct()
+
     query = Election.query.filter(
-        Election.id.in_(voted_elections_ids)
+        Election.id.in_(voted_elections_subquery)  # ✅ NO MORE WARNING
     )
     
     # Apply school year filter if selected
@@ -2699,9 +2773,12 @@ def results():
     # Order by end_date descending (most recent/completed first)
     voted_elections = query.order_by(Election.end_date.desc()).all()
     
+    # ✅ NO ASSIGNMENTS! Just pass the elections to template
+    # The template will use election.start_date_manila and election.end_date_manila properties
+    
     return render_template('results.html',
                          voted_elections=voted_elections,
-                         now=now,
+                         now=now_manila,  # Pass Manila time to template
                          school_years=get_all_school_years(),
                          current_sy=school_year)
 

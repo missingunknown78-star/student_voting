@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Registration</title>
 
-<!-- CSRF Token Meta Tag - REMOVED -->
-
 <link rel="stylesheet" href="{{ url_for('student.static', filename='css/registration.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
@@ -83,6 +81,19 @@
     .trim-hint.visible {
         display: block;
     }
+    
+    /* Password validation styles */
+    .password-error {
+        border-color: #dc2626 !important;
+        background-color: #fef2f2 !important;
+    }
+    
+    .password-error-message {
+        color: #dc2626;
+        font-size: 12px;
+        margin-top: 5px;
+        display: block;
+    }
 </style>
 </head>
 
@@ -107,8 +118,6 @@
         {% endwith %}
 
         <form id="registrationForm" method="POST" novalidate>
-            <!-- CSRF Token - REMOVED -->
-
             <!-- FIRST NAME -->
             <div class="input-group floating">
                 <input type="text" name="first_name" required placeholder=" "
@@ -148,7 +157,7 @@
             <!-- COURSE -->
             <div class="input-group">
                 <label>Department / Course <span class="required-asterisk">*</span></label>
-                <select name="course" required>
+                <select name="course" id="courseSelect" required>
                     <option value="">-- Select Course --</option>
                     {% for dept, courses in courses_by_department.items() %}
                         <optgroup label="{{ dept }}">
@@ -166,7 +175,7 @@
             <!-- YEAR LEVEL -->
             <div class="input-group">
                 <label>Year Level <span class="required-asterisk">*</span></label>
-                <select name="year_level" required>
+                <select name="year_level" id="yearLevelSelect" required>
                     <option value="">-- Select Year Level --</option>
                     {% for year in range(1,5) %}
                         <option value="{{ year }}"
@@ -180,7 +189,7 @@
             <!-- PROGRAM TYPE -->
             <div class="input-group">
                 <label>Program Type <span class="required-asterisk">*</span></label>
-                <select name="program_type" required>
+                <select name="program_type" id="programTypeSelect" required>
                     <option value="">-- Select Program Type --</option>
                     {% for program_type in program_types %}
                         <option value="{{ program_type.id }}"
@@ -217,10 +226,11 @@
                 <div class="trim-hint" id="username_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
-            <!-- PASSWORD -->
-            <div class="input-group floating">
-                <input type="password" name="password" required minlength="8" placeholder=" ">
+            <!-- PASSWORD - No value repopulation for security -->
+            <div class="input-group floating" id="passwordGroup">
+                <input type="password" name="password" id="passwordInput" required minlength="8" placeholder=" ">
                 <label>Password <span class="required-asterisk">*</span></label>
+                <div class="password-error-message" id="passwordError" style="display: none;">⚠️ Password is required</div>
             </div>
 
             <!-- ID NUMBER -->
@@ -239,15 +249,98 @@
 
         <p class="login-text">
             Already have an account?
-            <a href="{{ url_for('student.login') }}">Login Here</a>
+            <a href="{{ url_for('student.login') }}" id="loginLink">Login Here</a>
         </p>
 
     </div>
 </div>
 
 <script>
-// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
+// SESSION STORAGE MANAGEMENT - Preserve form data across refreshes
 
+// Save form data to sessionStorage whenever inputs change
+function saveFormToStorage() {
+    const formData = {
+        first_name: document.querySelector('input[name="first_name"]')?.value || '',
+        middle_name: document.querySelector('input[name="middle_name"]')?.value || '',
+        last_name: document.querySelector('input[name="last_name"]')?.value || '',
+        suffix: document.querySelector('input[name="suffix"]')?.value || '',
+        course: document.querySelector('select[name="course"]')?.value || '',
+        year_level: document.querySelector('select[name="year_level"]')?.value || '',
+        program_type: document.querySelector('select[name="program_type"]')?.value || '',
+        birth_date: document.querySelector('input[name="birth_date"]')?.value || '',
+        email: document.querySelector('input[name="email"]')?.value || '',
+        username: document.querySelector('input[name="username"]')?.value || '',
+        id_number: document.querySelector('input[name="id_number"]')?.value || ''
+    };
+    sessionStorage.setItem('registration_form_data', JSON.stringify(formData));
+}
+
+// Restore form data from sessionStorage (except password for security)
+function restoreFormFromStorage() {
+    const savedData = sessionStorage.getItem('registration_form_data');
+    if (savedData) {
+        const formData = JSON.parse(savedData);
+        
+        // Restore text inputs
+        document.querySelector('input[name="first_name"]').value = formData.first_name || '';
+        document.querySelector('input[name="middle_name"]').value = formData.middle_name || '';
+        document.querySelector('input[name="last_name"]').value = formData.last_name || '';
+        document.querySelector('input[name="suffix"]').value = formData.suffix || '';
+        document.querySelector('input[name="birth_date"]').value = formData.birth_date || '';
+        document.querySelector('input[name="email"]').value = formData.email || '';
+        document.querySelector('input[name="username"]').value = formData.username || '';
+        document.querySelector('input[name="id_number"]').value = formData.id_number || '';
+        
+        // Restore selects
+        if (formData.course) document.querySelector('select[name="course"]').value = formData.course;
+        if (formData.year_level) document.querySelector('select[name="year_level"]').value = formData.year_level;
+        if (formData.program_type) document.querySelector('select[name="program_type"]').value = formData.program_type;
+        
+        // DO NOT restore password for security
+        document.querySelector('input[name="password"]').value = '';
+    }
+}
+
+// Clear sessionStorage when navigating away
+function clearFormStorage() {
+    sessionStorage.removeItem('registration_form_data');
+}
+
+// Save on input changes
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore saved data first
+    restoreFormFromStorage();
+    
+    // Add save listeners to all form inputs (except password)
+    const inputsToSave = document.querySelectorAll('input[name]:not([name="password"]), select[name]');
+    inputsToSave.forEach(input => {
+        input.addEventListener('input', saveFormToStorage);
+        input.addEventListener('change', saveFormToStorage);
+    });
+    
+    // Clear storage when login link is clicked
+    const loginLink = document.getElementById('loginLink');
+    if (loginLink) {
+        loginLink.addEventListener('click', function() {
+            clearFormStorage();
+        });
+    }
+    
+    // Optional: Check session expiration by making a lightweight AJAX call
+    // If session expired, clear storage
+    fetch("{{ url_for('student.check_session') }}")
+        .then(response => response.json())
+        .then(data => {
+            if (!data.session_active) {
+                clearFormStorage();
+            }
+        })
+        .catch(() => {});
+});
+</script>
+
+<script>
 // Function to trim input values (remove leading/trailing spaces, preserve internal spaces)
 function trimInputValue(input) {
     if (!input || !input.value) return;
@@ -277,6 +370,9 @@ function trimInputValue(input) {
                 hint.classList.remove('visible');
             }, 2000);
         }
+        
+        // Save to storage after trimming
+        saveFormToStorage();
     }
 }
 
@@ -299,6 +395,46 @@ function trimAllFormInputs(form) {
     
     return wasTrimmed;
 }
+
+// Validate password before submission
+function validatePassword() {
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordError = document.getElementById('passwordError');
+    const passwordGroup = document.getElementById('passwordGroup');
+    
+    if (!passwordInput.value || passwordInput.value.trim() === '') {
+        passwordError.style.display = 'block';
+        passwordInput.classList.add('password-error');
+        passwordGroup.classList.add('input-error');
+        return false;
+    }
+    
+    // Check minimum length
+    if (passwordInput.value.length < 8) {
+        passwordError.textContent = '⚠️ Password must be at least 8 characters';
+        passwordError.style.display = 'block';
+        passwordInput.classList.add('password-error');
+        passwordGroup.classList.add('input-error');
+        return false;
+    }
+    
+    // Clear error if valid
+    passwordError.style.display = 'none';
+    passwordInput.classList.remove('password-error');
+    passwordGroup.classList.remove('input-error');
+    return true;
+}
+
+// Clear password error on input
+document.getElementById('passwordInput')?.addEventListener('input', function() {
+    const passwordError = document.getElementById('passwordError');
+    const passwordGroup = document.getElementById('passwordGroup');
+    if (this.value && this.value.length >= 8) {
+        passwordError.style.display = 'none';
+        this.classList.remove('password-error');
+        passwordGroup.classList.remove('input-error');
+    }
+});
 
 // Add real-time trimming on blur for better UX
 document.addEventListener('DOMContentLoaded', function() {
@@ -326,7 +462,14 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('registrationForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    // First, trim all inputs before validation and submission
+    // First, validate password
+    if (!validatePassword()) {
+        // Scroll to password field
+        document.getElementById('passwordInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    
+    // Trim all inputs before validation and submission
     trimAllFormInputs(this);
     
     const registerBtn = document.getElementById('registerBtn');
@@ -346,11 +489,9 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     const formData = new FormData(form);
 
     try {
-        // IMPORTANT: Do NOT set Content-Type header - browser will set it correctly for FormData
         const response = await fetch("{{ url_for('student.ajax_validate_register') }}", {
             method: "POST",
             body: formData
-            // No headers! The browser will set Content-Type: multipart/form-data automatically
         });
 
         const errors = await response.json();
@@ -380,13 +521,15 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
         // ✅ No validation errors → change spinner text and submit
         btnText.innerHTML = '<span class="btn-spinner"></span> Submitting...';
         
+        // Save final form data before submission (except password)
+        saveFormToStorage();
+        
         // Small delay to show the submitting state (optional)
         setTimeout(() => {
             form.submit();
         }, 300);
 
     } catch (error) {
-        // Handle any fetch errors
         console.error('Validation error:', error);
         
         // Reset button state
@@ -407,6 +550,13 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 <script>
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
     const registerBtn = document.getElementById('registerBtn');
+    
+    // Validate password before submission (safety check)
+    if (!validatePassword()) {
+        e.preventDefault();
+        document.getElementById('passwordInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
     
     // Trim all inputs before submission (safety measure)
     trimAllFormInputs(this);

@@ -5,13 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Vote - {{ election.title }}</title>
     
-    <!-- CSRF Token Meta Tag - REMOVED -->
-    
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
-    
-    <style>
-        /* Hide CSRF token input visually - REMOVED */
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -21,16 +16,13 @@
         <div class="spinner"></div>
         <h3>Encrypting Your Vote</h3>
         <p>Please wait while we secure your ballot...</p>
-        <p style="font-size: 0.9rem; color: #94a3b8;">This may take a few moments</p>
-        <div class="secure-badge">
-            🔐 End-to-End Encrypted
-        </div>
+        <div class="secure-badge">🔐 End-to-End Encrypted</div>
     </div>
 </div>
 
 <div class="vote-container">
 
-    <!-- CTU Header - Flexible width like cards -->
+    <!-- CTU Header -->
     <div class="ctu-header">
         <img src="{{ url_for('admin.static', filename='images/CTU HEADER.png', _external=True) }}" 
              alt="CTU Logo"
@@ -43,24 +35,11 @@
         <span class="encryption-badge">🔒 Encrypted Voting</span>
     </div>
 
-    <!-- PHE Information -->
+    <!-- PHE Information - SIMPLIFIED (no vote limits list) -->
     <section class="phe-info">
         <h4>🔐 Privacy-Protected Voting</h4>
         <p>Your vote is encrypted using advanced cryptography. Your choices remain private while ensuring vote integrity.</p>
-        <p><strong>Instructions: </strong>Please click your preferred candidates to vote for them. Once submitted, your vote cannot be changed.</p>
-        <p><strong>Vote limits per position:</strong></p>
-        <ul style="margin-top: 5px; padding-left: 20px;">
-            {% for position_name, position_data in candidates_by_position.items() %}
-            <li style="font-size: 0.8rem;">
-                <strong>{{ position_name }}:</strong> 
-                {% if position_data.max_votes > 1 %}
-                    Select up to {{ position_data.max_votes }} candidates ({{ position_data.candidates|length }} candidates running)
-                {% else %}
-                    Select 1 candidate ({{ position_data.candidates|length }} candidates running)
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
+        <p><strong>Instructions:</strong> Click on a candidate card to select them. Once submitted, your vote cannot be changed or recalled.</p>
     </section>
 
     <!-- Candidates Form -->
@@ -69,20 +48,14 @@
           id="voteForm"
           onsubmit="return validateVote()">
 
-        <!-- CSRF Token - REMOVED -->
-
-        <!-- Hidden inputs for timestamps -->
         <input type="hidden" name="cast_timestamp" id="cast-timestamp">
         <input type="hidden" name="click_timestamp" id="click-timestamp">
-        
-        <!-- Store all candidate IDs for one-hot vector creation -->
         <input type="hidden" name="all_candidate_ids" id="all-candidate-ids" 
                value="{{ all_candidate_ids|join(',') }}">
         
         {% for position_name, position_data in candidates_by_position.items() %}
         {% set candidate_count = position_data.candidates|length %}
         <div class="position-group" data-position-id="{{ position_data.position_id }}" data-max-votes="{{ position_data.max_votes }}">
-            <!-- Position header with title + badge on left, candidate count on right -->
             <div class="position-header">
                 <div class="position-title-container">
                     <h3 class="position-title">
@@ -93,9 +66,7 @@
                             </span>
                         {% endif %}
                     </h3>
-                   
                 </div>
-                <!-- Candidate count badge in upper right -->
                 <span class="candidate-count-badge">
                     🗳️ {{ candidate_count }} Candidate{% if candidate_count != 1 %}s{% endif %}
                 </span>
@@ -105,15 +76,13 @@
                 {% for candidate in position_data.candidates %}
                 <label class="candidate-row" for="candidate-{{ candidate.id }}">
                     <div class="candidate-info">
-                        <!-- Photo with slightly rounded corners -->
-                        <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) if candidate.photo else url_for('static', filename='default_avatar.png') }}" 
-                             alt="{{ candidate.first_name }} {{ candidate.last_name }}" 
-                             class="candidate-photo"
-                             onerror="this.src='{{ url_for('static', filename='default_avatar.png') }}'">
+                        <!-- Avatar with initials -->
+                        <div class="candidate-avatar">
+                            <span class="candidate-initials">{{ candidate.first_name[0] }}{{ candidate.last_name[0] }}</span>
+                        </div>
                         <div class="candidate-details">
                             <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
                             
-                            <!-- Party List Badge only (course removed) -->
                             <div class="candidate-course">
                                 {% if candidate.party_list and candidate.party_list.strip() %}
                                     <span class="party-badge">{{ candidate.party_list }}</span>
@@ -128,7 +97,6 @@
                         </div>
                     </div>
                     
-                    <!-- Input field - changes based on max_votes -->
                     {% if position_data.max_votes > 1 %}
                         <input type="checkbox" 
                                name="position_{{ position_data.position_id }}" 
@@ -149,7 +117,6 @@
                 {% endfor %}
             </div>
             
-            <!-- Selection counter for multiple selection positions -->
             {% if position_data.max_votes > 1 %}
             <div class="selection-counter" id="counter-{{ position_data.position_id }}">
                 Selected: <span class="selected-count">0</span> / {{ position_data.max_votes }} candidates
@@ -158,20 +125,17 @@
         </div>
         {% endfor %}
 
-        <!-- Voting Countdown -->
         <div class="voting-deadline-container">
             <h3>Voting ends in:</h3>
             <div id="countdown" class="countdown-timer"></div>
         </div>
 
-        <!-- Submit Button -->
         <div class="submit-vote">
             <button type="submit" id="submitBtn">Submit Vote</button>
             <p class="submit-note">Your vote will be encrypted for maximum privacy</p>
         </div>
     </form>
     
-    <!-- CTU Footer - Flexible width like cards -->
     <div class="ctu-footer">
         <div class="footer-text">
             Cebu Technological University - Moalboal Campus | Student Government
@@ -183,14 +147,8 @@
 
 </div>
 
-<!-- Font Awesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
 <script src="{{ url_for('student.static', filename='js/vote_page.js') }}"></script>
 <script>
-    // CSRF Token Helper Function - REMOVED (CSRF protection disabled)
-
-    // Pass Flask variables to JavaScript
     window.electionEndDate = "{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}";
     
     {% for position_name, position_data in candidates_by_position.items() %}

@@ -86,7 +86,7 @@ def load_user(user_id):
     admin = db.session.get(Admin, int(user_id))
     if admin:
         return admin
-    student = Student.query.get(int(user_id))
+    student = db.session.get(Student, int(user_id))
     if student:
         return student
     return None

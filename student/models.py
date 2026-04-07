@@ -55,7 +55,7 @@ class Student(db.Model, UserMixin):
     # Relationships - FIXED: Removed the conflicting backref
     department = db.relationship('Department', backref='students')
     course_rel = db.relationship('Course', backref='students')
-    program_type = db.relationship('ProgramType', backref='program_type_rel', overlaps="program_type_rel,students")  # FIXED: matches the backref in ProgramType
+    program_type = db.relationship('ProgramType', back_populates='students')
     
     @property
     def full_name(self):
@@ -399,8 +399,8 @@ class ProgramType(db.Model):
     name = db.Column(db.String(50), unique=True, nullable=False)  # 'Day' or 'Night'
     description = db.Column(db.String(200))
     
-    # Relationship
-    students = db.relationship('Student', backref='program_type_rel', lazy=True)
+    # Relationship - CHANGED: backref to back_populates
+    students = db.relationship('Student', back_populates='program_type', lazy=True)
     
     def __repr__(self):
         return f'<ProgramType {self.name}>'

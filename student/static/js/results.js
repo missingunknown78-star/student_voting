@@ -5,17 +5,13 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeRefreshButton();
     initializeVerifyButton();
     initializePhotoModal();
-    
-    // Auto-refresh for live results if needed
-    const templateData = getTemplateData();
-    if (templateData.resultsStatus && templateData.resultsStatus.includes('LIVE')) {
-        // Optional: Add auto-refresh logic here if needed
-    }
 });
 
 // ==================== HELPER FUNCTIONS ====================
 
 function getTemplateData() {
+    // This function expects a script tag with id 'template-data' to exist
+    // If not, return default values
     const script = document.getElementById('template-data');
     if (script) {
         try {
@@ -34,7 +30,9 @@ function initializeElectionSelector() {
     if (electionSelect) {
         electionSelect.addEventListener('change', function() {
             const electionId = this.value;
-            window.location.href = `/student/results/${electionId}`;
+            if (electionId) {
+                window.location.href = `/student/results/${electionId}`;
+            }
         });
     }
 }
@@ -60,56 +58,79 @@ function refreshResults() {
     
     if (!electionId) {
         console.error('No election ID available');
+        // Optional: show user feedback
+        if (refreshBtn) {
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fa fa-exclamation-triangle"></i> No Election Selected';
+            setTimeout(() => {
+                refreshBtn.innerHTML = originalText;
+            }, 2000);
+        }
         return;
     }
     
     // Show loading state
     isRefreshing = true;
-    refreshBtn.classList.add('refreshing');
-    refreshBtn.innerHTML = '<span class="loading-spinner"></span> Refreshing...';
-    loadingOverlay.classList.add('active');
+    if (refreshBtn) {
+        refreshBtn.classList.add('refreshing');
+        refreshBtn.innerHTML = '<span class="loading-spinner"></span> Refreshing...';
+    }
+    if (loadingOverlay) loadingOverlay.classList.add('active');
     
     // Update last updated text
-    document.getElementById('last-updated').textContent = 'updating...';
+    const lastUpdated = document.getElementById('last-updated');
+    if (lastUpdated) lastUpdated.textContent = 'updating...';
     
     // Fetch fresh results via AJAX
     fetch(`/student/api/refresh-results/${electionId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // Update the results container
-                document.getElementById('results-container').innerHTML = data.html;
+                const resultsContainer = document.getElementById('results-container');
+                if (resultsContainer) resultsContainer.innerHTML = data.html;
                 
                 // Update summary stats
                 if (data.summary) {
-                    document.getElementById('total-votes').textContent = data.summary.total_votes;
-                    document.getElementById('voter-turnout').textContent = data.summary.voter_turnout + '%';
-                    document.getElementById('votes-cast').textContent = data.summary.total_votes;
+                    const totalVotes = document.getElementById('total-votes');
+                    const voterTurnout = document.getElementById('voter-turnout');
+                    const votesCast = document.getElementById('votes-cast');
+                    const turnoutBar = document.getElementById('turnout-bar');
+                    const currentPercentage = document.getElementById('current-percentage');
                     
-                    // Update turnout chart
-                    document.getElementById('turnout-bar').style.width = data.summary.voter_turnout + '%';
-                    document.getElementById('current-percentage').textContent = data.summary.voter_turnout + '% Current';
+                    if (totalVotes) totalVotes.textContent = data.summary.total_votes;
+                    if (voterTurnout) voterTurnout.textContent = data.summary.voter_turnout + '%';
+                    if (votesCast) votesCast.textContent = data.summary.total_votes;
+                    if (turnoutBar) turnoutBar.style.width = data.summary.voter_turnout + '%';
+                    if (currentPercentage) currentPercentage.textContent = data.summary.voter_turnout + '% Current';
                 }
                 
                 // Update last updated time
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                document.getElementById('last-updated').textContent = timeStr;
+                if (lastUpdated) lastUpdated.textContent = timeStr;
             } else {
                 console.error('Refresh failed:', data.message);
-                document.getElementById('last-updated').textContent = 'refresh failed';
+                if (lastUpdated) lastUpdated.textContent = 'refresh failed';
             }
         })
         .catch(error => {
             console.error('Refresh error:', error);
-            document.getElementById('last-updated').textContent = 'error';
+            if (lastUpdated) lastUpdated.textContent = 'error';
         })
         .finally(() => {
             // Hide loading state
             isRefreshing = false;
-            refreshBtn.classList.remove('refreshing');
-            refreshBtn.innerHTML = '<i class="fa fa-sync-alt"></i> Refresh Results';
-            loadingOverlay.classList.remove('active');
+            if (refreshBtn) {
+                refreshBtn.classList.remove('refreshing');
+                refreshBtn.innerHTML = '<i class="fa fa-sync-alt"></i> Refresh Results';
+            }
+            if (loadingOverlay) loadingOverlay.classList.remove('active');
         });
 }
 
@@ -135,15 +156,15 @@ function verifyVote() {
     const electionId = templateData.recentElectionId;
     
     // Validate inputs
-    if (!candidateSelect.value) {
+    if (!candidateSelect || !candidateSelect.value) {
         showResult('error', '❌ No Candidate Selected', 'Please select which candidate you voted for.');
-        candidateSelect.focus();
+        if (candidateSelect) candidateSelect.focus();
         return;
     }
     
-    if (!secretCode.value.trim()) {
+    if (!secretCode || !secretCode.value.trim()) {
         showResult('error', '❌ Missing Secret Code', 'Please enter your secret receipt code.');
-        secretCode.focus();
+        if (secretCode) secretCode.focus();
         return;
     }
     
@@ -159,19 +180,23 @@ function verifyVote() {
     
     // Show loading state
     isVerifying = true;
-    verifyBtn.disabled = true;
-    verifyBtn.innerHTML = '<span class="loading-spinner"></span> Verifying...';
+    if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<span class="loading-spinner"></span> Verifying...';
+    }
     
-    resultDiv.className = 'verification-result show';
-    resultDiv.innerHTML = `
-        <div class="result-icon">⏳</div>
-        <div class="result-title">Verifying Your Vote...</div>
-        <div class="result-details">
-            <p><strong>${candidateName}</strong></p>
-            <p>Code: ${secretCode.value.substring(0, 8)}...</p>
-            <p><small>Checking blockchain records...</small></p>
-        </div>
-    `;
+    if (resultDiv) {
+        resultDiv.className = 'verification-result show';
+        resultDiv.innerHTML = `
+            <div class="result-icon">⏳</div>
+            <div class="result-title">Verifying Your Vote...</div>
+            <div class="result-details">
+                <p><strong>${escapeHtml(candidateName)}</strong></p>
+                <p>Code: ${escapeHtml(secretCode.value.substring(0, 8))}...</p>
+                <p><small>Checking blockchain records...</small></p>
+            </div>
+        `;
+    }
     
     // Make AJAX call to verify endpoint
     fetch('/student/verify-my-vote', {
@@ -194,7 +219,7 @@ function verifyVote() {
     .then(data => {
         if (data.success) {
             showResult('success', 'VOTE VERIFIED!', 
-                `Your vote for <strong>${data.candidate_name || candidateName}</strong> has been verified!`,
+                `Your vote for <strong>${escapeHtml(data.candidate_name || candidateName)}</strong> has been verified!`,
                 data);
         } else {
             showResult('error', 'VERIFICATION FAILED', 
@@ -208,19 +233,22 @@ function verifyVote() {
     })
     .finally(() => {
         isVerifying = false;
-        verifyBtn.disabled = false;
-        verifyBtn.innerHTML = '<i class="fa fa-check-circle"></i> Verify My Vote';
+        if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<i class="fa fa-check-circle"></i> Verify My Vote';
+        }
     });
 }
 
 function showResult(type, title, message, data = null) {
     const resultDiv = document.getElementById('verificationResult');
+    if (!resultDiv) return;
     
     let icon = type === 'success' ? '✅' : '❌';
     
     let html = `
         <div class="result-icon">${icon}</div>
-        <div class="result-title">${title}</div>
+        <div class="result-title">${escapeHtml(title)}</div>
         <div class="result-details">${message}</div>
     `;
     
@@ -228,10 +256,10 @@ function showResult(type, title, message, data = null) {
         html += `
             <div class="result-hash">
                 <small>Transaction ID:</small><br>
-                ${data.hash || 'Verified'}
+                ${escapeHtml(data.hash || 'Verified')}
             </div>
             <div class="result-footer">
-                <i class="fa fa-lock"></i> Verified at ${data.timestamp || new Date().toLocaleTimeString()}
+                <i class="fa fa-lock"></i> Verified at ${escapeHtml(data.timestamp || new Date().toLocaleTimeString())}
             </div>
         `;
     }
@@ -241,6 +269,14 @@ function showResult(type, title, message, data = null) {
     
     // Scroll to result
     resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ==================== PHOTO MODAL ====================
@@ -275,11 +311,13 @@ function openCandidatePhoto(element) {
     const modalImg = document.getElementById('photoModalImg');
     const modalCaption = document.getElementById('photoModalCaption');
     
+    if (!modal || !modalImg) return;
+    
     const photoUrl = element.getAttribute('data-photo-url');
     const candidateName = element.getAttribute('data-candidate-name');
     
     modalImg.src = photoUrl;
-    modalCaption.textContent = candidateName;
+    if (modalCaption) modalCaption.textContent = candidateName;
     
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -287,7 +325,9 @@ function openCandidatePhoto(element) {
 
 function closePhotoModal() {
     const modal = document.getElementById('photoModal');
-    modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+    }
     document.body.style.overflow = 'auto';
 }
 
