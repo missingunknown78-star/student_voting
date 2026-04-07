@@ -531,12 +531,18 @@ class AdminTrustedDevice(db.Model):
             self.generate_fingerprint()
     
     def generate_fingerprint(self):
-        """Generate a unique fingerprint for this device based on consistent device characteristics"""
+        """
+        Generate a unique fingerprint for this device.
+        🔥 FIXED: Removed IP address - IP changes too frequently!
+        Using ONLY stable device characteristics: admin_id + user_agent + browser + os
+        """
         import hashlib
         
-        # FIXED: Removed secrets.token_hex(8) to make it consistent!
-        # Using ONLY stable device characteristics that don't change between logins
-        fingerprint_data = f"{self.admin_id}{self.ip_address}{self.user_agent}{self.browser}{self.os}"
+        # 🔥 CRITICAL FIX: Remove IP address from fingerprint
+        # IP addresses change when switching networks, restarting router, etc.
+        fingerprint_data = f"{self.admin_id}{self.user_agent}{self.browser}{self.os}"
+        # OLD (WRONG): fingerprint_data = f"{self.admin_id}{self.ip_address}{self.user_agent}{self.browser}{self.os}"
+        
         self.device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
         return self.device_fingerprint
     

@@ -598,6 +598,19 @@ def ajax_validate_register():
     return jsonify(errors)
 
 
+@student_bp.route('/check-session')
+def check_session():
+    """Check if session is still active (for frontend to clear storage)"""
+    from flask import jsonify
+    
+    # Check if user has an active session for registration
+    session_active = bool(session.get('registration_data'))
+    
+    return jsonify({
+        'session_active': session_active
+    })
+
+
 # ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
@@ -963,7 +976,12 @@ def toggle_trust_device():
     if device:
         # Untrust this device
         db.session.delete(device)
-        flash("This device is no longer trusted.", "info")
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': 'This device is no longer trusted.',
+            'trusted': False
+        })
     else:
         # Trust this device
         device = TrustedDevice(
@@ -976,10 +994,12 @@ def toggle_trust_device():
             last_login=datetime.utcnow()
         )
         db.session.add(device)
-        flash("This device is now trusted.", "success")
-
-    db.session.commit()
-    return redirect(url_for('student.profile'))
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': 'This device is now trusted.',
+            'trusted': True
+        })
 
 
 
@@ -3591,7 +3611,7 @@ def profile():
     # Check if user is admin (has 'role' attribute or no 'department_id')
     if hasattr(current_user, 'role') or not hasattr(current_user, 'department_id'):
         # This is an admin user - redirect to admin profile
-        return redirect(url_for('admin.profile'))
+        return redirect(url_for('admin.dashboard'))
     
     # ================================================
     # 🔥 FIX #2: Safe passkey/fingerprint check for students

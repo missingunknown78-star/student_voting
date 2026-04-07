@@ -94,7 +94,7 @@
     </div>
 </div>
 
-<!-- JavaScript - Updated functions -->
+<!-- JavaScript - Updated functions (DEBUG CODE REMOVED) -->
 <script>
 // ==================== REVOKE TRUSTED DEVICE FUNCTION ====================
 function revokeTrustedDevice(deviceId, event) {
@@ -148,10 +148,13 @@ function revokeTrustedDevice(deviceId, event) {
             // Add a small note that they need to check email
             const deviceItem = button.closest('.device-item');
             if (deviceItem) {
-                const pendingNote = document.createElement('div');
-                pendingNote.className = 'pending-note';
-                pendingNote.innerHTML = '<small style="color: #f59e0b; display: block; margin-top: 5px;"><i class="fa-solid fa-envelope"></i> Check email to confirm removal</small>';
-                deviceItem.querySelector('.device-actions').appendChild(pendingNote);
+                // Check if pending note already exists
+                if (!deviceItem.querySelector('.pending-note')) {
+                    const pendingNote = document.createElement('div');
+                    pendingNote.className = 'pending-note';
+                    pendingNote.innerHTML = '<small style="color: #f59e0b; display: block; margin-top: 5px;"><i class="fa-solid fa-envelope"></i> Check email to confirm removal</small>';
+                    deviceItem.querySelector('.device-actions').appendChild(pendingNote);
+                }
             }
         } else {
             // Show error message
@@ -279,16 +282,8 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// ==================== DEBUG: Log current device fingerprint ====================
+// ==================== INITIALIZATION (No debug fetch) ====================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Trusted Devices JS loaded');
-    
-    // Log current device fingerprint for debugging
-    fetch('/admin/debug/current-device')
-        .then(response => response.json())
-        .then(data => {
-            console.log('Current device fingerprint:', data);
-        })
-        .catch(err => console.log('Debug endpoint not available'));
+    console.log('Trusted Devices JS loaded - Debug endpoint removed');
 });
 </script>

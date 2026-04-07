@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
 
 <style>
-    /* Spinner styles - UPDATED FOR VERTICAL CENTERING */
+    /* Spinner styles */
     .btn-spinner {
         display: inline-block;
         width: 20px;
@@ -94,10 +94,131 @@
         margin-top: 5px;
         display: block;
     }
+    
+    /* Toast Notification Styles */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .toast {
+        min-width: 280px;
+        max-width: 350px;
+        background: white;
+        border-radius: 12px;
+        padding: 14px 18px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideInRight 0.3s ease;
+        border-left: 4px solid;
+    }
+    
+    .toast.toast-error {
+        border-left-color: #dc2626;
+        background: #fef2f2;
+    }
+    
+    .toast.toast-success {
+        border-left-color: #10b981;
+        background: #f0fdf4;
+    }
+    
+    .toast.toast-warning {
+        border-left-color: #f59e0b;
+        background: #fffbeb;
+    }
+    
+    .toast-icon {
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .toast.toast-error .toast-icon {
+        color: #dc2626;
+    }
+    
+    .toast.toast-success .toast-icon {
+        color: #10b981;
+    }
+    
+    .toast.toast-warning .toast-icon {
+        color: #f59e0b;
+    }
+    
+    .toast-content {
+        flex: 1;
+        font-size: 0.85rem;
+        color: #1e293b;
+        line-height: 1.4;
+    }
+    
+    .toast-close {
+        cursor: pointer;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        transition: color 0.2s;
+    }
+    
+    .toast-close:hover {
+        color: #475569;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+    
+    .toast.fade-out {
+        animation: fadeOut 0.3s ease forwards;
+    }
+    
+    /* Security note */
+    .security-note {
+        background: #fef3c7;
+        padding: 10px 14px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        font-size: 0.75rem;
+        color: #92400e;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-left: 3px solid #f59e0b;
+    }
+    
+    .security-note i {
+        font-size: 0.9rem;
+    }
 </style>
 </head>
 
 <body>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
 
 <div class="registration-container">
     <div class="registration-box">
@@ -226,7 +347,13 @@
                 <div class="trim-hint" id="username_hint">⚠️ Extra spaces will be removed</div>
             </div>
 
-            <!-- PASSWORD - No value repopulation for security -->
+            <!-- SECURITY NOTE -->
+            <div class="security-note">
+                <i class="fas fa-shield-alt"></i>
+                <span>For security, password is not saved. If the page refreshes, please re-enter your password.</span>
+            </div>
+
+            <!-- PASSWORD -->
             <div class="input-group floating" id="passwordGroup">
                 <input type="password" name="password" id="passwordInput" required minlength="8" placeholder=" ">
                 <label>Password <span class="required-asterisk">*</span></label>
@@ -256,9 +383,70 @@
 </div>
 
 <script>
-// SESSION STORAGE MANAGEMENT - Preserve form data across refreshes
+// ======================
+// TOAST NOTIFICATION SYSTEM (with duplicate prevention)
+// ======================
 
-// Save form data to sessionStorage whenever inputs change
+let toastTimeout = null;
+let lastToastMessage = '';
+let lastToastTime = 0;
+
+function showToast(message, type = 'error') {
+    // Prevent duplicate toasts within 2 seconds
+    const now = Date.now();
+    if (message === lastToastMessage && (now - lastToastTime) < 2000) {
+        return; // Don't show duplicate
+    }
+    
+    lastToastMessage = message;
+    lastToastTime = now;
+    
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    let icon = '';
+    if (type === 'error') icon = '<i class="fas fa-exclamation-circle"></i>';
+    else if (type === 'success') icon = '<i class="fas fa-check-circle"></i>';
+    else icon = '<i class="fas fa-exclamation-triangle"></i>';
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">${message}</div>
+        <div class="toast-close"><i class="fas fa-times"></i></div>
+    `;
+    
+    container.appendChild(toast);
+    
+    const timeout = setTimeout(() => {
+        removeToast(toast);
+    }, 4000);
+    
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', () => {
+        clearTimeout(timeout);
+        removeToast(toast);
+    });
+    
+    toast.addEventListener('mouseenter', () => clearTimeout(timeout));
+    toast.addEventListener('mouseleave', () => {
+        setTimeout(() => removeToast(toast), 1000);
+    });
+}
+
+function removeToast(toast) {
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+        if (toast.parentNode) toast.remove();
+    }, 300);
+}
+
+// ======================
+// SESSION STORAGE MANAGEMENT
+// ======================
+
 function saveFormToStorage() {
     const formData = {
         first_name: document.querySelector('input[name="first_name"]')?.value || '',
@@ -276,13 +464,11 @@ function saveFormToStorage() {
     sessionStorage.setItem('registration_form_data', JSON.stringify(formData));
 }
 
-// Restore form data from sessionStorage (except password for security)
 function restoreFormFromStorage() {
     const savedData = sessionStorage.getItem('registration_form_data');
     if (savedData) {
         const formData = JSON.parse(savedData);
         
-        // Restore text inputs
         document.querySelector('input[name="first_name"]').value = formData.first_name || '';
         document.querySelector('input[name="middle_name"]').value = formData.middle_name || '';
         document.querySelector('input[name="last_name"]').value = formData.last_name || '';
@@ -292,125 +478,48 @@ function restoreFormFromStorage() {
         document.querySelector('input[name="username"]').value = formData.username || '';
         document.querySelector('input[name="id_number"]').value = formData.id_number || '';
         
-        // Restore selects
         if (formData.course) document.querySelector('select[name="course"]').value = formData.course;
         if (formData.year_level) document.querySelector('select[name="year_level"]').value = formData.year_level;
         if (formData.program_type) document.querySelector('select[name="program_type"]').value = formData.program_type;
         
-        // DO NOT restore password for security
         document.querySelector('input[name="password"]').value = '';
     }
 }
 
-// Clear sessionStorage when navigating away
 function clearFormStorage() {
     sessionStorage.removeItem('registration_form_data');
 }
 
-// Save on input changes
-document.addEventListener('DOMContentLoaded', function() {
-    // Restore saved data first
-    restoreFormFromStorage();
-    
-    // Add save listeners to all form inputs (except password)
-    const inputsToSave = document.querySelectorAll('input[name]:not([name="password"]), select[name]');
-    inputsToSave.forEach(input => {
-        input.addEventListener('input', saveFormToStorage);
-        input.addEventListener('change', saveFormToStorage);
-    });
-    
-    // Clear storage when login link is clicked
-    const loginLink = document.getElementById('loginLink');
-    if (loginLink) {
-        loginLink.addEventListener('click', function() {
-            clearFormStorage();
-        });
-    }
-    
-    // Optional: Check session expiration by making a lightweight AJAX call
-    // If session expired, clear storage
-    fetch("{{ url_for('student.check_session') }}")
-        .then(response => response.json())
-        .then(data => {
-            if (!data.session_active) {
-                clearFormStorage();
-            }
-        })
-        .catch(() => {});
-});
-</script>
+// ======================
+// PASSWORD VALIDATION (Single Toast)
+// ======================
 
-<script>
-// Function to trim input values (remove leading/trailing spaces, preserve internal spaces)
-function trimInputValue(input) {
-    if (!input || !input.value) return;
-    
-    const originalValue = input.value;
-    const trimmedValue = originalValue.trim().replace(/\s+/g, ' ');
-    
-    // Only update if value changed
-    if (originalValue !== trimmedValue) {
-        input.value = trimmedValue;
-        
-        // Show visual feedback
-        const wrapper = input.closest('.input-group');
-        if (wrapper) {
-            wrapper.classList.add('input-trimmed');
-            setTimeout(() => {
-                wrapper.classList.remove('input-trimmed');
-            }, 1000);
-        }
-        
-        // Show hint that spaces were removed
-        const hintId = input.name + '_hint';
-        const hint = document.getElementById(hintId);
-        if (hint) {
-            hint.classList.add('visible');
-            setTimeout(() => {
-                hint.classList.remove('visible');
-            }, 2000);
-        }
-        
-        // Save to storage after trimming
-        saveFormToStorage();
-    }
-}
+let isShowingToast = false;
 
-// Function to trim all text inputs in the form
-function trimAllFormInputs(form) {
-    const textInputs = form.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
-    let wasTrimmed = false;
-    
-    textInputs.forEach(input => {
-        if (input.value && input.dataset.trim === 'true') {
-            const originalValue = input.value;
-            const trimmedValue = originalValue.trim().replace(/\s+/g, ' ');
-            
-            if (originalValue !== trimmedValue) {
-                input.value = trimmedValue;
-                wasTrimmed = true;
-            }
-        }
-    });
-    
-    return wasTrimmed;
-}
-
-// Validate password before submission
 function validatePassword() {
     const passwordInput = document.getElementById('passwordInput');
     const passwordError = document.getElementById('passwordError');
     const passwordGroup = document.getElementById('passwordGroup');
     
     if (!passwordInput.value || passwordInput.value.trim() === '') {
+        if (!isShowingToast) {
+            isShowingToast = true;
+            showToast('⚠️ Password is required! Please enter your password.', 'error');
+            setTimeout(() => { isShowingToast = false; }, 2000);
+        }
         passwordError.style.display = 'block';
+        passwordError.textContent = '⚠️ Password is required';
         passwordInput.classList.add('password-error');
         passwordGroup.classList.add('input-error');
         return false;
     }
     
-    // Check minimum length
     if (passwordInput.value.length < 8) {
+        if (!isShowingToast) {
+            isShowingToast = true;
+            showToast('⚠️ Password must be at least 8 characters long.', 'error');
+            setTimeout(() => { isShowingToast = false; }, 2000);
+        }
         passwordError.textContent = '⚠️ Password must be at least 8 characters';
         passwordError.style.display = 'block';
         passwordInput.classList.add('password-error');
@@ -418,7 +527,6 @@ function validatePassword() {
         return false;
     }
     
-    // Clear error if valid
     passwordError.style.display = 'none';
     passwordInput.classList.remove('password-error');
     passwordGroup.classList.remove('input-error');
@@ -436,51 +544,69 @@ document.getElementById('passwordInput')?.addEventListener('input', function() {
     }
 });
 
-// Add real-time trimming on blur for better UX
-document.addEventListener('DOMContentLoaded', function() {
-    // Get all inputs that should be trimmed
-    const trimInputs = document.querySelectorAll('input[data-trim="true"]');
-    
-    trimInputs.forEach(input => {
-        // Trim on blur (when user leaves the field)
-        input.addEventListener('blur', function() {
-            trimInputValue(this);
-        });
-        
-        // Optional: Also trim on paste to clean pasted content
-        input.addEventListener('paste', function(e) {
-            setTimeout(() => {
-                trimInputValue(this);
-            }, 10);
-        });
-    });
-});
-</script>
+// ======================
+// TRIM FUNCTIONS
+// ======================
 
-<!-- ================= AJAX VALIDATION WITH SPINNER BUTTON ================= -->
-<script>
+function trimInputValue(input) {
+    if (!input || !input.value) return;
+    
+    const originalValue = input.value;
+    const trimmedValue = originalValue.trim().replace(/\s+/g, ' ');
+    
+    if (originalValue !== trimmedValue) {
+        input.value = trimmedValue;
+        
+        const wrapper = input.closest('.input-group');
+        if (wrapper) {
+            wrapper.classList.add('input-trimmed');
+            setTimeout(() => wrapper.classList.remove('input-trimmed'), 1000);
+        }
+        
+        const hintId = input.name + '_hint';
+        const hint = document.getElementById(hintId);
+        if (hint) {
+            hint.classList.add('visible');
+            setTimeout(() => hint.classList.remove('visible'), 2000);
+        }
+        
+        saveFormToStorage();
+    }
+}
+
+function trimAllFormInputs(form) {
+    const textInputs = form.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
+    textInputs.forEach(input => {
+        if (input.value && input.dataset.trim === 'true') {
+            const trimmedValue = input.value.trim().replace(/\s+/g, ' ');
+            if (input.value !== trimmedValue) {
+                input.value = trimmedValue;
+            }
+        }
+    });
+}
+
+// ======================
+// FORM SUBMISSION
+// ======================
+
 document.getElementById('registrationForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    // First, validate password
     if (!validatePassword()) {
-        // Scroll to password field
         document.getElementById('passwordInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
     
-    // Trim all inputs before validation and submission
     trimAllFormInputs(this);
     
     const registerBtn = document.getElementById('registerBtn');
     const btnText = registerBtn.querySelector('.btn-text');
     const originalText = btnText.textContent;
 
-    // Remove old errors
     document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
     document.querySelectorAll('.field-error-text').forEach(el => el.remove());
 
-    // Show spinner and disable button
     registerBtn.classList.add('loading');
     registerBtn.disabled = true;
     btnText.innerHTML = '<span class="btn-spinner"></span> Validating...';
@@ -497,12 +623,10 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
         const errors = await response.json();
 
         if (Object.keys(errors).length > 0) {
-            // Reset button state
             registerBtn.classList.remove('loading');
             registerBtn.disabled = false;
             btnText.textContent = originalText;
 
-            // Show errors
             for (const field in errors) {
                 const input = form.querySelector(`[name="${field}"]`);
                 if (!input) continue;
@@ -515,16 +639,14 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
                 error.textContent = errors[field];
                 wrapper.appendChild(error);
             }
-            return; // ❌ stop submit
+            
+            showToast('Please fix the errors above and try again.', 'warning');
+            return;
         }
 
-        // ✅ No validation errors → change spinner text and submit
         btnText.innerHTML = '<span class="btn-spinner"></span> Submitting...';
-        
-        // Save final form data before submission (except password)
         saveFormToStorage();
         
-        // Small delay to show the submitting state (optional)
         setTimeout(() => {
             form.submit();
         }, 300);
@@ -532,45 +654,72 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     } catch (error) {
         console.error('Validation error:', error);
         
-        // Reset button state
         registerBtn.classList.remove('loading');
         registerBtn.disabled = false;
         btnText.textContent = originalText;
         
-        // Show error message
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'alert alert-danger';
-        errorDiv.textContent = 'An error occurred. Please try again.';
-        form.insertBefore(errorDiv, form.firstChild);
+        showToast('An error occurred. Please try again.', 'error');
     }
 });
-</script>
 
-<!-- Handle regular form submission (if JavaScript fails) -->
-<script>
+// Fallback submit handler
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
     const registerBtn = document.getElementById('registerBtn');
     
-    // Validate password before submission (safety check)
     if (!validatePassword()) {
         e.preventDefault();
         document.getElementById('passwordInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
     
-    // Trim all inputs before submission (safety measure)
     trimAllFormInputs(this);
     
-    // If button is already disabled, prevent double submission
     if (registerBtn.disabled) {
         e.preventDefault();
         return;
     }
     
-    // For non-AJAX fallback, still show spinner
     registerBtn.classList.add('loading');
     registerBtn.disabled = true;
     registerBtn.querySelector('.btn-text').innerHTML = '<span class="btn-spinner"></span> Submitting...';
+});
+
+// ======================
+// DOM CONTENT LOADED
+// ======================
+
+document.addEventListener('DOMContentLoaded', function() {
+    restoreFormFromStorage();
+    
+    const inputsToSave = document.querySelectorAll('input[name]:not([name="password"]), select[name]');
+    inputsToSave.forEach(input => {
+        input.addEventListener('input', saveFormToStorage);
+        input.addEventListener('change', saveFormToStorage);
+    });
+    
+    const loginLink = document.getElementById('loginLink');
+    if (loginLink) {
+        loginLink.addEventListener('click', function() {
+            clearFormStorage();
+        });
+    }
+    
+    const alerts = document.querySelectorAll('.alert-danger');
+    if (alerts.length > 0) {
+        document.getElementById('passwordInput').focus();
+        document.getElementById('passwordInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    const trimInputs = document.querySelectorAll('input[data-trim="true"]');
+    trimInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            trimInputValue(this);
+        });
+        
+        input.addEventListener('paste', function(e) {
+            setTimeout(() => trimInputValue(this), 10);
+        });
+    });
 });
 </script>
 

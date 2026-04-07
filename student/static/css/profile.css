@@ -3,8 +3,8 @@
    ============================================ */
 
    .profile-container {
-    padding: 12px 8px;
-    padding-bottom: 90px; /* Extra space for footer */
+    padding: 12px 8px 0px 8px;
+    padding-bottom: 2px; /* Extra space for footer */
 }
 
 /* Profile Header */
@@ -322,8 +322,8 @@
 }
 
 .actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column; /* Changed from grid to column */
     gap: 10px;
     margin-top: 16px;
 }
@@ -343,7 +343,16 @@
     cursor: pointer;
     transition: var(--transition);
     min-height: 70px;
+    width: 100%; /* Make buttons full width */
 }
+
+/* Remove the old grid styles for mobile */
+/* @media (max-width: 360px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+} */
 
 .action-btn:active {
     transform: scale(0.98);

@@ -93,6 +93,17 @@
         margin-top: 4px;
         font-style: italic;
     }
+
+    /* Candidate button styling inside actions grid */
+    .action-btn.candidate {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        color: white;
+    }
+
+    .action-btn.candidate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(155, 89, 182, 0.3);
+    }
 </style>
 {% endblock %}
 
@@ -416,31 +427,22 @@
                     Request Deletion
                 {% endif %}
             </button>
+
+            <!-- Candidate Application Button - Moved inside Account Actions -->
+            {% if is_qualified %}
+            <a href="{{ url_for('student.apply_as_candidate_page') }}" class="action-btn candidate">
+                <span class="btn-icon">⭐</span>
+                Candidate Application
+            </a>
+            {% endif %}
         </div>
+        
         {% if has_pending_deletion %}
         <p style="text-align: center; color: #f59e0b; font-size: 0.85rem; margin-top: 10px;">
             Your deletion request is pending admin approval. You will be notified via email once processed.
         </p>
         {% endif %}
     </div>
-
-    <!-- Candidate Application Section - SIMPLIFIED -->
-    {% if is_qualified %}
-    <div class="card candidate-application-card" style="margin-top: 20px; border-left: 5px solid #9b59b6;">
-        <h2 class="card-title" style="color: #9b59b6;">
-            <i class="fa-solid fa-star"></i> Candidate Application
-        </h2>
-        
-        <div style="padding: 10px 0; text-align: center;">
-            <p style="margin-bottom: 20px; color: var(--text-secondary);">
-                You are qualified to run as a candidate! Click the button below to manage your application.
-            </p>
-            <a href="{{ url_for('student.apply_as_candidate_page') }}" class="action-btn" style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
-                <i class="fa-solid fa-star"></i> Candidate Application Center
-            </a>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Email Change Verification Modal -->

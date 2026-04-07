@@ -25,7 +25,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const MAX_CHARS = 5000;
     const MIN_CHARS_FOR_SUBMIT = 10; // At least 10 characters to enable submit
 
-    // Helper function to get CSRF token - REMOVED (CSRF protection disabled)
+    // Helper function for button loading state
+    function setButtonLoading(button, isLoading, loadingText = 'Processing...') {
+        if (!button) return;
+        if (isLoading) {
+            button.disabled = true;
+            button.dataset.originalText = button.innerHTML;
+            button.innerHTML = `<span class="button-icon"><span class="spinner"></span> <span>${loadingText}</span></span>`;
+        } else {
+            button.disabled = false;
+            if (button.dataset.originalText) {
+                button.innerHTML = button.dataset.originalText;
+                delete button.dataset.originalText;
+            }
+        }
+    }
 
     // Format number with commas
     function formatNumber(num) {
@@ -159,19 +173,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     async function submitDeletionRequest(reason) {
-        if (!submitBtn) return;
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="button-icon"><span class="spinner"></span> <span>Submitting...</span></span>';
+        // Set loading state on the submit button (the one in the modal)
+        const modalSubmitBtn = document.querySelector('#submitDeletionBtn');
+        if (modalSubmitBtn) {
+            setButtonLoading(modalSubmitBtn, true, 'Submitting...');
+        }
 
         try {
-            // CSRF token removed - no longer needed
-            
             const response = await fetch('/student/request-deletion', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                    // REMOVED: 'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     reason: reason
@@ -204,21 +216,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     deletionBtn.parentElement.parentElement.appendChild(statusMsg);
                 }
                 
+                // Reload after 2 seconds to show updated state
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+                
             } else {
                 showToast(data.error || 'Failed to submit request', 'error');
+                // Reset button state on error
+                if (modalSubmitBtn) {
+                    setButtonLoading(modalSubmitBtn, false);
+                }
             }
         } catch (error) {
             showToast('An error occurred. Please try again.', 'error');
             console.error('Error:', error);
-        } finally {
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="button-icon"><span>🗑️</span><span>Submit Request</span></span>';
+            // Reset button state on error
+            if (modalSubmitBtn) {
+                setButtonLoading(modalSubmitBtn, false);
             }
         }
     }
 
     function showConfirmationModal(reason) {
+        // Remove any existing confirmation modal first
+        const existingModal = document.querySelector('.confirm-modal');
+        if (existingModal) existingModal.remove();
+        
         const confirmModal = document.createElement('div');
         confirmModal.className = 'confirm-modal';
         confirmModal.innerHTML = `
@@ -234,146 +258,166 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         // Style the confirmation modal
-        const style = document.createElement('style');
-        style.textContent = `
-            .confirm-modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10001;
-                animation: fadeIn 0.3s ease;
-            }
-            
-            .confirm-content {
-                background: white;
-                border-radius: 16px;
-                padding: 30px;
-                max-width: 400px;
-                width: 90%;
-                text-align: center;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-                animation: slideUp 0.3s ease;
-            }
-            
-            .confirm-icon {
-                font-size: 48px;
-                margin-bottom: 20px;
-            }
-            
-            .confirm-title {
-                font-size: 1.3rem;
-                color: #333;
-                margin-bottom: 15px;
-                font-weight: 600;
-            }
-            
-            .confirm-message {
-                color: #666;
-                margin-bottom: 25px;
-                line-height: 1.5;
-                font-size: 0.95rem;
-            }
-            
-            .confirm-buttons {
-                display: flex;
-                gap: 10px;
-                justify-content: center;
-            }
-            
-            .btn-confirm-yes {
-                background: #e53935;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background 0.3s;
-                flex: 1;
-            }
-            
-            .btn-confirm-yes:hover {
-                background: #c62828;
-            }
-            
-            .btn-confirm-no {
-                background: #6c757d;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background 0.3s;
-                flex: 1;
-            }
-            
-            .btn-confirm-no:hover {
-                background: #5a6268;
-            }
-            
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            
-            @keyframes slideUp {
-                from {
-                    transform: translateY(20px);
-                    opacity: 0;
+        const styleId = 'confirm-modal-styles';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                .confirm-modal {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10001;
+                    animation: fadeIn 0.3s ease;
                 }
-                to {
-                    transform: translateY(0);
-                    opacity: 1;
+                
+                .confirm-content {
+                    background: white;
+                    border-radius: 16px;
+                    padding: 30px;
+                    max-width: 400px;
+                    width: 90%;
+                    text-align: center;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+                    animation: slideUp 0.3s ease;
                 }
-            }
-            
-            .spinner {
-                display: inline-block;
-                width: 16px;
-                height: 16px;
-                border: 2px solid rgba(255,255,255,0.3);
-                border-radius: 50%;
-                border-top-color: #fff;
-                animation: spin 1s ease-in-out infinite;
-                margin-right: 8px;
-            }
-            
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            
-            :root.dark-mode .confirm-content {
-                background: #2d2d2d;
-                color: #f0f0f0;
-            }
-            
-            :root.dark-mode .confirm-title {
-                color: #f0f0f0;
-            }
-            
-            :root.dark-mode .confirm-message {
-                color: #b0b0b0;
-            }
-        `;
+                
+                .confirm-icon {
+                    font-size: 48px;
+                    margin-bottom: 20px;
+                }
+                
+                .confirm-title {
+                    font-size: 1.3rem;
+                    color: #333;
+                    margin-bottom: 15px;
+                    font-weight: 600;
+                }
+                
+                .confirm-message {
+                    color: #666;
+                    margin-bottom: 25px;
+                    line-height: 1.5;
+                    font-size: 0.95rem;
+                }
+                
+                .confirm-buttons {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                }
+                
+                .btn-confirm-yes {
+                    background: #e53935;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background 0.3s;
+                    flex: 1;
+                }
+                
+                .btn-confirm-yes:hover {
+                    background: #c62828;
+                }
+                
+                .btn-confirm-yes:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+                
+                .btn-confirm-no {
+                    background: #6c757d;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background 0.3s;
+                    flex: 1;
+                }
+                
+                .btn-confirm-no:hover {
+                    background: #5a6268;
+                }
+                
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                
+                @keyframes slideUp {
+                    from {
+                        transform: translateY(20px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+                
+                .spinner {
+                    display: inline-block;
+                    width: 16px;
+                    height: 16px;
+                    border: 2px solid rgba(255,255,255,0.3);
+                    border-radius: 50%;
+                    border-top-color: #fff;
+                    animation: spin 1s ease-in-out infinite;
+                    margin-right: 8px;
+                }
+                
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                
+                :root.dark-mode .confirm-content {
+                    background: #2d2d2d;
+                    color: #f0f0f0;
+                }
+                
+                :root.dark-mode .confirm-title {
+                    color: #f0f0f0;
+                }
+                
+                :root.dark-mode .confirm-message {
+                    color: #b0b0b0;
+                }
+            `;
+            document.head.appendChild(style);
+        }
         
-        document.head.appendChild(style);
         document.body.appendChild(confirmModal);
         
-        document.getElementById('confirmYes').addEventListener('click', async function() {
-            confirmModal.remove();
-            await submitDeletionRequest(reason);
-        });
+        const confirmYesBtn = document.getElementById('confirmYes');
+        const confirmNoBtn = document.getElementById('confirmNo');
         
-        document.getElementById('confirmNo').addEventListener('click', function() {
-            confirmModal.remove();
-        });
+        if (confirmYesBtn) {
+            confirmYesBtn.addEventListener('click', async function() {
+                // Disable the confirm button and show loading
+                confirmYesBtn.disabled = true;
+                confirmYesBtn.innerHTML = '<span class="spinner"></span> Submitting...';
+                
+                confirmModal.remove();
+                await submitDeletionRequest(reason);
+            });
+        }
+        
+        if (confirmNoBtn) {
+            confirmNoBtn.addEventListener('click', function() {
+                confirmModal.remove();
+            });
+        }
         
         // Close when clicking outside
         confirmModal.addEventListener('click', function(e) {
@@ -407,7 +451,4 @@ document.addEventListener('DOMContentLoaded', function() {
             deletionModal.scrollTop = 0;
         }
     });
-
-    // CSRF meta tag addition - REMOVED (CSRF protection disabled)
-    // No longer needed to add CSRF meta tag
 });

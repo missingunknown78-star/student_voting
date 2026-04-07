@@ -516,7 +516,6 @@ def login():
 
 
 
-# ------------------- Admin 2FA Verification ------------------- #
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
 def verify_2fa():
     # Check if user is in pre-2fa session
@@ -560,13 +559,15 @@ def verify_2fa():
             # ===== DEVICE FINGERPRINT AND TRUST CHECK =====
             device_info = AdminTrustedDevice.get_device_info(request)
             
-            # IMPORTANT: Use the EXACT same method as the model's generate_fingerprint()
-            # Format: admin_id + ip_address + user_agent + browser + os
-            fingerprint_data = f"{admin.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+            # 🔥 FIXED: EXCLUDE IP address from fingerprint (IP changes!)
+            # OLD (WRONG): fingerprint_data = f"{admin.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+            # NEW (CORRECT) - NO IP ADDRESS:
+            fingerprint_data = f"{admin.id}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
             device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
 
             print(f"🔑 Generated fingerprint: {device_fingerprint[:20]}...")
-            print(f"📊 Data used: admin_id={admin.id}, ip={device_info['ip_address']}, browser={device_info['browser']}, os={device_info['os']}")
+            print(f"📊 Data used: admin_id={admin.id}, browser={device_info['browser']}, os={device_info['os']}")
+            print(f"⚠️ IP address NOT used in fingerprint (it changes)")
             
             # Store in session
             session['admin_device_fingerprint'] = device_fingerprint
@@ -606,7 +607,7 @@ def verify_2fa():
                         device_type=device_info['device_type'],
                         trusted=False
                     )
-                    # Set fingerprint using the same method
+                    # Set fingerprint using the fixed method (NO IP)
                     new_device.device_fingerprint = device_fingerprint
                     db.session.add(new_device)
                     db.session.commit()
@@ -645,7 +646,7 @@ def verify_2fa():
                         trusted=True,
                         expires_at=datetime.utcnow() + timedelta(days=30)
                     )
-                    # Set fingerprint using the same method
+                    # Set fingerprint using the fixed method (NO IP)
                     new_device.device_fingerprint = device_fingerprint
                     db.session.add(new_device)
                     db.session.commit()
@@ -662,7 +663,7 @@ def verify_2fa():
                 print("✅ Device ALREADY TRUSTED - direct to dashboard")
                 # Device already trusted - just update last used
                 trusted_device.update_last_used()
-                # Update device info to keep it current
+                # Update device info to keep it current (IP can change, that's fine)
                 trusted_device.ip_address = device_info['ip_address']
                 trusted_device.user_agent = device_info['user_agent']
                 trusted_device.browser = device_info['browser']
@@ -1717,85 +1718,224 @@ def send_otp_to_new_email():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/verify-otp-code', methods=['POST'])
+@login_required
+def verify_otp_code():
+    """Verify OTP code sent to new email"""
+    print("\n" + "="*60)
+    print("OTP VERIFICATION REQUEST RECEIVED")
+    print("="*60)
+    
+    try:
+        data = request.get_json()
+        entered_otp = data.get('otp')
+        request_id = data.get('request_id')
+        email = data.get('email')
+        
+        print(f"[DEBUG] OTP verification data:")
+        print(f"  - entered_otp: {entered_otp}")
+        print(f"  - request_id: {request_id}")
+        print(f"  - email: {email}")
+        
+        if not entered_otp or not request_id:
+            print(f"[DEBUG] Missing required fields")
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        # Get the stored OTP from session
+        stored_otp = session.get('new_email_otp')
+        stored_expiry = session.get('new_email_otp_expiry')
+        stored_request_id = session.get('change_request_id')
+        
+        print(f"[DEBUG] Session values:")
+        print(f"  - stored_otp: {stored_otp}")
+        print(f"  - stored_expiry: {stored_expiry}")
+        print(f"  - stored_request_id: {stored_request_id}")
+        print(f"  - current time timestamp: {datetime.utcnow().timestamp()}")
+        
+        # Check if OTP exists and not expired
+        if not stored_otp or not stored_expiry:
+            print(f"[DEBUG] No OTP found in session")
+            return jsonify({'success': False, 'message': 'No verification code found. Please request a new one.'}), 400
+        
+        if datetime.utcnow().timestamp() > stored_expiry:
+            print(f"[DEBUG] OTP expired")
+            return jsonify({'success': False, 'message': 'Verification code has expired. Please request a new one.'}), 400
+        
+        # Verify OTP
+        print(f"[DEBUG] Comparing OTP: entered='{entered_otp}' vs stored='{stored_otp}'")
+        print(f"[DEBUG] Comparing request_id: entered='{request_id}' vs stored='{stored_request_id}'")
+        
+        if entered_otp == stored_otp and stored_request_id == request_id:
+            print(f"[DEBUG] OTP VERIFICATION SUCCESSFUL!")
+            # Clear OTP from session
+            session.pop('new_email_otp', None)
+            session.pop('new_email_otp_expiry', None)
+            session.pop('pending_new_email', None)
+            session.pop('change_request_id', None)
+            print(f"[DEBUG] Session cleared")
+            print("="*60 + "\n")
+            
+            return jsonify({'success': True, 'message': 'Code verified successfully'})
+        else:
+            print(f"[DEBUG] OTP VERIFICATION FAILED!")
+            print(f"  - OTP match: {entered_otp == stored_otp}")
+            print(f"  - Request ID match: {stored_request_id == request_id}")
+            print("="*60 + "\n")
+            return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
+            
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        print(f"[DEBUG ERROR] Exception in OTP verification:")
+        print(f"  - Error: {str(e)}")
+        print(f"  - Full traceback:\n{error_traceback}")
+        print("="*60 + "\n")
+        
+        current_app.logger.error(f"Error verifying OTP: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @admin_bp.route('/settings/profile/update', methods=['POST'])
 @admin_required
 def settings_profile_update():
     """
     Update admin profile (username and email) with verification
     """
+    import traceback
+    print("\n" + "="*60)
+    print("PROFILE UPDATE REQUEST RECEIVED")
+    print("="*60)
+    
     try:
         admin = current_user
+        print(f"[DEBUG] Current admin ID: {admin.id}")
+        print(f"[DEBUG] Current admin username: {admin.username}")
+        print(f"[DEBUG] Current admin email: {admin.email}")
         
-        # Get form data
-        new_username = request.form.get('username')
-        new_email = request.form.get('email')
-        old_email_verified = request.form.get('old_email_verified')
-        new_email_verified = request.form.get('new_email_verified')
+        # Get data from JSON
+        data = request.get_json()
+        print(f"[DEBUG] Raw request data: {data}")
+        
+        new_username = data.get('username')
+        new_email = data.get('email')
+        old_email_verified = data.get('old_email_verified')
+        new_email_verified = data.get('new_email_verified')
+        
+        print(f"[DEBUG] Extracted values:")
+        print(f"  - new_username: {new_username}")
+        print(f"  - new_email: {new_email}")
+        print(f"  - old_email_verified: {old_email_verified} (type: {type(old_email_verified)})")
+        print(f"  - new_email_verified: {new_email_verified} (type: {type(new_email_verified)})")
         
         changes = {}
+        email_changed = False
+        old_email = admin.email
         
         # Update username if changed
         if new_username and new_username != admin.username:
-            # Check if username is already taken
+            print(f"[DEBUG] Username change detected: {admin.username} -> {new_username}")
             existing_admin = Admin.query.filter_by(username=new_username).first()
             if existing_admin and existing_admin.id != admin.id:
+                print(f"[DEBUG] Username already taken by another admin (ID: {existing_admin.id})")
                 return jsonify({
                     'success': False,
-                    'error': 'Username already taken'
+                    'message': 'Username already taken'
                 }), 400
             
             admin.username = new_username
             changes['username'] = new_username
+            print(f"[DEBUG] Username updated to: {admin.username}")
+        else:
+            print(f"[DEBUG] No username change detected")
         
         # Check if email is being changed
         if new_email and new_email != admin.email:
-            # Verify both old and new email verifications
-            if old_email_verified != 'true' or new_email_verified != 'true':
+            email_changed = True
+            print(f"[DEBUG] Email change detected: {admin.email} -> {new_email}")
+            
+            # Convert to string for comparison
+            old_verified_str = str(old_email_verified).lower() if old_email_verified is not None else 'false'
+            new_verified_str = str(new_email_verified).lower() if new_email_verified is not None else 'false'
+            
+            print(f"[DEBUG] Verification flags after conversion:")
+            print(f"  - old_verified_str: '{old_verified_str}'")
+            print(f"  - new_verified_str: '{new_verified_str}'")
+            
+            if old_verified_str != 'true' or new_verified_str != 'true':
+                print(f"[DEBUG] VERIFICATION FAILED: Both flags must be 'true'")
+                print(f"  - old_verified_str == 'true': {old_verified_str == 'true'}")
+                print(f"  - new_verified_str == 'true': {new_verified_str == 'true'}")
                 return jsonify({
                     'success': False,
-                    'error': 'Email change requires verification of both old and new emails'
+                    'message': 'Email change requires verification of both old and new emails'
                 }), 400
             
-            # Check if new email is already taken
+            print(f"[DEBUG] Verification passed! Proceeding with email update...")
+            
+            # Check if new email already exists
             existing_admin = Admin.query.filter_by(email=new_email).first()
             if existing_admin and existing_admin.id != admin.id:
+                print(f"[DEBUG] New email already in use by another admin (ID: {existing_admin.id})")
                 return jsonify({
                     'success': False,
-                    'error': 'Email already in use'
+                    'message': 'Email already in use'
                 }), 400
             
-            # Update email
-            old_email = admin.email
+            # ACTUALLY UPDATE THE EMAIL
+            old_email_value = admin.email
             admin.email = new_email
-            changes['email'] = {'old': old_email, 'new': new_email}
+            changes['email'] = {'old': old_email_value, 'new': new_email}
+            print(f"[DEBUG] Email updated in memory to: {admin.email}")
             
             # Send notification to old email
-            send_admin_email_change_notification(admin, old_email, new_email)
+            try:
+                send_admin_email_change_notification(admin, old_email_value, new_email)
+                print(f"[DEBUG] Notification email sent to old address: {old_email_value}")
+            except Exception as email_err:
+                print(f"[DEBUG] Failed to send notification email: {str(email_err)}")
+        else:
+            print(f"[DEBUG] No email change detected")
         
+        # Commit changes to database
+        print(f"[DEBUG] Attempting to commit to database...")
         db.session.commit()
+        print(f"[DEBUG] Database commit successful!")
+        
+        # Verify the changes were saved
+        db_admin = Admin.query.get(admin.id)
+        print(f"[DEBUG] Verification from fresh DB query:")
+        print(f"  - Username in DB: {db_admin.username}")
+        print(f"  - Email in DB: {db_admin.email}")
         
         # Audit log
         log_audit(
             action='PROFILE_UPDATED',
-            description=f"Admin user updated profile from IP: {request.remote_addr}"
+            description=f"Admin user '{admin.username}' updated profile from IP: {request.remote_addr}. Changes: {changes}"
         )
+        
+        print(f"[DEBUG] Returning success response")
+        print("="*60 + "\n")
         
         return jsonify({
             'success': True,
             'message': 'Profile updated successfully',
-            'changes': changes,
             'new_username': admin.username,
             'new_email': admin.email
         })
         
     except Exception as e:
         db.session.rollback()
+        error_traceback = traceback.format_exc()
+        print(f"[DEBUG ERROR] Exception occurred:")
+        print(f"  - Error: {str(e)}")
+        print(f"  - Full traceback:\n{error_traceback}")
+        print("="*60 + "\n")
+        
         current_app.logger.error(f"Error updating profile: {str(e)}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'message': str(e)
         }), 500
-
+    
 
 def send_admin_email_change_notification(admin, old_email, new_email):
     """Send notification to old email about email change"""
@@ -2079,9 +2219,10 @@ def add_trusted_device():
     """Add current device as trusted"""
     device_info = AdminTrustedDevice.get_device_info(request)
     
-    # Use the EXACT same fingerprint generation method
-    # Format: admin_id + ip_address + user_agent + browser + os
-    fingerprint_data = f"{current_user.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+    # 🔥 FIXED: EXCLUDE IP address from fingerprint (IP changes!)
+    # OLD (WRONG): fingerprint_data = f"{current_user.id}{device_info['ip_address']}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+    # NEW (CORRECT) - NO IP ADDRESS:
+    fingerprint_data = f"{current_user.id}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
     device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
     
     print(f"🔑 Add trusted device fingerprint: {device_fingerprint[:20]}...")
@@ -2135,7 +2276,7 @@ def add_trusted_device():
             last_used=datetime.utcnow()
         )
         
-        # Set the consistent fingerprint
+        # Set the consistent fingerprint (NO IP)
         device.device_fingerprint = device_fingerprint
         
         db.session.add(device)
@@ -2467,41 +2608,30 @@ def verify_admin_device(token):
 
 @admin_bp.route('/trusted-devices/check', methods=['POST'])
 def check_device_trust():
-    """Check if current device is trusted (used during login)"""
+    """Check if current device is trusted - used during login verification page"""
     if not current_user.is_authenticated:
         return jsonify({'trusted': False})
     
     device_info = AdminTrustedDevice.get_device_info(request)
     current_fingerprint = session.get('admin_device_fingerprint')
     
-    # Check by fingerprint first
-    if current_fingerprint:
-        device = AdminTrustedDevice.query.filter_by(
-            admin_id=current_user.id,
-            device_fingerprint=current_fingerprint,
-            trusted=True
-        ).first()
-        
-        if device and not device.is_expired():
-            device.last_used = datetime.utcnow()
-            db.session.commit()
-            # 🚫 REMOVED: Audit log for trust check (no data modification)
-            return jsonify({'trusted': True})
+    # 🔥 FIXED: Generate fingerprint WITHOUT IP (same as verify_2fa)
+    fingerprint_data = f"{current_user.id}{device_info['user_agent']}{device_info['browser']}{device_info['os']}"
+    device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
     
-    # Fallback to IP and browser check
-    device = AdminTrustedDevice.query.filter_by(
+    # Check if device is trusted by fingerprint only (NO IP FALLBACK)
+    trusted_device = AdminTrustedDevice.query.filter_by(
         admin_id=current_user.id,
-        ip_address=device_info['ip_address'],
-        browser=device_info['browser'],
+        device_fingerprint=device_fingerprint,
         trusted=True
     ).first()
     
-    if device and not device.is_expired():
-        device.last_used = datetime.utcnow()
+    if trusted_device and not trusted_device.is_expired():
+        # Update last used
+        trusted_device.last_used = datetime.utcnow()
         db.session.commit()
         # Update session fingerprint
-        session['admin_device_fingerprint'] = device.device_fingerprint
-        # 🚫 REMOVED: Audit log for trust check (no data modification)
+        session['admin_device_fingerprint'] = trusted_device.device_fingerprint
         return jsonify({'trusted': True})
     
     return jsonify({'trusted': False})
