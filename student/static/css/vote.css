@@ -1,5 +1,5 @@
 /* ======================
-   RESET & BASE STYLES - CTU GOLDEN YELLOW & RED-ORANGE THEME
+   RESET & BASE STYLES - PROFESSIONAL NAVY BLUE THEME
    COMPACT MOBILE-FIRST VERSION - PURE WHITE BACKGROUND
 ====================== */
 
@@ -88,17 +88,17 @@ body {
 }
 
 /* ======================
-   ELECTION TITLE - COMPACT
+   ELECTION TITLE - PROFESSIONAL NAVY BLUE
 ====================== */
 
 .election-title {
-    background: linear-gradient(135deg, #C49A1A, #E67E22);
-    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3a5f, #2c5282);
+    border-radius: 8px;
     padding: 16px 20px;
     margin-bottom: 12px;
     text-align: center;
     color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .election-title h2 {
@@ -109,8 +109,7 @@ body {
 }
 
 .encryption-badge {
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(4px);
+    background: rgba(255, 255, 255, 0.15);
     padding: 4px 12px;
     border-radius: 30px;
     font-size: 0.7rem;
@@ -119,16 +118,16 @@ body {
 }
 
 /* ======================
-   PHE INFO - COMPACT
+   PHE INFO - PROFESSIONAL NAVY BLUE
 ====================== */
 
 .phe-info {
-    background: linear-gradient(135deg, #C49A1A, #E67E22);
-    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3a5f, #2c5282);
+    border-radius: 8px;
     padding: 12px 16px;
     margin: 0 0 16px 0;
     color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .phe-info h4 {
@@ -143,7 +142,7 @@ body {
 .phe-info p {
     margin: 4px 0;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.95);
+    color: rgba(255, 255, 255, 0.9);
     line-height: 1.3;
 }
 
@@ -155,7 +154,7 @@ body {
 .phe-info li {
     font-size: 0.7rem;
     margin-bottom: 2px;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .phe-info strong {
@@ -168,7 +167,7 @@ body {
 
 .position-group {
     background: white;
-    border-radius: 16px;
+    border-radius: 12px;
     margin-bottom: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     overflow: hidden;
@@ -180,13 +179,12 @@ body {
 }
 
 /* ======================
-   POSITION HEADER - CTU GOLDEN YELLOW & RED-ORANGE (Visible to students)
+   POSITION HEADER - PROFESSIONAL NAVY BLUE
 ====================== */
 
 .position-header {
-    background: linear-gradient(135deg, #C49A1A, #E67E22);
+    background: linear-gradient(135deg, #1e3a5f, #2c5282);
     padding: 10px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -212,7 +210,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.2);
     color: white;
     padding: 2px 8px;
     border-radius: 16px;
@@ -224,17 +222,16 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 0.65rem;
     font-weight: 600;
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* ======================
-   CANDIDATES GRID - COMPACT (3 columns even on mobile)
+   CANDIDATES GRID - COMPACT
 ====================== */
 
 .position-candidates {
@@ -265,15 +262,15 @@ body {
 }
 
 .candidate-row:hover {
-    border-color: #E67E22;
+    border-color: #2c5282;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* Selected state */
 .candidate-row.selected {
-    border: 1.5px solid #E67E22;
-    background: linear-gradient(135deg, #fef9e7, #fef3c7);
+    border: 1.5px solid #2c5282;
+    background: linear-gradient(135deg, #f0f4f8, #e2e8f0);
 }
 
 .candidate-row.selected::after {
@@ -281,7 +278,7 @@ body {
     position: absolute;
     top: 4px;
     right: 4px;
-    background: #E67E22;
+    background: #2c5282;
     color: white;
     width: 18px;
     height: 18px;
@@ -294,8 +291,8 @@ body {
 }
 
 .candidate-row.selected-multi {
-    border: 1.5px solid #E67E22;
-    background: linear-gradient(135deg, #fef9e7, #fef3c7);
+    border: 1.5px solid #2c5282;
+    background: linear-gradient(135deg, #f0f4f8, #e2e8f0);
 }
 
 .candidate-row.selected-multi::after {
@@ -303,7 +300,7 @@ body {
     position: absolute;
     top: 4px;
     right: 4px;
-    background: #E67E22;
+    background: #2c5282;
     color: white;
     width: 18px;
     height: 18px;
@@ -315,7 +312,7 @@ body {
     font-weight: bold;
 }
 
-/* Candidate Info Layout - Centered for compact */
+/* Candidate Info Layout */
 .candidate-info {
     display: flex;
     flex-direction: column;
@@ -325,13 +322,13 @@ body {
 }
 
 /* ======================
-   AVATAR - COMPACT
+   AVATAR - PROFESSIONAL NAVY BLUE
 ====================== */
 
 .candidate-avatar {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #C49A1A, #E67E22);
+    background: linear-gradient(135deg, #1e3a5f, #2c5282);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -347,7 +344,7 @@ body {
     text-transform: uppercase;
 }
 
-/* Candidate Details - Centered */
+/* Candidate Details */
 .candidate-details {
     text-align: center;
     width: 100%;
@@ -369,7 +366,7 @@ body {
     gap: 3px;
 }
 
-/* Party Badge - Compact */
+/* Party Badge */
 .party-badge {
     display: inline-block;
     background: #e2e8f0;
@@ -387,7 +384,7 @@ body {
     font-style: italic;
 }
 
-/* Candidate Platform - Hidden by default, show on hover desktop */
+/* Candidate Platform */
 .candidate-platform {
     font-size: 0.6rem;
     color: #64748b;
@@ -402,7 +399,7 @@ body {
     }
 }
 
-/* Hide radio/checkbox visually */
+/* Hide radio/checkbox */
 .candidate-radio {
     position: absolute;
     opacity: 0;
@@ -411,7 +408,7 @@ body {
 }
 
 /* ======================
-   SELECTION COUNTER - CENTERED
+   SELECTION COUNTER
 ====================== */
 
 .selection-counter {
@@ -430,27 +427,27 @@ body {
 
 .selection-counter .selected-count {
     font-weight: bold;
-    color: #E67E22;
+    color: #2c5282;
     font-size: 0.85rem;
 }
 
 /* ======================
-   VOTING DEADLINE - COMPACT
+   VOTING DEADLINE - PROFESSIONAL NAVY BLUE
 ====================== */
 
 .voting-deadline-container {
-    background: linear-gradient(135deg, #C49A1A, #E67E22);
-    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3a5f, #2c5282);
+    border-radius: 8px;
     padding: 14px 20px;
     margin: 16px 0;
     text-align: center;
     color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .voting-deadline-container h3 {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.85);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 6px;
@@ -468,7 +465,7 @@ body {
 }
 
 /* ======================
-   SUBMIT BUTTON - COMPACT
+   SUBMIT BUTTON
 ====================== */
 
 .submit-vote {
@@ -518,7 +515,7 @@ body {
 }
 
 /* ======================
-   LOADING OVERLAY - COMPACT
+   LOADING OVERLAY
 ====================== */
 
 #loadingOverlay {
@@ -547,7 +544,7 @@ body {
 
 .spinner {
     border: 3px solid #e2e8f0;
-    border-top: 3px solid #E67E22;
+    border-top: 3px solid #2c5282;
     border-radius: 50%;
     width: 50px;
     height: 50px;
@@ -573,8 +570,8 @@ body {
 }
 
 .secure-badge {
-    background: #fef9e7;
-    color: #E67E22;
+    background: #e2e8f0;
+    color: #1e3a5f;
     padding: 6px 12px;
     border-radius: 25px;
     font-size: 0.75rem;
@@ -583,7 +580,7 @@ body {
 }
 
 /* ======================
-   RESPONSIVE - KEEP 3 COLUMNS ON MOBILE (compact)
+   RESPONSIVE - 3 COLUMNS ON MOBILE
 ====================== */
 
 @media (max-width: 600px) {

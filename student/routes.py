@@ -835,11 +835,11 @@ def login():
         # Always generate a fingerprint, even if none was sent
         if not device_fp or device_fp == '':
             print("⚠️ No device fingerprint received, generating from request data")
-            # Use the same method as in utils.py
+            # FIXED: Removed Accept header which changes between requests
             raw_data = (
                 request.headers.get('User-Agent', '') +
-                request.headers.get('Accept-Language', '') +
-                request.remote_addr
+                request.headers.get('Accept-Encoding', '')
+                # REMOVED: request.headers.get('Accept', '') - this changes!
             )
             device_fp = hashlib.sha256(raw_data.encode()).hexdigest()
             print(f"🔑 Generated fingerprint: {device_fp[:32]}...")

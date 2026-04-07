@@ -153,7 +153,7 @@
     })();
 </script>
 
-<!-- Sidebar Scroll Position Persistence Script -->
+<!-- Sidebar Scroll Position Persistence Script - FIXED -->
 <script>
     (function() {
         const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
@@ -165,6 +165,10 @@
             const sidebar = document.getElementById('sidebar');
             
             if (!sidebar) return;
+            
+            // Check if we're on dashboard or first page after login
+            const isDashboard = window.location.pathname.includes('/admin/dashboard');
+            const isFirstVisit = !localStorage.getItem(SCROLL_POSITION_KEY);
             
             // Save scroll position before navigating away
             function setupScrollSave() {
@@ -182,12 +186,37 @@
                 });
             }
             
-            // Restore scroll position with multiple attempts
+            // Function to scroll to active link
+            function scrollToActiveLink() {
+                const activeLink = document.querySelector('.sidebar-nav a.active');
+                if (!activeLink) return false;
+                
+                // Calculate position to show active link in the middle of sidebar
+                const linkTop = activeLink.offsetTop;
+                const linkHeight = activeLink.offsetHeight;
+                const sidebarHeight = sidebar.clientHeight;
+                
+                // Scroll to make active link visible in the middle
+                const scrollToPosition = Math.max(0, linkTop - (sidebarHeight / 2) + (linkHeight / 2));
+                sidebar.scrollTop = scrollToPosition;
+                console.log('Scrolled to active link at position:', scrollToPosition);
+                return true;
+            }
+            
+            // Restore scroll position - ONLY if not on dashboard or if there's a saved position
             function restoreScrollPosition() {
                 if (!sidebar) return;
                 
                 const savedPosition = localStorage.getItem(SCROLL_POSITION_KEY);
                 
+                // On dashboard or first visit, always show active link instead of restoring position
+                if (isDashboard || isFirstVisit) {
+                    console.log('Dashboard or first visit - scrolling to active link');
+                    scrollToActiveLink();
+                    return;
+                }
+                
+                // For other pages, restore saved position if it exists
                 if (savedPosition !== null) {
                     const position = parseInt(savedPosition);
                     
@@ -204,40 +233,34 @@
                     applyScroll(4);  // 200ms
                     applyScroll(10); // 500ms
                     applyScroll(20); // 1000ms
+                } else {
+                    // No saved position, scroll to active link
+                    scrollToActiveLink();
                 }
             }
             
-            // =============== ENSURE ACTIVE LINK IS VISIBLE (WITHOUT LOSING POSITION) ===============
+            // Ensure active link is always visible after any dynamic content loads
             function ensureActiveLinkVisible() {
                 if (!sidebar) return;
                 
-                const activeLink = document.querySelector('.sidebar-nav a.active');
-                if (!activeLink) return;
-                
-                // Get the saved position first
-                const savedPosition = localStorage.getItem(SCROLL_POSITION_KEY);
-                
-                // If we have a saved position, use that instead of auto-scrolling to active
-                if (savedPosition !== null) {
-                    return; // Already restored by restoreScrollPosition
-                }
-                
-                // Only auto-scroll to active if no saved position exists (first visit)
-                const linkTop = activeLink.offsetTop;
-                const linkHeight = activeLink.offsetHeight;
-                const sidebarHeight = sidebar.clientHeight;
-                const currentScroll = sidebar.scrollTop;
-                
-                // Check if active link is outside visible area
-                const isAboveView = linkTop < currentScroll;
-                const isBelowView = linkTop + linkHeight > currentScroll + sidebarHeight;
-                
-                if (isAboveView || isBelowView) {
-                    const scrollToPosition = Math.max(0, linkTop - (sidebarHeight / 2) + (linkHeight / 2));
-                    sidebar.scrollTop = scrollToPosition;
-                    // Save this position for next time
-                    localStorage.setItem(SCROLL_POSITION_KEY, scrollToPosition);
-                }
+                // Small delay to ensure DOM is ready
+                setTimeout(() => {
+                    const activeLink = document.querySelector('.sidebar-nav a.active');
+                    if (!activeLink) return;
+                    
+                    // Check if active link is visible in viewport
+                    const linkTop = activeLink.offsetTop;
+                    const linkBottom = linkTop + activeLink.offsetHeight;
+                    const sidebarTop = sidebar.scrollTop;
+                    const sidebarBottom = sidebarTop + sidebar.clientHeight;
+                    
+                    // If active link is not fully visible, scroll to it
+                    if (linkTop < sidebarTop || linkBottom > sidebarBottom) {
+                        console.log('Active link not visible, scrolling to it');
+                        const scrollToPosition = Math.max(0, linkTop - (sidebar.clientHeight / 2) + (activeLink.offsetHeight / 2));
+                        sidebar.scrollTop = scrollToPosition;
+                    }
+                }, 100);
             }
             
             // Clear position on logout
@@ -253,19 +276,29 @@
             
             // Initialize
             setupScrollSave();
-            restoreScrollPosition();
             setupLogoutClear();
             
-            // Run after everything else loads
+            // Restore position or scroll to active based on page
             window.addEventListener('load', function() {
                 restoreScrollPosition();
                 ensureActiveLinkVisible();
             });
             
             // Run after dynamic content might load
-            setTimeout(restoreScrollPosition, 300);
-            setTimeout(restoreScrollPosition, 800);
-            setTimeout(restoreScrollPosition, 1500);
+            setTimeout(() => {
+                if (document.readyState === 'complete') {
+                    restoreScrollPosition();
+                    ensureActiveLinkVisible();
+                }
+            }, 300);
+            setTimeout(() => {
+                restoreScrollPosition();
+                ensureActiveLinkVisible();
+            }, 800);
+            setTimeout(() => {
+                restoreScrollPosition();
+                ensureActiveLinkVisible();
+            }, 1500);
             
         })();
         

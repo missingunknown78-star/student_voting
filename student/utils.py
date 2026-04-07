@@ -15,11 +15,12 @@ socket.setdefaulttimeout(30)
 def generate_device_fingerprint():
     """
     Generate a consistent device fingerprint from request data
+    Uses only stable headers that don't change between request types
     """
     raw_data = (
         request.headers.get('User-Agent', '') +
-        request.headers.get('Accept-Language', '') +
-        request.remote_addr
+        request.headers.get('Accept-Encoding', '')
+        # REMOVED: Accept header - it changes between page loads and AJAX requests
     )
     return hashlib.sha256(raw_data.encode()).hexdigest()
 
@@ -67,8 +68,7 @@ def send_new_device_email(student, trusted_device):
                 
                 <p style="color: #6b7280; font-size: 14px; margin: 15px 0;">
                     <strong>Device details:</strong><br>
-                    IP: {trusted_device.ip_address}<br>
-                    Browser: {trusted_device.browser[:50]}...
+                    Browser: {trusted_device.browser[:100]}...
                 </p>
 
                 <!-- Buttons container -->
