@@ -113,10 +113,6 @@ function generateQRCodeHTML(data) {
                 Scan this QR code with your Google Authenticator app or any TOTP authenticator app.
             </p>
             <img src="${qrUrl}" alt="2FA QR Code" style="max-width: 250px; border: 2px solid var(--border-color); border-radius: 12px; padding: 10px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin: 20px auto;">
-            <div class="qr-note" style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 15px; border-radius: 6px; margin-top: 20px; font-size: 0.9rem;">
-                <i class="fa-solid fa-circle-info"></i>
-                <strong>After scanning:</strong> The 2FA will be automatically enabled.
-            </div>
         </div>
     `;
 }

@@ -89,66 +89,62 @@
         visibility: hidden;
     }
     
-    /* Flash notification styling */
-    .flash-container {
+    /* ==================== CENTERED FLOATING MESSAGE ==================== */
+    .floating-message-center {
         position: fixed;
         top: 20px;
-        right: 20px;
-        z-index: 9999;
-        max-width: 400px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        z-index: 10000;
+        padding: 15px 30px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 1rem;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        backdrop-filter: blur(10px);
+        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        max-width: 90%;
+        min-width: 300px;
+        pointer-events: none;
     }
     
-    .flash-message {
-        padding: 15px 20px;
-        margin-bottom: 10px;
-        border-radius: 8px;
-        color: #fff;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        animation: slideIn 0.3s ease-out;
-        cursor: pointer;
+    .floating-message-center.show {
+        transform: translateX(-50%) translateY(0);
     }
     
-    .flash-message.success {
-        background-color: #27ae60;
-        border-left: 4px solid #2ecc71;
+    .floating-message-center.success {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        color: white;
+        border-left: 4px solid #fff;
     }
     
-    .flash-message.error {
-        background-color: #e74c3c;
-        border-left: 4px solid #c0392b;
+    .floating-message-center.error {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+        border-left: 4px solid #fff;
     }
     
-    .flash-message.warning {
-        background-color: #f39c12;
-        border-left: 4px solid #e67e22;
+    .floating-message-center.warning {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        color: white;
+        border-left: 4px solid #fff;
     }
     
-    .flash-message.info {
-        background-color: #3498db;
-        border-left: 4px solid #2980b9;
+    .floating-message-center.info {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border-left: 4px solid #fff;
     }
     
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+    .floating-message-center i {
+        margin-right: 10px;
+        font-size: 1.2rem;
     }
     
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
+    /* Dark mode support */
+    :root.dark-mode .floating-message-center {
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
     }
     
     .select-col { width: 40px; text-align: center; }
@@ -360,6 +356,68 @@
 
 </div>
 
+<!-- =============== CENTERED FLOATING MESSAGE FUNCTION =============== -->
+<script>
+// Show centered floating message for results only
+function showFloatingMessage(message, type = 'success') {
+    // Remove any existing message
+    const existingMessage = document.querySelector('.floating-message-center');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    // Create message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `floating-message-center ${type}`;
+    
+    // Add icon based on type
+    let icon = '';
+    if (type === 'success') icon = '<i class="fa-solid fa-circle-check"></i>';
+    else if (type === 'error') icon = '<i class="fa-solid fa-circle-exclamation"></i>';
+    else if (type === 'warning') icon = '<i class="fa-solid fa-triangle-exclamation"></i>';
+    else icon = '<i class="fa-solid fa-info-circle"></i>';
+    
+    messageDiv.innerHTML = `${icon} ${message}`;
+    document.body.appendChild(messageDiv);
+    
+    // Trigger animation
+    setTimeout(() => {
+        messageDiv.classList.add('show');
+    }, 10);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        messageDiv.classList.remove('show');
+        setTimeout(() => {
+            if (messageDiv.parentElement) {
+                messageDiv.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Check for flash messages from server (results of actions)
+document.addEventListener('DOMContentLoaded', function() {
+    // Look for flash messages in the page (rendered by Flask)
+    const flashMessages = document.querySelectorAll('.flash-message, .alert, .message');
+    flashMessages.forEach(msg => {
+        let message = msg.textContent;
+        let type = 'info';
+        
+        if (msg.classList.contains('success') || msg.classList.contains('alert-success')) {
+            type = 'success';
+        } else if (msg.classList.contains('error') || msg.classList.contains('alert-danger') || msg.classList.contains('alert-error')) {
+            type = 'error';
+        } else if (msg.classList.contains('warning') || msg.classList.contains('alert-warning')) {
+            type = 'warning';
+        }
+        
+        showFloatingMessage(message, type);
+        msg.remove();
+    });
+});
+</script>
+
 <!-- =============== THEME SYNCHRONIZATION FIX =============== -->
 <script>
 // This ensures the theme applies immediately without refresh
@@ -437,41 +495,6 @@ function applyThemeToMainContent() {
 </script>
 
 <script>
-// Helper function to show floating notifications
-function showFlashMessage(message, category = 'info') {
-    // Check if flash container exists, if not create one
-    let flashContainer = document.querySelector('.flash-container');
-    if (!flashContainer) {
-        flashContainer = document.createElement('div');
-        flashContainer.className = 'flash-container';
-        document.body.appendChild(flashContainer);
-    }
-    
-    const flashDiv = document.createElement('div');
-    flashDiv.className = `flash-message ${category}`;
-    flashDiv.textContent = message;
-    
-    // Add click to dismiss functionality
-    flashDiv.addEventListener('click', function() {
-        this.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => {
-            this.remove();
-        }, 300);
-    });
-    
-    flashContainer.appendChild(flashDiv);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (flashDiv.parentElement) {
-            flashDiv.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => {
-                flashDiv.remove();
-            }, 300);
-        }
-    }, 5000);
-}
-
 // Spinner button handler
 function showButtonSpinner(button) {
     if (!button) return;
@@ -495,7 +518,7 @@ function showButtonSpinner(button) {
     };
 }
 
-// Handle all form submissions with spinner
+// Handle form submissions - show spinner only, no "adding" messages
 document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', function(e) {
         const submitBtn = this.querySelector('button[type="submit"]');
@@ -581,7 +604,7 @@ function saveEdit(button) {
     if (rowType === 'department') {
         const newName = row.querySelector('.edit-mode-input').value.trim();
         if (!newName) {
-            showFlashMessage('Department name cannot be empty', 'error');
+            showFloatingMessage('Department name cannot be empty', 'error');
             if (restoreSpinner) restoreSpinner();
             return;
         }
@@ -601,15 +624,15 @@ function saveEdit(button) {
                 // Update the view mode span
                 row.querySelector('.view-mode').textContent = newName;
                 cancelEdit(button);
-                showFlashMessage('Department updated successfully', 'success');
+                showFloatingMessage(data.message || 'Department updated successfully!', 'success');
             } else {
-                showFlashMessage('Error: ' + data.message, 'error');
+                showFloatingMessage(data.message || 'Error updating department', 'error');
             }
         })
         .catch(error => {
             if (restoreSpinner) restoreSpinner();
             console.error('Error:', error);
-            showFlashMessage('An error occurred while updating', 'error');
+            showFloatingMessage('An error occurred while updating', 'error');
         });
         
     } else if (rowType === 'course') {
@@ -617,7 +640,7 @@ function saveEdit(button) {
         const newDeptId = row.querySelectorAll('.edit-mode-input')[1].value;
         
         if (!newName) {
-            showFlashMessage('Course name cannot be empty', 'error');
+            showFloatingMessage('Course name cannot be empty', 'error');
             if (restoreSpinner) restoreSpinner();
             return;
         }
@@ -640,15 +663,15 @@ function saveEdit(button) {
                 row.querySelectorAll('.view-mode')[0].textContent = newName;
                 row.querySelectorAll('.view-mode')[1].textContent = data.department_name;
                 cancelEdit(button);
-                showFlashMessage('Course updated successfully', 'success');
+                showFloatingMessage(data.message || 'Course updated successfully!', 'success');
             } else {
-                showFlashMessage('Error: ' + data.message, 'error');
+                showFloatingMessage(data.message || 'Error updating course', 'error');
             }
         })
         .catch(error => {
             if (restoreSpinner) restoreSpinner();
             console.error('Error:', error);
-            showFlashMessage('An error occurred while updating', 'error');
+            showFloatingMessage('An error occurred while updating', 'error');
         });
     }
     
@@ -694,8 +717,9 @@ if (selectAllDepartmentsBtn) {
     selectAllDepartmentsBtn.addEventListener('click', () => {
         const allChecked = Array.from(deptCheckboxes).every(cb => cb.checked);
         deptCheckboxes.forEach(cb => cb.checked = !allChecked);
+        const selectedCount = Array.from(deptCheckboxes).filter(cb => cb.checked).length;
         if (deleteDepartmentsBtn) {
-            deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+            deleteDepartmentsBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
         }
         
         // Reapply theme after state change
@@ -705,8 +729,9 @@ if (selectAllDepartmentsBtn) {
 
 deptCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
+        const selectedCount = Array.from(deptCheckboxes).filter(c => c.checked).length;
         if (deleteDepartmentsBtn) {
-            deleteDepartmentsBtn.style.display = Array.from(deptCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+            deleteDepartmentsBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
         }
         
         // Reapply theme after state change
@@ -717,9 +742,14 @@ deptCheckboxes.forEach(cb => {
 if (deleteDepartmentsBtn) {
     deleteDepartmentsBtn.addEventListener('click', () => {
         const ids = Array.from(deptCheckboxes).filter(c => c.checked).map(c => c.value);
-        if(ids.length && confirm('Are you sure you want to delete selected departments?')){
+        const selectedCount = ids.length;
+        
+        if(selectedCount && confirm(`Are you sure you want to delete ${selectedCount} selected department(s)?`)){
             // Add spinner to delete button
             const restoreSpinner = showButtonSpinner(deleteDepartmentsBtn);
+            
+            // Clear previous inputs
+            deleteDepartmentsForm.innerHTML = '';
             
             ids.forEach(id => {
                 const input = document.createElement('input');
@@ -771,8 +801,9 @@ if (selectAllCoursesBtn) {
     selectAllCoursesBtn.addEventListener('click', () => {
         const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
         courseCheckboxes.forEach(cb => cb.checked = !allChecked);
+        const selectedCount = Array.from(courseCheckboxes).filter(cb => cb.checked).length;
         if (deleteCoursesBtn) {
-            deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+            deleteCoursesBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
         }
         
         // Reapply theme after state change
@@ -782,8 +813,9 @@ if (selectAllCoursesBtn) {
 
 courseCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
+        const selectedCount = Array.from(courseCheckboxes).filter(c => c.checked).length;
         if (deleteCoursesBtn) {
-            deleteCoursesBtn.style.display = Array.from(courseCheckboxes).some(c => c.checked) ? 'inline-block' : 'none';
+            deleteCoursesBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
         }
         
         // Reapply theme after state change
@@ -794,9 +826,14 @@ courseCheckboxes.forEach(cb => {
 if (deleteCoursesBtn) {
     deleteCoursesBtn.addEventListener('click', () => {
         const ids = Array.from(courseCheckboxes).filter(c => c.checked).map(c => c.value);
-        if(ids.length && confirm('Are you sure you want to delete selected courses?')){
+        const selectedCount = ids.length;
+        
+        if(selectedCount && confirm(`Are you sure you want to delete ${selectedCount} selected course(s)?`)){
             // Add spinner to delete button
             const restoreSpinner = showButtonSpinner(deleteCoursesBtn);
+            
+            // Clear previous inputs
+            deleteCoursesForm.innerHTML = '';
             
             ids.forEach(id => {
                 const input = document.createElement('input');

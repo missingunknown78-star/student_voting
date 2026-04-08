@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🐍 WARP SNAKE | JERSON'S EDITION (WALL PASS)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 30% 20%, #0e1f2f, #030c12);
+      font-family: 'Segoe UI', 'Courier New', 'VT323', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .game-container {
+      background: #0a1a22dd;
+      backdrop-filter: blur(2px);
+      border-radius: 3rem;
+      padding: 1.8rem 2rem 2rem 2rem;
+      box-shadow: 0 25px 40px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+      border: 1px solid #48a0c0;
+    }
+
+    .game-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .game-header h1 {
+      font-size: 3rem;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, #aaffdd, #5fd0ff, #2a9fd6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 8px #1e88a0;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .badge {
+      background: #00a6c4aa;
+      border-radius: 60px;
+      padding: 4px 15px;
+      font-size: 0.8rem;
+      color: #eefcff;
+      font-weight: bold;
+      display: inline-block;
+      margin-top: 8px;
+      backdrop-filter: blur(4px);
+    }
+
+    .score-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      background: #02131cee;
+      backdrop-filter: blur(4px);
+      padding: 10px 25px;
+      border-radius: 60px;
+      margin-top: 12px;
+      font-weight: bold;
+      border: 1px solid #4cafcf;
+    }
+
+    .score-box, .highscore-box {
+      font-size: 1.6rem;
+      font-family: monospace;
+      color: #eef4ff;
+    }
+
+    .score-box span, .highscore-box span {
+      color: #ffd966;
+      font-size: 2rem;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+
+    .canvas-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0 15px 0;
+      background: #03181f;
+      border-radius: 28px;
+      padding: 8px;
+      box-shadow: inset 0 0 12px #00000055, 0 12px 24px rgba(0,0,0,0.5);
+    }
+
+    canvas {
+      background-color: #0c1f2c;
+      border-radius: 20px;
+      display: block;
+      width: 100%;
+      height: auto;
+      box-shadow: 0 0 0 2px #3fbbdd;
+      cursor: pointer;
+    }
+
+    .info-area {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .status {
+      background: #000000aa;
+      padding: 8px 20px;
+      border-radius: 3rem;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #b8ecff;
+      font-family: monospace;
+      letter-spacing: 1px;
+      backdrop-filter: blur(4px);
+      flex: 2;
+      text-align: center;
+    }
+
+    button {
+      background: #ffb74d;
+      border: none;
+      font-family: 'Segoe UI', monospace;
+      font-weight: bold;
+      font-size: 1.1rem;
+      padding: 8px 26px;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      color: #1e3a3f;
+      box-shadow: 0 4px 0 #b45f1b;
+      letter-spacing: 1px;
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #b45f1b;
+    }
+
+    .controls-hint {
+      display: flex;
+      gap: 20px;
+      background: #07222daa;
+      padding: 6px 20px;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      color: #bdeeff;
+      font-weight: bold;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .controls-hint kbd {
+      background: #1a2c34;
+      padding: 4px 10px;
+      border-radius: 30px;
+      font-family: monospace;
+      font-weight: bold;
+      color: #ffe1a0;
+      margin: 0 4px;
+      box-shadow: inset 0 1px 0 0 #5f7f8f;
+    }
+
+    .portal-icon {
+      font-size: 0.9rem;
+      background: #2f5570;
+      border-radius: 20px;
+      padding: 2px 10px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.7rem;
+      color: #80b7cc;
+    }
+
+    @media (max-width: 580px) {
+      .game-container { padding: 1rem; }
+      .game-header h1 { font-size: 2rem; }
+      .score-box, .highscore-box { font-size: 1rem; }
+      .score-box span, .highscore-box span { font-size: 1.4rem; }
+      button { padding: 5px 18px; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="game-container">
+  <div class="game-header">
+    <h1>
+      🌀 WARP SNAKE 🐍
+      <span>✨</span>
+    </h1>
+    <div class="badge">⚡ WALL-TELEPORT MODE · PASS THROUGH BORDERS ⚡</div>
+    <div class="score-panel">
+      <div class="score-box">🍎 SCORE: <span id="scoreValue">0</span></div>
+      <div class="highscore-box">🏆 BEST: <span id="highScoreValue">0</span></div>
+    </div>
+  </div>
+
+  <div class="canvas-wrapper">
+    <canvas id="snakeCanvas" width="800" height="500" style="width:100%; height:auto; max-width:800px; aspect-ratio:800/500"></canvas>
+  </div>
+
+  <div class="info-area">
+    <div class="status" id="gameStatusMsg">🌀 WARP ACTIVE · GO THROUGH WALLS! 🌀</div>
+    <button id="resetButton">🔄 NEW GAME</button>
+  </div>
+
+  <div class="controls-hint">
+    <span><kbd>⬆️</kbd> <kbd>⬇️</kbd> <kbd>⬅️</kbd> <kbd>➡️</kbd> move</span>
+    <span><kbd>R</kbd> restart &nbsp;|&nbsp; <kbd>Space</kbd> pause</span>
+    <span class="portal-icon">🌌 WARP: no walls, reappear opposite side</span>
+  </div>
+  <footer>🔥 JERSON'S SNAKE — NO WALL COLLISION! TELEPORT EDITION 🔥</footer>
+</div>
+
+<script>
+  (function() {
+    // ------------------- CANVAS -------------------
+    const canvas = document.getElementById('snakeCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreSpan = document.getElementById('scoreValue');
+    const highScoreSpan = document.getElementById('highScoreValue');
+    const statusDiv = document.getElementById('gameStatusMsg');
+
+    // ------------------- GAME CONFIGURATION -------------------
+    const GRID_WIDTH = 20;      // 20 columns
+    const GRID_HEIGHT = 15;     // 15 rows (canvas 800x500 gives 40x33.33 but cells scale perfectly)
+    let cellWidth = 0;
+    let cellHeight = 0;
+
+    // Snake state
+    let snake = [];       
+    let direction = 'RIGHT';
+    let nextDirection = 'RIGHT';
+    let food = { x: 12, y: 8 };
+    let score = 0;
+    let highScore = 0;
+    let gameOver = false;
+    let isPaused = false;
+    let gameLoopInterval = null;
+    
+    // Load highscore
+    try {
+      const saved = localStorage.getItem('warpSnakeHighScoreJerson');
+      if (saved && !isNaN(parseInt(saved))) {
+        highScore = parseInt(saved);
+        highScoreSpan.innerText = highScore;
+      }
+    } catch(e) { /* silent */ }
+
+    // Update highscore UI & storage
+    function updateHighScoreUI() {
+      highScoreSpan.innerText = highScore;
+      if (score > highScore) {
+        highScore = score;
+        highScoreSpan.innerText = highScore;
+        try {
+          localStorage.setItem('warpSnakeHighScoreJerson', highScore);
+        } catch(e) {}
+      }
+    }
+
+    // cell dimensions recalculation
+    function updateCellDimensions() {
+      canvas.width = 800;
+      canvas.height = 500;
+      cellWidth = canvas.width / GRID_WIDTH;
+      cellHeight = canvas.height / GRID_HEIGHT;
+    }
+
+    // Generate random food avoiding snake body
+    function generateRandomFood() {
+      const totalCells = GRID_WIDTH * GRID_HEIGHT;
+      if (snake.length >= totalCells) {
+        gameOver = true;
+        statusDiv.innerText = '✨ PERFECT WIN! YOU CONSUMED THE VOID ✨ Press NEW GAME';
+        return false;
+      }
+      
+      const snakeSet = new Set(snake.map(seg => `${seg.x},${seg.y}`));
+      const freeCells = [];
+      for (let i = 0; i < GRID_WIDTH; i++) {
+        for (let j = 0; j < GRID_HEIGHT; j++) {
+          if (!snakeSet.has(`${i},${j}`)) {
+            freeCells.push({ x: i, y: j });
+          }
+        }
+      }
+      if (freeCells.length === 0) {
+        gameOver = true;
+        statusDiv.innerText = '🏆 GODLIKE! FULL GRID VICTORY 🏆';
+        return false;
+      }
+      const rand = Math.floor(Math.random() * freeCells.length);
+      food = freeCells[rand];
+      return true;
+    }
+
+    // ------------------- CORE MECHANIC: WARP TELEPORT -------------------
+    // This function takes a coordinate and wraps it around torus-style
+    function wrapPosition(x, y) {
+      let newX = x;
+      let newY = y;
+      if (x < 0) newX = GRID_WIDTH - 1;
+      if (x >= GRID_WIDTH) newX = 0;
+      if (y < 0) newY = GRID_HEIGHT - 1;
+      if (y >= GRID_HEIGHT) newY = 0;
+      return { x: newX, y: newY };
+    }
+
+    // Reset game fully
+    function resetGame() {
+      if (gameLoopInterval) {
+        clearInterval(gameLoopInterval);
+        gameLoopInterval = null;
+      }
+      
+      // Spawn snake in center area
+      const startX = Math.floor(GRID_WIDTH / 2) - 1;
+      const startY = Math.floor(GRID_HEIGHT / 2);
+      snake = [
+        { x: startX + 1, y: startY },
+        { x: startX, y: startY },
+        { x: startX - 1, y: startY }
+      ];
+      direction = 'RIGHT';
+      nextDirection = 'RIGHT';
+      score = 0;
+      gameOver = false;
+      isPaused = false;
+      scoreSpan.innerText = '0';
+      statusDiv.innerText = '🌀 WARP MODE ON · go through walls! 🌀';
+      
+      // Generate valid food
+      (function initFood() {
+        const snakeSet = new Set(snake.map(seg => `${seg.x},${seg.y}`));
+        for (let i = 0; i < GRID_WIDTH; i++) {
+          for (let j = 0; j < GRID_HEIGHT; j++) {
+            if (!snakeSet.has(`${i},${j}`)) {
+              food = { x: i, y: j };
+              return;
+            }
+          }
+        }
+        food = { x: 5, y: 5 }; // fallback
+      })();
+      
+      updateHighScoreUI(); 
+      drawGame();
+      startLoop();
+    }
+    
+    function startLoop() {
+      if (gameLoopInterval) clearInterval(gameLoopInterval);
+      gameLoopInterval = setInterval(() => {
+        if (!gameOver && !isPaused) {
+          updateGameWithWarp();
+          drawGame();
+        } else {
+          drawGame(); // show pause or game over screen
+        }
+      }, 125); // smooth classic speed
+    }
+    
+    // ------------------- GAME LOGIC WITH WARP (no wall death) -------------------
+    function updateGameWithWarp() {
+      if (gameOver) return;
+      
+      // direction update (avoid 180 flip)
+      if ((nextDirection === 'RIGHT' && direction !== 'LEFT') ||
+          (nextDirection === 'LEFT' && direction !== 'RIGHT') ||
+          (nextDirection === 'UP' && direction !== 'DOWN') ||
+          (nextDirection === 'DOWN' && direction !== 'UP')) {
+        direction = nextDirection;
+      }
+      
+      // calculate new head position BEFORE wrapping
+      let rawHead = { ...snake[0] };
+      switch (direction) {
+        case 'RIGHT': rawHead.x += 1; break;
+        case 'LEFT':  rawHead.x -= 1; break;
+        case 'UP':    rawHead.y -= 1; break;
+        case 'DOWN':  rawHead.y += 1; break;
+        default: break;
+      }
+      
+      // 🔮 TELEPORT / WARP EFFECT: wrap coordinates around the grid
+      const newHead = wrapPosition(rawHead.x, rawHead.y);
+      
+      // Check if food is eaten (compare with wrapped head)
+      const willEat = (newHead.x === food.x && newHead.y === food.y);
+      
+      // Perform movement
+      snake.unshift(newHead);
+      if (!willEat) {
+        snake.pop();
+      } else {
+        // increase score
+        score++;
+        scoreSpan.innerText = score;
+        updateHighScoreUI();
+        const success = generateRandomFood();
+        if (!success) {
+          gameOver = true;
+          statusDiv.innerText = '🏆 INFINITE WARP VICTORY! PERFECT BOARD! 🏆';
+          drawGame();
+          return;
+        }
+      }
+      
+      // ⚠️ SELF COLLISION CHECK (still lethal! but warp is only for walls)
+      const headPos = snake[0];
+      for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === headPos.x && snake[i].y === headPos.y) {
+          gameOver = true;
+          statusDiv.innerText = '💀 SELF BITE! GAME OVER 💀 Press NEW GAME';
+          drawGame();
+          return;
+        }
+      }
+      
+      // win condition: snake fills entire grid
+      if (snake.length === GRID_WIDTH * GRID_HEIGHT) {
+        gameOver = true;
+        statusDiv.innerText = '🌟 MIRACLE! YOU DOMINATED THE WARP WORLD! 🌟';
+      }
+    }
+    
+    // ------------------- VISUAL EFFECTS: Show portal hints at edges -------------------
+    function drawGame() {
+      if (!ctx) return;
+      // deep cosmic background
+      ctx.fillStyle = '#0a1722';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // draw glowing grid lines with portal style
+      ctx.strokeStyle = '#2c7799';
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i <= GRID_WIDTH; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellWidth, 0);
+        ctx.lineTo(i * cellWidth, canvas.height);
+        ctx.stroke();
+      }
+      for (let i = 0; i <= GRID_HEIGHT; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellHeight);
+        ctx.lineTo(canvas.width, i * cellHeight);
+        ctx.stroke();
+      }
+      
+      // draw warp zone decorations (border portals)
+      ctx.globalAlpha = 0.5;
+      for (let side = 0; side < 4; side++) {
+        ctx.fillStyle = '#66ccff';
+        // subtle portal glow at edges
+      }
+      ctx.globalAlpha = 1;
+      
+      // draw FOOD (shiny starburst)
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "#ffaa66";
+      ctx.fillStyle = '#ff5e5e';
+      ctx.beginPath();
+      ctx.arc(food.x * cellWidth + cellWidth/2, food.y * cellHeight + cellHeight/2, Math.min(cellWidth, cellHeight) * 0.38, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffaa';
+      ctx.beginPath();
+      ctx.arc(food.x * cellWidth + cellWidth/2 - 2, food.y * cellHeight + cellHeight/2 - 2, 3.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#a5662a';
+      ctx.beginPath();
+      ctx.moveTo(food.x * cellWidth + cellWidth/2 + 6, food.y * cellHeight + cellHeight/2 - 8);
+      ctx.lineTo(food.x * cellWidth + cellWidth/2, food.y * cellHeight + cellHeight/2 - 14);
+      ctx.lineTo(food.x * cellWidth + cellWidth/2 + 10, food.y * cellHeight + cellHeight/2 - 12);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      // draw SNAKE with neon / warp shimmer
+      for (let i = 0; i < snake.length; i++) {
+        const seg = snake[i];
+        const x = seg.x * cellWidth;
+        const y = seg.y * cellHeight;
+        const w = cellWidth - (cellWidth > 6 ? 1.8 : 1);
+        const h = cellHeight - (cellHeight > 6 ? 1.8 : 1);
+        let gradient;
+        if (i === 0) {
+          gradient = ctx.createLinearGradient(x, y, x + cellWidth, y + cellHeight);
+          gradient.addColorStop(0, '#73e8ff');
+          gradient.addColorStop(1, '#2fa0cc');
+        } else {
+          gradient = ctx.createLinearGradient(x, y, x + cellWidth, y + cellHeight);
+          gradient.addColorStop(0, '#45c0a0');
+          gradient.addColorStop(1, '#208070');
+        }
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x + 1, y + 1, w, h);
+        // scale pattern
+        ctx.fillStyle = '#1f5544';
+        ctx.fillRect(x + 2, y + 2, w - 3, 3);
+        
+        // EYES on head + warp spark
+        if (i === 0) {
+          ctx.fillStyle = '#FFFFFF';
+          const eyeSize = Math.max(3, cellWidth * 0.2);
+          const eyeOffsetX = cellWidth * 0.28;
+          const eyeOffsetY = cellHeight * 0.32;
+          ctx.beginPath();
+          ctx.arc(x + eyeOffsetX, y + eyeOffsetY, eyeSize, 0, Math.PI*2);
+          ctx.arc(x + cellWidth - eyeOffsetX, y + eyeOffsetY, eyeSize, 0, Math.PI*2);
+          ctx.fill();
+          ctx.fillStyle = '#02131e';
+          ctx.beginPath();
+          ctx.arc(x + eyeOffsetX + 1.2, y + eyeOffsetY, eyeSize*0.45, 0, Math.PI*2);
+          ctx.arc(x + cellWidth - eyeOffsetX + 1.2, y + eyeOffsetY, eyeSize*0.45, 0, Math.PI*2);
+          ctx.fill();
+          // warp mark
+          ctx.fillStyle = '#ffffb0';
+          ctx.beginPath();
+          ctx.arc(x + cellWidth/2, y + cellHeight - 6, 3, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+      
+      // draw portal effect on edges (visual hint for warp)
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = '#77bbff';
+      // top edge ripple
+      for (let i = 0; i < GRID_WIDTH; i++) {
+        ctx.fillRect(i * cellWidth, 0, cellWidth, 3);
+        ctx.fillRect(i * cellWidth, canvas.height - 3, cellWidth, 3);
+      }
+      for (let j = 0; j < GRID_HEIGHT; j++) {
+        ctx.fillRect(0, j * cellHeight, 3, cellHeight);
+        ctx.fillRect(canvas.width - 3, j * cellHeight, 3, cellHeight);
+      }
+      ctx.globalAlpha = 1;
+      
+      // overlay messages
+      if (gameOver) {
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = '#021017';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        ctx.font = `bold ${Math.floor(canvas.width / 18)}px 'Courier New', monospace`;
+        ctx.fillStyle = '#ffd48a';
+        ctx.fillText('🌀 GAME OVER', canvas.width/2 - 110, canvas.height/2);
+        ctx.font = `16px monospace`;
+        ctx.fillStyle = '#9fd0ff';
+        ctx.fillText('press NEW GAME or R', canvas.width/2 - 95, canvas.height/2 + 45);
+      } 
+      else if (isPaused) {
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#0a1f28';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        ctx.font = `bold ${Math.floor(canvas.width / 20)}px monospace`;
+        ctx.fillStyle = '#ffecb3';
+        ctx.fillText('⏸ PAUSED (WARP MODE)', canvas.width/2 - 135, canvas.height/2);
+        ctx.font = '14px monospace';
+        ctx.fillStyle = '#bbe0ff';
+        ctx.fillText('press SPACE to resume', canvas.width/2 - 95, canvas.height/2 + 40);
+      }
+      
+      // score floating
+      ctx.font = `bold ${Math.floor(cellHeight * 1.2)}px 'VT323', monospace`;
+      ctx.fillStyle = '#f9f2d9';
+      ctx.fillText(`🍎 ${score}`, 18, 45);
+      ctx.font = `10px monospace`;
+      ctx.fillStyle = '#bbddff';
+      ctx.fillText(`WARP ACTIVE`, canvas.width - 85, 35);
+    }
+    
+    // ------------------- KEYBOARD HANDLER -------------------
+    function handleKeydown(e) {
+      const key = e.key;
+      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Space', 'r', 'R'];
+      if (arrowKeys.includes(key)) {
+        e.preventDefault();
+      }
+      
+      // restart with R
+      if (key === 'r' || key === 'R') {
+        resetGame();
+        return;
+      }
+      
+      // pause on Space
+      if (key === ' ' || key === 'Space') {
+        if (!gameOver) {
+          isPaused = !isPaused;
+          statusDiv.innerText = isPaused ? '⏸ PAUSED · Warp frozen — press SPACE' : '🌀 WARP ACTIVE · go through walls! 🌀';
+          drawGame();
+        }
+        return;
+      }
+      
+      if (gameOver || isPaused) return;
+      
+      switch (key) {
+        case 'ArrowUp':    if (direction !== 'DOWN')  nextDirection = 'UP'; break;
+        case 'ArrowDown':  if (direction !== 'UP')    nextDirection = 'DOWN'; break;
+        case 'ArrowLeft':  if (direction !== 'RIGHT') nextDirection = 'LEFT'; break;
+        case 'ArrowRight': if (direction !== 'LEFT')  nextDirection = 'RIGHT'; break;
+        default: return;
+      }
+    }
+    
+    function handleWindowResize() {
+      updateCellDimensions();
+      drawGame();
+    }
+    
+    // ------------------- INITIALIZE WARP SNAKE -------------------
+    function init() {
+      updateCellDimensions();
+      resetGame();
+      window.addEventListener('resize', handleWindowResize);
+      window.addEventListener('keydown', handleKeydown);
+      const resetBtn = document.getElementById('resetButton');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => resetGame());
+      }
+    }
+    
+    window.addEventListener('load', init);
+  })();
+</script>
+</body>
+</html>

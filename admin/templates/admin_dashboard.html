@@ -218,7 +218,7 @@
         <!-- Year Filter Dropdown (Changed from School Year to Year) -->
         <div class="school-year-filter">
             <select id="yearSelect" class="school-year-select" onchange="changeYear(this.value)">
-                <option value="">All Years</option>
+                <option value="">Select Year</option>
                 {% for yr in available_years %}
                 <option value="{{ yr }}" {% if current_year == yr|string %}selected{% endif %}>{{ yr }}</option>
                 {% endfor %}

@@ -45,6 +45,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
+import traceback
 
 try:
     from admin.models import TallyVote
@@ -839,19 +840,162 @@ def confirm_disable_2fa(token):
                     message = "Two-Factor Authentication has been disabled on your account."
                     success = True
         
-        # Render result page
-        return render_template('admin_2fa_disable_result.html',
-                             success=success,
-                             title=title,
-                             message=message)
+        # Return simple HTML with only close window button
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>{title}</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }}
+                .container {{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    text-align: center;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                }}
+                .success {{ color: #10b981; }}
+                .error {{ color: #ef4444; }}
+                .icon {{ font-size: 48px; margin-bottom: 20px; }}
+                h1 {{ color: #333; margin-bottom: 10px; }}
+                p {{ color: #666; margin-bottom: 30px; line-height: 1.5; }}
+                button {{
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                }}
+                button:hover {{
+                    background: #764ba2;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }}
+                button:active {{
+                    transform: translateY(0);
+                }}
+            </style>
+            <script>
+                function closeWindow() {{
+                    // Check if window was opened by script
+                    if (window.opener) {{
+                        // Close this window/tab
+                        window.close();
+                    }} else {{
+                        // If no opener, show message and try to close anyway
+                        alert('You can now close this window/tab.');
+                        window.close();
+                    }}
+                }}
+            </script>
+        </head>
+        <body>
+            <div class="container">
+                <div class="icon {'success' if success else 'error'}">
+                    {'✓' if success else '✗'}
+                </div>
+                <h1>{title}</h1>
+                <p>{message}</p>
+                <button onclick="closeWindow()">
+                    <i style="margin-right: 8px;">✕</i> Close Window
+                </button>
+            </div>
+        </body>
+        </html>
+        """
         
     except Exception as e:
         print(f"Error in confirm_disable_2fa: {str(e)}")
         db.session.rollback()
-        return render_template('admin_2fa_disable_result.html',
-                             success=False,
-                             title="Error",
-                             message="An error occurred. Please try again or contact support.")
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }}
+                .container {{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    text-align: center;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                }}
+                .error {{ color: #ef4444; font-size: 48px; margin-bottom: 20px; }}
+                h1 {{ color: #333; margin-bottom: 10px; }}
+                p {{ color: #666; margin-bottom: 30px; line-height: 1.5; }}
+                button {{
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                }}
+                button:hover {{
+                    background: #764ba2;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }}
+                button:active {{
+                    transform: translateY(0);
+                }}
+            </style>
+            <script>
+                function closeWindow() {{
+                    if (window.opener) {{
+                        window.close();
+                    }} else {{
+                        alert('An error occurred. You can now close this window/tab.');
+                        window.close();
+                    }}
+                }}
+            </script>
+        </head>
+        <body>
+            <div class="container">
+                <div class="error">✗</div>
+                <h1>Error</h1>
+                <p>An error occurred while disabling 2FA. Please try again or contact support.</p>
+                <button onclick="closeWindow()">
+                    <i style="margin-right: 8px;">✕</i> Close Window
+                </button>
+            </div>
+        </body>
+        </html>
+        """
 
 
 @admin_bp.route('/2fa/disable/cancel/<token>')
@@ -860,6 +1004,10 @@ def cancel_disable_2fa(token):
     try:
         # Find the token
         disable_token = TwoFADisableToken.query.filter_by(token=token, used=False).first()
+        
+        success = False
+        title = ""
+        message = ""
         
         if disable_token:
             # Mark as used so it can't be used later
@@ -873,20 +1021,169 @@ def cancel_disable_2fa(token):
                 )
             
             db.session.commit()
+            success = True
+            title = "Request Cancelled"
+            message = "Your 2FA disable request has been cancelled. Your account remains protected with Two-Factor Authentication."
+        else:
+            title = "Invalid Link"
+            message = "This cancellation link is invalid or has already been used."
         
-        # Render cancellation result
-        return render_template('admin_2fa_disable_result.html',
-                             success=True,
-                             title="Request Cancelled",
-                             message="Your 2FA disable request has been cancelled. Your account remains protected with Two-Factor Authentication.")
+        # Return simple HTML with only close window button
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>{title}</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }}
+                .container {{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    text-align: center;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                }}
+                .success {{ color: #10b981; }}
+                .error {{ color: #ef4444; }}
+                .icon {{ font-size: 48px; margin-bottom: 20px; }}
+                h1 {{ color: #333; margin-bottom: 10px; }}
+                p {{ color: #666; margin-bottom: 30px; line-height: 1.5; }}
+                button {{
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                }}
+                button:hover {{
+                    background: #764ba2;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }}
+                button:active {{
+                    transform: translateY(0);
+                }}
+            </style>
+            <script>
+                function closeWindow() {{
+                    // Check if window was opened by script
+                    if (window.opener) {{
+                        // Close this window/tab
+                        window.close();
+                    }} else {{
+                        // If no opener, show message and try to close anyway
+                        alert('You can now close this window/tab.');
+                        window.close();
+                    }}
+                }}
+            </script>
+        </head>
+        <body>
+            <div class="container">
+                <div class="icon {'success' if success else 'error'}">
+                    {'✓' if success else '✗'}
+                </div>
+                <h1>{title}</h1>
+                <p>{message}</p>
+                <button onclick="closeWindow()">
+                    <i style="margin-right: 8px;">✕</i> Close Window
+                </button>
+            </div>
+        </body>
+        </html>
+        """
         
     except Exception as e:
         print(f"Error in cancel_disable_2fa: {str(e)}")
         db.session.rollback()
-        return render_template('admin_2fa_disable_result.html',
-                             success=False,
-                             title="Error",
-                             message="An error occurred while cancelling the request.")
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }}
+                .container {{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    text-align: center;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                }}
+                .error {{ color: #ef4444; font-size: 48px; margin-bottom: 20px; }}
+                h1 {{ color: #333; margin-bottom: 10px; }}
+                p {{ color: #666; margin-bottom: 30px; line-height: 1.5; }}
+                button {{
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                }}
+                button:hover {{
+                    background: #764ba2;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }}
+                button:active {{
+                    transform: translateY(0);
+                }}
+            </style>
+            <script>
+                function closeWindow() {{
+                    if (window.opener) {{
+                        window.close();
+                    }} else {{
+                        alert('An error occurred. You can now close this window/tab.');
+                        window.close();
+                    }}
+                }}
+            </script>
+        </head>
+        <body>
+            <div class="container">
+                <div class="error">✗</div>
+                <h1>Error</h1>
+                <p>An error occurred while cancelling the request. Please try again or contact support.</p>
+                <button onclick="closeWindow()">
+                    <i style="margin-right: 8px;">✕</i> Close Window
+                </button>
+            </div>
+        </body>
+        </html>
+        """
 
 
 
@@ -4904,7 +5201,8 @@ def manage_departments():
     return render_template('manage_departments.html', departments=departments, courses=courses)
 
 
-# --- Department routes ---
+# In your routes, make sure you're using flash() for all actions
+
 @admin_bp.route('/departments/add', methods=['POST'])
 @admin_required
 def add_department():
@@ -4925,7 +5223,7 @@ def add_department():
     if existing:
         cursor.close()
         connection.close()
-        flash(f'Department "{name}" already exists!', 'error')
+        flash(f'❌ Department "{name}" already exists!', 'error')
         return redirect(url_for('admin.manage_departments'))
     
     try:
@@ -4941,9 +5239,9 @@ def add_department():
             description=f"Admin user '{username}' added new department: '{name}' from IP: {ip}"
         )
         
-        flash('Department added successfully', 'success')
+        flash(f'✅ Department "{name}" added successfully!', 'success')
     except Exception as e:
-        flash(f'Error adding department: {str(e)}', 'error')
+        flash(f'❌ Error adding department: {str(e)}', 'error')
     finally:
         cursor.close()
         connection.close()
@@ -4951,66 +5249,6 @@ def add_department():
     return redirect(url_for('admin.manage_departments'))
 
 
-@admin_bp.route('/departments/delete-multiple', methods=['POST'])
-@admin_required
-def delete_multiple_departments():
-    ids = request.form.getlist('department_ids')
-    if ids:
-        connection = mysql.connector.connect(
-            host=MYSQL_HOST,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=MYSQL_DB
-        )
-        cursor = connection.cursor(dictionary=True)
-        
-        try:
-            # Check if departments have courses
-            format_strings = ','.join(['%s'] * len(ids))
-            cursor.execute(f"""
-                SELECT COUNT(*) as course_count 
-                FROM courses 
-                WHERE department_id IN ({format_strings})
-            """, tuple(ids))
-            result = cursor.fetchone()
-            
-            if result and result['course_count'] > 0:
-                flash(f'Cannot delete departments that have courses. Please delete the courses first.', 'error')
-                cursor.close()
-                connection.close()
-                return redirect(url_for('admin.manage_departments'))
-            
-            # Get department names before deletion for audit log
-            cursor.execute(f"SELECT id, name FROM departments WHERE id IN ({format_strings})", tuple(ids))
-            departments_to_delete = cursor.fetchall()
-            department_names = [d['name'] for d in departments_to_delete]
-            
-            # Delete departments
-            cursor.execute(f"DELETE FROM departments WHERE id IN ({format_strings})", tuple(ids))
-            connection.commit()
-            
-            # Audit log
-            username = getattr(current_user, 'username', 'Unknown')
-            ip = request.remote_addr
-            
-            log_audit(
-                action='DELETE_MULTIPLE_DEPARTMENTS',
-                description=f"Admin user '{username}' deleted {len(ids)} department(s) from IP: {ip} | Departments: {', '.join(department_names)} (IDs: {', '.join(ids)})"
-            )
-            
-            flash(f'{len(ids)} department(s) deleted successfully!', 'success')
-        except Exception as e:
-            flash(f'Error deleting departments: {str(e)}', 'error')
-        finally:
-            cursor.close()
-            connection.close()
-    else:
-        flash('No departments selected for deletion.', 'warning')
-    
-    return redirect(url_for('admin.manage_departments'))
-
-
-# --- Course routes ---
 @admin_bp.route('/courses/add', methods=['POST'])
 @admin_required
 def add_course():
@@ -5018,7 +5256,7 @@ def add_course():
     department_id = request.form['department_id']
     
     if not department_id:
-        flash('Please select a department', 'warning')
+        flash('⚠️ Please select a department', 'warning')
         return redirect(url_for('admin.manage_departments'))
 
     connection = mysql.connector.connect(
@@ -5028,6 +5266,11 @@ def add_course():
         database=MYSQL_DB
     )
     cursor = connection.cursor(dictionary=True)
+    
+    # Get department name for message
+    cursor.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
+    dept = cursor.fetchone()
+    dept_name = dept['name'] if dept else 'Unknown'
     
     # Check for duplicate course in the same department
     cursor.execute(
@@ -5039,7 +5282,7 @@ def add_course():
     if existing:
         cursor.close()
         connection.close()
-        flash(f'Course "{course_name}" already exists in this department!', 'error')
+        flash(f'❌ Course "{course_name}" already exists in {dept_name} department!', 'error')
         return redirect(url_for('admin.manage_departments'))
     
     try:
@@ -5049,23 +5292,94 @@ def add_course():
         )
         connection.commit()
         
-        # Get department name for audit log
-        cursor.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
-        department_result = cursor.fetchone()
-        department_name = department_result['name'] if department_result else 'Unknown'
-        
         # Audit log
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
         log_audit(
             action='ADD_COURSE',
-            description=f"Admin user '{username}' added new course: '{course_name}' to department: '{department_name}' (ID: {department_id}) from IP: {ip}"
+            description=f"Admin user '{username}' added new course: '{course_name}' to department: '{dept_name}' (ID: {department_id}) from IP: {ip}"
         )
         
-        flash('Course added successfully', 'success')
+        flash(f'✅ Course "{course_name}" added successfully to {dept_name}!', 'success')
     except Exception as e:
-        flash(f'Error adding course: {str(e)}', 'error')
+        flash(f'❌ Error adding course: {str(e)}', 'error')
+    finally:
+        cursor.close()
+        connection.close()
+    
+    return redirect(url_for('admin.manage_departments'))
+
+
+@admin_bp.route('/departments/delete-multiple', methods=['POST'])
+@admin_required
+def delete_multiple_departments():
+    ids = request.form.getlist('department_ids')
+    
+    if not ids:
+        flash('⚠️ No departments selected for deletion.', 'warning')
+        return redirect(url_for('admin.manage_departments'))
+    
+    connection = mysql.connector.connect(
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
+    )
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        # Check if departments have courses
+        format_strings = ','.join(['%s'] * len(ids))
+        cursor.execute(f"""
+            SELECT COUNT(*) as course_count 
+            FROM courses 
+            WHERE department_id IN ({format_strings})
+        """, tuple(ids))
+        result = cursor.fetchone()
+        course_count = result['course_count'] if result else 0
+        
+        if course_count > 0:
+            cursor.execute(f"SELECT name FROM departments WHERE id IN ({format_strings})", tuple(ids))
+            depts = cursor.fetchall()
+            dept_names = [d['name'] for d in depts]
+            flash(f'❌ Cannot delete departments that have courses. Please delete courses first. Departments: {", ".join(dept_names)}', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('admin.manage_departments'))
+        
+        # Get department names before deletion
+        cursor.execute(f"SELECT name FROM departments WHERE id IN ({format_strings})", tuple(ids))
+        departments_to_delete = cursor.fetchall()
+        department_names = [d['name'] for d in departments_to_delete]
+        
+        if not departments_to_delete:
+            flash('⚠️ No matching departments found to delete.', 'warning')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('admin.manage_departments'))
+        
+        # Delete departments
+        cursor.execute(f"DELETE FROM departments WHERE id IN ({format_strings})", tuple(ids))
+        connection.commit()
+        rows_deleted = cursor.rowcount
+        
+        if rows_deleted > 0:
+            # Audit log
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='DELETE_MULTIPLE_DEPARTMENTS',
+                description=f"Admin user '{username}' deleted {len(department_names)} department(s): {', '.join(department_names)} from IP: {ip}"
+            )
+            
+            flash(f'✅ Successfully deleted {len(department_names)} department(s): {", ".join(department_names)}', 'success')
+        else:
+            flash('⚠️ No departments were deleted.', 'warning')
+            
+    except Exception as e:
+        flash(f'❌ Error deleting departments: {str(e)}', 'error')
     finally:
         cursor.close()
         connection.close()
@@ -5077,67 +5391,90 @@ def add_course():
 @admin_required
 def delete_multiple_courses():
     ids = request.form.getlist('course_ids')
-    if ids:
-        connection = mysql.connector.connect(
-            host=MYSQL_HOST,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=MYSQL_DB
-        )
-        cursor = connection.cursor(dictionary=True)
+    
+    if not ids:
+        flash('⚠️ No courses selected for deletion.', 'warning')
+        return redirect(url_for('admin.manage_departments'))
+    
+    connection = mysql.connector.connect(
+        host=MYSQL_HOST,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        database=MYSQL_DB
+    )
+    cursor = connection.cursor(dictionary=True)
+    
+    try:
+        format_strings = ','.join(['%s'] * len(ids))
         
-        try:
-            # Check if courses are used in voters or students
-            format_strings = ','.join(['%s'] * len(ids))
+        # Check if courses have students (using 'students' table, not 'voters')
+        cursor.execute(f"""
+            SELECT COUNT(*) as student_count 
+            FROM students 
+            WHERE course_id IN ({format_strings})
+        """, tuple(ids))
+        result = cursor.fetchone()
+        student_count = result['student_count'] if result else 0
+        
+        if student_count > 0:
             cursor.execute(f"""
-                SELECT COUNT(*) as usage_count 
-                FROM voters 
-                WHERE course_id IN ({format_strings})
-            """, tuple(ids))
-            result = cursor.fetchone()
-            
-            if result and result['usage_count'] > 0:
-                flash(f'Cannot delete courses that are assigned to voters. Please reassign voters first.', 'error')
-                cursor.close()
-                connection.close()
-                return redirect(url_for('admin.manage_departments'))
-            
-            # Get course names and department info before deletion for audit log
-            cursor.execute(f"""
-                SELECT c.id, c.course_name, d.name AS department_name 
+                SELECT c.course_name, d.name as dept_name
                 FROM courses c
                 JOIN departments d ON c.department_id = d.id
                 WHERE c.id IN ({format_strings})
             """, tuple(ids))
-            courses_to_delete = cursor.fetchall()
-            course_names = [f"{c['course_name']} ({c['department_name']})" for c in courses_to_delete]
-            
-            # Delete courses
-            cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
-            connection.commit()
-            
+            courses = cursor.fetchall()
+            course_list = [f'"{c["course_name"]}" ({c["dept_name"]})' for c in courses]
+            flash(f'❌ Cannot delete courses that have students assigned. Please reassign students first. Courses: {", ".join(course_list)}', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('admin.manage_departments'))
+        
+        # Get course names before deletion
+        cursor.execute(f"""
+            SELECT c.course_name, d.name as dept_name
+            FROM courses c
+            JOIN departments d ON c.department_id = d.id
+            WHERE c.id IN ({format_strings})
+        """, tuple(ids))
+        courses_to_delete = cursor.fetchall()
+        
+        if not courses_to_delete:
+            flash('⚠️ No matching courses found to delete.', 'warning')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('admin.manage_departments'))
+        
+        course_names = [f'"{c["course_name"]}" ({c["dept_name"]})' for c in courses_to_delete]
+        
+        # Delete courses
+        cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
+        connection.commit()
+        rows_deleted = cursor.rowcount
+        
+        if rows_deleted > 0:
             # Audit log
             username = getattr(current_user, 'username', 'Unknown')
             ip = request.remote_addr
             
             log_audit(
                 action='DELETE_MULTIPLE_COURSES',
-                description=f"Admin user '{username}' deleted {len(ids)} course(s) from IP: {ip} | Courses: {', '.join(course_names)} (IDs: {', '.join(ids)})"
+                description=f"Admin user '{username}' deleted {len(course_names)} course(s): {', '.join(course_names)} from IP: {ip}"
             )
             
-            flash(f'{len(ids)} course(s) deleted successfully!', 'success')
-        except Exception as e:
-            flash(f'Error deleting courses: {str(e)}', 'error')
-        finally:
-            cursor.close()
-            connection.close()
-    else:
-        flash('No courses selected for deletion.', 'warning')
+            flash(f'✅ Successfully deleted {len(course_names)} course(s): {", ".join(course_names)}', 'success')
+        else:
+            flash('⚠️ No courses were deleted.', 'warning')
+            
+    except Exception as e:
+        flash(f'❌ Error deleting courses: {str(e)}', 'error')
+    finally:
+        cursor.close()
+        connection.close()
     
     return redirect(url_for('admin.manage_departments'))
 
 
-# --- Update Department route ---
 @admin_bp.route('/departments/update', methods=['POST'])
 @admin_required
 def update_department():
@@ -5162,7 +5499,7 @@ def update_department():
         
         old_name = old_name_result['name']
         
-        # Check for duplicate name (if name is different)
+        # Check for duplicate name
         if old_name != new_name:
             cursor.execute("SELECT id FROM departments WHERE name = %s AND id != %s", (new_name, dept_id))
             duplicate = cursor.fetchone()
@@ -5188,13 +5525,12 @@ def update_department():
         cursor.close()
         connection.close()
         
-        return jsonify({'success': True, 'message': 'Department updated successfully'})
+        return jsonify({'success': True, 'message': f'✅ Department updated from "{old_name}" to "{new_name}"'})
         
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': f'❌ Error: {str(e)}'}), 500
 
 
-# --- Update Course route ---
 @admin_bp.route('/courses/update', methods=['POST'])
 @admin_required
 def update_course():
@@ -5211,7 +5547,7 @@ def update_course():
         )
         cursor = connection.cursor(dictionary=True)
         
-        # Get old data for audit log and duplicate check
+        # Get old data
         cursor.execute("""
             SELECT c.course_name, c.department_id, d.name as dept_name 
             FROM courses c
@@ -5223,7 +5559,7 @@ def update_course():
         if not old_data:
             return jsonify({'success': False, 'message': 'Course not found'}), 404
         
-        # Check for duplicate course in the same department (if name or department changed)
+        # Check for duplicate
         if old_data['course_name'] != new_name or old_data['department_id'] != int(new_department_id):
             cursor.execute("""
                 SELECT id FROM courses 
@@ -5240,7 +5576,7 @@ def update_course():
         )
         connection.commit()
         
-        # Get new department name for response
+        # Get new department name
         cursor.execute("SELECT name FROM departments WHERE id = %s", (new_department_id,))
         new_dept = cursor.fetchone()
         new_dept_name = new_dept['name'] if new_dept else 'Unknown'
@@ -5249,12 +5585,9 @@ def update_course():
         username = getattr(current_user, 'username', 'Unknown')
         ip = request.remote_addr
         
-        old_dept_name = old_data['dept_name'] if old_data else 'Unknown'
-        old_course_name = old_data['course_name'] if old_data else 'Unknown'
-        
         log_audit(
             action='UPDATE_COURSE',
-            description=f"Admin user '{username}' updated course from '{old_course_name}' (Dept: {old_dept_name}) to '{new_name}' (Dept: {new_dept_name}) (ID: {course_id}) from IP: {ip}"
+            description=f"Admin user '{username}' updated course from '{old_data['course_name']}' ({old_data['dept_name']}) to '{new_name}' ({new_dept_name}) from IP: {ip}"
         )
         
         cursor.close()
@@ -5262,12 +5595,12 @@ def update_course():
         
         return jsonify({
             'success': True, 
-            'message': 'Course updated successfully',
+            'message': f'✅ Course updated from "{old_data["course_name"]}" to "{new_name}" in {new_dept_name}',
             'department_name': new_dept_name
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': f'❌ Error: {str(e)}'}), 500
 
 
 # ---------------------- MANAGE CANDIDATES ---------------------- #

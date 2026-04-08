@@ -1575,32 +1575,11 @@ def dashboard():
     
     announcements = announcements_query.order_by(Announcement.date.desc()).all()
 
-    # ---------------- Updated leading_candidates logic with school year filter ----------------
-    leading_candidates = []
-    
-    if elections:
-        # Use the most recent election from filtered elections
-        if elections:
-            # Sort elections by start_date to get the most recent
-            elections.sort(key=lambda x: x.start_date, reverse=True)
-            recent_election = elections[0]
-            
-            # Get all candidates for this election
-            candidates = Candidate.query.filter_by(election_id=recent_election.id).all()
-            candidate_ids = [c.id for c in candidates]
-            
-            # Count votes using homomorphic encryption
-            vote_counts = count_votes_for_candidates(recent_election.id, candidate_ids)
-            
-            # Create list of (candidate, vote_count)
-            candidate_votes = []
-            for candidate in candidates:
-                vote_count = vote_counts.get(candidate.id, 0)
-                candidate_votes.append((candidate, vote_count))
-            
-            # Sort by vote count and get top 5
-            candidate_votes.sort(key=lambda x: x[1], reverse=True)
-            leading_candidates = candidate_votes[:5]
+    # ================================================
+    # 🔥 REMOVED: Expensive vote counting for leading candidates
+    # This was causing slow dashboard loads but wasn't used in template
+    # ================================================
+    leading_candidates = []  # Not used in template anyway
 
     # ---------------- Trust-device prompt ----------------
     fingerprint = generate_device_fingerprint()
@@ -1647,7 +1626,7 @@ def dashboard():
         total_votes=total_votes,
         has_voted=has_voted,
         announcements=announcements,
-        leading_candidates=leading_candidates,
+        leading_candidates=leading_candidates,  # Now just empty list
         trust_prompt=trust_prompt,
         current_time=now,
         days_remaining=days_remaining,
@@ -1656,6 +1635,8 @@ def dashboard():
         school_years=school_years,  # Pass to template for header
         current_sy=school_year  # Pass current selection
     )
+
+
 
 @student_bp.route('/trust-current-device', methods=['POST'])
 @login_required

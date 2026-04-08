@@ -8,287 +8,396 @@
 <!-- Link to external JavaScript -->
 <script src="{{ url_for('student.static', filename='js/receipt.js') }}" defer></script>
 <style>
-    /* Mobile-First Approach */
-    .receipt-container {
-        max-width: 600px;
-        margin: 10px auto;
-        padding: 12px;
+    /* ========== MODERN COMPACT DESIGN ========== */
+    :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --primary-glow: rgba(99, 102, 241, 0.2);
+        --success: #10b981;
+        --warning: #f59e0b;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-900: #111827;
+        --shadow-sm: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-lg: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
     }
-    
-    /* No Receipt State */
-    .no-receipt-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px 20px;
+
+    /* PAGE TITLE - Centered at the very top */
+    .page-title-section {
         text-align: center;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e2e8f0;
-    }
-    
-    .no-receipt-icon {
-        font-size: 4rem;
-        margin-bottom: 15px;
-        opacity: 0.5;
-    }
-    
-    .no-receipt-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #0f172a;
+        padding: 16px 20px 8px 20px;
+        background: linear-gradient(to bottom, white, transparent);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(8px);
+        background-color: rgba(255, 255, 255, 0.92);
         margin-bottom: 8px;
+        border-bottom: 1px solid var(--gray-200);
     }
     
-    .no-receipt-text {
-        color: #64748b;
-        margin-bottom: 25px;
-        font-size: 0.95rem;
-        padding: 0 10px;
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary), #a855f7);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        letter-spacing: -0.02em;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
     }
     
-    /* Receipt Card */
+    .page-title i {
+        background: none;
+        -webkit-background-clip: unset;
+        background-clip: unset;
+        color: var(--primary);
+        font-size: 1.3rem;
+    }
+
+    /* Base container - more compact */
+    .receipt-container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 16px 24px 16px;
+    }
+
+    /* ========== COUNTER BADGE - PERFECTLY CENTERED ========== */
+    .receipts-counter-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 16px;
+    }
+    
+    .receipts-counter {
+        background: linear-gradient(135deg, var(--gray-50), white);
+        text-align: center;
+        padding: 8px 20px;
+        border-radius: 40px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--gray-700);
+        border: 1px solid var(--gray-200);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: var(--shadow-sm);
+        backdrop-filter: blur(4px);
+    }
+    
+    .receipts-counter i {
+        color: var(--primary);
+        font-size: 0.9rem;
+    }
+    
+    .receipts-counter .counter-number {
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 1rem;
+        margin: 0 2px;
+    }
+    
+    .receipts-counter .check-icon {
+        color: var(--success);
+    }
+
+    /* ========== RECEIPT CARD - More Compact ========== */
     .receipt-card {
         background: white;
         border-radius: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e2e8f0;
+        margin-bottom: 14px;
+        box-shadow: var(--shadow-md);
+        transition: all 0.25s ease;
+        border: 1px solid var(--gray-200);
         position: relative;
         overflow: hidden;
-        transition: all 0.3s ease;
     }
-    
-    .receipt-card.expanded {
-        margin-bottom: 15px;
+
+    .receipt-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary);
     }
-    
+
+    /* Gradient top bar - thinner */
     .receipt-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        height: 6px;
-        background: linear-gradient(90deg, #4f46e5, #818cf8);
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary), #a855f7, var(--primary));
     }
-    
-    /* Receipt Header (Clickable) */
+
+    /* ========== HEADER (Clickable) - Compact ========== */
     .receipt-header {
-        padding: 16px;
+        padding: 14px 16px;
         cursor: pointer;
         display: flex;
         align-items: center;
         gap: 12px;
         background: white;
-        transition: background 0.2s ease;
+        transition: all 0.2s ease;
     }
-    
+
     .receipt-header:active {
-        background: #f8fafc;
+        background: var(--gray-50);
     }
-    
+
     .receipt-header-icon {
-        width: 44px;
-        height: 44px;
-        background: #eef2ff;
-        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.3rem;
-        color: #4f46e5;
+        font-size: 1.2rem;
+        color: var(--primary);
         flex-shrink: 0;
     }
-    
+
     .receipt-header-info {
         flex: 1;
         min-width: 0;
     }
-    
+
     .receipt-header-title {
-        font-weight: 600;
-        color: #0f172a;
+        font-weight: 700;
+        color: var(--gray-900);
         margin-bottom: 4px;
-        font-size: 1rem;
+        font-size: 0.95rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    
+
     .receipt-header-date {
-        font-size: 0.75rem;
-        color: #64748b;
+        font-size: 0.7rem;
+        color: var(--gray-600);
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
     }
-    
+
     .receipt-header-date i {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        color: var(--primary);
     }
-    
+
     .receipt-header-expand {
         width: 28px;
         height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #64748b;
-        transition: transform 0.3s ease;
+        background: var(--gray-100);
+        border-radius: 20px;
+        transition: all 0.2s ease;
         flex-shrink: 0;
     }
-    
+
     .receipt-header-expand i {
-        font-size: 0.9rem;
+        font-size: 0.75rem;
+        color: var(--gray-600);
         transition: transform 0.3s ease;
+    }
+
+    .receipt-card.expanded .receipt-header-expand {
+        background: var(--primary);
     }
     
     .receipt-card.expanded .receipt-header-expand i {
         transform: rotate(180deg);
+        color: white;
     }
-    
-    /* Receipt Content (Expandable) */
+
+    /* ========== EXPANDABLE CONTENT ========== */
     .receipt-content {
         display: none;
         background: white;
+        border-top: 1px solid var(--gray-200);
     }
-    
+
     .receipt-card.expanded .receipt-content {
         display: block;
+        animation: slideDown 0.3s ease;
     }
-    
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     .receipt-content-inner {
-        padding: 0 16px 20px 16px;
-    }
-    
-    .secret-code-container {
-        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-        border-radius: 16px;
         padding: 16px;
-        margin-bottom: 20px;
-        border: 2px dashed #4f46e5;
+    }
+
+    /* ========== SECRET CODE - Compact ========== */
+    .secret-code-container {
+        background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+        border-radius: 16px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
         text-align: center;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        position: relative;
+        overflow: hidden;
     }
     
+    .secret-code-container::after {
+        content: '🔒';
+        position: absolute;
+        bottom: 4px;
+        right: 10px;
+        font-size: 1.2rem;
+        opacity: 0.1;
+        pointer-events: none;
+    }
+
     .secret-code-label {
-        font-size: 0.7rem;
+        font-size: 0.6rem;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #64748b;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+        color: var(--primary-dark);
         margin-bottom: 6px;
     }
-    
+
     .secret-code {
-        font-family: 'Courier New', monospace;
-        font-size: 1.2rem;
+        font-family: 'SF Mono', 'Courier New', monospace;
+        font-size: 1rem;
         font-weight: 700;
-        color: #4f46e5;
         background: white;
-        padding: 8px 12px;
-        border-radius: 10px;
+        padding: 6px 14px;
+        border-radius: 40px;
         display: inline-block;
-        border: 1px solid #e2e8f0;
         letter-spacing: 1px;
+        color: var(--primary-dark);
+        border: 1px solid rgba(99, 102, 241, 0.3);
         word-break: break-all;
     }
-    
-    .warning-box {
-        background: #fffbeb;
-        border-left: 4px solid #f59e0b;
-        padding: 12px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-        font-size: 0.85rem;
-    }
-    
+
+    /* ========== DETAILS GRID - Compact ========== */
     .receipt-details {
-        background: #f8fafc;
-        border-radius: 16px;
-        padding: 16px;
-        margin-bottom: 20px;
+        background: var(--gray-50);
+        border-radius: 14px;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        border: 1px solid var(--gray-200);
     }
-    
+
     .detail-row {
         display: flex;
         justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid #e2e8f0;
-        font-size: 0.9rem;
+        align-items: baseline;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--gray-200);
+        font-size: 0.8rem;
     }
-    
+
     .detail-row:last-child {
         border-bottom: none;
     }
-    
+
     .detail-label {
-        color: #64748b;
+        color: var(--gray-600);
         font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 5px;
     }
-    
+
+    .detail-label i {
+        color: var(--primary);
+        width: 14px;
+        font-size: 0.7rem;
+    }
+
     .detail-value {
         font-weight: 600;
-        color: #0f172a;
+        color: var(--gray-900);
         text-align: right;
         max-width: 60%;
         word-break: break-word;
     }
-    
-    /* Processing Time Special Style */
+
+    /* Processing Time Highlight */
     .processing-time-row {
-        background: #eef2ff;
+        background: linear-gradient(90deg, rgba(99, 102, 241, 0.05), transparent);
         border-radius: 12px;
-        margin-top: 5px;
-        margin-bottom: 5px;
+        margin: 4px 0;
+        padding: 6px 0;
     }
-    
+
     .processing-time-row .detail-label {
-        color: #4f46e5;
+        color: var(--primary);
     }
-    
+
     .processing-time-row .detail-value {
-        color: #4f46e5;
-        font-weight: bold;
+        color: var(--primary);
+        font-weight: 700;
     }
-    
-    /* Instructions Box */
+
+    /* ========== INSTRUCTIONS BOX - Compact ========== */
     .instructions-box {
-        background: #eef2ff;
-        border-radius: 16px;
-        padding: 16px;
-        margin: 20px 0;
+        background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin: 14px 0;
+        border: 1px solid rgba(16, 185, 129, 0.2);
     }
-    
+
     .instructions-title {
-        font-size: 1rem;
+        font-size: 0.8rem;
         margin-bottom: 10px;
-        color: #4f46e5;
+        color: #047857;
         display: flex;
         align-items: center;
         gap: 6px;
+        font-weight: 700;
     }
-    
+
     .instructions-list {
-        margin-left: 20px;
-        color: #334155;
-        font-size: 0.85rem;
-    }
-    
-    .instructions-list li {
-        margin-bottom: 6px;
-    }
-    
-    /* Action Buttons - Stack on mobile */
-    .action-buttons {
+        margin-left: 18px;
+        color: #065f46;
+        font-size: 0.75rem;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        margin-top: 20px;
+        gap: 6px;
     }
-    
+
+    .instructions-list li {
+        margin-bottom: 0;
+        line-height: 1.35;
+    }
+
+    /* ========== ACTION BUTTONS ========== */
+    .action-buttons {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        margin-top: 8px;
+    }
+
     .btn {
-        padding: 14px;
+        padding: 10px 16px;
         border-radius: 40px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         text-align: center;
         text-decoration: none;
         transition: all 0.2s ease;
@@ -298,110 +407,187 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        width: 100%;
+        flex: 1;
     }
-    
+
     .btn i {
-        font-size: 1rem;
-    }
-    
-    .btn-primary {
-        background: #4f46e5;
-        color: white;
-    }
-    
-    .btn-primary:active {
-        background: #4338ca;
-        transform: scale(0.98);
-    }
-    
-    /* Receipts Counter */
-    .receipts-counter {
-        text-align: center;
-        color: #64748b;
         font-size: 0.85rem;
-        margin-bottom: 12px;
-        padding: 8px;
-        background: #f8fafc;
-        border-radius: 40px;
     }
-    
-    /* Disclaimer */
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+    }
+
+    .btn-primary:active {
+        transform: scale(0.97);
+    }
+
+    /* ========== NO RECEIPT STATE ========== */
+    .no-receipt-card {
+        background: white;
+        border-radius: 28px;
+        padding: 32px 20px;
+        text-align: center;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--gray-200);
+    }
+
+    .no-receipt-icon {
+        font-size: 3.5rem;
+        margin-bottom: 12px;
+        opacity: 0.6;
+    }
+
+    .no-receipt-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 8px;
+    }
+
+    .no-receipt-text {
+        color: var(--gray-600);
+        margin-bottom: 20px;
+        font-size: 0.85rem;
+    }
+
+    /* ========== DISCLAIMER ========== */
     .disclaimer {
         text-align: center;
-        color: #94a3b8;
+        color: #9ca3af;
         font-size: 0.65rem;
-        margin-top: 15px;
-        padding: 0 10px;
+        margin-top: 16px;
+        padding: 0 12px;
     }
-    
-    /* Desktop Adjustments */
+
+    /* ========== DESKTOP ========== */
     @media (min-width: 768px) {
+        .page-title-section {
+            padding: 20px 20px 12px 20px;
+        }
+        
+        .page-title {
+            font-size: 1.8rem;
+        }
+        
         .receipt-container {
-            margin: 20px auto;
-            padding: 20px;
+            max-width: 680px;
+            padding: 0 20px 32px 20px;
         }
         
         .receipt-card {
-            border-radius: 24px;
+            border-radius: 22px;
+            margin-bottom: 16px;
         }
         
-        .action-buttons {
-            flex-direction: row;
+        .receipt-header {
+            padding: 14px 18px;
         }
         
-        .btn {
-            width: auto;
+        .receipt-header-title {
+            font-size: 1rem;
+        }
+        
+        .receipt-content-inner {
+            padding: 18px;
         }
         
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
         
         .receipt-header:hover {
-            background: #f8fafc;
+            background: var(--gray-50);
         }
         
         .secret-code {
-            font-size: 1.5rem;
-            padding: 10px 15px;
+            font-size: 1.1rem;
+            padding: 8px 18px;
+        }
+        
+        .receipts-counter {
+            padding: 10px 24px;
+            font-size: 0.9rem;
         }
     }
-    
-    /* Print styles */
+
+    /* Mobile adjustments */
+    @media (max-width: 480px) {
+        .action-buttons {
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+        
+        .receipt-header {
+            padding: 12px 14px;
+        }
+        
+        .receipt-content-inner {
+            padding: 12px;
+        }
+        
+        .secret-code {
+            font-size: 0.85rem;
+            padding: 5px 12px;
+        }
+    }
+
+    /* ========== PRINT STYLES ========== */
     @media print {
-        .header, .footer-nav, .fab-menu, .mobile-fab, .action-buttons,
-        .receipt-header, .receipts-counter, .disclaimer {
+        .page-title-section, .header, .footer-nav, .fab-menu, .mobile-fab, .action-buttons,
+        .receipt-header, .receipts-counter-wrapper, .disclaimer, .instructions-box {
             display: none !important;
         }
-        
+
         .receipt-card {
             box-shadow: none;
-            border: 1px solid #000;
+            border: 1px solid #ccc;
             page-break-inside: avoid;
-            margin: 0;
+            margin-bottom: 16px;
             border-radius: 0;
         }
-        
+
+        .receipt-card::before {
+            display: none;
+        }
+
         .receipt-content {
             display: block !important;
         }
-        
-        .secret-code {
-            border: 2px solid #000;
+
+        .secret-code-container {
+            border: 1px solid #000;
+            background: white;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- PAGE TITLE - Centered at the very top -->
+<div class="page-title-section">
+    <h1 class="page-title">
+        <i class="fa fa-receipt"></i> 
+        Vote Receipts
+    </h1>
+</div>
+
 <div class="receipt-container">
     {% if votes and votes|length > 0 %}
-        <!-- Receipts Counter -->
-        <div class="receipts-counter">
-            <i class="fa fa-receipt"></i> 
-            You have {{ votes|length }} receipt{% if votes|length > 1 %}s{% endif %}
+        <!-- Receipts Counter - PERFECTLY CENTERED -->
+        <div class="receipts-counter-wrapper">
+            <div class="receipts-counter">
+                <span class="counter-number">{{ votes|length }}</span> 
+                 Receipt{% if votes|length > 1 %}s{% endif %}
+                <i class="fa fa-check-circle check-icon"></i>
+            </div>
         </div>
         
         <!-- Multiple Receipts -->
@@ -415,8 +601,11 @@
                 <div class="receipt-header-info">
                     <div class="receipt-header-title">{{ vote_item.election.title }}</div>
                     <div class="receipt-header-date">
-                        <i class="fa fa-calendar"></i> 
-                        {{ vote_item.vote.created_at_manila.strftime('%B %d, %Y') if vote_item.vote.created_at_manila else 'Date not available' }}
+                        <i class="fa fa-calendar-alt"></i> 
+                        {{ vote_item.vote.created_at_manila.strftime('%b %d, %Y') if vote_item.vote.created_at_manila else 'Date N/A' }}
+                        <span style="margin: 0 3px">•</span>
+                        <i class="fa fa-clock"></i>
+                        {{ vote_item.vote.created_at_manila.strftime('%I:%M %p') if vote_item.vote.created_at_manila else '' }}
                     </div>
                 </div>
                 <div class="receipt-header-expand">
@@ -429,35 +618,33 @@
                 <div class="receipt-content-inner">
                     <!-- SECRET CODE -->
                     <div class="secret-code-container">
-                        <div class="secret-code-label">Your Secret Verification Code</div>
+                        <div class="secret-code-label">🔐 VERIFICATION CODE</div>
                         <div class="secret-code">{{ vote_item.secret_nonce }}</div>
-                        <p style="color: #475569; font-size: 0.75rem; margin-top: 8px;">
-                            <i class="fa fa-shield-alt"></i> Keep this code private
-                        </p>
                     </div>
 
+                    <!-- Voting Details -->
                     <div class="receipt-details">
                         <div class="detail-row">
-                            <span class="detail-label">Election:</span>
+                            <span class="detail-label"><i class="fa fa-poll"></i> Election:</span>
                             <span class="detail-value">{{ vote_item.election.title }}</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Date:</span>
+                            <span class="detail-label"><i class="fa fa-calendar-check"></i> Date:</span>
                             <span class="detail-value">
                                 {{ vote_item.vote.created_at_manila.strftime('%B %d, %Y') if vote_item.vote.created_at_manila else 'N/A' }}
                             </span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">Time:</span>
+                            <span class="detail-label"><i class="fa fa-hourglass-start"></i> Time:</span>
                             <span class="detail-value">
                                 {{ vote_item.vote.created_at_manila.strftime('%I:%M %p') if vote_item.vote.created_at_manila else 'N/A' }}
                             </span>
                         </div>
-                        <!-- PROCESSING TIME DISPLAY -->
+                        <!-- PROCESSING TIME -->
                         {% if vote_item.processing_time %}
                         <div class="detail-row processing-time-row">
                             <span class="detail-label">
-                                <i class="fa fa-hourglass-half"></i> Processing Time:
+                                <i class="fa fa-tachometer-alt"></i> Processing:
                             </span>
                             <span class="detail-value">
                                 {{ vote_item.processing_time }}
@@ -465,29 +652,29 @@
                         </div>
                         {% endif %}
                         <div class="detail-row">
-                            <span class="detail-label">Status:</span>
-                            <span class="detail-value" style="color: #059669;">✓ Recorded</span>
+                            <span class="detail-label"><i class="fa fa-check-circle"></i> Status:</span>
+                            <span class="detail-value" style="color: #10b981;">✓ Recorded</span>
                         </div>
                     </div>
                     
-                    <!-- How to Verify Instructions -->
+                    <!-- How to Verify -->
                     <div class="instructions-box">
                         <h3 class="instructions-title">
-                            <i class="fa fa-search"></i> How to Verify Your Vote
+                            <i class="fa fa-search"></i> Verify Your Vote
                         </h3>
                         <ol class="instructions-list">
-                            <li>Click the <strong>Verify Now</strong> button below for this election</li>
+                            <li>Click <strong>Verify Now</strong> below</li>
                             <li>Find the <strong>"Verify Your Vote"</strong> section</li>
-                            <li>Enter your secret code: <strong>{{ vote_item.secret_nonce }}</strong></li>
-                            <li>The system will show you which candidates your vote was counted for</li>
-                            <li>Match the candidate hashes above with what appears on the results page</li>
+                            <li>Enter code: <strong>{{ vote_item.secret_nonce }}</strong></li>
+                            <li>Match the displayed candidates</li>
                         </ol>
                     </div>
                     
-                    <!-- Action Buttons - Only Verify Now remains -->
+                    <!-- Action Buttons -->
                     <div class="action-buttons">
                         <a href="{{ url_for('student.results_detail', election_id=vote_item.vote.election_id) }}" class="btn btn-primary">
-                            <i class="fa fa-check-circle"></i> Verify Now
+                            <i class="fa fa-shield-alt"></i> Verify Now
+                            <i class="fa fa-arrow-right"></i>
                         </a>
                     </div>
                 </div>
@@ -498,18 +685,18 @@
     {% else %}
         <!-- No Receipts State -->
         <div class="no-receipt-card">
-            <div class="no-receipt-icon">🧾</div>
-            <h1 class="no-receipt-title">No Receipts Available</h1>
-            <p class="no-receipt-text">You haven't cast any votes yet. Vote in an election to see your receipt here.</p>
-            <a href="{{ url_for('student.available_elections') }}" class="btn btn-primary" style="display: inline-block; padding: 12px 30px; text-decoration: none; width: auto;">
-                <i class="fa fa-vote-yea"></i> View Elections
+            <div class="no-receipt-icon">📭</div>
+            <h1 class="no-receipt-title">No Receipts Yet</h1>
+            <p class="no-receipt-text">Cast your vote in any active election, and your secure receipt will appear here.</p>
+            <a href="{{ url_for('student.available_elections') }}" class="btn btn-primary" style="display: inline-flex; width: auto; padding: 10px 28px; text-decoration: none;">
+                <i class="fa fa-vote-yea"></i> Browse Elections
             </a>
         </div>
     {% endif %}
     
     <!-- Disclaimer -->
     <p class="disclaimer">
-        Receipts are your proof of voting. Secret codes are encrypted and cannot be retrieved if lost.
+        <i class="fa fa-lock"></i> Receipts are encrypted. Secret codes cannot be recovered if lost.
     </p>
 </div>
 {% endblock %}
