@@ -27,17 +27,18 @@
             {% endfor %}
             {% set total_positions = positions_set|length %}
             
-            {% set grouped = {} %}
+            {# Group by election for stats #}
+            {% set grouped_for_stats = {} %}
             {% for c in candidates %}
                 {% set election_title = c.election.title if c.election else 'Other Elections' %}
-                {% if election_title not in grouped %}
-                    {% set _ = grouped.update({ election_title: [] }) %}
+                {% if election_title not in grouped_for_stats %}
+                    {% set _ = grouped_for_stats.update({ election_title: [] }) %}
                 {% endif %}
-                {% set _ = grouped[election_title].append(c) %}
+                {% set _ = grouped_for_stats[election_title].append(c) %}
             {% endfor %}
             
             <!-- Dynamic Stats -->
-            <div class="election-stats" data-total-elections="{{ grouped|length }}">
+            <div class="election-stats" data-total-elections="{{ grouped_for_stats|length }}">
                 <div class="stat">
                     <span class="stat-number">{{ total_candidates }}</span>
                     <span class="stat-label">Candidates</span>
@@ -47,7 +48,7 @@
                     <span class="stat-label">Positions</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-number">{{ grouped|length }}</span>
+                    <span class="stat-number">{{ grouped_for_stats|length }}</span>
                     <span class="stat-label">Elections</span>
                 </div>
             </div>
@@ -97,7 +98,7 @@
                         </div>
                     </div>
                     
-                    {% if grouped|length > 1 %}
+                    {% if grouped_for_stats|length > 1 %}
                     <div class="filter-group">
                         <label class="filter-label">By Election:</label>
                         <div class="election-filters">
@@ -105,7 +106,7 @@
                                 <input type="radio" name="election-filter" value="all" checked>
                                 <span>All Elections</span>
                             </label>
-                            {% for election_title in grouped.keys()|sort %}
+                            {% for election_title in grouped_for_stats.keys()|sort %}
                             <label class="election-filter" data-election="{{ election_title|lower|replace(' ', '-') }}">
                                 <input type="radio" name="election-filter" value="{{ election_title|lower|replace(' ', '-') }}">
                                 <span>{{ election_title }}</span>
@@ -123,18 +124,23 @@
             </div>
         </div>
 
-        {# Group candidates by election #}
+        {# Group candidates by election with date for sorting #}
         {% set grouped = {} %}
         {% for c in candidates %}
             {% set election_title = c.election.title if c.election else 'Other Elections' %}
+            {% set election_date = c.election.created_at if c.election else None %}
             {% if election_title not in grouped %}
-                {% set _ = grouped.update({ election_title: [] }) %}
+                {% set _ = grouped.update({ election_title: {'candidates': [], 'date': election_date} }) %}
             {% endif %}
-            {% set _ = grouped[election_title].append(c) %}
+            {% set _ = grouped[election_title]['candidates'].append(c) %}
         {% endfor %}
 
+        {# Sort elections by date (newest first) #}
+        {% set sorted_elections = grouped.items()|sort(attribute='1.date', reverse=True) %}
+
         {# Display each election group #}
-        {% for election_title, election_candidates in grouped.items()|sort %}
+        {% for election_title, election_data in sorted_elections %}
+            {% set election_candidates = election_data.candidates %}
         <div class="election-section" data-election="{{ election_title|lower|replace(' ', '-') }}">
             <!-- Election Header -->
             <div class="election-header-card">

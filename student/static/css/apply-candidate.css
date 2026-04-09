@@ -1,79 +1,118 @@
 /* Apply Candidate Page Styles - Compact Desktop/Mobile View */
 
 .application-container {
-    max-width: 700px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 15px;
 }
 
 .page-title {
-    font-size: 1.8rem;
-    margin-bottom: 25px;
+    font-size: 1.6rem;
+    margin-bottom: 20px;
     color: #333;
     text-align: center;
 }
 
-.page-title i {
-    margin-right: 10px;
+/* Hero Banner - Compact */
+.hero-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 20px 25px;
+    margin-bottom: 25px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.25);
 }
 
-/* Action Button Container */
+.hero-banner h1 {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.hero-banner p {
+    opacity: 0.95;
+    font-size: 0.85rem;
+}
+
+/* Action Button - Compact */
 .action-button-container {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
 .action-button {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);
     color: white;
     border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
+    padding: 10px 28px;
+    border-radius: 40px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.9rem;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none;
-    border: none;
-    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.2);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.35);
 }
 
 .action-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(155, 89, 182, 0.3);
+    box-shadow: 0 6px 20px rgba(155, 89, 182, 0.45);
 }
 
-/* Status Cards - Compact Design */
+/* Status Cards - Compact */
 .status-card {
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
     transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+}
+
+.status-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
 }
 
 .status-pending {
-    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    background: linear-gradient(135deg, #fff9e6, #ffe6b3);
+    border-left: 4px solid #f39c12;
 }
 
 .status-approved {
-    background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-left: 4px solid #27ae60;
 }
 
 .status-rejected {
     background: linear-gradient(135deg, #ffebee, #ffcdd2);
+    border-left: 4px solid #e74c3c;
 }
 
 .status-qualified {
     background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-left: 4px solid #3498db;
 }
 
 .info-message {
     background: #f8f9fa;
-    border-left: 5px solid #6c757d;
     text-align: center;
     padding: 30px 20px;
 }
@@ -83,217 +122,291 @@
     align-items: center;
     gap: 15px;
     margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 .status-icon {
-    font-size: 2rem;
-    color: inherit;
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    flex-shrink: 0;
 }
 
 .status-icon-large {
-    font-size: 3rem;
-    color: #6c757d;
-    margin-bottom: 15px;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
 }
 
 .status-header h2 {
     margin: 0;
-    font-size: 1.4rem;
+    font-size: 1.1rem;
+    font-weight: 700;
 }
 
 .status-header p {
-    margin: 5px 0 0;
+    margin: 3px 0 0;
     color: #666;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
 }
 
 /* Details Table - Compact */
 .details-table {
-    background: white;
-    border-radius: 8px;
-    padding: 15px;
-    margin: 15px 0;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 10px;
+    padding: 12px 15px;
+    margin: 12px 0;
+    border: 1px solid rgba(255,255,255,0.5);
 }
 
 .details-table h3 {
-    margin: 0 0 12px 0;
-    color: #333;
-    font-size: 1.1rem;
+    margin: 0 0 10px 0;
+    font-size: 0.85rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.details-table h3 i {
-    color: #9b59b6;
+    gap: 6px;
+    color: #2c3e50;
 }
 
 .details-table table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.95rem;
 }
 
 .details-table td {
-    padding: 10px 8px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.details-table tr:last-child td {
-    border-bottom: none;
+    padding: 8px 5px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 0.8rem;
 }
 
 .details-table td:first-child {
-    color: #666;
     width: 120px;
-    font-weight: 500;
+    font-weight: 600;
+    color: #555;
 }
 
 .details-table td:last-child {
-    font-weight: 600;
-    color: #333;
+    font-weight: 500;
+    color: #2c3e50;
 }
 
-/* Responsive table for mobile */
-@media (max-width: 480px) {
-    .details-table td:first-child {
-        width: 100px;
-    }
-    
-    .details-table table {
-        font-size: 0.85rem;
-    }
-}
-
-/* Reason Box */
+/* Reason Box - Compact */
 .reason-box {
-    background: #fef2f2;
-    border-radius: 6px;
-    padding: 12px 15px;
-    margin: 15px 0 5px;
-    border: 1px solid #fecaca;
-    color: #991b1b;
-    font-size: 0.95rem;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 10px;
+    padding: 10px 14px;
+    border-left: 3px solid #e74c3c;
+    font-size: 0.8rem;
 }
 
 .reason-box strong {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
 }
 
 .reason-box p {
     margin: 0;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 /* Notification Message */
 .notification-message {
-    margin: 15px 0 0;
+    margin: 12px 0 0;
     color: #666;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     display: flex;
     align-items: center;
     gap: 8px;
     background: rgba(255,255,255,0.5);
-    padding: 10px 12px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
 }
 
-.notification-message i {
-    color: #f59e0b;
+/* Section Title - Compact */
+.section-title {
+    font-size: 1.2rem;
+    margin: 25px 0 15px;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.section-title i {
+    color: #9b59b6;
+}
+
+.section-title span {
+    font-size: 0.75rem;
+    background: #9b59b6;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 20px;
 }
 
 /* Qualified Message */
 .qualified-message {
-    margin: 15px 0 5px;
+    margin: 12px 0 5px;
     color: #555;
     line-height: 1.5;
-    font-size: 0.95rem;
-}
-
-/* Dashboard Link */
-.dashboard-link-container {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.dashboard-button {
-    background: linear-gradient(135deg, #27ae60, #229954);
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none;
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
-}
-
-.dashboard-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
+    font-size: 0.85rem;
 }
 
 /* Help Text */
 .help-text {
-    font-size: 0.85rem;
-    margin-top: 15px;
+    font-size: 0.75rem;
+    margin-top: 12px;
     color: #888;
 }
 
-/* Modal adjustments for better mobile view */
+/* Badge */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #9b59b6;
+    color: white;
+}
+
+/* ==================== MODAL - YOUR MODAL IS GOOD! ==================== */
+/* Your existing modal CSS is already well-designed with two-column layout */
+/* I'll add just a few small improvements for compactness */
+
 @media (max-width: 768px) {
-    .modal-content {
-        width: 95%;
-        margin: 20px auto;
-        padding: 15px;
-    }
-    
     .application-container {
         padding: 10px;
     }
     
-    .page-title {
-        font-size: 1.5rem;
+    .hero-banner {
+        padding: 15px 20px;
         margin-bottom: 20px;
     }
     
-    .status-header {
-        flex-direction: column;
-        text-align: center;
-        gap: 10px;
-    }
-    
-    .status-header h2 {
+    .hero-banner h1 {
         font-size: 1.2rem;
     }
     
-    .action-button {
-        padding: 10px 25px;
-        font-size: 0.95rem;
+    .hero-banner p {
+        font-size: 0.75rem;
     }
-}
-
-/* Very small devices */
-@media (max-width: 360px) {
+    
+    .action-button {
+        padding: 8px 22px;
+        font-size: 0.85rem;
+    }
+    
+    .status-card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .status-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+    
+    .status-header h2 {
+        font-size: 1rem;
+    }
+    
+    .status-header p {
+        font-size: 0.7rem;
+    }
+    
+    .details-table {
+        padding: 10px 12px;
+    }
+    
     .details-table td {
-        display: block;
-        width: 100%;
-        padding: 8px 5px;
+        padding: 6px 4px;
+        font-size: 0.75rem;
     }
     
     .details-table td:first-child {
-        width: 100%;
-        padding-bottom: 0;
+        width: 100px;
     }
     
-    .details-table td:last-child {
-        padding-top: 0;
+    .section-title {
+        font-size: 1.1rem;
+        margin: 20px 0 12px;
+    }
+    
+    .reason-box {
+        padding: 8px 12px;
+        font-size: 0.75rem;
     }
 }
+
+@media (max-width: 480px) {
+    .application-container {
+        padding: 8px;
+    }
+    
+    .hero-banner {
+        padding: 12px 15px;
+    }
+    
+    .hero-banner h1 {
+        font-size: 1rem;
+        gap: 6px;
+    }
+    
+    .hero-banner p {
+        font-size: 0.7rem;
+    }
+    
+    .status-header {
+        gap: 10px;
+    }
+    
+    .status-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    .status-header h2 {
+        font-size: 0.9rem;
+    }
+    
+    .details-table td:first-child {
+        width: 85px;
+    }
+    
+    .details-table td {
+        font-size: 0.7rem;
+        padding: 5px 3px;
+    }
+    
+    .section-title {
+        font-size: 1rem;
+        gap: 8px;
+    }
+    
+    .section-title i {
+        font-size: 0.9rem;
+    }
+}
+
+/* ==================== MODAL - YOUR EXISTING MODAL CSS IS GOOD ==================== */
+/* Your application_modal.css is well-designed with:
+   - Two-column layout that stays on mobile
+   - Responsive breakpoints
+   - Good spacing
+   - Clean form styling
+   
+   No major changes needed - it's already good!
+*/

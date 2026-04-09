@@ -10,110 +10,390 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="{{ url_for('student.static', filename='js/candidate-application.js') }}" defer></script>
 <style>
+    /* Enhanced styling for modern look - COMPACT VERSION */
     .readonly-field {
-        background-color: #f5f5f5;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 10px 12px;
-        color: #333;
-        font-size: 0.95rem;
-        margin: 5px 0 10px 0;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 10px 14px;
+        color: #2c3e50;
+        font-size: 0.85rem;
+        margin: 4px 0 8px 0;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .readonly-field:hover {
+        border-color: #9b59b6;
+        background: linear-gradient(135deg, #fef9ff, #f3e5ff);
     }
     
     .required-star {
         color: #e74c3c;
         margin-left: 4px;
+        font-weight: 600;
     }
     
     .form-hint {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         color: #7f8c8d;
         margin-top: 4px;
         display: block;
+        font-style: italic;
+    }
+    
+    /* Hero Banner - COMPACT */
+    .hero-banner {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 20px 25px;
+        margin-bottom: 25px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+    }
+    
+    .hero-banner h1 {
+        font-size: 1.3rem;
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+    
+    /* Enhanced Status Cards - COMPACT */
+    .status-card {
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 18px;
+        transition: all 0.3s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .status-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    }
+    
+    .status-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    }
+    
+    .status-pending {
+        background: linear-gradient(135deg, #fff9e6, #ffe6b3);
+    }
+    
+    .status-approved {
+        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    }
+    
+    .status-rejected {
+        background: linear-gradient(135deg, #ffebee, #ffcdd2);
+    }
+    
+    .status-qualified {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    }
+    
+    .status-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .status-icon {
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        flex-shrink: 0;
+    }
+    
+    .status-pending .status-icon { color: #f39c12; }
+    .status-approved .status-icon { color: #27ae60; }
+    .status-rejected .status-icon { color: #e74c3c; }
+    .status-qualified .status-icon { color: #3498db; }
+    
+    .status-header h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+    
+    .status-header p {
+        margin: 3px 0 0;
+        color: #666;
+        font-size: 0.7rem;
+    }
+    
+    /* Enhanced Details Table - COMPACT */
+    .details-table {
+        background: rgba(255,255,255,0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 12px 15px;
+        margin: 12px 0;
+        border: 1px solid rgba(255,255,255,0.5);
+    }
+    
+    .details-table h3 {
+        margin: 0 0 10px 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #2c3e50;
+    }
+    
+    .details-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .details-table td {
+        padding: 8px 6px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        font-size: 0.75rem;
+    }
+    
+    .details-table td:first-child {
+        width: 110px;
+        font-weight: 600;
+        color: #555;
+    }
+    
+    .details-table td:last-child {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    /* Reason Box - COMPACT */
+    .reason-box {
+        background: rgba(231, 76, 60, 0.1);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 0.75rem;
+    }
+    
+    .reason-box strong {
+        font-size: 0.75rem;
+    }
+    
+    /* Action Button - COMPACT */
+    .action-button {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        color: white;
+        border: none;
+        padding: 10px 28px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(155, 89, 182, 0.35);
+        width: auto;
+        min-width: 220px;
+    }
+    
+    .button-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+    }
+    
+    .button-main-text {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+    
+    .button-sub-text {
+        font-size: 0.65rem;
+        opacity: 0.9;
+        font-weight: 400;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(155, 89, 182, 0.45);
+    }
+    
+    /* Section Title - COMPACT */
+    .section-title {
+        font-size: 1.1rem;
+        margin: 25px 0 15px;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .section-title i {
+        color: #9b59b6;
+        font-size: 1rem;
+    }
+    
+    .section-title span {
+        font-size: 0.7rem;
+        background: #9b59b6;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+    
+    /* Badge */
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        background: #9b59b6;
+        color: white;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-banner {
+            padding: 15px 20px;
+        }
+        
+        .hero-banner h1 {
+            font-size: 1.1rem;
+        }
+        
+        .status-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .status-icon {
+            margin: 0 auto;
+        }
+        
+        .details-table td:first-child {
+            width: 95px;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+        }
+        
+        .action-button {
+            padding: 8px 22px;
+            min-width: 200px;
+        }
+        
+        .button-main-text {
+            font-size: 0.85rem;
+        }
+        
+        .button-sub-text {
+            font-size: 0.6rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="application-container">
-    <h1 class="page-title">
-        Candidate Application Center
-    </h1>
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+        <h1>Candidate Application Center</h1>
+    </div>
     
     <!-- Action Button Container - Show if qualified and no pending application -->
     {% if is_qualified and not has_pending_application %}
-    <div class="action-button-container">
+    <div style="text-align: center; margin-bottom: 25px;">
         <button id="applyAsCandidateBtn" class="action-button">
-            <i class="fa-solid fa-star"></i> 
-            {% if has_approved_application or has_rejected_application %}
-                Apply for Another Election
-            {% else %}
-                Apply Now
-            {% endif %}
+            <div class="button-content">
+                <span class="button-main-text">
+                    {% if has_approved_application or has_rejected_application %}
+                        Apply for Another Election
+                    {% else %}
+                        Start Your Application
+                    {% endif %}
+                </span>
+                <span class="button-sub-text">Click here to apply</span>
+            </div>
         </button>
     </div>
-    {% endif %}
+{% endif %}
     
     {% if not is_qualified %}
-        <div class="status-card info-message">
-            <i class="fa-solid fa-info-circle status-icon-large"></i>
-            <h3>Not Qualified</h3>
-            <p>You are not currently qualified to apply as a candidate.</p>
-            <p class="help-text">Please check back later or contact the COMELEC admin for more information.</p>
+        <div class="status-card info-message" style="text-align: center;">
+            <div class="status-icon" style="margin: 0 auto 15px; background: #f8f9fa;">
+                <i class="fa-solid fa-info-circle"></i>
+            </div>
+            <h3 style="margin-bottom: 8px; font-size: 1rem;">Not Qualified Yet</h3>
+            <p style="font-size: 0.8rem;">You are not currently qualified to apply as a candidate.</p>
+            <p class="help-text" style="margin-top: 12px; font-size: 0.7rem;">Please check back later or contact the COMELEC admin for more information.</p>
         </div>
     {% endif %}
     
     <!-- Display ALL applications from PendingCandidate table -->
     {% if all_applications %}
-        <h2 style="margin: 30px 0 15px; color: #333; font-size: 1.5rem;">
-            <i class="fa-solid fa-file-lines"></i> Your Applications ({{ all_applications|length }})
-        </h2>
+        <div class="section-title">
+            <i class="fa-solid fa-file-lines"></i>
+            Your Applications
+            <span>{{ all_applications|length }} Total</span>
+        </div>
         
         {% for app in all_applications %}
             {% if app.status == 'pending' %}
                 <!-- PENDING APPLICATION CARD -->
                 <div class="status-card status-pending">
                     <div class="status-header">
-                        <i class="fa-solid fa-clock status-icon"></i>
+                        <div class="status-icon">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
                         <div>
                             <h2>Application #{{ loop.index }} - Pending Review</h2>
-                            <p>Submitted on {{ app.applied_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                            <p><i class="fa-regular fa-calendar"></i> {{ app.applied_at.strftime('%b %d, %Y at %I:%M %p') }}</p>
                         </div>
                     </div>
                     
                     <div class="details-table">
-                        <h3>
-                            <i class="fa-solid fa-file-lines"></i> Application Details
-                        </h3>
-                        <table class="details-table">
-                            <tr>
-                                <td><strong>Election:</strong></td>
-                                <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
+                        <h3><i class="fa-solid fa-circle-info"></i> Details</h3>
+                        <table>
+                            <tr><td>Election</td><td><strong>{{ app.election.title if app.election else 'Unknown' }}</strong></td>
                             </tr>
-                            <tr>
-                                <td><strong>Position:</strong></td>
-                                <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            <tr><td>Position</td><td><strong>{{ app.position.name if app.position else 'Unknown' }}</strong></td>
                             </tr>
-                            <tr>
-                                <td><strong>Year Level:</strong></td>
-                                <td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
+                            <tr><td>Year Level</td><td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
                             </tr>
                             {% if app.party_list %}
-                            <tr>
-                                <td><strong>Party List:</strong></td>
-                                <td>{{ app.party_list }}</td>
+                            <tr><td>Party List</td><td>{{ app.party_list }}</td>
                             </tr>
                             {% endif %}
-                            <tr>
-                                <td><strong>Scope:</strong></td>
-                                <td>{{ app.scope|title }}</td>
+                            <tr><td>Scope</td><td><span class="badge">{{ app.scope|title }}</span></td>
                             </tr>
                         </table>
                     </div>
                     
-                    <p class="notification-message">
-                        <i class="fa-solid fa-bell"></i> Please check this page for updates on your application status.
-                    </p>
+                    <div class="reason-box" style="background: rgba(243, 156, 18, 0.1);">
+                        <i class="fa-solid fa-bell" style="margin-right: 6px;"></i>
+                        <strong>Under review.</strong> Check back for updates.
+                    </div>
                 </div>
             {% endif %}
             
@@ -121,47 +401,40 @@
                 <!-- APPROVED APPLICATION CARD -->
                 <div class="status-card status-approved">
                     <div class="status-header">
-                        <i class="fa-solid fa-check-circle status-icon"></i>
+                        <div class="status-icon">
+                            <i class="fa-solid fa-check-circle"></i>
+                        </div>
                         <div>
-                            <h2>Application #{{ loop.index }} - Approved!</h2>
-                            <p>Your application for <strong>{{ app.election.title if app.election else 'Unknown Election' }}</strong> has been approved</p>
+                            <h2>Application #{{ loop.index }} - Approved! 🎉</h2>
+                            <p>For <strong>{{ app.election.title if app.election else 'Unknown Election' }}</strong></p>
                         </div>
                     </div>
                     
                     <div class="details-table">
-                        <h3>
-                            <i class="fa-solid fa-star"></i> Application Details
-                        </h3>
-                        <table class="details-table">
-                            <tr>
-                                <td><strong>Election:</strong></td>
-                                <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
+                        <h3><i class="fa-solid fa-star"></i> Details</h3>
+                        <table>
+                            <tr><td>Election</td><td><strong>{{ app.election.title if app.election else 'Unknown' }}</strong></td>
                             </tr>
-                            <tr>
-                                <td><strong>Position:</strong></td>
-                                <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            <tr><td>Position</td><td><strong>{{ app.position.name if app.position else 'Unknown' }}</strong></td>
                             </tr>
-                            <tr>
-                                <td><strong>Year Level:</strong></td>
-                                <td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
+                            <tr><td>Year Level</td><td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
                             </tr>
                             {% if app.party_list %}
-                            <tr>
-                                <td><strong>Party List:</strong></td>
-                                <td>{{ app.party_list }}</td>
+                            <tr><td>Party List</td><td>{{ app.party_list }}</td>
                             </tr>
                             {% endif %}
-                            <tr>
-                                <td><strong>Scope:</strong></td>
-                                <td>{{ app.scope|title }}</td>
+                            <tr><td>Scope</td><td><span class="badge">{{ app.scope|title }}</span></td>
                             </tr>
                             {% if app.reviewed_at %}
-                            <tr>
-                                <td><strong>Reviewed on:</strong></td>
-                                <td>{{ app.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}</td>
+                            <tr><td>Reviewed</td><td>{{ app.reviewed_at.strftime('%b %d, %Y at %I:%M %p') }}</td>
                             </tr>
                             {% endif %}
                         </table>
+                    </div>
+                    
+                    <div class="reason-box" style="background: rgba(39, 174, 96, 0.1);">
+                        <i class="fa-solid fa-circle-check" style="margin-right: 6px;"></i>
+                        <strong>Congratulations! You are now an official candidate.</strong>
                     </div>
                 </div>
             {% endif %}
@@ -170,45 +443,39 @@
                 <!-- REJECTED APPLICATION CARD -->
                 <div class="status-card status-rejected">
                     <div class="status-header">
-                        <i class="fa-solid fa-times-circle status-icon"></i>
+                        <div class="status-icon">
+                            <i class="fa-solid fa-times-circle"></i>
+                        </div>
                         <div>
                             <h2>Application #{{ loop.index }} - Not Approved</h2>
-                            <p>Your application for <strong>{{ app.election.title if app.election else 'Unknown Election' }}</strong> was rejected</p>
+                            <p>For <strong>{{ app.election.title if app.election else 'Unknown Election' }}</strong></p>
                         </div>
                     </div>
                     
                     <div class="details-table">
-                        <h3>Application Details</h3>
-                        <table class="details-table">
-                            <tr>
-                                <td><strong>Election:</strong></td>
-                                <td>{{ app.election.title if app.election else 'Unknown Election' }}</td>
+                        <h3><i class="fa-solid fa-circle-info"></i> Details</h3>
+                        <table>
+                            <tr><td>Election</td><td>{{ app.election.title if app.election else 'Unknown' }}</td>
                             </tr>
-                            <tr>
-                                <td><strong>Position:</strong></td>
-                                <td>{{ app.position.name if app.position else 'Unknown Position' }}</td>
+                            <tr><td>Position</td><td>{{ app.position.name if app.position else 'Unknown' }}</td>
                             </tr>
-                            <tr>
-                                <td><strong>Year Level:</strong></td>
-                                <td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
+                            <tr><td>Year Level</td><td>{{ app.year_level.year_name if app.year_level else 'N/A' }}</td>
                             </tr>
                             {% if app.party_list %}
-                            <tr>
-                                <td><strong>Party List:</strong></td>
-                                <td>{{ app.party_list }}</td>
+                            <tr><td>Party List</td><td>{{ app.party_list }}</td>
                             </tr>
                             {% endif %}
                         </table>
                     </div>
                     
                     <div class="reason-box">
-                        <strong><i class="fa-solid fa-info-circle"></i> Rejection Reason:</strong>
-                        <p>{{ app.rejection_reason or 'No specific reason provided.' }}</p>
+                        <strong><i class="fa-solid fa-info-circle"></i> Reason:</strong>
+                        <p style="margin-top: 6px;">{{ app.rejection_reason or 'No specific reason provided.' }}</p>
                     </div>
                     
                     {% if app.reviewed_at %}
-                    <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
-                        <i class="fa-solid fa-calendar"></i> Reviewed on: {{ app.reviewed_at.strftime('%B %d, %Y') }}
+                    <p style="margin-top: 12px; font-size: 0.7rem; color: #888;">
+                        <i class="fa-regular fa-calendar"></i> Reviewed: {{ app.reviewed_at.strftime('%b %d, %Y') }}
                     </p>
                     {% endif %}
                 </div>
@@ -219,17 +486,26 @@
         {% if is_qualified %}
         <div class="status-card status-qualified">
             <div class="status-header">
-                <i class="fa-solid fa-star status-icon"></i>
+                <div class="status-icon">
+                    <i class="fa-solid fa-star"></i>
+                </div>
                 <div>
-                    <h2>You are Qualified!</h2>
+                    <h2>You're Qualified! 🎯</h2>
                     <p>You are eligible to apply as a candidate</p>
                 </div>
             </div>
             
-            <p class="qualified-message">
-                Based on your academic standing and eligibility, you have been qualified to run as a candidate 
-                in the upcoming elections. Click the "Apply Now" button above to start your application.
-            </p>
+            <div class="details-table">
+                <p style="margin: 0; line-height: 1.5; font-size: 0.8rem;">
+                    <i class="fa-solid fa-check-circle" style="color: #27ae60;"></i> 
+                    Based on your academic standing, you have been qualified to run as a candidate.
+                </p>
+            </div>
+            
+            <div class="reason-box" style="background: rgba(52, 152, 219, 0.1); margin-top: 12px;">
+                <i class="fa-solid fa-lightbulb" style="margin-right: 6px;"></i>
+                <strong>Pro Tip:</strong> Prepare your platform before applying!
+            </div>
         </div>
         {% endif %}
     {% endif %}
@@ -239,7 +515,7 @@
 <div id="candidateApplicationModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2><i class="fa-solid fa-star"></i> Apply as Candidate</h2>
+            <h2>Candidate Application Form</h2>
             <span class="close-modal" onclick="closeCandidateModal()">&times;</span>
         </div>
         <div class="modal-body">
@@ -247,24 +523,22 @@
             <div id="candidateApplicationNotification" class="modal-notification"></div>
             
             <form id="candidateApplicationForm" enctype="multipart/form-data">
-                <!-- CSRF Token - REMOVED -->
-                
                 <!-- Hidden field for year level - auto-populated from student record -->
                 <input type="hidden" name="year_level_id" id="apply_year_level_id" value="{{ student.year_level_id or '' }}">
                 
                 <div class="form-group full-width">
-                    <label>Your Name</label>
-                    <p id="applicantName" class="readonly-field">{{ student.first_name }} {{ student.last_name }}</p>
+                    <label><i class="fa-solid fa-user"></i> Your Name</label>
+                    <p id="applicantName" class="readonly-field"><i class="fa-regular fa-id-card"></i> {{ student.first_name }} {{ student.last_name }}</p>
                 </div>
 
                 <!-- Display Year Level (read-only) -->
                 <div class="form-group full-width">
-                    <label>Your Year Level <span class="required-star">*</span></label>
+                    <label><i class="fa-solid fa-graduation-cap"></i> Year Level <span class="required-star">*</span></label>
                     <p class="readonly-field" id="applicantYearLevel">
                         {% if student.year_level %}
-                            {{ student.year_level.year_name }}
+                            <i class="fa-regular fa-calendar"></i> {{ student.year_level.year_name }}
                         {% else %}
-                            Not specified - Please contact admin to update your year level
+                            <i class="fa-solid fa-exclamation-triangle"></i> Not specified - Contact admin
                         {% endif %}
                     </p>
                     <small class="form-hint">Your current year level will be included in your application</small>
@@ -272,51 +546,47 @@
 
                 <!-- Party List Field -->
                 <div class="form-group">
-                    <label>Party List</label>
-                    <input type="text" name="party_list" id="apply_party_list" placeholder="Enter party list (e.g., Lakas, Aksyon, etc.)">
+                    <label><i class="fa-solid fa-flag"></i> Party List</label>
+                    <input type="text" name="party_list" id="apply_party_list" placeholder="e.g., Lakas, Aksyon">
                     <small class="form-hint">Optional: Leave blank if independent</small>
                 </div>
 
                 <!-- Platform Field -->
                 <div class="form-group">
-                    <label>Platform</label>
-                    <textarea name="platform" id="apply_platform" rows="3" placeholder="Enter your platform, goals, or manifesto"></textarea>
-                    <small class="form-hint">Tell voters what you stand for</small>
+                    <label><i class="fa-solid fa-bullhorn"></i> Platform</label>
+                    <textarea name="platform" id="apply_platform" rows="3" placeholder="Tell voters what you stand for..."></textarea>
+                    <small class="form-hint">Share your goals and vision</small>
                 </div>
 
                 <!-- ELECTION SCOPE -->
                 <div class="form-group">
-                    <label>Election Scope <span class="required-star">*</span></label>
+                    <label><i class="fa-solid fa-globe"></i> Election Scope <span class="required-star">*</span></label>
                     <select name="scope" id="apply_scope" required onchange="filterElectionsForApply()">
-                        <option value="" disabled selected>Select Election Scope</option>
-                        <option value="campus">Campus-Wide Election</option>
+                        <option value="" disabled selected>Select Scope</option>
+                        <option value="campus">Campus-Wide</option>
                         <option value="department">Department Election</option>
                     </select>
                 </div>
 
                 <!-- Election Field -->
                 <div class="form-group">
-                    <label>Election <span class="required-star">*</span></label>
+                    <label><i class="fa-solid fa-vote-yea"></i> Election <span class="required-star">*</span></label>
                     <select name="election_id" id="apply_election" required>
                         <option value="" disabled selected>Select election</option>
                         {% for election in active_elections %}
                             <option value="{{ election.id }}" 
                                     data-scope="{{ election.scope }}"
                                     data-department="{{ election.department_id }}">
-                                {{ election.title }} 
-                                ({{ election.scope|title }}) 
-                                {% if election.display_status %}
-                                    - {{ election.display_status }}
-                                {% endif %}
+                                {{ election.title }} ({{ election.scope|title }})
                             </option>
                         {% endfor %}
                     </select>
-                    <small class="form-hint">Showing active and upcoming elections only</small>
+                    <small class="form-hint">Active and upcoming elections only</small>
                 </div>
 
                 <!-- Position Field -->
                 <div class="form-group">
-                    <label>Position <span class="required-star">*</span></label>
+                    <label><i class="fa-solid fa-briefcase"></i> Position <span class="required-star">*</span></label>
                     <select name="position_id" id="apply_position" required>
                         <option value="" disabled selected>Select position</option>
                         {% for position in positions %}
@@ -327,24 +597,19 @@
 
                 <!-- Photo Field -->
                 <div class="form-group full-width">
-                    <label>Photo (Optional)</label>
+                    <label><i class="fa-solid fa-camera"></i> Photo (Optional)</label>
                     <input type="file" name="photo" id="apply_photo" accept="image/*">
-                    <small class="form-hint">Upload a campaign photo</small>
-                </div>
-
-                <div class="form-group full-width">
-                    <div class="info-box">
-                        <i class="fa-solid fa-info-circle"></i>
-                        <span>Your application will be reviewed by the COMELEC admin. You will be notified via email once approved.</span>
-                    </div>
+                    <small class="form-hint">JPG, PNG, max 5MB</small>
                 </div>
 
                 <div class="button-group">
                     <button type="submit" class="bulk-candidate-btn" id="applySubmitBtn">
-                        <span class="button-text">Submit Application</span>
+                        <span class="button-text"><i class="fa-regular fa-paper-plane"></i> Submit</span>
                         <span class="loading-spinner" style="display: none;"></span>
                     </button>
-                    <button type="button" class="reset-btn" onclick="closeCandidateModal()">Cancel</button>
+                    <button type="button" class="reset-btn" onclick="closeCandidateModal()">
+                        <i class="fa-solid fa-times"></i> Cancel
+                    </button>
                 </div>
             </form>
         </div>

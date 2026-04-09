@@ -252,26 +252,6 @@
         </div>
     </div>
 
-    <!-- Account Information -->
-    <div class="card account-card">
-        <h2 class="card-title">Account Information</h2>
-        
-        <div class="account-info">
-            {% if student.created_at %}
-            <div class="info-row">
-                <div class="info-label">Account Created</div>
-                <div class="info-value">{{ student.created_at.strftime('%B %d, %Y') }}</div>
-            </div>
-            {% endif %}
-            
-            {% if student.last_login %}
-            <div class="info-row">
-                <div class="info-label">Last Login</div>
-                <div class="info-value">{{ student.last_login.strftime('%B %d, %Y at %I:%M %p') }}</div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
 
     <!-- Security Settings -->
     <div class="card settings-card">
