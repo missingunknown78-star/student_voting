@@ -175,6 +175,34 @@
         align-items: center;
     }
     
+    /* Bottom action bar for back button */
+    .bottom-actions-bar {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .back-button-bottom {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #6c5ce7, #a363d9);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .back-button-bottom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+    }
+    
     @media (max-width: 768px) {
         .chart-wrapper {
             height: 400px;
@@ -195,16 +223,18 @@
             grid-template-columns: 40px 1fr 1fr 60px 80px;
             gap: 8px;
         }
+        
+        .back-button-bottom {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="results-detail-container">
-    <!-- Back Button -->
-    <a href="{{ url_for('admin.results_page') }}" class="back-button">
-        <i class="fa-solid fa-arrow-left"></i> Back to All Elections
-    </a>
+    <!-- Back Button - REMOVED FROM TOP -->
     
     <!-- Election Header -->
     <div class="election-header">
@@ -377,13 +407,6 @@
             <i class="fa-solid fa-chart-line" style="color: #3498db;"></i> 
             Live Results (Unofficial)
         </h2>
-        
-        <div class="live-results-note">
-            <i class="fa-solid fa-exclamation-circle"></i>
-            <p>
-                <strong>Note:</strong> Percentages are based on encrypted votes from the Vote table and may change until official tally.
-            </p>
-        </div>
         
         {% if candidate_results %}
         <div class="candidates-table live-table">
@@ -714,6 +737,13 @@
                 </button>
             </div>
         </div>
+    </div>
+    
+    <!-- Back Button at Bottom Right -->
+    <div class="bottom-actions-bar">
+        <a href="{{ url_for('admin.results_page') }}" class="back-button-bottom">
+            <i class="fa-solid fa-arrow-left"></i> Back to All Elections
+        </a>
     </div>
     
 </div>

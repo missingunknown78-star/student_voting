@@ -38,6 +38,7 @@ html {
 
 .import-students-page {
     animation: quickFadeIn 0.1s ease-out;
+    padding-top: 5px !important; /* Slight padding to prevent content shift during animation */
 }
 
 /* ==================== CSS VARIABLES ==================== */

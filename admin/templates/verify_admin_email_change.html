@@ -45,9 +45,6 @@
             font-weight: 700 !important;
             color: white !important;
             letter-spacing: -0.3px;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
             text-align: center !important;
             width: 100% !important;
         }
@@ -146,18 +143,9 @@
             font-weight: 600 !important;
             cursor: pointer;
             text-decoration: none;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 6px;
             transition: all 0.2s ease;
             text-align: center !important;
-        }
-        
-        /* Force button text to center */
-        .btn span {
             display: inline-block !important;
-            text-align: center !important;
         }
         
         /* Confirm button */
@@ -239,7 +227,6 @@
             
             .btn {
                 width: 100% !important;
-                justify-content: center !important;
             }
             
             .header h1 {
@@ -309,9 +296,7 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <h1>
-                <span>🔐</span> Confirm Email Change
-            </h1>
+            <h1>🔐 Confirm Email Change</h1>
             <p>Admin Account Security Verification</p>
         </div>
         
@@ -331,10 +316,10 @@
             
             <div class="button-group">
                 <a href="{{ confirm_url }}" class="btn btn-confirm">
-                    <span>✅</span> Yes, it's me
+                    ✅ Yes, it's me
                 </a>
                 <a href="{{ reject_url }}" class="btn btn-reject">
-                    <span>❌</span> No, cancel
+                    ❌ No, cancel
                 </a>
             </div>
             
@@ -347,7 +332,7 @@
             <p>Cebu Technological University - Moalboal Campus</p>
             <p>COMELEC Administration System</p>
             <div class="security-note">
-                If you didn't request this change, please ignore this email or contact support immediately.
+                If you didn't request this change, please ignore this email or cancel the request.
             </div>
         </div>
     </div>

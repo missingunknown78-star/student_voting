@@ -5,6 +5,70 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* FIX: Remove top spacing - minimal gap at the very top edge */
+    .announcements-page {
+        margin-top: 0 !important;
+        padding-top: 5px !important;
+    }
+    
+    /* Spinning button animation */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .submit-btn.loading {
+        opacity: 0.8;
+        cursor: wait;
+        pointer-events: none;
+    }
+    
+    .submit-btn .fa-spinner {
+        animation: spin 0.8s linear infinite;
+    }
+    
+    /* Floating Toast Message - Top Center */
+    .floating-toast {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        z-index: 10000;
+        padding: 14px 28px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        backdrop-filter: blur(10px);
+        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        max-width: 90%;
+        min-width: 300px;
+        pointer-events: none;
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        color: white;
+        border-left: 4px solid #fff;
+    }
+    
+    .floating-toast.show {
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    .floating-toast i {
+        margin-right: 10px;
+        font-size: 1.1rem;
+    }
+    
+    .floating-toast.error {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+    
+    /* Dark mode support */
+    .dark-mode .floating-toast {
+        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -14,40 +78,33 @@
         <p class="page-description">Create and manage announcements for students and departments</p>
     </div>
 
-    <!-- Flash Messages - Only show announcements page messages -->
+    <!-- Flash Messages - Hidden, will be converted to floating toast -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flash-container">
-                {% for category, message in messages %}
-                    <!-- Only show if message is from announcements page or has no source -->
-                    {% if 'announcements_page' in message or category == 'announcements' or message.startswith('Announcement') %}
-                        <div class="flash-message {{ category }}">
-                            <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
-                            {{ message|replace('announcements_page:', '') }}
-                            <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
-                            <div class="flash-progress"></div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
+            <div id="flashData" style="display:none;" 
+                 data-messages='[
+                    {% for category, message in messages %}
+                        {"category": "{{ category }}", "message": "{{ message|replace('announcements_page:', '')|replace('"', '\\"')|replace('\n', ' ')|replace('\r', '') }}"}{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                 ]'>
             </div>
         {% endif %}
     {% endwith %}
 
     <!-- Add this after the Add Announcement button -->
-<!-- Update the button section -->
-<div style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
-    <button class="add-announcement-btn" id="openModalBtn">
-        <i class="fa-solid fa-plus"></i> Add Announcement
-    </button>
-    
-    <a href="{{ url_for('admin.help_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #10b981, #059669); text-decoration: none;">
-        <i class="fa-solid fa-gear"></i> Help Settings
-    </a>
-    
-    <a href="{{ url_for('admin.guidelines_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); text-decoration: none;">
-        <i class="fa-solid fa-book"></i> Guidelines Settings
-    </a>
-</div>
+    <div style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
+        <button class="add-announcement-btn" id="openModalBtn">
+            <i class="fa-solid fa-plus"></i> Add Announcement
+        </button>
+        
+        <a href="{{ url_for('admin.help_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #10b981, #059669); text-decoration: none;">
+            <i class="fa-solid fa-gear"></i> Help Settings
+        </a>
+        
+        <a href="{{ url_for('admin.guidelines_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); text-decoration: none;">
+            <i class="fa-solid fa-book"></i> Guidelines Settings
+        </a>
+    </div>
 
     <!-- Add Modal - Desktop Style Layout -->
     <div id="addModal" class="modal">
@@ -55,7 +112,6 @@
             <span class="close-btn" id="closeAddModalBtn">&times;</span>
             <h3><i class="fa-solid fa-bullhorn"></i> Add New Announcement</h3>
             <form id="addAnnouncementForm" method="POST" action="{{ url_for('admin.announcements') }}" class="desktop-form">
-                <!-- CSRF Token - REMOVED -->
                 
                 <div class="form-left">
                     <div class="form-group">
@@ -89,7 +145,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="submit-btn">
+                    <button type="submit" class="submit-btn" id="publishBtn">
                         <i class="fa-solid fa-check"></i> Publish Announcement
                     </button>
                 </div>
@@ -103,7 +159,6 @@
             <span class="close-btn" id="closeEditModalBtn">&times;</span>
             <h3><i class="fa-solid fa-pen"></i> Edit Announcement</h3>
             <form id="editAnnouncementForm" method="POST" action="" class="desktop-form">
-                <!-- CSRF Token - REMOVED -->
                 <input type="hidden" id="edit_id" name="id">
                 
                 <div class="form-left">
@@ -138,7 +193,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="submit-btn edit-submit">
+                    <button type="submit" class="submit-btn edit-submit" id="updateBtn">
                         <i class="fa-solid fa-save"></i> Update Announcement
                     </button>
                 </div>
@@ -158,7 +213,6 @@
             <p class="delete-warning">This action cannot be undone.</p>
             
             <form id="deleteAnnouncementForm" method="POST" action="">
-                <!-- CSRF Token - REMOVED -->
                 <input type="hidden" id="delete_id" name="id">
                 <div class="delete-actions">
                     <button type="button" class="cancel-delete-btn" id="cancelDeleteBtn">
@@ -225,74 +279,130 @@
     </div>
 </div>
 
+<!-- Floating Toast Container -->
+<div id="floatingToast" class="floating-toast">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="toastMessage">Success!</span>
+</div>
 
-<!-- THEME SYNCHRONIZATION FIX -->
 <script>
-// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
+// =============== FLOATING TOAST FUNCTION ===============
+function showFloatingToast(message, isError = false) {
+    const toast = document.getElementById('floatingToast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastIcon = toast.querySelector('i');
+    
+    if (!toast) return;
+    
+    // Clean the message - remove any remaining announcements_page: prefix just in case
+    let cleanMessage = message.replace(/announcements_page:/g, '');
+    toastMessage.textContent = cleanMessage;
+    
+    if (isError) {
+        toast.classList.add('error');
+        toastIcon.className = 'fa-solid fa-circle-exclamation';
+    } else {
+        toast.classList.remove('error');
+        toastIcon.className = 'fa-solid fa-circle-check';
+    }
+    
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 5000);
+}
 
-// This ensures the theme applies immediately without refresh
+// =============== CAPTURE FLASH MESSAGES AS FLOATING TOAST ===============
+function showFlashAsToast() {
+    const flashData = document.getElementById('flashData');
+    if (flashData) {
+        const messagesAttr = flashData.getAttribute('data-messages');
+        if (messagesAttr) {
+            try {
+                const messages = JSON.parse(messagesAttr);
+                messages.forEach(function(msg) {
+                    let message = msg.message;
+                    let isError = (msg.category === 'error' || msg.category === 'danger');
+                    // Remove the announcements_page: prefix if it somehow survived
+                    message = message.replace(/announcements_page:/g, '');
+                    showFloatingToast(message, isError);
+                });
+            } catch(e) {
+                console.error('Error parsing flash messages:', e);
+            }
+        }
+    }
+}
+
+// =============== SPINNING BUTTON FUNCTION ===============
+function makeButtonSpin(button) {
+    if (!button) return;
+    
+    const originalIcon = button.innerHTML;
+    button.classList.add('loading');
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + button.textContent.trim();
+    button.disabled = true;
+    
+    return function restoreButton() {
+        button.classList.remove('loading');
+        button.innerHTML = originalIcon;
+        button.disabled = false;
+    };
+}
+
+// =============== FORM SUBMIT HANDLERS WITH SPINNING ===============
+document.addEventListener('DOMContentLoaded', function() {
+    // Show flash messages as floating toast
+    showFlashAsToast();
+    
+    // Add form submit spinner for Publish button
+    const addForm = document.getElementById('addAnnouncementForm');
+    const publishBtn = document.getElementById('publishBtn');
+    
+    if (addForm && publishBtn) {
+        addForm.addEventListener('submit', function(e) {
+            makeButtonSpin(publishBtn);
+        });
+    }
+    
+    // Add form submit spinner for Update button
+    const editForm = document.getElementById('editAnnouncementForm');
+    const updateBtn = document.getElementById('updateBtn');
+    
+    if (editForm && updateBtn) {
+        editForm.addEventListener('submit', function(e) {
+            makeButtonSpin(updateBtn);
+        });
+    }
+});
+
+// Apply theme to main content
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
     
-    // Check current theme from localStorage
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
     
-    // Apply or remove dark-mode class - ONLY to mainContent
     if (isDark) {
         mainContent.classList.add('dark-mode');
     } else {
         mainContent.classList.remove('dark-mode');
     }
     
-    // Ensure content is visible
     mainContent.classList.add('theme-applied');
-}
-
-// Auto-dismiss flash messages after 5 seconds
-function setupFlashMessages() {
-    const flashMessages = document.querySelectorAll('.flash-message');
-    
-    flashMessages.forEach(message => {
-        // Auto dismiss after 5 seconds
-        setTimeout(() => {
-            if (message.parentElement) {
-                message.style.animation = 'fadeOut 0.5s ease forwards';
-                setTimeout(() => {
-                    if (message.parentElement) {
-                        message.remove();
-                    }
-                }, 500);
-            }
-        }, 5000);
-        
-        // Add click handler for close button
-        const closeBtn = message.querySelector('.flash-close-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', function() {
-                message.style.animation = 'fadeOut 0.5s ease forwards';
-                setTimeout(() => {
-                    if (message.parentElement) {
-                        message.remove();
-                    }
-                }, 500);
-            });
-        }
-    });
 }
 
 // Apply immediately when page loads
 (function() {
     applyThemeToMainContent();
     
-    // Also apply after a tiny delay
     setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
-    // Listen for theme toggle button clicks
     document.addEventListener('click', function(e) {
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
             setTimeout(function() {
@@ -301,14 +411,12 @@ function setupFlashMessages() {
         }
     });
     
-    // Listen for storage events
     window.addEventListener('storage', function(e) {
         if (e.key === 'theme') {
             applyThemeToMainContent();
         }
     });
     
-    // Create a mutation observer
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {
         const mainContentObserver = new MutationObserver(function(mutations) {
@@ -322,9 +430,6 @@ function setupFlashMessages() {
 
 // ==================== MODAL FUNCTIONALITY ====================
 document.addEventListener('DOMContentLoaded', () => {
-    // Setup flash messages
-    setupFlashMessages();
-    
     // Get all modals
     const addModal = document.getElementById('addModal');
     const editModal = document.getElementById('editModal');
@@ -396,14 +501,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== ENHANCED EDIT FUNCTION WITH DEBUGGING ====================
 function openEditModal(announcementId, event) {
-    // Prevent default button behavior
     if (event) {
         event.preventDefault();
     }
     
     console.log('🔍 Opening edit modal for announcement ID:', announcementId);
     
-    // Show loading state on button
     const editBtn = event ? event.target.closest('.edit-btn') : document.querySelector(`.edit-btn[onclick*="${announcementId}"]`);
     let originalText = '';
     
@@ -413,11 +516,9 @@ function openEditModal(announcementId, event) {
         editBtn.disabled = true;
     }
     
-    // Fetch announcement data via AJAX (CSRF token removed)
     fetch(`/ctumoalboal-comelec/get-announcement/${announcementId}`, {
         headers: {
             'Content-Type': 'application/json'
-            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
         .then(response => {
@@ -431,7 +532,6 @@ function openEditModal(announcementId, event) {
             console.log('📦 Received data:', data);
             
             if (data.success) {
-                // Get all form elements
                 const idField = document.getElementById('edit_id');
                 const titleField = document.getElementById('edit_title');
                 const contentField = document.getElementById('edit_content');
@@ -440,20 +540,10 @@ function openEditModal(announcementId, event) {
                 const form = document.getElementById('editAnnouncementForm');
                 const modal = document.getElementById('editModal');
                 
-                // Check if all elements exist
                 if (!idField || !titleField || !contentField || !dateField || !deptSelect || !form || !modal) {
-                    console.error('❌ Missing form elements:', {
-                        idField: !!idField,
-                        titleField: !!titleField,
-                        contentField: !!contentField,
-                        dateField: !!dateField,
-                        deptSelect: !!deptSelect,
-                        form: !!form,
-                        modal: !!modal
-                    });
+                    console.error('❌ Missing form elements');
                     alert('System error: Could not find form elements');
                     
-                    // Reset button
                     if (editBtn) {
                         editBtn.innerHTML = originalText;
                         editBtn.disabled = false;
@@ -461,33 +551,23 @@ function openEditModal(announcementId, event) {
                     return;
                 }
                 
-                // Fill the form with data
-                console.log('📝 Filling form with data:', data.announcement);
                 idField.value = data.announcement.id || '';
                 titleField.value = data.announcement.title || '';
                 contentField.value = data.announcement.content || '';
                 dateField.value = data.announcement.date || '';
                 
-                // Set department select
                 if (data.announcement.department_id) {
-                    console.log('🏢 Setting department to ID:', data.announcement.department_id);
                     deptSelect.value = data.announcement.department_id;
                 } else {
-                    console.log('🌍 Setting department to "all"');
                     deptSelect.value = 'all';
                 }
                 
-                // Set form action
                 const actionUrl = `/ctumoalboal-comelec/update-announcement/${announcementId}`;
-                console.log('🔗 Setting form action to:', actionUrl);
                 form.action = actionUrl;
                 
-                // Show modal
-                console.log('🎯 Showing edit modal');
                 modal.classList.add('show');
                 setTimeout(applyThemeToMainContent, 10);
                 
-                // Reset button
                 if (editBtn) {
                     editBtn.innerHTML = originalText;
                     editBtn.disabled = false;
@@ -496,7 +576,6 @@ function openEditModal(announcementId, event) {
                 console.error('❌ Server returned success: false', data);
                 alert('Failed to load announcement data: Server returned error');
                 
-                // Reset button
                 if (editBtn) {
                     editBtn.innerHTML = originalText;
                     editBtn.disabled = false;
@@ -507,7 +586,6 @@ function openEditModal(announcementId, event) {
             console.error('❌ Error fetching announcement:', error);
             alert('Failed to load announcement data. Check console for details.');
             
-            // Reset button
             if (editBtn) {
                 editBtn.innerHTML = originalText;
                 editBtn.disabled = false;
@@ -524,30 +602,22 @@ function openDeleteModal(announcementId, announcementTitle) {
     const titleSpan = document.getElementById('deleteTitle');
     const idField = document.getElementById('delete_id');
     
-    // Check if elements exist
     if (!modal || !form || !titleSpan || !idField) {
         console.error('❌ Missing delete modal elements');
         alert('System error: Could not find delete modal elements');
         return;
     }
     
-    // Set the title
     titleSpan.textContent = announcementTitle;
-    
-    // Set the ID
     idField.value = announcementId;
     
-    // Set form action
     const actionUrl = `/ctumoalboal-comelec/delete-announcement/${announcementId}`;
-    console.log('🔗 Setting delete form action to:', actionUrl);
     form.action = actionUrl;
     
-    // Show modal
     modal.classList.add('show');
     setTimeout(applyThemeToMainContent, 10);
 }
 
-// Add this to test if the edit function is being called
 document.addEventListener('click', function(e) {
     if (e.target.closest('.edit-btn')) {
         console.log('✏️ Edit button clicked');

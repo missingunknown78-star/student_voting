@@ -364,58 +364,201 @@ def send_device_removal_confirmation(admin, device, token):
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    background-color: #f4f6fb;
+                }}
+                .container {{
+                    max-width: 550px;
+                    margin: 20px auto;
+                    background: white;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    padding: 20px 24px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    color: white;
+                    margin: 0;
+                    font-size: 20px;
+                }}
+                .content {{
+                    padding: 24px;
+                }}
+                .greeting {{
+                    font-size: 15px;
+                    color: #1f2937;
+                    margin-bottom: 16px;
+                }}
+                .message {{
+                    font-size: 14px;
+                    color: #4b5563;
+                    line-height: 1.5;
+                    margin-bottom: 20px;
+                }}
+                .device-card {{
+                    background: #f8fafc;
+                    border-radius: 10px;
+                    padding: 16px;
+                    margin: 20px 0;
+                    border: 1px solid #e2e8f0;
+                }}
+                .device-row {{
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                }}
+                .device-icon {{
+                    background: #fee2e2;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }}
+                .device-icon span {{
+                    font-size: 20px;
+                }}
+                .device-details {{
+                    flex: 1;
+                }}
+                .device-name {{
+                    margin: 0 0 4px 0;
+                    color: #1f2937;
+                    font-weight: 600;
+                    font-size: 14px;
+                }}
+                .device-info {{
+                    margin: 0;
+                    color: #6b7280;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }}
+                .button-container {{
+                    text-align: center;
+                    margin: 25px 0 20px 0;
+                }}
+                .confirm-btn {{
+                    display: inline-block;
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    color: white;
+                    text-decoration: none;
+                    padding: 12px 32px;
+                    border-radius: 40px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+                }}
+                .cancel-link {{
+                    text-align: center;
+                    margin: 15px 0;
+                }}
+                .cancel-link a {{
+                    color: #6b7280;
+                    text-decoration: none;
+                    font-size: 13px;
+                }}
+                .security-notice {{
+                    background: #fee2e2;
+                    border-left: 3px solid #ef4444;
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin: 20px 0;
+                }}
+                .security-notice p {{
+                    margin: 0;
+                    color: #991b1b;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }}
+                .footer {{
+                    background: #f1f5f9;
+                    padding: 16px;
+                    text-align: center;
+                    border-top: 1px solid #e2e8f0;
+                }}
+                .footer p {{
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 12px;
+                }}
+                .footer small {{
+                    display: block;
+                    margin-top: 4px;
+                    color: #94a3b8;
+                    font-size: 11px;
+                }}
+                @media (max-width: 600px) {{
+                    .container {{
+                        margin: 10px;
+                        width: auto;
+                    }}
+                    .content {{
+                        padding: 20px;
+                    }}
+                }}
+            </style>
         </head>
-        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
-            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <body style="margin:0; padding:0; background-color: #f4f6fb;">
+            <div class="container">
                 <!-- Header -->
-                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Confirm Device Removal</h1>
+                <div class="header">
+                    <h1>🔐 Confirm Device Removal</h1>
                 </div>
                 
                 <!-- Content -->
-                <div style="padding: 40px 30px;">
-                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                <div class="content">
+                    <p class="greeting">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
                     
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                    <p class="message">
                         We received a request to remove this trusted device from your account:
                     </p>
                     
                     <!-- Device Info Card -->
-                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #e2e8f0;">
-                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                            <div style="background: #fee2e2; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 24px;">💻</span>
+                    <div class="device-card">
+                        <div class="device-row">
+                            <div class="device-icon">
+                                <span>💻</span>
                             </div>
-                            <div style="flex: 1;">
-                                <p style="margin: 0 0 5px 0; color: #1f2937; font-weight: 600;">{device.device_name or 'Unknown Device'}</p>
-                                <p style="margin: 0; color: #6b7280; font-size: 14px;">IP: {device.ip_address}</p>
-                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Browser: {device.browser}</p>
-                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Trusted until: {device.expires_at.strftime('%Y-%m-%d %H:%M') if device.expires_at else 'N/A'}</p>
+                            <div class="device-details">
+                                <p class="device-name">{device.device_name or 'Unknown Device'}</p>
+                                <p class="device-info">IP: {device.ip_address}</p>
+                                <p class="device-info">Browser: {device.browser}</p>
+                                <p class="device-info">Trusted until: {device.expires_at.strftime('%Y-%m-%d %H:%M') if device.expires_at else 'N/A'}</p>
                             </div>
                         </div>
                     </div>
                     
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                    <p class="message">
                         If you want to remove this device from your trusted devices list, click the button below:
                     </p>
                     
                     <!-- Confirm Button -->
-                    <div style="text-align: center; margin: 35px 0;">
-                        <a href="{confirm_url}" style="display: inline-block; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; text-decoration: none; padding: 15px 40px; border-radius: 40px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">✅ Yes, Remove Device</a>
+                    <div class="button-container">
+                        <a href="{confirm_url}" class="confirm-btn">✅ Yes, Remove Device</a>
                     </div>
                     
                     <!-- Cancel Link -->
-                    <div style="text-align: center; margin: 20px 0;">
-                        <a href="{cancel_url}" style="color: #6b7280; text-decoration: none; font-size: 14px;">❌ No, keep this device</a>
+                    <div class="cancel-link">
+                        <a href="{cancel_url}">❌ No, keep this device</a>
                     </div>
                     
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                    <p class="message">
                         If you didn't request this, please secure your account immediately.
                     </p>
                     
                     <!-- Security Notice -->
-                    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                        <p style="margin: 0; color: #991b1b; font-size: 14px;">
+                    <div class="security-notice">
+                        <p>
                             <strong>⚠️ Security Notice:</strong> This link will expire in 15 minutes. 
                             If you didn't request this, someone may be trying to access your account.
                         </p>
@@ -423,9 +566,9 @@ def send_device_removal_confirmation(admin, device, token):
                 </div>
                 
                 <!-- Footer -->
-                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
-                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                <div class="footer">
+                    <p>COMELEC Admin - CTU Moalboal</p>
+                    <small>This is an automated message, please do not reply.</small>
                 </div>
             </div>
         </body>
@@ -554,9 +697,17 @@ def send_2fa_disable_confirmation(admin, token):
     import socket
     socket.setdefaulttimeout(30)
     from datetime import datetime
+    import pytz
     
     confirm_url = url_for('admin.confirm_disable_2fa', token=token.token, _external=True)
     cancel_url = url_for('admin.cancel_disable_2fa', token=token.token, _external=True)
+    
+    # Get Manila timezone
+    manila_tz = pytz.timezone('Asia/Manila')
+    now_utc = datetime.utcnow()
+    now_utc = pytz.UTC.localize(now_utc)
+    now_manila = now_utc.astimezone(manila_tz)
+    manila_time_str = now_manila.strftime('%Y-%m-%d %H:%M:%S')
     
     msg = Message(
         subject="🔐 Confirm 2FA Disable Request - COMELEC Admin",
@@ -567,81 +718,224 @@ def send_2fa_disable_confirmation(admin, token):
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    background-color: #f4f6fb;
+                }}
+                .container {{
+                    max-width: 550px;
+                    margin: 20px auto;
+                    background: white;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    padding: 20px 24px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    color: white;
+                    margin: 0;
+                    font-size: 20px;
+                }}
+                .content {{
+                    padding: 24px;
+                }}
+                .greeting {{
+                    font-size: 15px;
+                    color: #1f2937;
+                    margin-bottom: 16px;
+                }}
+                .message {{
+                    font-size: 14px;
+                    color: #4b5563;
+                    line-height: 1.5;
+                    margin-bottom: 20px;
+                }}
+                .alert-card {{
+                    background: #fee2e2;
+                    border-radius: 10px;
+                    padding: 16px;
+                    margin: 20px 0;
+                    border: 1px solid #fecaca;
+                }}
+                .alert-row {{
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                }}
+                .alert-icon {{
+                    background: #ef4444;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }}
+                .alert-icon span {{
+                    font-size: 20px;
+                    color: white;
+                }}
+                .alert-details {{
+                    flex: 1;
+                }}
+                .alert-title {{
+                    margin: 0 0 4px 0;
+                    color: #991b1b;
+                    font-weight: 600;
+                    font-size: 14px;
+                }}
+                .alert-info {{
+                    margin: 0;
+                    color: #b91c1c;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }}
+                .warning-text {{
+                    font-size: 14px;
+                    color: #4b5563;
+                    line-height: 1.5;
+                    margin-bottom: 20px;
+                }}
+                .warning-text strong {{
+                    color: #dc2626;
+                }}
+                .button-group {{
+                    text-align: center;
+                    margin: 25px 0 20px 0;
+                }}
+                .btn-confirm {{
+                    display: inline-block;
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
+                    color: white;
+                    text-decoration: none;
+                    padding: 12px 28px;
+                    border-radius: 40px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+                    margin: 0 5px 10px 5px;
+                }}
+                .btn-cancel {{
+                    display: inline-block;
+                    background: linear-gradient(135deg, #6b7280, #4b5563);
+                    color: white;
+                    text-decoration: none;
+                    padding: 12px 28px;
+                    border-radius: 40px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                    margin: 0 5px 10px 5px;
+                }}
+                .cancel-link {{
+                    text-align: center;
+                    margin: 15px 0;
+                }}
+                .cancel-link a {{
+                    color: #6b7280;
+                    text-decoration: none;
+                    font-size: 13px;
+                }}
+                .security-notice {{
+                    background: #fff3cd;
+                    border-left: 3px solid #ffc107;
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin: 20px 0;
+                }}
+                .security-notice p {{
+                    margin: 0;
+                    color: #856404;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }}
+                .footer {{
+                    background: #f1f5f9;
+                    padding: 16px;
+                    text-align: center;
+                    border-top: 1px solid #e2e8f0;
+                }}
+                .footer p {{
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 12px;
+                }}
+                .footer small {{
+                    display: block;
+                    margin-top: 4px;
+                    color: #94a3b8;
+                    font-size: 11px;
+                }}
+                @media (max-width: 600px) {{
+                    .container {{
+                        margin: 10px;
+                        width: auto;
+                    }}
+                    .content {{
+                        padding: 20px;
+                    }}
+                    .btn-confirm, .btn-cancel {{
+                        display: block;
+                        margin: 8px 0;
+                    }}
+                }}
+            </style>
         </head>
-        <body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f6fb;">
-            <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <body style="margin:0; padding:0; background-color: #f4f6fb;">
+            <div class="container">
                 <!-- Header -->
-                <div style="background: linear-gradient(135deg, #ef4444, #dc2626); padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Confirm 2FA Disable Request</h1>
+                <div class="header">
+                    <h1>🔐 Confirm 2FA Disable Request</h1>
                 </div>
                 
                 <!-- Content -->
-                <div style="padding: 40px 30px;">
-                    <p style="font-size: 16px; color: #1f2937; margin-bottom: 20px;">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
+                <div class="content">
+                    <p class="greeting">Hello <strong>{admin.first_name} {admin.last_name}</strong>,</p>
                     
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+                    <p class="message">
                         We received a request to <strong>disable Two-Factor Authentication (2FA)</strong> on your COMELEC Admin account.
                     </p>
                     
-                    <div style="background: #fee2e2; border-radius: 12px; padding: 20px; margin: 25px 0; border: 1px solid #fecaca;">
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="background: #ef4444; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-size: 24px; color: white;">⚠️</span>
+                    <!-- Alert Card -->
+                    <div class="alert-card">
+                        <div class="alert-row">
+                            <div class="alert-icon">
+                                <span>⚠️</span>
                             </div>
-                            <div style="flex: 1;">
-                                <p style="margin: 0 0 5px 0; color: #991b1b; font-weight: 600;">Security Alert</p>
-                                <p style="margin: 0; color: #b91c1c; font-size: 14px;">IP Address: {request.remote_addr}</p>
-                                <p style="margin: 0; color: #b91c1c; font-size: 14px;">Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
+                            <div class="alert-details">
+                                <p class="alert-title">Security Alert</p>
+                                <p class="alert-info">IP Address: {request.remote_addr}</p>
+                                <p class="alert-info">Time: {manila_time_str} (Philippine Time)</p>
                             </div>
                         </div>
                     </div>
                     
-                    <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin-bottom: 25px;">
+                    <p class="warning-text">
                         <strong>⚠️ Disabling 2FA makes your account less secure.</strong> Only proceed if you're sure.
                     </p>
                     
                     <!-- Two Buttons -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 25px auto;">
-                        <tr>
-                            <td style="padding: 5px;">
-                                <a href="{confirm_url}" style="
-                                    display: inline-block;
-                                    padding: 14px 30px;
-                                    background: linear-gradient(135deg, #ef4444, #dc2626);
-                                    color: #ffffff;
-                                    text-decoration: none;
-                                    border-radius: 40px;
-                                    font-weight: 600;
-                                    font-size: 16px;
-                                    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
-                                ">✅ Yes, Disable 2FA</a>
-                            </td>
-                            <td style="padding: 5px;">
-                                <a href="{cancel_url}" style="
-                                    display: inline-block;
-                                    padding: 14px 30px;
-                                    background: linear-gradient(135deg, #6b7280, #4b5563);
-                                    color: #ffffff;
-                                    text-decoration: none;
-                                    border-radius: 40px;
-                                    font-weight: 600;
-                                    font-size: 16px;
-                                    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-                                ">❌ No, Keep 2FA</a>
-                            </td>
-                        </tr>
-                    </table>
+                    <div class="button-group">
+                        <a href="{confirm_url}" class="btn-confirm">✅ Yes, Disable 2FA</a>
+                        <a href="{cancel_url}" class="btn-cancel">❌ No, Keep 2FA</a>
+                    </div>
                     
                     <!-- Cancel Link (text only) -->
-                    <div style="text-align: center; margin: 20px 0;">
-                        <p style="color: #6b7280; font-size: 14px;">
-                            <a href="{cancel_url}" style="color: #6b7280;">✖️ Or click here to cancel</a>
-                        </p>
+                    <div class="cancel-link">
+                        <a href="{cancel_url}">✖️ Or click here to cancel</a>
                     </div>
                     
                     <!-- Security Notice -->
-                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                        <p style="margin: 0; color: #856404; font-size: 14px;">
+                    <div class="security-notice">
+                        <p>
                             <strong>⚠️ Security Notice:</strong> This link will expire in <strong>15 minutes</strong>. 
                             If you didn't request this, click "No, Keep 2FA" immediately and change your password.
                         </p>
@@ -649,9 +943,9 @@ def send_2fa_disable_confirmation(admin, token):
                 </div>
                 
                 <!-- Footer -->
-                <div style="background: #f1f5f9; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="margin: 0; color: #64748b; font-size: 14px;">COMELEC Admin - CTU Moalboal</p>
-                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 12px;">This is an automated message, please do not reply.</p>
+                <div class="footer">
+                    <p>COMELEC Admin - CTU Moalboal</p>
+                    <small>This is an automated message, please do not reply.</small>
                 </div>
             </div>
         </body>

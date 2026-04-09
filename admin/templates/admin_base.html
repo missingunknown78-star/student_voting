@@ -159,39 +159,24 @@
         const schoolYearMeta = document.querySelector('meta[name="current-school-year"]');
         window.currentSchoolYear = schoolYearMeta ? schoolYearMeta.content : '';
         
-        // =============== SIDEBAR SCROLL POSITION PERSISTENCE ===============
+        // =============== SIDEBAR SCROLL POSITION PERSISTENCE - FIXED ===============
         (function() {
             const SCROLL_POSITION_KEY = 'adminSidebarScrollPosition';
             const sidebar = document.getElementById('sidebar');
             
             if (!sidebar) return;
             
-            // Check if we're on dashboard or first page after login
-            const isDashboard = window.location.pathname.includes('/admin/dashboard');
-            const isFirstVisit = !localStorage.getItem(SCROLL_POSITION_KEY);
+            // Check if we're on dashboard or login page
+            const currentPath = window.location.pathname;
+            const isDashboard = currentPath.includes('/admin/dashboard');
+            const isLoginPage = currentPath.includes('/admin/login');
             
-            // Save scroll position before navigating away
-            function setupScrollSave() {
-                const sidebarLinks = document.querySelectorAll('.sidebar-nav a:not([href*="logout"])');
-                
-                sidebarLinks.forEach(link => {
-                    link.addEventListener('click', function(e) {
-                        if (this.classList.contains('disabled-link')) return;
-                        
-                        // Save current scroll position
-                        const currentScroll = sidebar.scrollTop;
-                        localStorage.setItem(SCROLL_POSITION_KEY, currentScroll);
-                        console.log('Saved scroll position:', currentScroll);
-                    });
-                });
-            }
-            
-            // Function to scroll to active link
+            // Function to scroll active link to the middle of sidebar
             function scrollToActiveLink() {
                 const activeLink = document.querySelector('.sidebar-nav a.active');
                 if (!activeLink) return false;
                 
-                // Calculate position to show active link in the middle of sidebar
+                // Calculate position to show active link in the middle
                 const linkTop = activeLink.offsetTop;
                 const linkHeight = activeLink.offsetHeight;
                 const sidebarHeight = sidebar.clientHeight;
@@ -203,24 +188,56 @@
                 return true;
             }
             
-            // Restore scroll position - ONLY if not on dashboard or if there's a saved position
-            function restoreScrollPosition() {
+            // Clear saved scroll position (for fresh login)
+            function clearSavedScrollPosition() {
+                localStorage.removeItem(SCROLL_POSITION_KEY);
+                console.log('Cleared saved scroll position');
+            }
+            
+            // Save scroll position before navigating away
+            function setupScrollSave() {
+                const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+                
+                sidebarLinks.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        // Don't save position if it's the logout link
+                        if (this.getAttribute('href')?.includes('logout')) {
+                            clearSavedScrollPosition();
+                            return;
+                        }
+                        
+                        // Only save scroll position if NOT on dashboard
+                        if (!isDashboard) {
+                            const currentScroll = sidebar.scrollTop;
+                            localStorage.setItem(SCROLL_POSITION_KEY, currentScroll);
+                            console.log('Saved scroll position:', currentScroll);
+                        } else {
+                            // On dashboard, don't save position (clear it instead)
+                            console.log('On dashboard - not saving scroll position');
+                        }
+                    });
+                });
+            }
+            
+            // Restore scroll position or scroll to active link
+            function restoreOrScroll() {
                 if (!sidebar) return;
                 
-                const savedPosition = localStorage.getItem(SCROLL_POSITION_KEY);
-                
-                // On dashboard or first visit, always show active link instead of restoring position
-                if (isDashboard || isFirstVisit) {
-                    console.log('Dashboard or first visit - scrolling to active link');
+                // On dashboard or login page, always scroll to active link
+                if (isDashboard || isLoginPage) {
+                    console.log('Dashboard or login page - scrolling to active link');
+                    clearSavedScrollPosition();
                     scrollToActiveLink();
                     return;
                 }
                 
                 // For other pages, restore saved position if it exists
+                const savedPosition = localStorage.getItem(SCROLL_POSITION_KEY);
+                
                 if (savedPosition !== null) {
                     const position = parseInt(savedPosition);
                     
-                    // Multiple attempts to ensure it restores after content loads
+                    // Apply scroll position with multiple attempts to ensure it works
                     const applyScroll = function(attempt) {
                         setTimeout(() => {
                             sidebar.scrollTop = position;
@@ -263,12 +280,12 @@
                 }, 100);
             }
             
-            // Clear position on logout
+            // Clear position on logout (redundant but safe)
             function setupLogoutClear() {
                 const logoutLink = document.querySelector('.sidebar-nav a[href*="logout"]');
                 if (logoutLink) {
                     logoutLink.addEventListener('click', function() {
-                        localStorage.removeItem(SCROLL_POSITION_KEY);
+                        clearSavedScrollPosition();
                         console.log('Cleared scroll position on logout');
                     });
                 }
@@ -280,23 +297,23 @@
             
             // Restore position or scroll to active based on page
             window.addEventListener('load', function() {
-                restoreScrollPosition();
+                restoreOrScroll();
                 ensureActiveLinkVisible();
             });
             
             // Run after dynamic content might load
             setTimeout(() => {
                 if (document.readyState === 'complete') {
-                    restoreScrollPosition();
+                    restoreOrScroll();
                     ensureActiveLinkVisible();
                 }
             }, 300);
             setTimeout(() => {
-                restoreScrollPosition();
+                restoreOrScroll();
                 ensureActiveLinkVisible();
             }, 800);
             setTimeout(() => {
-                restoreScrollPosition();
+                restoreOrScroll();
                 ensureActiveLinkVisible();
             }, 1500);
             

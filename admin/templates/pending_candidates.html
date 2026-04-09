@@ -65,6 +65,170 @@
         width: 100%;
         box-sizing: border-box;
     }
+    
+    /* Bulk Action Bar Styles */
+    .bulk-action-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+    
+    :root.dark-mode .bulk-action-bar {
+        background: linear-gradient(135deg, #2d2d2d, #252525);
+        border-color: #404040;
+    }
+    
+    .bulk-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    .select-all-btn {
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .select-all-btn:hover {
+        background: #138496;
+        transform: translateY(-2px);
+    }
+    
+    .bulk-approve-btn {
+        background: linear-gradient(135deg, #27ae60, #229954);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .bulk-approve-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    }
+    
+    .bulk-reject-btn {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .bulk-reject-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    }
+    
+    .selected-count {
+        font-size: 0.9rem;
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    :root.dark-mode .selected-count {
+        color: #adb5bd;
+    }
+    
+    /* Selection Checkbox Column */
+    .select-col {
+        width: 40px;
+        text-align: center;
+    }
+    
+    .select-col input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #17a2b8;
+    }
+    
+    /* Edit Mode Button */
+    .edit-mode-btn {
+        background: #2c7be5;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .edit-mode-btn:hover {
+        background: #1a5bb8;
+        transform: translateY(-2px);
+    }
+    
+    .cancel-edit-btn {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .cancel-edit-btn:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+    
+    .action-buttons {
+        white-space: nowrap;
+    }
+    
+    /* Disabled state */
+    button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    
+    /* Hide edit mode button when not needed */
+    .edit-mode-btn.hidden {
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -151,11 +315,39 @@
         </form>
     </div>
 
+    <!-- Bulk Action Bar -->
+    <div class="bulk-action-bar" id="bulkActionBar" style="display: none;">
+        <div class="bulk-actions">
+            <button class="select-all-btn" id="selectAllBtn">
+                <i class="fa-solid fa-check-double"></i> Select All
+            </button>
+            <button class="bulk-approve-btn" id="bulkApproveBtn">
+                <i class="fa-solid fa-check-circle"></i> Approve Selected
+            </button>
+            <button class="bulk-reject-btn" id="bulkRejectBtn">
+                <i class="fa-solid fa-times-circle"></i> Reject Selected
+            </button>
+        </div>
+        <div class="selected-count" id="selectedCount">0 selected</div>
+        <button class="cancel-edit-btn" id="cancelEditBtn">
+            <i class="fa-solid fa-times"></i> Cancel
+        </button>
+    </div>
+
+    <!-- Edit Mode Toggle Button (only shown if pending_count >= 2) -->
+    {% set pending_count = stats.pending|int %}
+    <div style="margin-bottom: 15px;">
+        <button class="edit-mode-btn {% if pending_count < 2 %}hidden{% endif %}" id="editModeBtn">
+            <i class="fa-solid fa-check-square"></i> Select Applications
+        </button>
+    </div>
+
     <!-- Applications Table -->
     <div class="table-container" id="tableContainer">
         <table class="applications-table">
             <thead>
                 <tr>
+                    <th class="select-col" style="display: none;">Select</th>
                     <th>Photo</th>
                     <th>Student Name</th>
                     <th>Party List</th>
@@ -169,7 +361,10 @@
             <tbody id="applicationsBody">
                 {% if applications and applications|length > 0 %}
                     {% for app in applications %}
-                    <tr id="app-{{ app.id }}">
+                    <tr id="app-{{ app.id }}" data-id="{{ app.id }}" data-status="{{ app.status }}">
+                        <td class="select-col" style="display: none; text-align: center;">
+                            <input type="checkbox" class="app-checkbox" value="{{ app.id }}" {% if app.status != 'pending' %}disabled{% endif %}>
+                        </td>
                         <td>
                             {% if app.photo %}
                                 <img src="{{ url_for('admin.static', filename='images/' ~ app.photo) }}" 
@@ -227,7 +422,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="8" class="empty-state">
+                        <td colspan="9" class="empty-state">
                             <i class="fa-solid fa-inbox"></i>
                             <h3>No Applications Found</h3>
                             <p>There are no candidate applications to display.</p>
@@ -302,7 +497,44 @@
     </div>
 </div>
 
-<!-- Reject Modal with Reason -->
+<!-- Bulk Approve Confirmation Modal -->
+<div id="bulkApproveModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-check-circle" style="color: #27ae60;"></i> Bulk Approve Applications</h2>
+            <span class="close" onclick="closeModal('bulkApproveModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to approve <strong id="bulkApproveCount">0</strong> selected application(s)?</p>
+            <p class="warning-text">This will move all selected candidates to the official candidates list.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-approve-btn" id="confirmBulkApproveBtn">Yes, Approve All</button>
+            <button class="modal-cancel-btn" onclick="closeModal('bulkApproveModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Reject Modal with Reason -->
+<div id="bulkRejectModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-times-circle" style="color: #e74c3c;"></i> Bulk Reject Applications</h2>
+            <span class="close" onclick="closeModal('bulkRejectModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to reject <strong id="bulkRejectCount">0</strong> selected application(s)?</p>
+            <p style="margin-bottom: 12px; margin-top: 12px;">Please provide a reason for rejection (will be applied to all):</p>
+            <textarea id="bulkRejectReason" class="reject-textarea" placeholder="Enter reason for rejection..." rows="4"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-reject-btn" id="confirmBulkRejectBtn">Submit Rejections</button>
+            <button class="modal-cancel-btn" onclick="closeModal('bulkRejectModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal with Reason (Single) -->
 <div id="rejectModal" class="modal">
     <div class="modal-content" style="max-width: 450px;">
         <div class="modal-header">
@@ -331,12 +563,33 @@
 <script>
     let currentApplicationId = null;
     let searchTimeout = null;
+    let editMode = false;
+    let selectedIds = new Set();
     
     // DOM Elements
     const searchInput = document.getElementById('searchInput');
     const searchForm = document.getElementById('searchForm');
     const applicationsBody = document.getElementById('applicationsBody');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const editModeBtn = document.getElementById('editModeBtn');
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+    const bulkRejectBtn = document.getElementById('bulkRejectBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    // Count pending applications from stats
+    const pendingCount = parseInt(document.getElementById('statsPending')?.textContent || '0');
+    
+    // Show/hide edit mode button based on pending count
+    if (editModeBtn) {
+        if (pendingCount < 2) {
+            editModeBtn.style.display = 'none';
+        } else {
+            editModeBtn.style.display = 'inline-flex';
+        }
+    }
     
     // Real-time search - triggers on every keystroke
     if (searchInput) {
@@ -358,7 +611,7 @@
             
             // Show loading indicator
             searchForm.classList.add('loading');
-            applicationsBody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="loading-spinner"></div><p>Searching...</p></td></tr>';
+            applicationsBody.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="loading-spinner"></div><p>Searching...</p></td></tr>';
             
             // Debounce to avoid too many requests
             searchTimeout = setTimeout(() => {
@@ -376,9 +629,202 @@
         });
     }
     
+    // Edit Mode Toggle
+    if (editModeBtn) {
+        editModeBtn.addEventListener('click', function() {
+            editMode = true;
+            showCheckboxes(true);
+            bulkActionBar.style.display = 'flex';
+            editModeBtn.style.display = 'none';
+            updateSelectedCount();
+        });
+    }
+    
+    // Cancel Edit Mode
+    if (cancelEditBtn) {
+        cancelEditBtn.addEventListener('click', function() {
+            editMode = false;
+            selectedIds.clear();
+            showCheckboxes(false);
+            bulkActionBar.style.display = 'none';
+            if (editModeBtn && pendingCount >= 2) {
+                editModeBtn.style.display = 'inline-flex';
+            }
+            updateSelectedCount();
+        });
+    }
+    
+    // Show/Hide checkboxes
+    function showCheckboxes(show) {
+        const selectCols = document.querySelectorAll('.select-col');
+        selectCols.forEach(col => {
+            col.style.display = show ? 'table-cell' : 'none';
+        });
+        
+        if (!show) {
+            // Uncheck all checkboxes
+            const checkboxes = document.querySelectorAll('.app-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+        }
+    }
+    
+    // Update selected count and buttons
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.app-checkbox:checked');
+        selectedCountSpan.textContent = `${checkboxes.length} selected`;
+        
+        // Enable/disable bulk buttons based on selection
+        const hasSelection = checkboxes.length > 0;
+        bulkApproveBtn.disabled = !hasSelection;
+        bulkRejectBtn.disabled = !hasSelection;
+    }
+    
+    // Select All functionality
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.app-checkbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+            updateSelectedCount();
+        });
+    }
+    
+    // Listen for checkbox changes
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('app-checkbox')) {
+            updateSelectedCount();
+        }
+    });
+    
+    // Bulk Approve
+    if (bulkApproveBtn) {
+        bulkApproveBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.app-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (ids.length === 0) {
+                showToast('No applications selected', 'error');
+                return;
+            }
+            
+            document.getElementById('bulkApproveCount').textContent = ids.length;
+            currentApplicationId = ids; // Store array of IDs
+            document.getElementById('bulkApproveModal').style.display = 'flex';
+        });
+    }
+    
+    // Bulk Reject
+    if (bulkRejectBtn) {
+        bulkRejectBtn.addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('.app-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (ids.length === 0) {
+                showToast('No applications selected', 'error');
+                return;
+            }
+            
+            document.getElementById('bulkRejectCount').textContent = ids.length;
+            currentApplicationId = ids; // Store array of IDs
+            document.getElementById('bulkRejectReason').value = '';
+            document.getElementById('bulkRejectModal').style.display = 'flex';
+        });
+    }
+    
+    // Confirm Bulk Approve
+    document.getElementById('confirmBulkApproveBtn').addEventListener('click', function() {
+        const ids = currentApplicationId;
+        if (!ids || ids.length === 0) return;
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving...';
+        
+        fetch('/ctumoalboal-comelec/bulk-approve-pending', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ ids: ids })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`✅ ${data.approved_count} application(s) approved successfully!`, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                closeModal('bulkApproveModal');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('❌ Error approving applications', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            closeModal('bulkApproveModal');
+        });
+    });
+    
+    // Confirm Bulk Reject
+    document.getElementById('confirmBulkRejectBtn').addEventListener('click', function() {
+        const ids = currentApplicationId;
+        if (!ids || ids.length === 0) return;
+        
+        const reason = document.getElementById('bulkRejectReason').value.trim();
+        if (!reason) {
+            showToast('Please provide a reason for rejection.', 'error');
+            return;
+        }
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Rejecting...';
+        
+        fetch('/ctumoalboal-comelec/bulk-reject-pending', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ ids: ids, reason: reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`✅ ${data.rejected_count} application(s) rejected.`, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast('❌ Error: ' + (data.message || 'Unknown error'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                closeModal('bulkRejectModal');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('❌ Error rejecting applications', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            closeModal('bulkRejectModal');
+        });
+    });
+    
     function submitSearch() {
         const form = searchForm;
-        const formData = new FormData(form);
         const searchValue = searchInput.value;
         
         let url = window.location.pathname + '?';
@@ -392,7 +838,6 @@
         })
         .then(response => response.text())
         .then(html => {
-            // Extract the table body content from the response
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const newBody = doc.getElementById('applicationsBody');
@@ -411,6 +856,11 @@
             }
             
             searchForm.classList.remove('loading');
+            
+            // Reapply edit mode if active
+            if (editMode) {
+                showCheckboxes(true);
+            }
         })
         .catch(error => {
             console.error('Error:', error);
@@ -512,7 +962,7 @@
         document.getElementById('lightbox').style.display = 'none';
     }
     
-    // Approve button click handler
+    // Approve button click handler (single)
     document.getElementById('confirmApproveBtn').addEventListener('click', function() {
         if (!currentApplicationId) {
             showToast('No application selected', 'error');
@@ -554,7 +1004,7 @@
         });
     });
     
-    // Reject button click handler
+    // Reject button click handler (single)
     document.getElementById('confirmRejectBtn').addEventListener('click', function() {
         if (!currentApplicationId) {
             showToast('No application selected', 'error');
@@ -818,6 +1268,11 @@ button:disabled {
 
 :root.dark-mode .warning-text {
     color: #ff6b6b;
+}
+
+/* Hidden class for edit mode button */
+.edit-mode-btn.hidden {
+    display: none;
 }
 </style>
 {% endblock %}

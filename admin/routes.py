@@ -5172,6 +5172,168 @@ def reject_pending(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+
+@admin_bp.route('/bulk-approve-pending', methods=['POST'])
+@login_required
+def bulk_approve_pending():
+    """Bulk approve multiple pending candidate applications"""
+    from student.models import PendingCandidate
+    from datetime import datetime
+    
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return jsonify({'success': False, 'message': 'No applications selected'}), 400
+        
+        approved_count = 0
+        errors = []
+        
+        for app_id in ids:
+            try:
+                pending = PendingCandidate.query.get(app_id)
+                if not pending:
+                    errors.append(f'Application {app_id} not found')
+                    continue
+                
+                if pending.status != 'pending':
+                    errors.append(f'Application {pending.first_name} {pending.last_name} is no longer pending')
+                    continue
+                
+                # Check if candidate already exists
+                existing = Candidate.query.filter_by(
+                    first_name=pending.first_name,
+                    last_name=pending.last_name,
+                    election_id=pending.election_id
+                ).first()
+                
+                if existing:
+                    pending.status = 'rejected'
+                    pending.rejection_reason = f'Bulk approve failed: Candidate with same name already exists in this election'
+                    pending.reviewed_at = datetime.utcnow()
+                    db.session.commit()
+                    errors.append(f'{pending.first_name} {pending.last_name}: Duplicate candidate exists')
+                    continue
+                
+                # Create new candidate
+                new_candidate = Candidate(
+                    first_name=pending.first_name,
+                    last_name=pending.last_name,
+                    party_list=pending.party_list,
+                    platform=pending.platform,
+                    department_id=pending.department_id,
+                    course_id=pending.course_id,
+                    year_level_id=pending.year_level_id,
+                    position_id=pending.position_id,
+                    election_id=pending.election_id,
+                    scope=pending.scope,
+                    photo=pending.photo
+                )
+                
+                db.session.add(new_candidate)
+                
+                # Update pending record
+                pending.status = 'approved'
+                pending.reviewed_at = datetime.utcnow()
+                if hasattr(current_user, 'id'):
+                    pending.reviewed_by = current_user.id
+                
+                approved_count += 1
+                
+            except Exception as e:
+                errors.append(f'Error processing application {app_id}: {str(e)}')
+        
+        db.session.commit()
+        
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='BULK_APPROVE_CANDIDATES',
+            description=f"Admin user '{username}' bulk approved {approved_count} candidate applications from IP: {ip}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'approved_count': approved_count,
+            'errors': errors if errors else None,
+            'message': f'Successfully approved {approved_count} application(s)'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in bulk_approve_pending: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/bulk-reject-pending', methods=['POST'])
+@login_required
+def bulk_reject_pending():
+    """Bulk reject multiple pending candidate applications"""
+    from student.models import PendingCandidate
+    from datetime import datetime
+    
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+        reason = data.get('reason', 'Bulk rejection')
+        
+        if not ids:
+            return jsonify({'success': False, 'message': 'No applications selected'}), 400
+        
+        if not reason:
+            return jsonify({'success': False, 'message': 'Rejection reason is required'}), 400
+        
+        rejected_count = 0
+        errors = []
+        
+        for app_id in ids:
+            try:
+                pending = PendingCandidate.query.get(app_id)
+                if not pending:
+                    errors.append(f'Application {app_id} not found')
+                    continue
+                
+                if pending.status != 'pending':
+                    errors.append(f'Application {pending.first_name} {pending.last_name} is no longer pending')
+                    continue
+                
+                pending.status = 'rejected'
+                pending.rejection_reason = reason
+                pending.reviewed_at = datetime.utcnow()
+                if hasattr(current_user, 'id'):
+                    pending.reviewed_by = current_user.id
+                
+                rejected_count += 1
+                
+            except Exception as e:
+                errors.append(f'Error processing application {app_id}: {str(e)}')
+        
+        db.session.commit()
+        
+        username = getattr(current_user, 'username', 'Unknown')
+        ip = request.remote_addr
+        
+        log_audit(
+            action='BULK_REJECT_CANDIDATES',
+            description=f"Admin user '{username}' bulk rejected {rejected_count} candidate applications from IP: {ip} | Reason: {reason[:100]}..."
+        )
+        
+        return jsonify({
+            'success': True,
+            'rejected_count': rejected_count,
+            'errors': errors if errors else None,
+            'message': f'Successfully rejected {rejected_count} application(s)'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in bulk_reject_pending: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+        
 # ---------------------- Departments & Courses ---------------------- #
 @admin_bp.route('/departments')
 @admin_required
@@ -7097,7 +7259,14 @@ def election_results(election_id):
             latest_tally = TallyVote.query.filter_by(
                 election_id=election_id
             ).order_by(TallyVote.tally_timestamp.desc()).first()
-            tally_timestamp = latest_tally.tally_timestamp if latest_tally else None
+            if latest_tally and latest_tally.tally_timestamp:
+                # Convert UTC timestamp to Manila timezone
+                tally_utc = latest_tally.tally_timestamp
+                # If the timestamp is naive (no timezone), assume it's UTC
+                if tally_utc.tzinfo is None:
+                    tally_utc = pytz.UTC.localize(tally_utc)
+                # Convert to Manila timezone
+                tally_timestamp = tally_utc.astimezone(tz)
     
     # Get all candidates
     candidates = Candidate.query.filter_by(election_id=election_id).all()

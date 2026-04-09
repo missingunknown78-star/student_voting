@@ -71,6 +71,8 @@
         align-items: center;
         gap: 8px;
         transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
     
     .save-btn:hover {
@@ -78,18 +80,72 @@
         box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
     }
     
+    /* Spinning animation for button */
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    
+    .save-btn.spinning .btn-icon {
+        animation: spin 0.5s ease-in-out;
+    }
+    
+    /* Disabled button state */
+    .save-btn.submitting {
+        opacity: 0.8;
+        cursor: wait;
+        pointer-events: none;
+    }
+    
+    /* Circular spinner */
+    @keyframes spinner-rotate {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+    
+    .btn-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spinner-rotate 0.8s linear infinite;
+        margin-right: 8px;
+    }
+    
     .back-link {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 20px;
         color: var(--text-color);
         text-decoration: none;
         font-weight: 500;
+        transition: all 0.3s ease;
     }
     
     .back-link:hover {
         color: var(--primary-blue);
+        transform: translateX(-3px);
+    }
+    
+    /* Bottom action bar */
+    .bottom-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        margin-bottom: 50px;
+        gap: 20px;
+        flex-wrap: wrap;
     }
     
     .info-note {
@@ -112,40 +168,160 @@
         color: var(--text-secondary);
         margin-top: 5px;
     }
+    
+    /* ==================== FLOATING FLASH MESSAGES ==================== */
+    .flash-container {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10000;
+        min-width: 300px;
+        max-width: 500px;
+        pointer-events: none;
+    }
+    
+    .flash-message {
+        background: white;
+        border-radius: 12px;
+        padding: 14px 20px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        animation: slideDown 0.3s ease forwards;
+        pointer-events: auto;
+        border-left: 5px solid;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .flash-message.success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border-left-color: #064e3b;
+    }
+    
+    .flash-message.error,
+    .flash-message.danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        border-left-color: #7f1d1d;
+    }
+    
+    .flash-message.warning {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        border-left-color: #78350f;
+    }
+    
+    .flash-message.info {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border-left-color: #1e3a8a;
+    }
+    
+    .flash-message i {
+        font-size: 20px;
+    }
+    
+    .flash-message .flash-close-btn {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .flash-message .flash-close-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-20px);
+            display: none;
+        }
+    }
+    
+    /* Dark mode flash messages */
+    .dark-mode .flash-message {
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .guidelines-settings-container {
+            margin-left: 0;
+            padding: 20px;
+        }
+        
+        .flash-container {
+            width: 90%;
+            min-width: auto;
+        }
+        
+        .flash-message {
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        
+        .bottom-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+        
+        .save-btn {
+            justify-content: center;
+        }
+        
+        .back-link {
+            justify-content: center;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="guidelines-settings-container">
-    <a href="{{ url_for('admin.announcements') }}" class="back-link">
-        <i class="fa-solid fa-arrow-left"></i> Back to Announcements
-    </a>
-    
     <h2 class="announcements-title">📋 Voting Guidelines Settings</h2>
     <p class="page-description">Customize the voting guidelines shown on the student guidelines page</p>
     
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-container">
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">
-                        <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
-                        {{ message|replace('announcements_page:', '') }}
-                        <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
-                        <div class="flash-progress"></div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-    
     <div class="info-note">
         <i class="fa-solid fa-info-circle"></i> 
-        Changes made here will immediately reflect on the student voting guidelines page. Use bullet points (•) for lists and number them for steps.
+        Changes made here will immediately reflect on the student voting guidelines page.
     </div>
     
-    <form method="POST" action="{{ url_for('admin.guidelines_settings') }}">
+    <form method="POST" action="{{ url_for('admin.guidelines_settings') }}" id="guidelinesForm">
         <!-- Purpose Card -->
         <div class="settings-card">
             <h3><i class="fa-solid fa-bullseye"></i> Purpose of the Election</h3>
@@ -203,32 +379,86 @@
             </div>
         </div>
         
-        <!-- Save Button -->
-        <div style="margin-top: 30px; margin-bottom: 50px;">
-            <button type="submit" class="save-btn">
-                <i class="fa-solid fa-save"></i> Save Guidelines
+        <!-- Bottom Actions: Save Button (Left) and Back Button (Right) -->
+        <div class="bottom-actions">
+            <button type="submit" class="save-btn" id="saveBtn">
+                <i class="fa-solid fa-save btn-icon"></i> Save Guidelines
             </button>
+            
+            <a href="{{ url_for('admin.announcements') }}" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i> Back to Announcements
+            </a>
         </div>
     </form>
 </div>
 
+<!-- Flash Messages Container (Floating) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-container" id="flashContainer">
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                    <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' or category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-info-circle{% endif %}"></i>
+                    <span>{{ message|replace('announcements_page:', '') }}</span>
+                    <button class="flash-close-btn" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
 <script>
-// Auto-dismiss flash messages
+// Add spinning effect to button on click
+function addSpinningEffect(button) {
+    button.classList.add('spinning');
+    setTimeout(() => {
+        button.classList.remove('spinning');
+    }, 500);
+}
+
+// Handle form submission
+const form = document.getElementById('guidelinesForm');
+const saveBtn = document.getElementById('saveBtn');
+
+if (form) {
+    form.addEventListener('submit', function(e) {
+        if (saveBtn) {
+            // Add spinning effect
+            addSpinningEffect(saveBtn);
+            
+            // Change button to submitting state
+            saveBtn.classList.add('submitting');
+            saveBtn.innerHTML = '<span class="btn-spinner"></span> Saving Guidelines...';
+            saveBtn.disabled = true;
+        }
+        // Allow form to submit normally
+    });
+}
+
+// Auto-dismiss flash messages after 5 seconds
 document.addEventListener('DOMContentLoaded', function() {
     const flashMessages = document.querySelectorAll('.flash-message');
     
     flashMessages.forEach(message => {
+        // Auto dismiss after 5 seconds
         setTimeout(() => {
             if (message.parentElement) {
                 message.style.animation = 'fadeOut 0.5s ease forwards';
                 setTimeout(() => {
                     if (message.parentElement) {
                         message.remove();
+                        
+                        // Remove container if empty
+                        const container = document.getElementById('flashContainer');
+                        if (container && container.children.length === 0) {
+                            container.remove();
+                        }
                     }
                 }, 500);
             }
         }, 5000);
         
+        // Close button functionality
         const closeBtn = message.querySelector('.flash-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', function() {
@@ -236,6 +466,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(() => {
                     if (message.parentElement) {
                         message.remove();
+                        
+                        // Remove container if empty
+                        const container = document.getElementById('flashContainer');
+                        if (container && container.children.length === 0) {
+                            container.remove();
+                        }
                     }
                 }, 500);
             });

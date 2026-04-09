@@ -107,6 +107,7 @@ body {
 /* ==================== PAGE LAYOUT ==================== */
 .container {
     margin-left: var(--sidebar-width);  /* Match sidebar width */
+    padding-top: 5px !important; /* Slight padding to prevent content shift during animation */
     padding: 30px 40px;
     min-height: 100vh;
     box-sizing: border-box;

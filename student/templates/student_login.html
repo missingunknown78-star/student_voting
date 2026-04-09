@@ -101,6 +101,122 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* ================= FLOATING NOTIFICATION STYLES ================= */
+.floating-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    animation: slideInRight 0.3s ease-out;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    max-width: 280px;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.floating-notification:hover {
+    transform: translateY(-2px);
+}
+
+.floating-notification.success {
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+}
+
+.floating-notification.error {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.floating-notification.info {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+}
+
+.floating-notification.warning {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
+.floating-notification .notification-icon {
+    font-size: 16px;
+}
+
+.floating-notification .notification-text {
+    flex: 1;
+}
+
+.floating-notification .close-notification {
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    margin-left: 8px;
+    line-height: 1;
+}
+
+.floating-notification .close-notification:hover {
+    opacity: 1;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.floating-notification.hide {
+    animation: slideOutRight 0.3s ease-out forwards;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+    .floating-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        padding: 8px 15px;
+        font-size: 12px;
+        border-radius: 40px;
+    }
+}
+
+/* Compact mode for very small screens */
+@media (max-width: 480px) {
+    .floating-notification {
+        top: 8px;
+        right: 8px;
+        left: 8px;
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+}
 </style>
 </head>
 <body>
@@ -117,12 +233,12 @@
 
         <h2>Voting Portal</h2>
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages - Hidden but kept for functionality -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     {% if not category.startswith('admin') %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                        <div class="alert alert-{{ category }}" style="display:none;" data-message="{{ message }}" data-category="{{ category }}">{{ message }}</div>
                     {% endif %}
                 {% endfor %}
             {% endif %}
@@ -149,7 +265,6 @@
             <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
 
             <div class="options">
-                <label><input type="checkbox" name="remember"> Remember Me</label>
                 <a href="javascript:void(0);" id="forgotPasswordLink">Forgot Password?</a>
             </div>
 
@@ -193,6 +308,94 @@
 
     </div>
 </div>
+
+<!-- ================= FLOATING NOTIFICATION SYSTEM ================= -->
+<script>
+// Floating notification handler
+function showFloatingNotification(message, category = 'success') {
+    // Remove any existing notifications
+    const existingNotification = document.querySelector('.floating-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `floating-notification ${category}`;
+    
+    // Set icon based on category
+    let icon = '✓';
+    if (category === 'error') icon = '✗';
+    if (category === 'info') icon = 'ℹ';
+    if (category === 'warning') icon = '⚠';
+    
+    notification.innerHTML = `
+        <span class="notification-icon">${icon}</span>
+        <span class="notification-text">${escapeHtml(message)}</span>
+        <span class="close-notification">×</span>
+    `;
+    
+    // Add to body
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    const timeout = setTimeout(() => {
+        removeNotification(notification);
+    }, 5000);
+    
+    // Add click handler to close button
+    const closeBtn = notification.querySelector('.close-notification');
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearTimeout(timeout);
+        removeNotification(notification);
+    });
+    
+    // Also close when clicking on notification (optional)
+    notification.addEventListener('click', (e) => {
+        if (e.target !== closeBtn && e.target !== notification.querySelector('.close-notification')) {
+            clearTimeout(timeout);
+            removeNotification(notification);
+        }
+    });
+}
+
+function removeNotification(notification) {
+    notification.classList.add('hide');
+    setTimeout(() => {
+        if (notification && notification.parentNode) {
+            notification.remove();
+        }
+    }, 300);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Check for flash messages on page load and show as floating notifications
+document.addEventListener('DOMContentLoaded', function() {
+    // Find all hidden alert messages
+    const flashMessages = document.querySelectorAll('.alert');
+    
+    flashMessages.forEach(function(msg) {
+        const message = msg.getAttribute('data-message') || msg.innerText;
+        let category = msg.getAttribute('data-category') || 'success';
+        
+        // Map Flask categories to notification categories
+        let notificationCategory = 'success';
+        if (category === 'danger' || category === 'error') notificationCategory = 'error';
+        if (category === 'warning') notificationCategory = 'warning';
+        if (category === 'info') notificationCategory = 'info';
+        
+        if (message && message.trim()) {
+            showFloatingNotification(message, notificationCategory);
+        }
+    });
+});
+</script>
 
 <!-- ================= LOGIN FORM HANDLER ================= -->
 <script>

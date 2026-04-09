@@ -23,6 +23,7 @@ html {
 
 .manage-students-page {
     animation: quickFadeIn 0.1s ease-out;
+    padding-top: 5px !important; /* Slight padding to prevent content shift during animation */
 }
 
 /* ==================== CSS VARIABLES ==================== */
@@ -464,6 +465,7 @@ html {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding-top: 10px !important;
     margin-bottom: 10px;
     width: 100%;
     flex-wrap: wrap;
