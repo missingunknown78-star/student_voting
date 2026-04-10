@@ -76,12 +76,23 @@
                 {% for candidate in position_data.candidates %}
                 <label class="candidate-row" for="candidate-{{ candidate.id }}">
                     <div class="candidate-info">
-                        <!-- Avatar with initials -->
+                        <!-- Avatar with initials - handle studio candidates -->
                         <div class="candidate-avatar">
-                            <span class="candidate-initials">{{ candidate.first_name[0] }}{{ candidate.last_name[0] }}</span>
+                            {% if candidate.candidate_type == 'studio' %}
+                                <span class="candidate-initials">{{ candidate.studio_name[0]|upper if candidate.studio_name else 'S' }}</span>
+                            {% else %}
+                                <span class="candidate-initials">{{ candidate.first_name[0] }}{{ candidate.last_name[0] }}</span>
+                            {% endif %}
                         </div>
                         <div class="candidate-details">
-                            <span class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</span>
+                            <!-- Candidate Name - conditional display -->
+                            <span class="candidate-name">
+                                {% if candidate.candidate_type == 'studio' %}
+                                    {{ candidate.studio_name }}
+                                {% else %}
+                                    {{ candidate.first_name }} {{ candidate.last_name }}
+                                {% endif %}
+                            </span>
                             
                             <div class="candidate-course">
                                 {% if candidate.party_list and candidate.party_list.strip() %}

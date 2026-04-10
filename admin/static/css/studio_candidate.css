@@ -1,0 +1,113 @@
+/* Studio Candidate Styles - Separate file to avoid conflicts */
+
+/* Candidate Type Selector Styles */
+.candidate-type-selector {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.candidate-type-selector h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.type-options {
+    display: flex;
+    gap: 20px;
+}
+
+.type-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.type-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+.type-option label {
+    cursor: pointer;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.type-option i {
+    font-size: 1.1rem;
+}
+
+.type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.type-badge.student {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.type-badge.studio {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Studio Fields Container */
+.studio-fields-container {
+    animation: fadeIn 0.3s ease;
+}
+
+.student-fields-container {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dark mode support */
+:root.dark-mode .candidate-type-selector {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+:root.dark-mode .type-option label {
+    color: #e2e8f0;
+}
+
+:root.dark-mode .type-badge.student {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+:root.dark-mode .type-badge.studio {
+    background: #78350f;
+    color: #fde68a;
+}
+
+/* Studio form group spacing */
+.studio-fields-container .form-row {
+    margin-bottom: 15px;
+}
+
+.studio-fields-container .form-group.full-width {
+    width: 100%;
+}

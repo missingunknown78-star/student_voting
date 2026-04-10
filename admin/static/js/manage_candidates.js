@@ -115,6 +115,7 @@ function attachEditButtonListeners() {
 }
 
 // Handle edit button click - WITH PLATFORM HANDLING
+// Update the handleEditClick function to include studio data
 function handleEditClick(e) {
     e.preventDefault();
     
@@ -123,58 +124,66 @@ function handleEditClick(e) {
     
     const btn = this;
     const id = btn.dataset.id;
+    const candidateType = btn.dataset.candidateType || 'student';
+    
     document.getElementById('edit_id').value = id;
-    document.getElementById('edit_first').value = btn.dataset.first;
-    document.getElementById('edit_last').value = btn.dataset.last;
+    document.getElementById('edit_candidate_type').value = candidateType;
+    
+    // Set common fields
     document.getElementById('edit_party_list').value = btn.dataset.party || '';
-    
-    // Set year level if available
-    if (btn.dataset.year_level_id) {
-        document.getElementById('edit_year_level').value = btn.dataset.year_level_id;
-    }
-    
-    // Set platform if available - FIXED: Handle platform correctly
-    if (btn.dataset.platform) {
-        document.getElementById('edit_platform').value = btn.dataset.platform;
-    } else {
-        document.getElementById('edit_platform').value = '';
-    }
-    
+    document.getElementById('edit_platform').value = btn.dataset.platform || '';
     document.getElementById('edit_position').value = btn.dataset.position;
-    
-    // Handle scope and department
-    const scope = btn.dataset.scope || 'campus';
-    document.getElementById('edit_scope').value = scope;
-    
-    // Set department
+    document.getElementById('edit_election').value = btn.dataset.election;
+    document.getElementById('edit_scope').value = btn.dataset.scope || 'campus';
     document.getElementById('edit_department').value = btn.dataset.department_id || '';
     
-    // Load courses for the department
+    // Set course after department loads
     if (btn.dataset.department_id) {
-        // Set a timeout to ensure courses are loaded before setting the value
         loadCourses('edit', btn.dataset.department_id).then(() => {
-            // Set course after courses are loaded
             if (btn.dataset.course_id) {
                 setTimeout(() => {
                     document.getElementById('edit_course').value = btn.dataset.course_id;
                 }, 100);
             }
         });
-    } else {
-        // Clear course dropdown if no department
-        const courseSelect = document.getElementById('edit_course');
-        courseSelect.innerHTML = '<option value="">Select course</option>';
     }
     
-    // Get the election select element
+    // Handle candidate type specific fields
+    if (candidateType === 'studio') {
+        // Studio candidate
+        const studioName = btn.dataset.studioName || '';
+        setupEditModalType('studio', studioName, '', '', '');
+    } else {
+        // Student candidate
+        const firstName = btn.dataset.first || '';
+        const lastName = btn.dataset.last || '';
+        const yearLevelId = btn.dataset.yearLevelId || '';
+        setupEditModalType('student', '', firstName, lastName, yearLevelId);
+    }
+    
+    // Filter elections based on scope
+    const scope = btn.dataset.scope || 'campus';
+    filterElectionsByScopeForEdit(scope, btn.dataset.department_id, btn.dataset.election);
+    
+    // Hide any existing notifications
+    const editNotification = document.getElementById('editCandidateNotification');
+    if (editNotification) {
+        editNotification.style.display = 'none';
+    }
+    
+    document.getElementById('editCandidateModal').style.display = 'flex';
+}
+
+// Helper function to filter elections for edit modal
+function filterElectionsByScopeForEdit(scope, departmentId, selectedElectionId) {
     const editElection = document.getElementById('edit_election');
     
-    // First, hide all options
+    // Hide all options first
     for (let i = 0; i < editElection.options.length; i++) {
         editElection.options[i].style.display = 'none';
     }
     
-    // Show the placeholder option
+    // Show placeholder
     for (let i = 0; i < editElection.options.length; i++) {
         if (editElection.options[i].value === "") {
             editElection.options[i].style.display = 'block';
@@ -183,27 +192,24 @@ function handleEditClick(e) {
     }
     
     if (scope === 'department') {
-        // Show only department elections for the selected department
-        const departmentId = btn.dataset.department_id;
-        if (departmentId) {
-            for (let i = 0; i < editElection.options.length; i++) {
-                const option = editElection.options[i];
-                if (option.value === "") continue;
-                
-                const optionScope = option.getAttribute('data-scope');
-                const optionDept = option.getAttribute('data-department');
-                
-                if (optionScope === 'department' && optionDept === departmentId) {
-                    option.style.display = 'block';
-                }
+        // Show department elections
+        for (let i = 0; i < editElection.options.length; i++) {
+            const option = editElection.options[i];
+            if (option.value === "") continue;
+            
+            const optionScope = option.getAttribute('data-scope');
+            const optionDept = option.getAttribute('data-department');
+            
+            if (optionScope === 'department' && optionDept === departmentId) {
+                option.style.display = 'block';
             }
         }
     } else {
-        // Show only campus elections
+        // Show campus elections
         for (let i = 0; i < editElection.options.length; i++) {
             const option = editElection.options[i];
             if (option.value === "") {
-                option.style.display = 'block'; // Keep placeholder visible
+                option.style.display = 'block';
                 continue;
             }
             
@@ -214,16 +220,10 @@ function handleEditClick(e) {
         }
     }
     
-    // Set the election value after filtering
-    document.getElementById('edit_election').value = btn.dataset.election;
-
-    // Hide any existing notifications in edit modal
-    const editNotification = document.getElementById('editCandidateNotification');
-    if (editNotification) {
-        editNotification.style.display = 'none';
+    // Set selected election
+    if (selectedElectionId) {
+        editElection.value = selectedElectionId;
     }
-    
-    document.getElementById('editCandidateModal').style.display = 'flex';
 }
 
 // Display school year info if filtered
@@ -628,13 +628,12 @@ function filterCandidates(page = null, keepPage = false) {
     });
 }
 
-/* Update table with new data - MODIFIED to show beautiful empty state */
+/* Update table with new data */
 function updateTable(candidates, pagination) {
     const tbody = document.getElementById('candidatesTableBody');
     if (!tbody) return;
 
     if (!candidates || candidates.length === 0) {
-        // Create beautiful empty state with 7 columns colspan
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" style="padding: 0;">
@@ -669,6 +668,14 @@ function updateTable(candidates, pagination) {
         const scopeDisplay = scopeClass.charAt(0).toUpperCase() + scopeClass.slice(1);
         const electionTitle = escapeHtml(c.election_title) || 'No Election';
         
+        // Determine display name based on candidate type
+        let displayName = '';
+        if (c.candidate_type === 'studio') {
+            displayName = escapeHtml(c.studio_name || '');
+        } else {
+            displayName = escapeHtml((c.first_name || '') + ' ' + (c.last_name || ''));
+        }
+        
         html += `
             <tr id="candidate-${c.id}">
                 <td>
@@ -676,7 +683,7 @@ function updateTable(candidates, pagination) {
                         `<img src="${c.photo}" class="candidate-photo clickable-photo" alt="Candidate Photo">` : 
                         '<span>No Photo</span>'}
                 </td>
-                <td>${escapeHtml(c.first_name || '')} ${escapeHtml(c.last_name || '')}</td>
+                <td>${displayName}</td>
                 <td>${escapeHtml(c.party_list) || 'Independent'}</td>
                 <td>${escapeHtml(c.department) || 'N/A'}</td>
                 <td>${escapeHtml(c.position) || ''}</td>
@@ -690,12 +697,14 @@ function updateTable(candidates, pagination) {
                     <div class="action-buttons">
                         <a href="#" class="edit-btn openEditModal" 
                         data-id="${c.id}" 
+                        data-candidate-type="${c.candidate_type || 'student'}"
                         data-first="${escapeHtml(c.first_name) || ''}" 
                         data-last="${escapeHtml(c.last_name) || ''}" 
+                        data-studio-name="${escapeHtml(c.studio_name) || ''}"
                         data-party="${escapeHtml(c.party_list) || ''}"
                         data-platform="${escapeHtml(c.platform) || ''}"
-                        data-year_level_id="${c.year_level_id || ''}"
-                        data-year_level_name="${escapeHtml(c.year_level) || ''}"
+                        data-year-level-id="${c.year_level_id || ''}"
+                        data-year-level-name="${escapeHtml(c.year_level) || ''}"
                         data-position="${c.position_id || ''}" 
                         data-election="${c.election_id || ''}" 
                         data-department="${escapeHtml(c.department) || ''}"
@@ -1296,6 +1305,88 @@ function deleteCandidate(candidateId) {
     `;
     document.head.appendChild(style);
 })();
+
+
+// Setup edit modal type (for studio/student candidates)
+function setupEditModalType(candidateType, studioName, firstName, lastName, yearLevelId) {
+    const editTypeDisplay = document.getElementById('edit_type_display');
+    const editStudentFields = document.getElementById('editStudentFields');
+    const editStudioFields = document.getElementById('editStudioFields');
+    const editCandidateType = document.getElementById('edit_candidate_type');
+    const editPartyListField = document.getElementById('edit_party_list')?.closest('.form-row');
+    const editPlatformField = document.getElementById('edit_platform')?.closest('.form-group');
+    
+    if (!editTypeDisplay) return;
+    
+    // Set the hidden candidate type field
+    if (editCandidateType) editCandidateType.value = candidateType;
+    
+    if (candidateType === 'studio') {
+        // Show studio type
+        editTypeDisplay.innerHTML = '<i class="fa-solid fa-video"></i> Studio Candidate';
+        editTypeDisplay.style.background = '#f59e0b';
+        
+        // Show studio fields, hide student fields
+        if (editStudentFields) editStudentFields.style.display = 'none';
+        if (editStudioFields) editStudioFields.style.display = 'block';
+        
+        // Hide party list and platform for studio candidates in edit modal
+        if (editPartyListField) editPartyListField.style.display = 'none';
+        if (editPlatformField) editPlatformField.style.display = 'none';
+        
+        // Set studio name
+        const studioNameInput = document.getElementById('edit_studio_name');
+        if (studioNameInput) studioNameInput.value = studioName || '';
+        
+        // Make studio name required
+        if (studioNameInput) studioNameInput.required = true;
+        
+        // Make student fields not required
+        const editFirstName = document.getElementById('edit_first');
+        const editLastName = document.getElementById('edit_last');
+        const editYearLevel = document.getElementById('edit_year_level');
+        const editDepartment = document.getElementById('edit_department');
+        const editCourse = document.getElementById('edit_course');
+        
+        if (editFirstName) editFirstName.required = false;
+        if (editLastName) editLastName.required = false;
+        if (editYearLevel) editYearLevel.required = false;
+        if (editDepartment) editDepartment.required = false;
+        if (editCourse) editCourse.required = false;
+        
+    } else {
+        // Show student type
+        editTypeDisplay.innerHTML = '<i class="fa-solid fa-user-graduate"></i> Student Candidate';
+        editTypeDisplay.style.background = '#3b82f6';
+        
+        // Show student fields, hide studio fields
+        if (editStudentFields) editStudentFields.style.display = 'block';
+        if (editStudioFields) editStudioFields.style.display = 'none';
+        
+        // Show party list and platform for student candidates in edit modal
+        if (editPartyListField) editPartyListField.style.display = 'block';
+        if (editPlatformField) editPlatformField.style.display = 'block';
+        
+        // Set student name fields
+        const editFirstName = document.getElementById('edit_first');
+        const editLastName = document.getElementById('edit_last');
+        const editYearLevel = document.getElementById('edit_year_level');
+        
+        if (editFirstName) editFirstName.value = firstName || '';
+        if (editLastName) editLastName.value = lastName || '';
+        if (editYearLevel && yearLevelId) editYearLevel.value = yearLevelId;
+        
+        // Make student fields required
+        if (editFirstName) editFirstName.required = true;
+        if (editLastName) editLastName.required = true;
+        if (editYearLevel) editYearLevel.required = true;
+        
+        // Make studio name not required
+        const studioNameInput = document.getElementById('edit_studio_name');
+        if (studioNameInput) studioNameInput.required = false;
+    }
+}
+
 
 // Make functions available globally
 window.filterCandidates = filterCandidates;

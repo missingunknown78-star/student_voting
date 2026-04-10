@@ -71,6 +71,9 @@ class Candidate(db.Model):
     # ✅ ADD THIS LINE - Year Level field
     year_level_id = db.Column(db.Integer, db.ForeignKey('year_levels.id'), nullable=True)
     year_level = db.relationship('YearLevel', backref='candidates', lazy=True)
+    
+    candidate_type = db.Column(db.String(20), default='student')
+    studio_name = db.Column(db.String(200), nullable=True)
 
     position_id = db.Column(db.Integer, db.ForeignKey('positions.id', ondelete='CASCADE'), nullable=False)
     photo = db.Column(db.String(255))

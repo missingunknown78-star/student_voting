@@ -316,6 +316,7 @@ def register():
         if not session.get('registration_data'):
             session.pop('registration_data', None)
             session.pop('error_fields', None)
+            session.pop('temp_password', None)  # Clear temp password on GET
 
     if request.method == 'POST':
         # Helper function to clean text fields
@@ -369,12 +370,14 @@ def register():
             'email': email,
             'id_number': id_number,
             'username': username,
-            'password': password,  # Store temporarily for OTP
             'birth_date': birth_date,
             'course': request.form.get('course', ''),
             'year_level': request.form.get('year_level', ''),
             'program_type': request.form.get('program_type', '')
         }
+        
+        # ✅ Store password in a separate session variable for OTP phase
+        session['temp_password'] = password
         
         session['error_fields'] = []
         session['keep_form'] = True
@@ -441,14 +444,16 @@ def register():
         ).first()
 
         if not ctu_match:
-            flash("You are not registered in the CTU database. Please contact the admin.", "danger")
+            flash("You are not in the CTU Masterlist. Please contact the COMELEC admin.", "danger")
             session['error_fields'].append('ctu_verification')
 
         # ---------------- HANDLE ERRORS ----------------
         if session['error_fields']:
-            # Remove password from session before redirect (security)
+            # ✅ Don't remove temp_password on error - keep it for next attempt
+            # Just clear any password marker in registration_data if exists
             if 'password' in session['registration_data']:
                 del session['registration_data']['password']
+            # temp_password remains in session for the next submission attempt
             return redirect(url_for('student.register'))
 
         # ---------------- OTP GENERATION ----------------
@@ -529,18 +534,18 @@ def register():
             """
             mail.send(msg)
 
-            # Remove password from session before OTP verification (security)
-            if 'password' in session['registration_data']:
-                del session['registration_data']['password']
-                
+            # ✅ Don't remove temp_password yet - we need it for OTP verification
+            # It will be cleared after successful registration in verify_otp route
+            
             flash("📧 OTP has been sent to your email. Please check your inbox (and spam folder).", "info")
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
             flash(f"Failed to send OTP email: {str(e)}", "danger")
-            # Remove password from session on error
-            if 'password' in session['registration_data']:
-                del session['registration_data']['password']
+            # Clean up on error
+            if 'temp_password' in session:
+                del session['temp_password']
+            return redirect(url_for('student.register'))
 
     # ---------------- LOAD COURSES AND PROGRAM TYPES ----------------
     departments = Department.query.order_by(Department.name).all()
@@ -620,7 +625,23 @@ def verify_otp():
         entered_otp = request.form.get('otp')
         if entered_otp == session.get('otp'):
             data = session.get('registration_data')
-            password_hash = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
+            
+            # ✅ Get password from temp storage instead of registration_data
+            password = session.get('temp_password')
+            
+            # ✅ Validate that password exists
+            if not password:
+                flash("Session expired or password missing. Please register again.", "danger")
+                # Clear all session data
+                session.pop('otp', None)
+                session.pop('registration_data', None)
+                session.pop('temp_password', None)
+                session.pop('error_fields', None)
+                session.pop('keep_form', None)
+                return redirect(url_for('student.register'))
+            
+            # Generate password hash
+            password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
             new_student = Student(
                 first_name=data.get('first_name'),
@@ -642,9 +663,10 @@ def verify_otp():
             db.session.add(new_student)
             db.session.commit()
 
-            # ✅ Clear session only after registration is successful
+            # ✅ Clear all session data after successful registration
             session.pop('otp', None)
             session.pop('registration_data', None)
+            session.pop('temp_password', None)  # ✅ Clear temp password
             session.pop('error_fields', None)
             session.pop('keep_form', None)
 
@@ -2960,11 +2982,13 @@ def results_detail(election_id):
             db.session.commit()
             print(f"✅ Cached results for future requests")
     
-    # ===== GET ALL CANDIDATES WITH THEIR POSITIONS =====
+    # ===== GET ALL CANDIDATES WITH THEIR POSITIONS (UPDATED for studio candidates) =====
     candidates_query = db.session.query(
         Candidate.id,
         Candidate.first_name,
         Candidate.last_name,
+        Candidate.studio_name,
+        Candidate.candidate_type,
         Candidate.photo,
         Candidate.party_list,
         Candidate.position_id,
@@ -3008,6 +3032,8 @@ def results_detail(election_id):
             'id': c.id,
             'first_name': c.first_name,
             'last_name': c.last_name,
+            'studio_name': c.studio_name,
+            'candidate_type': c.candidate_type or 'student',
             'photo': c.photo,
             'party_list': c.party_list,
             'department': c.department_name,

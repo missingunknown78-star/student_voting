@@ -511,6 +511,7 @@
     }
     
     function escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -530,7 +531,7 @@
         // Get photo HTML - use actual photo if available
         let photoHtml = '';
         if (candidate.photo) {
-            photoHtml = `<img src="${candidate.photo}" alt="${candidate.name}" class="candidate-photo-img">`;
+            photoHtml = `<img src="${candidate.photo}" alt="${escapeHtml(candidate.name)}" class="candidate-photo-img">`;
         } else {
             photoHtml = `<div class="candidate-avatar">${escapeHtml(candidate.initials)}</div>`;
         }

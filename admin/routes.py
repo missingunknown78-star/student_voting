@@ -5958,135 +5958,274 @@ def manage_candidates():
         # Check if this is an AJAX request
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        party_list = request.form.get('party_list')
-        platform = request.form.get('platform')  # FIXED: Get platform correctly
-        department_id_form = request.form.get('department_id', type=int)
-        course_id = request.form.get('course_id', type=int)
-        position_id = request.form.get('position_id')
-        election_id = request.form.get('election_id')
-        scope = request.form.get('scope')
-        year_level_id = request.form.get('year_level_id', type=int)
-
-        # Get election to verify
-        election = Election.query.get(election_id)
-        if not election:
-            if is_ajax:
-                return jsonify({'success': False, 'message': 'Selected election does not exist.'})
-            flash('Selected election does not exist.', 'danger')
-            return redirect(url_for('admin.manage_candidates'))
-
-        # Validate required fields
-        if not all([first_name, last_name, position_id, election_id, scope]):
-            if is_ajax:
-                return jsonify({'success': False, 'message': 'Please fill in all required fields.'})
-            flash('Please fill in all required fields.', 'danger')
-            return redirect(url_for('admin.manage_candidates'))
-
-        # Check for duplicate candidate in the SAME election
-        existing_candidate = Candidate.query.filter_by(
-            first_name=first_name,
-            last_name=last_name,
-            election_id=election_id
-        ).first()
+        # Get candidate type
+        candidate_type = request.form.get('candidate_type', 'student')
         
-        if existing_candidate:
-            error_msg = f'A candidate with the name {first_name} {last_name} already exists in this election: {election.title}'
+        if candidate_type == 'studio':
+            # ===== STUDIO CANDIDATE =====
+            studio_name = request.form.get('studio_name', '').strip()
+            party_list = request.form.get('party_list')
+            platform = request.form.get('platform')
+            department_id_form = request.form.get('department_id', type=int)
+            course_id = request.form.get('course_id', type=int)
+            position_id = request.form.get('position_id')
+            election_id = request.form.get('election_id')
+            scope = request.form.get('scope')
+            
+            # Get election to verify
+            election = Election.query.get(election_id)
+            if not election:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Selected election does not exist.'})
+                flash('Selected election does not exist.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Validate required fields for studio
+            if not studio_name:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Studio name is required.'})
+                flash('Studio name is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not position_id or not election_id or not scope:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Please fill in all required fields.'})
+                flash('Please fill in all required fields.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Check for duplicate studio candidate in the SAME election
+            existing_candidate = Candidate.query.filter_by(
+                studio_name=studio_name,
+                election_id=election_id,
+                candidate_type='studio'
+            ).first()
+            
+            if existing_candidate:
+                error_msg = f'A studio candidate with the name "{studio_name}" already exists in this election: {election.title}'
+                if is_ajax:
+                    return jsonify({'success': False, 'message': error_msg}), 400
+                flash(error_msg, 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Validate department and course (required for ALL candidates)
+            if not department_id_form:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Department is required for all candidates.'}), 400
+                flash('Department is required for all candidates.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not course_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Course is required for all candidates.'}), 400
+                flash('Course is required for all candidates.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Save photo if uploaded
+            photo_file = request.files.get('photo')
+            photo_filename = None
+            photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
+            os.makedirs(photo_folder, exist_ok=True)
+            
+            if photo_file and photo_file.filename:
+                filename = secure_filename(photo_file.filename)
+                name, ext = os.path.splitext(filename)
+                photo_filename = f"{name}_{int(time.time())}{ext}"
+                photo_file.save(os.path.join(photo_folder, photo_filename))
+            
+            # Create studio candidate
+            new_candidate = Candidate(
+                candidate_type='studio',
+                studio_name=studio_name,
+                first_name=None,
+                last_name=None,
+                party_list=party_list if party_list else None,
+                platform=platform if platform else None,
+                department_id=department_id_form,
+                course_id=course_id,
+                position_id=position_id,
+                election_id=election_id,
+                scope=scope,
+                year_level_id=None,  # Studio candidates don't have year level
+                photo=photo_filename
+            )
+            
+            db.session.add(new_candidate)
+            db.session.commit()
+            
+            # Audit log for studio candidate
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            department_name = new_candidate.department.name if new_candidate.department else 'N/A'
+            position_name = new_candidate.position.name if new_candidate.position else 'N/A'
+            election_title = new_candidate.election.title if new_candidate.election else 'N/A'
+            party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
+            platform_display = new_candidate.platform[:50] + '...' if new_candidate.platform and len(new_candidate.platform) > 50 else (new_candidate.platform or 'None')
+            
+            year_info = f" | Year: {year}" if year else ""
+            
+            log_audit(
+                action='CREATE_STUDIO_CANDIDATE',
+                description=f"Admin user '{username}' added studio candidate: {studio_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Platform: {platform_display} | Election: {election_title} ({scope}){year_info}"
+            )
+            
+            # Return JSON for AJAX requests
             if is_ajax:
-                return jsonify({'success': False, 'message': error_msg}), 400
-            flash(error_msg, 'danger')
-            return redirect(url_for('admin.manage_candidates'))
-
-        # Validate department and course (required for ALL candidates)
-        if not department_id_form:
-            if is_ajax:
-                return jsonify({'success': False, 'message': 'Department is required for all candidates.'}), 400
-            flash('Department is required for all candidates.', 'danger')
+                return jsonify({
+                    'success': True,
+                    'message': 'Studio candidate added successfully!',
+                    'id': new_candidate.id,
+                    'studio_name': new_candidate.studio_name,
+                    'candidate_type': 'studio',
+                    'party_list': new_candidate.party_list,
+                    'platform': new_candidate.platform,
+                    'department': new_candidate.department.name if new_candidate.department else '',
+                    'department_id': new_candidate.department_id,
+                    'course_id': new_candidate.course_id,
+                    'position': new_candidate.position.name,
+                    'position_id': new_candidate.position_id,
+                    'election_id': new_candidate.election_id,
+                    'scope': new_candidate.scope,
+                    'photo': url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None
+                })
+            
+            flash('Studio candidate added successfully!', 'success')
             return redirect(url_for('admin.manage_candidates'))
         
-        if not course_id:
+        else:
+            # ===== STUDENT CANDIDATE (Existing Logic) =====
+            first_name = request.form.get('first_name')
+            last_name = request.form.get('last_name')
+            party_list = request.form.get('party_list')
+            platform = request.form.get('platform')
+            department_id_form = request.form.get('department_id', type=int)
+            course_id = request.form.get('course_id', type=int)
+            position_id = request.form.get('position_id')
+            election_id = request.form.get('election_id')
+            scope = request.form.get('scope')
+            year_level_id = request.form.get('year_level_id', type=int)
+            
+            # Get election to verify
+            election = Election.query.get(election_id)
+            if not election:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Selected election does not exist.'})
+                flash('Selected election does not exist.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Validate required fields
+            if not all([first_name, last_name, position_id, election_id, scope]):
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Please fill in all required fields.'})
+                flash('Please fill in all required fields.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Check for duplicate candidate in the SAME election
+            existing_candidate = Candidate.query.filter_by(
+                first_name=first_name,
+                last_name=last_name,
+                election_id=election_id,
+                candidate_type='student'
+            ).first()
+            
+            if existing_candidate:
+                error_msg = f'A candidate with the name {first_name} {last_name} already exists in this election: {election.title}'
+                if is_ajax:
+                    return jsonify({'success': False, 'message': error_msg}), 400
+                flash(error_msg, 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Validate department and course (required for ALL candidates)
+            if not department_id_form:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Department is required for all candidates.'}), 400
+                flash('Department is required for all candidates.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not course_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Course is required for all candidates.'}), 400
+                flash('Course is required for all candidates.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Save photo if uploaded
+            photo_file = request.files.get('photo')
+            photo_filename = None
+            photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
+            os.makedirs(photo_folder, exist_ok=True)
+            
+            if photo_file and photo_file.filename:
+                filename = secure_filename(photo_file.filename)
+                name, ext = os.path.splitext(filename)
+                photo_filename = f"{name}_{int(time.time())}{ext}"
+                photo_file.save(os.path.join(photo_folder, photo_filename))
+            
+            # Create candidate with platform field
+            new_candidate = Candidate(
+                candidate_type='student',
+                first_name=first_name,
+                last_name=last_name,
+                party_list=party_list if party_list else None,
+                platform=platform if platform else None,
+                department_id=department_id_form,
+                course_id=course_id,
+                position_id=position_id,
+                election_id=election_id,
+                scope=scope,
+                year_level_id=year_level_id,
+                studio_name=None,
+                photo=photo_filename
+            )
+            
+            db.session.add(new_candidate)
+            db.session.commit()
+            
+            # Audit log
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            department_name = new_candidate.department.name if new_candidate.department else 'N/A'
+            position_name = new_candidate.position.name if new_candidate.position else 'N/A'
+            election_title = new_candidate.election.title if new_candidate.election else 'N/A'
+            party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
+            year_level_name = new_candidate.year_level.year_name if new_candidate.year_level else 'N/A'
+            platform_display = new_candidate.platform[:50] + '...' if new_candidate.platform and len(new_candidate.platform) > 50 else (new_candidate.platform or 'None')
+            
+            year_info = f" | Year: {year}" if year else ""
+            
+            log_audit(
+                action='CREATE_CANDIDATE',
+                description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Platform: {platform_display} | Election: {election_title} ({scope}){year_info}"
+            )
+            
+            # Return JSON for AJAX requests
             if is_ajax:
-                return jsonify({'success': False, 'message': 'Course is required for all candidates.'}), 400
-            flash('Course is required for all candidates.', 'danger')
+                return jsonify({
+                    'success': True,
+                    'message': 'Candidate added successfully!',
+                    'id': new_candidate.id,
+                    'first_name': new_candidate.first_name,
+                    'last_name': new_candidate.last_name,
+                    'candidate_type': 'student',
+                    'party_list': new_candidate.party_list,
+                    'platform': new_candidate.platform,
+                    'department': new_candidate.department.name if new_candidate.department else '',
+                    'department_id': new_candidate.department_id,
+                    'course_id': new_candidate.course_id,
+                    'year_level_id': new_candidate.year_level_id,
+                    'year_level': new_candidate.year_level.year_name if new_candidate.year_level else '',
+                    'position': new_candidate.position.name,
+                    'position_id': new_candidate.position_id,
+                    'election_id': new_candidate.election_id,
+                    'scope': new_candidate.scope,
+                    'photo': url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None
+                })
+            
+            flash('Candidate added successfully!', 'success')
             return redirect(url_for('admin.manage_candidates'))
-
-        # Save photo if uploaded
-        photo_file = request.files.get('photo')
-        photo_filename = None
-        photo_folder = os.path.join(current_app.root_path, 'admin', 'static', 'images')
-        os.makedirs(photo_folder, exist_ok=True)
-
-        if photo_file and photo_file.filename:
-            filename = secure_filename(photo_file.filename)
-            name, ext = os.path.splitext(filename)
-            photo_filename = f"{name}_{int(time.time())}{ext}"
-            photo_file.save(os.path.join(photo_folder, photo_filename))
-
-        # Create candidate with platform field
-        new_candidate = Candidate(
-            first_name=first_name,
-            last_name=last_name,
-            party_list=party_list if party_list else None,
-            platform=platform if platform else None,  # FIXED: Save platform correctly
-            department_id=department_id_form,
-            course_id=course_id,
-            position_id=position_id,
-            election_id=election_id,
-            scope=scope,
-            year_level_id=year_level_id,
-            photo=photo_filename
-        )
-
-        db.session.add(new_candidate)
-        db.session.commit()
-
-        # Audit log
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        department_name = new_candidate.department.name if new_candidate.department else 'N/A'
-        position_name = new_candidate.position.name if new_candidate.position else 'N/A'
-        election_title = new_candidate.election.title if new_candidate.election else 'N/A'
-        party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
-        year_level_name = new_candidate.year_level.year_name if new_candidate.year_level else 'N/A'
-        platform_display = new_candidate.platform[:50] + '...' if new_candidate.platform and len(new_candidate.platform) > 50 else (new_candidate.platform or 'None')
-        
-        year_info = f" | Year: {year}" if year else ""
-        
-        log_audit(
-            action='CREATE_CANDIDATE',
-            description=f"Admin user '{username}' added candidate: {first_name} {last_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Platform: {platform_display} | Election: {election_title} ({scope}){year_info}"
-        )
-
-        # Return JSON for AJAX requests
-        if is_ajax:
-            return jsonify({
-                'success': True,
-                'message': 'Candidate added successfully!',
-                'id': new_candidate.id,
-                'first_name': new_candidate.first_name,
-                'last_name': new_candidate.last_name,
-                'party_list': new_candidate.party_list,
-                'platform': new_candidate.platform,  # Include platform in response
-                'department': new_candidate.department.name if new_candidate.department else '',
-                'department_id': new_candidate.department_id,
-                'course_id': new_candidate.course_id,
-                'year_level_id': new_candidate.year_level_id,
-                'year_level': new_candidate.year_level.year_name if new_candidate.year_level else '',
-                'position': new_candidate.position.name,
-                'position_id': new_candidate.position_id,
-                'election_id': new_candidate.election_id,
-                'scope': new_candidate.scope,
-                'photo': url_for('admin.static', filename='images/' + new_candidate.photo) if new_candidate.photo else None
-            })
-
-        flash('Candidate added successfully!', 'success')
-        return redirect(url_for('admin.manage_candidates'))
-
+    
     # ===== FOR DROPDOWN IN MODALS: Only upcoming and active elections =====
     campus_elections = [e for e in dropdown_elections if e.scope == 'campus']
     department_elections = [e for e in dropdown_elections if e.scope == 'department']
-
+    
     return render_template(
         'manage_candidates.html',
         candidates=candidates,
@@ -6127,9 +6266,9 @@ def filter_candidates():
     search = request.args.get('search', default='')
     page = request.args.get('page', 1, type=int)
     per_page = 10
-
+    
     query = Candidate.query
-
+    
     # Filter by year through elections
     if start_date and end_date:
         # Get elections within the year
@@ -6156,15 +6295,15 @@ def filter_candidates():
                 },
                 'current_year': year
             })
-
+    
     # Filter by scope
     if selected_scope:
         query = query.filter(Candidate.scope == selected_scope)
-
+    
     # Filter by department
     if selected_scope == 'department' and department_id:
         query = query.filter(Candidate.department_id == department_id)
-
+    
     # Search functionality
     if search:
         search_term = f'%{search}%'
@@ -6172,24 +6311,38 @@ def filter_candidates():
             db.or_(
                 Candidate.first_name.ilike(search_term),
                 Candidate.last_name.ilike(search_term),
+                Candidate.studio_name.ilike(search_term),
                 Candidate.party_list.ilike(search_term),
                 Candidate.platform.ilike(search_term),
                 Position.name.ilike(search_term),
                 Election.title.ilike(search_term)
             )
         )
-
+    
     # Paginate
     pagination = query.order_by(Candidate.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     candidates = pagination.items
-
+    
     # Format candidates for JSON response
     candidates_data = []
     for c in candidates:
+        # Determine display name based on candidate type
+        if c.candidate_type == 'studio':
+            display_name = c.studio_name
+            first_name = None
+            last_name = None
+        else:
+            display_name = f"{c.first_name} {c.last_name}"
+            first_name = c.first_name
+            last_name = c.last_name
+        
         candidates_data.append({
             'id': c.id,
-            'first_name': c.first_name,
-            'last_name': c.last_name,
+            'first_name': first_name,
+            'last_name': last_name,
+            'studio_name': c.studio_name,
+            'candidate_type': c.candidate_type,
+            'display_name': display_name,
             'party_list': c.party_list,
             'platform': c.platform,
             'department': c.department.name if c.department else '',
@@ -6204,7 +6357,7 @@ def filter_candidates():
             'scope': c.scope,
             'photo': url_for('admin.static', filename='images/' + c.photo) if c.photo else None
         })
-
+    
     return jsonify({
         'candidates': candidates_data,
         'pagination': {
@@ -6227,38 +6380,64 @@ def update_candidate(id):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
     # Store old values
+    old_candidate_type = candidate.candidate_type
     old_first_name = candidate.first_name
     old_last_name = candidate.last_name
+    old_studio_name = candidate.studio_name
     old_party_list = candidate.party_list
     old_platform = candidate.platform
     old_position = candidate.position.name if candidate.position else 'N/A'
     old_department = candidate.department.name if candidate.department else 'N/A'
     old_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'
     old_scope = candidate.scope
-
-    # Get form data
-    candidate.first_name = request.form.get('first_name')
-    candidate.last_name = request.form.get('last_name')
     
-    party_list = request.form.get('party_list')
-    candidate.party_list = party_list if party_list else None
+    # Get candidate type from form
+    candidate_type = request.form.get('candidate_type', 'student')
     
-    platform = request.form.get('platform')
-    candidate.platform = platform if platform else None
-    
-    candidate.position_id = request.form.get('position_id')
-    candidate.election_id = request.form.get('election_id')
-    
-    scope = request.form.get('scope')
-    candidate.scope = scope
-    
-    department_id = request.form.get('department_id', type=int)
-    course_id = request.form.get('course_id', type=int)
-    year_level_id = request.form.get('year_level_id', type=int)
-    
-    candidate.department_id = department_id if department_id else None
-    candidate.course_id = course_id if course_id else None
-    candidate.year_level_id = year_level_id if year_level_id else None
+    if candidate_type == 'studio':
+        # ===== UPDATE STUDIO CANDIDATE =====
+        studio_name = request.form.get('studio_name', '').strip()
+        party_list = request.form.get('party_list')
+        platform = request.form.get('platform')
+        candidate.position_id = request.form.get('position_id')
+        candidate.election_id = request.form.get('election_id')
+        candidate.scope = request.form.get('scope')
+        candidate.department_id = request.form.get('department_id', type=int)
+        candidate.course_id = request.form.get('course_id', type=int)
+        
+        # Update studio-specific fields
+        candidate.studio_name = studio_name
+        candidate.party_list = party_list if party_list else None
+        candidate.platform = platform if platform else None
+        candidate.candidate_type = 'studio'
+        
+        # Clear student fields
+        candidate.first_name = None
+        candidate.last_name = None
+        candidate.year_level_id = None
+        
+    else:
+        # ===== UPDATE STUDENT CANDIDATE =====
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        party_list = request.form.get('party_list')
+        platform = request.form.get('platform')
+        candidate.position_id = request.form.get('position_id')
+        candidate.election_id = request.form.get('election_id')
+        candidate.scope = request.form.get('scope')
+        candidate.department_id = request.form.get('department_id', type=int)
+        candidate.course_id = request.form.get('course_id', type=int)
+        candidate.year_level_id = request.form.get('year_level_id', type=int)
+        
+        # Update student-specific fields
+        candidate.first_name = first_name
+        candidate.last_name = last_name
+        candidate.party_list = party_list if party_list else None
+        candidate.platform = platform if platform else None
+        candidate.candidate_type = 'student'
+        
+        # Clear studio fields
+        candidate.studio_name = None
     
     # Get election to verify
     election = Election.query.get(candidate.election_id)
@@ -6284,7 +6463,7 @@ def update_candidate(id):
         
         photo_file.save(os.path.join(photo_folder, filename))
         candidate.photo = filename
-
+    
     db.session.commit()
     
     # Format platform for audit log (truncate if too long)
@@ -6298,33 +6477,67 @@ def update_candidate(id):
     new_party_list = candidate.party_list if candidate.party_list else 'Independent'
     new_year_level = candidate.year_level.year_name if candidate.year_level else 'N/A'
     
+    # Build candidate name for audit log
+    if candidate.candidate_type == 'studio':
+        old_name_display = old_studio_name or 'Unknown Studio'
+        new_name_display = candidate.studio_name or 'Unknown Studio'
+        action_type = 'UPDATE_STUDIO_CANDIDATE'
+    else:
+        old_name_display = f"{old_first_name or ''} {old_last_name or ''}".strip() or 'Unknown Student'
+        new_name_display = f"{candidate.first_name or ''} {candidate.last_name or ''}".strip() or 'Unknown Student'
+        action_type = 'UPDATE_CANDIDATE'
+    
     log_audit(
-        action='UPDATE_CANDIDATE',
-        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_first_name} {old_last_name} → {candidate.first_name} {candidate.last_name} | Scope: {old_scope} → {scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Platform: {old_platform_display} → {new_platform_display} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department} | Year Level: {old_year_level} → {new_year_level}"
+        action=action_type,
+        description=f"Admin user '{username}' updated candidate from IP: {ip} | {old_name_display} → {new_name_display} | Scope: {old_scope} → {candidate.scope} | Party: {old_party_list or 'Independent'} → {new_party_list} | Platform: {old_platform_display} → {new_platform_display} | Position: {old_position} → {new_position} | Department: {old_department} → {new_department} | Year Level: {old_year_level} → {new_year_level}"
     )
     
     if is_ajax:
-        return jsonify({
-            'success': True,
-            'message': 'Candidate updated successfully!',
-            'candidate': {  # Wrap in candidate object for consistency
-                'id': candidate.id,
-                'first_name': candidate.first_name,
-                'last_name': candidate.last_name,
-                'party_list': candidate.party_list,
-                'platform': candidate.platform,
-                'department': candidate.department.name if candidate.department else '',
-                'department_id': candidate.department_id,
-                'course_id': candidate.course_id,
-                'year_level_id': candidate.year_level_id,
-                'year_level': candidate.year_level.year_name if candidate.year_level else '',
-                'position': candidate.position.name if candidate.position else '',
-                'position_id': candidate.position_id,
-                'election_id': candidate.election_id,
-                'scope': candidate.scope,
-                'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
+        # Prepare response data based on candidate type
+        if candidate.candidate_type == 'studio':
+            response_data = {
+                'success': True,
+                'message': 'Studio candidate updated successfully!',
+                'candidate': {
+                    'id': candidate.id,
+                    'studio_name': candidate.studio_name,
+                    'candidate_type': 'studio',
+                    'party_list': candidate.party_list,
+                    'platform': candidate.platform,
+                    'department': candidate.department.name if candidate.department else '',
+                    'department_id': candidate.department_id,
+                    'course_id': candidate.course_id,
+                    'position': candidate.position.name if candidate.position else '',
+                    'position_id': candidate.position_id,
+                    'election_id': candidate.election_id,
+                    'scope': candidate.scope,
+                    'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
+                }
             }
-        })
+        else:
+            response_data = {
+                'success': True,
+                'message': 'Candidate updated successfully!',
+                'candidate': {
+                    'id': candidate.id,
+                    'first_name': candidate.first_name,
+                    'last_name': candidate.last_name,
+                    'candidate_type': 'student',
+                    'party_list': candidate.party_list,
+                    'platform': candidate.platform,
+                    'department': candidate.department.name if candidate.department else '',
+                    'department_id': candidate.department_id,
+                    'course_id': candidate.course_id,
+                    'year_level_id': candidate.year_level_id,
+                    'year_level': candidate.year_level.year_name if candidate.year_level else '',
+                    'position': candidate.position.name if candidate.position else '',
+                    'position_id': candidate.position_id,
+                    'election_id': candidate.election_id,
+                    'scope': candidate.scope,
+                    'photo': url_for('admin.static', filename='images/' + candidate.photo) if candidate.photo else None
+                }
+            }
+        return jsonify(response_data)
     
     flash('Candidate updated successfully!', 'success')
     return redirect(url_for('admin.manage_candidates'))
@@ -6339,11 +6552,18 @@ def delete_candidate(id):
     # Store candidate info for audit log before deletion
     username = getattr(current_user, 'username', 'Unknown')
     ip = request.remote_addr
-    candidate_name = f"{candidate.first_name} {candidate.last_name}"
+    
+    if candidate.candidate_type == 'studio':
+        candidate_name = candidate.studio_name or 'Unknown Studio'
+        action_type = 'DELETE_STUDIO_CANDIDATE'
+    else:
+        candidate_name = f"{candidate.first_name} {candidate.last_name}"
+        action_type = 'DELETE_CANDIDATE'
+    
     party_list = candidate.party_list if candidate.party_list else 'Independent'
     position_name = candidate.position.name if candidate.position else 'N/A'
     department_name = candidate.department.name if candidate.department else 'N/A'
-    year_level_name = candidate.year_level.year_name if candidate.year_level else 'N/A'  # ADD THIS
+    year_level_name = candidate.year_level.year_name if candidate.year_level else 'N/A'
     election_title = candidate.election.title if candidate.election else 'N/A'
     
     try:
@@ -6359,9 +6579,9 @@ def delete_candidate(id):
         db.session.delete(candidate)
         db.session.commit()
         
-        # ✅ KEEP THIS AUDIT LOG (DELETE CANDIDATE - data modification)
+        # Audit log
         log_audit(
-            action='DELETE_CANDIDATE',
+            action=action_type,
             description=f"Admin user '{username}' deleted candidate from IP: {ip} | Candidate: {candidate_name} | Party: {party_list} | Position: {position_name} | Department: {department_name} | Year Level: {year_level_name} | Election: {election_title}"
         )
         
@@ -6412,6 +6632,7 @@ def get_courses_by_department(department_id):
             'success': False,
             'error': str(e)
         }), 500
+
 
 @admin_bp.route('/validate-student', methods=['GET'])
 @admin_required
@@ -7395,6 +7616,12 @@ def election_results(election_id):
         print("📊 Using finder_hashes for live results")
         vote_counts = get_admin_live_vote_counts(election_id)
     
+    # ===== DEBUG: Print vote counts for studio candidates =====
+    print("\n🔍 DEBUG: Vote counts for studio candidates:")
+    for candidate in candidates:
+        if candidate.candidate_type == 'studio':
+            print(f"   Studio: {candidate.studio_name} - Votes: {vote_counts.get(candidate.id, 0)}")
+    
     # ===== CALCULATE VOTERS PER POSITION =====
     position_voter_counts = {}
     candidate_position_map = {c.id: c.position_id for c in candidates}
@@ -7425,21 +7652,39 @@ def election_results(election_id):
                         if isinstance(item, dict) and 'candidate_id' in item:
                             candidate_ids.append(item['candidate_id'])
                 
+                # Check if ANY candidate in this vote belongs to this position
                 for cid in candidate_ids:
                     cand_position_id = candidate_position_map.get(cid)
                     if cand_position_id == position_id:
+                        # Count this voter for this position
                         if vote.student_id:
                             voters_for_position.add(vote.student_id)
                         else:
                             voters_for_position.add(f"anon_{vote.id}")
-                        break
+                        break  # Once we found this voter voted in this position, move to next vote
                         
             except (json.JSONDecodeError, Exception) as e:
                 print(f"Error parsing vote {vote.id}: {e}")
                 continue
         
         position_voter_counts[position_id] = len(voters_for_position)
-        print(f"📊 Position {position_name}: Voters = {len(voters_for_position)}")
+        print(f"📊 Position {position_name} (ID: {position_id}): Voters = {len(voters_for_position)}")
+    
+    # ===== DEBUG: Print first 10 votes finder_hash to see structure =====
+    print("\n🔍 DEBUG: First 5 votes finder_hash structure:")
+    for i, vote in enumerate(all_votes[:5]):
+        if vote.finder_hash:
+            try:
+                finder_data = json.loads(vote.finder_hash)
+                print(f"Vote {i+1}: Type={type(finder_data).__name__}")
+                if isinstance(finder_data, dict):
+                    print(f"   Keys: {list(finder_data.keys())}")
+                    if 'hashes' in finder_data and finder_data['hashes']:
+                        print(f"   First hash: {finder_data['hashes'][0]}")
+                elif isinstance(finder_data, list) and finder_data:
+                    print(f"   First item: {finder_data[0]}")
+            except Exception as e:
+                print(f"Vote {i+1}: Error parsing - {e}")
     
     # ===== GROUP CANDIDATES BY POSITION =====
     candidates_by_position = {}
@@ -7462,10 +7707,13 @@ def election_results(election_id):
         
         vote_count = vote_counts.get(candidate.id, 0)
         
+        # UPDATED: Added studio_name and candidate_type
         candidates_by_position[position_name]['candidates'].append({
             'id': candidate.id,
             'first_name': candidate.first_name or "",
             'last_name': candidate.last_name or "",
+            'studio_name': candidate.studio_name or "",
+            'candidate_type': candidate.candidate_type or "student",
             'photo': candidate.photo or "",
             'party_list': candidate.party_list or "",
             'position': position_name,
@@ -7480,16 +7728,18 @@ def election_results(election_id):
         voter_count = pos_data['voter_count']
         max_winners = pos_data['max_votes']
         
-        print(f"📊 {position_name}: Max winners = {max_winners}, Voters = {voter_count}")
+        print(f"\n📊 {position_name}: Max winners = {max_winners}, Voters = {voter_count}")
         
         # Calculate percentages
         if not voter_count or voter_count == 0:
+            print(f"   ⚠️ WARNING: voter_count is 0 for {position_name} - setting percentages to 0")
             for candidate in pos_data['candidates']:
                 candidate['voter_percentage'] = 0
         else:
             for candidate in pos_data['candidates']:
                 percentage = (candidate['vote_count'] / voter_count) * 100
                 candidate['voter_percentage'] = round(percentage, 2)
+                print(f"   {candidate['studio_name'] if candidate['candidate_type'] == 'studio' else candidate['first_name']}: {candidate['vote_count']} votes = {candidate['voter_percentage']}%")
         
         # Sort candidates by vote count (descending)
         pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
@@ -7501,7 +7751,9 @@ def election_results(election_id):
             # 2. Vote count is greater than 0
             if i < max_winners and candidate['vote_count'] > 0:
                 candidate['is_winner'] = True
-                print(f"  ✓ WINNER: {candidate['first_name']} {candidate['last_name']} - {candidate['vote_count']} votes")
+                # UPDATED: Use studio_name if available for logging
+                candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
+                print(f"  ✓ WINNER: {candidate_display} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
             else:
                 candidate['is_winner'] = False
     
@@ -7519,7 +7771,14 @@ def election_results(election_id):
         winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
         if winners:
             winners_by_position[position_name] = winners
-            print(f"🏆 {position_name}: {len(winners)} winner(s) - {[w['first_name'] + ' ' + w['last_name'] for w in winners]}")
+            # UPDATED: Log with studio name if applicable
+            winner_names = []
+            for w in winners:
+                if w['candidate_type'] == 'studio':
+                    winner_names.append(w['studio_name'])
+                else:
+                    winner_names.append(f"{w['first_name']} {w['last_name']}")
+            print(f"🏆 {position_name}: {len(winners)} winner(s) - {winner_names}")
     
     # ===== SORT WINNERS BY POSITION ID (already sorted from above, but ensure) =====
     ordered_winners_by_position = {}
@@ -7564,16 +7823,19 @@ def election_results(election_id):
             'max_votes': position_limits.get(position_id, 1)
         }
     
-    # ===== DEBUG OUTPUT =====
-    print("\n" + "="*50)
+    # ===== FINAL DEBUG OUTPUT =====
+    print("\n" + "="*60)
     print("FINAL SORTED RESULTS BY POSITION ID:")
     for position_name, pos_data in sorted_candidates_by_position.items():
         print(f"\n📌 {position_name} (ID: {pos_data.get('id')}):")
+        print(f"   Voter Count: {pos_data.get('voter_count')}")
         print(f"   Winners: {len([c for c in pos_data['candidates'] if c.get('is_winner')])}")
         for candidate in pos_data['candidates']:
             winner_status = "✓ WINNER" if candidate.get('is_winner') else "  Candidate"
-            print(f"   {winner_status}: {candidate['first_name']} {candidate['last_name']} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
-    print("="*50 + "\n")
+            # UPDATED: Display studio name or student name
+            candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
+            print(f"   {winner_status}: {candidate_display} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
+    print("="*60 + "\n")
     
     # Register helper functions for template
     app = current_app._get_current_object()
@@ -8236,6 +8498,57 @@ def election_results_pdf(election_id):
     tally_records = TallyVote.query.filter_by(election_id=election_id).all()
     tally_dict = {t.candidate_id: t.vote_count for t in tally_records}
     
+    # Helper function to get candidate display name
+    def get_candidate_display_name(candidate):
+        if candidate.candidate_type == 'studio':
+            return candidate.studio_name or "Unknown Studio"
+        else:
+            return f"{candidate.first_name or ''} {candidate.last_name or ''}".strip() or "Unknown Candidate"
+    
+    # ===== CALCULATE POSITION-SPECIFIC VOTER COUNTS (for percentages) =====
+    position_voter_counts = {}
+    candidate_position_map = {c.id: c.position_id for c in candidates}
+    
+    for ep in election_positions:
+        position_id = ep.position_id
+        voters_for_position = set()
+        
+        for vote in all_votes:
+            if not vote.finder_hash:
+                continue
+                
+            try:
+                import json
+                finder_data = json.loads(vote.finder_hash)
+                candidate_ids = []
+                
+                if isinstance(finder_data, dict):
+                    if 'hashes' in finder_data and isinstance(finder_data['hashes'], list):
+                        for item in finder_data['hashes']:
+                            if isinstance(item, dict) and 'candidate_id' in item:
+                                candidate_ids.append(item['candidate_id'])
+                    elif 'candidate_ids' in finder_data:
+                        candidate_ids = finder_data['candidate_ids']
+                elif isinstance(finder_data, list):
+                    for item in finder_data:
+                        if isinstance(item, dict) and 'candidate_id' in item:
+                            candidate_ids.append(item['candidate_id'])
+                
+                for cid in candidate_ids:
+                    cand_position_id = candidate_position_map.get(cid)
+                    if cand_position_id == position_id:
+                        if vote.student_id:
+                            voters_for_position.add(vote.student_id)
+                        else:
+                            voters_for_position.add(f"anon_{vote.id}")
+                        break
+                        
+            except (json.JSONDecodeError, Exception):
+                continue
+        
+        position_voter_counts[position_id] = len(voters_for_position)
+        print(f"PDF - Position {ep.position_id}: Voters = {len(voters_for_position)}")
+    
     # Build candidate results
     candidate_results = []
     candidates_by_position = {}
@@ -8243,14 +8556,23 @@ def election_results_pdf(election_id):
     for candidate in candidates:
         position_name = candidate.position.name if candidate.position else "Unknown"
         vote_count = tally_dict.get(candidate.id, 0)
+        display_name = get_candidate_display_name(candidate)
+        
+        # Get position-specific voter count for percentage calculation
+        pos_voter_count = position_voter_counts.get(candidate.position_id, 1)
+        percentage = round((vote_count / pos_voter_count * 100), 2) if pos_voter_count > 0 else 0
         
         candidate_data = {
             'id': candidate.id,
             'first_name': candidate.first_name,
             'last_name': candidate.last_name,
+            'studio_name': candidate.studio_name,
+            'candidate_type': candidate.candidate_type or "student",
+            'display_name': display_name,
             'position': position_name,
             'position_id': candidate.position_id,
             'vote_count': vote_count,
+            'percentage': percentage,
             'is_winner': False
         }
         candidate_results.append(candidate_data)
@@ -8259,6 +8581,7 @@ def election_results_pdf(election_id):
             candidates_by_position[position_name] = {
                 'id': candidate.position_id,
                 'max_votes': position_limits.get(candidate.position_id, 1),
+                'voter_count': pos_voter_count,
                 'candidates': []
             }
         candidates_by_position[position_name]['candidates'].append(candidate_data)
@@ -8276,7 +8599,7 @@ def election_results_pdf(election_id):
         if winners:
             winners_by_position[position_name] = winners
     
-    # Calculate statistics
+    # Calculate overall statistics
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
     else:
@@ -8376,22 +8699,22 @@ def election_results_pdf(election_id):
     # ===== CUSTOM STYLES =====
     # Adjusted font sizes - smaller
     title_style = ParagraphStyle('Title', parent=styles['Heading1'],
-                                  fontSize=14, alignment=TA_CENTER, spaceAfter=5,  # Reduced from 16 to 14
+                                  fontSize=14, alignment=TA_CENTER, spaceAfter=5,
                                   fontName='Helvetica-Bold')
     
     subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'],
-                                     fontSize=12, alignment=TA_CENTER, spaceAfter=5,  # Reduced from 14 to 12
+                                     fontSize=12, alignment=TA_CENTER, spaceAfter=5,
                                      fontName='Helvetica-Bold')
     
     date_style = ParagraphStyle('Date', parent=styles['Normal'],
-                                 fontSize=10, alignment=TA_CENTER, spaceAfter=15)  # Reduced from 12 to 10
+                                 fontSize=10, alignment=TA_CENTER, spaceAfter=15)
     
-    # ===== HEADER LOGO - Keep it but make it appear in margin by reducing top margin spacing =====
+    # ===== HEADER LOGO =====
     logo_path = os.path.join(current_app.root_path, 'admin', 'static', 'images', 'CTU HEADER.png')
     if os.path.exists(logo_path):
         try:
             # Add negative space before logo to pull it up into the margin
-            story.append(Spacer(1, -0.2*inch))  # Pull logo up into margin
+            story.append(Spacer(1, -0.2*inch))
             img = RLImage(logo_path, width=AVAILABLE_WIDTH, height=1.0*inch)
             story.append(img)
             story.append(Spacer(1, 0.05*inch))
@@ -8480,19 +8803,18 @@ def election_results_pdf(election_id):
     story.append(Paragraph("OFFICIAL ELECTION WINNERS", winners_title_style))
     story.append(Spacer(1, 0.05*inch))
     
-    # Winners table
+    # Winners table - UPDATED to show studio_name for studio candidates
     winners_data = [['Position', 'Winner(s)', 'Votes']]
     for position_name, winners in winners_by_position.items():
         if len(winners) == 1:
             winner = winners[0]
-            winners_data.append([position_name, 
-                                f"{winner['first_name']} {winner['last_name']}",
-                                str(winner['vote_count'])])
+            winner_display = winner['display_name']
+            winners_data.append([position_name, winner_display, str(winner['vote_count'])])
         else:
             winners_data.append([position_name, f"{len(winners)} WINNERS", ''])
             for winner in winners:
-                winners_data.append(['', f"  • {winner['first_name']} {winner['last_name']}",
-                                    str(winner['vote_count'])])
+                winner_display = winner['display_name']
+                winners_data.append(['', f"  • {winner_display}", str(winner['vote_count'])])
     
     winners_table = Table(winners_data, colWidths=[AVAILABLE_WIDTH * 0.35, AVAILABLE_WIDTH * 0.45, AVAILABLE_WIDTH * 0.2])
     winners_table.setStyle(TableStyle([
@@ -8545,25 +8867,27 @@ def election_results_pdf(election_id):
                                          fontName='Helvetica-Bold')
         story.append(Paragraph(f"{position_name}{' (' + str(max_winners) + ' WINNERS)' if max_winners > 1 else ''}", pos_title_style))
         
-        detail_data = [['Rank', 'Candidate', 'Votes', 'Result']]
+        # UPDATED: Show display_name (studio_name or full name) and percentage
+        detail_data = [['Rank', 'Candidate', 'Votes', 'Percentage', 'Result']]
         for idx, candidate in enumerate(candidates_list[:max_winners+5], 1):
             result = "✓ WINNER" if idx <= max_winners and candidate['vote_count'] > 0 else "—"
             detail_data.append([str(idx),
-                               f"{candidate['first_name']} {candidate['last_name']}",
+                               candidate['display_name'],
                                str(candidate['vote_count']),
+                               f"{candidate['percentage']}%",
                                result])
         
-        detail_table = Table(detail_data, colWidths=[AVAILABLE_WIDTH * 0.12, AVAILABLE_WIDTH * 0.53, AVAILABLE_WIDTH * 0.15, AVAILABLE_WIDTH * 0.20])
+        detail_table = Table(detail_data, colWidths=[AVAILABLE_WIDTH * 0.10, AVAILABLE_WIDTH * 0.43, AVAILABLE_WIDTH * 0.12, AVAILABLE_WIDTH * 0.12, AVAILABLE_WIDTH * 0.23])
         detail_table.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e0e0e0')),
             ('GRID', (0,0), (-1,-1), 0.5, colors.black),
             ('ALIGN', (0,0), (0,-1), 'CENTER'),
-            ('ALIGN', (2,0), (3,-1), 'CENTER'),
+            ('ALIGN', (2,0), (4,-1), 'CENTER'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('FONTSIZE', (0,0), (-1,0), 9),
-            ('FONTSIZE', (0,1), (-1,-1), 9),
-            ('TEXTCOLOR', (3,1), (3,max_winners), colors.HexColor('#1b5e20')),
-            ('FONTNAME', (3,1), (3,max_winners), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('TEXTCOLOR', (4,1), (4,max_winners), colors.HexColor('#1b5e20')),
+            ('FONTNAME', (4,1), (4,max_winners), 'Helvetica-Bold'),
             ('TOPPADDING', (0,0), (-1,-1), 5),
             ('BOTTOMPADDING', (0,0), (-1,-1), 5),
             ('LEFTPADDING', (0,0), (-1,-1), 6),
@@ -8867,14 +9191,22 @@ def get_vote_distribution(election_id):
         if candidate.photo:
             photo_url = url_for('admin.static', filename='images/' + candidate.photo)
         
+        # ===== UPDATED: Determine display name and initials based on candidate type =====
+        if candidate.candidate_type == 'studio':
+            display_name = candidate.studio_name or "Unknown Studio"
+            initials = candidate.studio_name[0].upper() if candidate.studio_name else "S"
+        else:
+            display_name = f"{candidate.first_name or ''} {candidate.last_name or ''}".strip() or "Unknown Candidate"
+            initials = f"{candidate.first_name[0] if candidate.first_name else ''}{candidate.last_name[0] if candidate.last_name else ''}".upper() or "??"
+        
         candidate_data = {
             'id': candidate.id,
-            'name': f"{candidate.first_name} {candidate.last_name}",
-            'initials': f"{candidate.first_name[0]}{candidate.last_name[0]}" if candidate.first_name and candidate.last_name else "??",
+            'name': display_name,
+            'initials': initials,
             'position': candidate.position.name if candidate.position else "Unknown",
             'position_id': candidate.position_id,
             'total_votes': total_votes,
-            'photo': photo_url,  # Add photo URL
+            'photo': photo_url,
             'breakdown': []
         }
         

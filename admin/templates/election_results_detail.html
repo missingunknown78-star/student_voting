@@ -421,7 +421,7 @@
             {% for candidate in candidate_results %}
             <div class="candidate-row" 
                  data-candidate-id="{{ candidate.id }}"
-                 data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                 data-candidate-name="{% if candidate.candidate_type == 'studio' %}{{ candidate.studio_name }}{% else %}{{ candidate.first_name }} {{ candidate.last_name }}{% endif %}"
                  data-candidate-position="{{ candidate.position }}"
                  data-vote-count="{{ candidate.vote_count }}">
                 <div>{{ loop.index }}</div>
@@ -429,7 +429,7 @@
                     <div class="candidate-photo-container">
                         {% if candidate.photo %}
                         <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
-                             alt="{{ candidate.first_name }}" class="candidate-photo">
+                             alt="{% if candidate.candidate_type == 'studio' %}{{ candidate.studio_name }}{% else %}{{ candidate.first_name }}{% endif %}" class="candidate-photo">
                         {% else %}
                         <div class="default-avatar">
                             <i class="fa-solid fa-user"></i>
@@ -438,7 +438,13 @@
                         <div class="vote-badge-container" id="vote-badge-{{ candidate.id }}"></div>
                     </div>
                     <div class="candidate-text">
-                        <div class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</div>
+                        <div class="candidate-name">
+                            {% if candidate.candidate_type == 'studio' %}
+                                {{ candidate.studio_name }}
+                            {% else %}
+                                {{ candidate.first_name }} {{ candidate.last_name }}
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="candidate-position">{{ candidate.position }}</div>
@@ -531,14 +537,20 @@
                             <div class="winner-info">
                                 {% if winner.photo %}
                                 <img src="{{ url_for('admin.static', filename='images/' + winner.photo) }}" 
-                                     alt="{{ winner.first_name }}" class="winner-photo">
+                                     alt="{% if winner.candidate_type == 'studio' %}{{ winner.studio_name }}{% else %}{{ winner.first_name }}{% endif %}" class="winner-photo">
                                 {% else %}
                                 <div class="winner-photo" style="background: #f59e0b; display: flex; align-items: center; justify-content: center;">
                                     <i class="fa-solid fa-user" style="color: white;"></i>
                                 </div>
                                 {% endif %}
                                 <div>
-                                    <div class="winner-name">{{ winner.first_name }} {{ winner.last_name }}</div>
+                                    <div class="winner-name">
+                                        {% if winner.candidate_type == 'studio' %}
+                                            {{ winner.studio_name }}
+                                        {% else %}
+                                            {{ winner.first_name }} {{ winner.last_name }}
+                                        {% endif %}
+                                    </div>
                                     <div class="winner-position-label">{{ position }}</div>
                                 </div>
                             </div>
@@ -558,13 +570,19 @@
                             <div class="winner-info">
                                 {% if winner.photo %}
                                 <img src="{{ url_for('admin.static', filename='images/' + winner.photo) }}" 
-                                     alt="{{ winner.first_name }}" class="winner-photo-small">
+                                     alt="{% if winner.candidate_type == 'studio' %}{{ winner.studio_name }}{% else %}{{ winner.first_name }}{% endif %}" class="winner-photo-small">
                                 {% else %}
                                 <div class="winner-photo-small" style="background: #f59e0b; display: flex; align-items: center; justify-content: center;">
                                     <i class="fa-solid fa-user" style="color: white; font-size: 12px;"></i>
                                 </div>
                                 {% endif %}
-                                <span class="winner-name-small">{{ winner.first_name }} {{ winner.last_name }}</span>
+                                <span class="winner-name-small">
+                                    {% if winner.candidate_type == 'studio' %}
+                                        {{ winner.studio_name }}
+                                    {% else %}
+                                        {{ winner.first_name }} {{ winner.last_name }}
+                                    {% endif %}
+                                </span>
                             </div>
                             <div class="winner-vote-count-small">{{ winner.vote_count }}</div>
                         </div>
@@ -620,7 +638,7 @@
             
             <div class="candidate-row {% if is_winner %}winner{% endif %}" 
                  data-candidate-id="{{ candidate.id }}"
-                 data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                 data-candidate-name="{% if candidate.candidate_type == 'studio' %}{{ candidate.studio_name }}{% else %}{{ candidate.first_name }} {{ candidate.last_name }}{% endif %}"
                  data-candidate-position="{{ candidate.position }}"
                  data-position-id="{{ candidate.position_id }}"
                  data-vote-count="{{ candidate.vote_count }}"
@@ -630,7 +648,7 @@
                     <div class="candidate-photo-container">
                         {% if candidate.photo %}
                         <img src="{{ url_for('admin.static', filename='images/' + candidate.photo) }}" 
-                             alt="{{ candidate.first_name }}" class="candidate-photo">
+                             alt="{% if candidate.candidate_type == 'studio' %}{{ candidate.studio_name }}{% else %}{{ candidate.first_name }}{% endif %}" class="candidate-photo">
                         {% else %}
                         <div class="default-avatar">
                             <i class="fa-solid fa-user"></i>
@@ -638,7 +656,13 @@
                         {% endif %}
                     </div>
                     <div class="candidate-text">
-                        <div class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</div>
+                        <div class="candidate-name">
+                            {% if candidate.candidate_type == 'studio' %}
+                                {{ candidate.studio_name }}
+                            {% else %}
+                                {{ candidate.first_name }} {{ candidate.last_name }}
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="candidate-position">{{ candidate.position }}</div>

@@ -22,26 +22,36 @@
                     <div class="candidate-info">
                         <div class="candidate-photo" 
                              data-photo-url="{% if candidate.photo %}{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}{% else %}{{ url_for('student.static', filename='images/default_user.png') }}{% endif %}"
-                             data-candidate-name="{{ candidate.first_name }} {{ candidate.last_name }}"
+                             data-candidate-name="{% if candidate.candidate_type == 'studio' %}{{ candidate.studio_name }}{% else %}{{ candidate.first_name }} {{ candidate.last_name }}{% endif %}"
                              onclick="openCandidatePhoto(this)">
                             {% if candidate.photo %}
                                 <img src="{{ url_for('admin.static', filename='images/' ~ candidate.photo) }}" 
-                                     alt="{{ candidate.first_name }} {{ candidate.last_name }}"
+                                     alt="{% if candidate.candidate_type == 'studio' %}{{ candidate.studio_name }}{% else %}{{ candidate.first_name }} {{ candidate.last_name }}{% endif %}"
                                      class="candidate-photo-img"
                                      onerror="this.style.display='none'; this.parentElement.classList.add('no-image');">
                             {% endif %}
                             {% if not candidate.photo %}
                                 <span class="candidate-initials">
-                                    {{ candidate.first_name[0] }}{{ candidate.last_name[0] }}
+                                    {% if candidate.candidate_type == 'studio' %}
+                                        {{ candidate.studio_name[0]|upper if candidate.studio_name else 'S' }}
+                                    {% else %}
+                                        {{ candidate.first_name[0] }}{{ candidate.last_name[0] }}
+                                    {% endif %}
                                 </span>
                             {% endif %}
                         </div>
                         <div class="candidate-details">
-                            <h3 class="candidate-name">{{ candidate.first_name }} {{ candidate.last_name }}</h3>
+                            <h3 class="candidate-name">
+                                {% if candidate.candidate_type == 'studio' %}
+                                    {{ candidate.studio_name }}
+                                {% else %}
+                                    {{ candidate.first_name }} {{ candidate.last_name }}
+                                {% endif %}
+                            </h3>
                             {% if candidate.party_list %}
                             <span class="party-badge">{{ candidate.party_list }}</span>
                             {% endif %}
-                            {% if candidate.department %}
+                            {% if candidate.department and candidate.candidate_type != 'studio' %}
                             <p class="candidate-course">{{ candidate.department }}</p>
                             {% endif %}
                         </div>

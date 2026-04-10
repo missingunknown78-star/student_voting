@@ -89,6 +89,78 @@
             max-width: 55px !important;
         }
     }
+
+    /* Candidate Type Selector Styles - DROPDOWN VERSION */
+    .candidate-type-selector {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .candidate-type-selector h4 {
+        margin: 0 0 12px 0;
+        font-size: 0.9rem;
+        color: #475569;
+    }
+    
+    .candidate-type-dropdown {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        background: white;
+        cursor: pointer;
+    }
+    
+    .candidate-type-dropdown:focus {
+        outline: none;
+        border-color: #3b82f6;
+        ring: 2px solid #3b82f6;
+    }
+    
+    .type-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    
+    .type-badge.student {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .type-badge.studio {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    /* Dark mode styles */
+    :root.dark-mode .candidate-type-selector {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    
+    :root.dark-mode .candidate-type-dropdown {
+        background: #0f172a;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+    
+    :root.dark-mode .type-badge.student {
+        background: #1e3a8a;
+        color: #bfdbfe;
+    }
+    
+    :root.dark-mode .type-badge.studio {
+        background: #78350f;
+        color: #fde68a;
+    }
 </style>
 {% endblock %}
 
@@ -160,7 +232,7 @@
             <thead>
                 <tr>
                     <th>Photo</th>
-                    <th>Student Name</th>
+                    <th>Name</th>
                     <th>Party List</th>
                     <th>Department</th>
                     <th>Position</th>
@@ -180,7 +252,13 @@
                             <span>No Photo</span>
                         {% endif %}
                     </td>
-                    <td>{{ c.first_name }} {{ c.last_name }}</td>
+                    <td>
+                        {% if c.candidate_type == 'studio' %}
+                            {{ c.studio_name }}
+                        {% else %}
+                            {{ c.first_name }} {{ c.last_name }}
+                        {% endif %}
+                    </td>
                     <td>{{ c.party_list or 'Independent' }}</td>
                     <td>{{ c.department.name if c.department else 'N/A' }}</td>
                     <td>{{ c.position.name }}</td>
@@ -197,9 +275,13 @@
                             <a href="#"
                                class="edit-btn openEditModal"
                                data-id="{{ c.id }}"
-                               data-first="{{ c.first_name }}"
-                               data-last="{{ c.last_name }}"
+                               data-candidate-type="{{ c.candidate_type or 'student' }}"
+                               data-first="{{ c.first_name or '' }}"
+                               data-last="{{ c.last_name or '' }}"
+                               data-studio-name="{{ c.studio_name or '' }}"
                                data-party="{{ c.party_list or '' }}"
+                               data-platform="{{ c.platform or '' }}"
+                               data-year-level-id="{{ c.year_level_id or '' }}"
                                data-position="{{ c.position_id }}"
                                data-election="{{ c.election_id }}"
                                data-department="{{ c.department.name if c.department else '' }}"
@@ -331,32 +413,59 @@
         <div id="addCandidateNotification" class="modal-notification" style="display: none;"></div>
 
         <form id="addCandidateForm" enctype="multipart/form-data">
-            <!-- First Row: First Name and Last Name -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>First Name <span class="required">*</span></label>
-                    <input type="text" name="first_name" id="add_first_name" required placeholder="Enter first name">
+            <!-- Candidate Type Selection - DROPDOWN -->
+            <div class="candidate-type-selector">
+                <h4>Candidate Type</h4>
+                <select name="candidate_type" id="candidate_type_select" class="candidate-type-dropdown">
+                    <option value="student">🎓 Student Candidate</option>
+                    <option value="studio">🎬 Studio Candidate</option>
+                </select>
+            </div>
+
+            <!-- Student Candidate Fields -->
+            <div id="studentFields">
+                <!-- First Row: First Name and Last Name -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" name="first_name" id="add_first_name" required placeholder="Enter first name">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" name="last_name" id="add_last_name" required placeholder="Enter last name">
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Last Name <span class="required">*</span></label>
-                    <input type="text" name="last_name" id="add_last_name" required placeholder="Enter last name">
+                <!-- Second Row: Year Level -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Year Level <span class="required">*</span></label>
+                        <select name="year_level_id" id="add_year_level" required>
+                            <option value="" disabled selected>Select Year Level</option>
+                            {% for year in year_levels %}
+                                <option value="{{ year.id }}">{{ year.year_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-hint">Current year level</small>
+                    </div>
                 </div>
             </div>
 
-            <!-- Second Row: Year Level and Party List -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Year Level <span class="required">*</span></label>
-                    <select name="year_level_id" id="add_year_level" required>
-                        <option value="" disabled selected>Select Year Level</option>
-                        {% for year in year_levels %}
-                            <option value="{{ year.id }}">{{ year.year_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-hint">Current year level</small>
+            <!-- Studio Candidate Fields (Hidden by default) - NO PARTY LIST, NO PLATFORM -->
+            <div id="studioFields" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>Studio Name <span class="required">*</span></label>
+                        <input type="text" name="studio_name" id="add_studio_name" placeholder="Enter studio name (e.g., Studio A, Photography Studio)">
+                        <small class="form-hint">Name of the studio/group running for election</small>
+                    </div>
                 </div>
-                
+            </div>
+
+            <!-- Common Fields for Both Types -->
+            <!-- Party List -->
+            <div class="form-row" id="partyListField">
                 <div class="form-group">
                     <label>Party List</label>
                     <input type="text" name="party_list" id="add_party_list" placeholder="e.g., Lakas, Aksyon">
@@ -365,7 +474,7 @@
             </div>
 
             <!-- Platform Field (Full Width) -->
-            <div class="form-group full-width">
+            <div class="form-group full-width" id="platformField">
                 <label>Platform</label>
                 <textarea name="platform" id="add_platform" rows="3" placeholder="Enter candidate's platform, goals, or manifesto..."></textarea>
                 <small class="form-hint">Optional: Describe the candidate's platform</small>
@@ -460,31 +569,60 @@
 
         <form id="editCandidateForm" enctype="multipart/form-data">
             <input type="hidden" id="edit_id" name="id">
+            <input type="hidden" id="edit_candidate_type" name="candidate_type">
 
-            <!-- First Row: First Name and Last Name -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>First Name <span class="required">*</span></label>
-                    <input type="text" name="first_name" id="edit_first" required placeholder="Enter first name">
-                </div>
-                <div class="form-group">
-                    <label>Last Name <span class="required">*</span></label>
-                    <input type="text" name="last_name" id="edit_last" required placeholder="Enter last name">
+            <!-- Candidate Type Display (read-only for edit) -->
+            <div class="candidate-type-selector" style="background: #e2e8f0; opacity: 0.8;">
+                <h4>Candidate Type</h4>
+                <div class="type-options">
+                    <span id="edit_type_display" style="padding: 5px 12px; border-radius: 20px; background: #3b82f6; color: white; font-size: 0.85rem;">
+                        <i class="fa-solid fa-user-graduate"></i> Student Candidate
+                    </span>
                 </div>
             </div>
 
-            <!-- Second Row: Year Level and Party List -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Year Level <span class="required">*</span></label>
-                    <select name="year_level_id" id="edit_year_level" required>
-                        <option value="" disabled>Select Year Level</option>
-                        {% for year in year_levels %}
-                            <option value="{{ year.id }}">{{ year.year_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-hint">Current year level</small>
+            <!-- Student Candidate Fields -->
+            <div id="editStudentFields">
+                <!-- First Row: First Name and Last Name -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" name="first_name" id="edit_first" required placeholder="Enter first name">
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" name="last_name" id="edit_last" required placeholder="Enter last name">
+                    </div>
                 </div>
+
+                <!-- Second Row: Year Level -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Year Level <span class="required">*</span></label>
+                        <select name="year_level_id" id="edit_year_level" required>
+                            <option value="" disabled>Select Year Level</option>
+                            {% for year in year_levels %}
+                                <option value="{{ year.id }}">{{ year.year_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-hint">Current year level</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Studio Candidate Fields -->
+            <div id="editStudioFields" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>Studio Name <span class="required">*</span></label>
+                        <input type="text" name="studio_name" id="edit_studio_name" placeholder="Enter studio name">
+                        <small class="form-hint">Name of the studio/group</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Common Fields -->
+            <div class="form-row">
                 <div class="form-group">
                     <label>Party List</label>
                     <input type="text" name="party_list" id="edit_party_list" placeholder="e.g., Lakas, Aksyon">
@@ -616,6 +754,77 @@ function applyThemeToMainContent() {
         }
     });
 })();
+
+// Candidate Type Dropdown Toggle Function
+document.addEventListener('DOMContentLoaded', function() {
+    const candidateTypeSelect = document.getElementById('candidate_type_select');
+    const studentFields = document.getElementById('studentFields');
+    const studioFields = document.getElementById('studioFields');
+    const partyListField = document.getElementById('partyListField');
+    const platformField = document.getElementById('platformField');
+    
+    if (candidateTypeSelect) {
+        function toggleCandidateFields() {
+            const selectedType = candidateTypeSelect.value;
+            
+            if (selectedType === 'student') {
+                // Show student fields, hide studio fields
+                if (studentFields) studentFields.style.display = 'block';
+                if (studioFields) studioFields.style.display = 'none';
+                
+                // Show party list and platform for students
+                if (partyListField) partyListField.style.display = 'block';
+                if (platformField) platformField.style.display = 'block';
+                
+                // Make student fields required
+                const firstName = document.getElementById('add_first_name');
+                const lastName = document.getElementById('add_last_name');
+                const yearLevel = document.getElementById('add_year_level');
+                const department = document.getElementById('add_department');
+                const course = document.getElementById('add_course');
+                
+                if (firstName) firstName.required = true;
+                if (lastName) lastName.required = true;
+                if (yearLevel) yearLevel.required = true;
+                if (department) department.required = true;
+                if (course) course.required = true;
+                
+                // Make studio fields not required
+                const studioName = document.getElementById('add_studio_name');
+                if (studioName) studioName.required = false;
+                
+            } else {
+                // Show studio fields, hide student fields
+                if (studentFields) studentFields.style.display = 'none';
+                if (studioFields) studioFields.style.display = 'block';
+                
+                // Hide party list and platform for studios
+                if (partyListField) partyListField.style.display = 'none';
+                if (platformField) platformField.style.display = 'none';
+                
+                // Make student fields not required
+                const firstName = document.getElementById('add_first_name');
+                const lastName = document.getElementById('add_last_name');
+                const yearLevel = document.getElementById('add_year_level');
+                const department = document.getElementById('add_department');
+                const course = document.getElementById('add_course');
+                
+                if (firstName) firstName.required = false;
+                if (lastName) lastName.required = false;
+                if (yearLevel) yearLevel.required = false;
+                if (department) department.required = false;
+                if (course) course.required = false;
+                
+                // Make studio fields required
+                const studioName = document.getElementById('add_studio_name');
+                if (studioName) studioName.required = true;
+            }
+        }
+        
+        candidateTypeSelect.addEventListener('change', toggleCandidateFields);
+        toggleCandidateFields(); // Initial call
+    }
+});
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/manage_candidates.js') }}"></script>
