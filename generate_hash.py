@@ -1,17 +1,23 @@
-# generate_hash.py
-from werkzeug.security import generate_password_hash
+# generate_bcrypt_hash.py
+from flask_bcrypt import Bcrypt
+import sys
 
-# Change this to your actual password
-PASSWORD = "Admin1!"
+# Initialize bcrypt
+bcrypt = Bcrypt()
 
-# Generate the hash
-new_hash = generate_password_hash(PASSWORD)
+# Your password
+password = "Admin1!"
 
-print("=" * 50)
-print("NEW PASSWORD HASH GENERATED")
-print("=" * 50)
-print(f"Password: {PASSWORD}")
-print(f"\nHash: {new_hash}")
-print("=" * 50)
-print("\nCopy this hash and use it in MySQL:")
-print(f"UPDATE admin SET password = '{new_hash}' WHERE username = 'admin';")
+# Generate hash (exactly like your admin creation script)
+hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+
+print("=" * 60)
+print("BCRYPT HASH GENERATED (Compatible with your app)")
+print("=" * 60)
+print(f"Password: {password}")
+print(f"\nHash: {hashed}")
+print(f"\nHash length: {len(hashed)} characters")
+print(f"Starts with $2b$? {hashed.startswith('$2b$')}")
+print("=" * 60)
+print("\nRun this SQL command:")
+print(f"UPDATE admins SET password = '{hashed}' WHERE username = 'admin';")

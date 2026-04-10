@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login</title>
 
-    <!-- CSRF Token Meta Tag - REMOVED -->
-
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/admin_login.css') }}">
 </head>
@@ -29,8 +27,6 @@
     <!-- Login Form -->
     <form action="{{ url_for('admin.login') }}" method="POST" class="login-form" autocomplete="off" id="loginForm">
         
-        <!-- CSRF Token - REMOVED -->
-
         <h3>Admin Login</h3>
 
         <!-- Username -->
@@ -67,6 +63,11 @@
             <span class="spinner"></span>
         </button>
 
+        <!-- Forgot Password Link -->
+        <div class="forgot-link">
+            <a onclick="openModal()">Forgot Password?</a>
+        </div>
+
         <!-- Error Message -->
         {% if error %}
             <p class="error-msg">{{ error }}</p>
@@ -75,7 +76,237 @@
     </form>
 </div>
 
-<!-- JS for Floating Labels & Button Spinner -->
+<!-- Forgot Password Modal -->
+<div id="forgotPasswordModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Reset Admin Password</h3>
+        <p>Enter your email and username to receive a password reset link.</p>
+        
+        <form id="forgotPasswordForm">
+            <div class="input-group">
+                <input type="email" id="resetEmail" placeholder=" " required>
+                <label>Email Address</label>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="resetUsername" placeholder=" " required>
+                <label>Username</label>
+            </div>
+            
+            <button type="submit" class="reset-btn" id="resetBtn">
+                <span class="reset-btn-text">Send Reset Link</span>
+                <span class="reset-spinner"></span>
+            </button>
+        </form>
+        
+        <div id="resetMessage" class="reset-message"></div>
+    </div>
+</div>
+
+<style>
+    /* Modal styles - Glassmorphic effect */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .modal-content {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        margin: 0;
+        padding: 35px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 450px;
+        position: relative;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    .close {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #666;
+        transition: color 0.3s;
+    }
+    
+    .close:hover {
+        color: #000;
+    }
+    
+    .reset-btn {
+        width: 100%;
+        padding: 12px;
+        background: #2196F3;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 10px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: background 0.3s;
+    }
+    
+    .reset-btn:hover {
+        background: #1976D2;
+    }
+    
+    .reset-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .reset-btn-text {
+        display: inline-block;
+    }
+    
+    .reset-spinner {
+        display: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+    }
+    
+    .reset-btn.spinning .reset-btn-text {
+        display: none;
+    }
+    
+    .reset-btn.spinning .reset-spinner {
+        display: inline-block;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .reset-message {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        text-align: center;
+    }
+    
+    .reset-message.success {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .reset-message.error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .forgot-link {
+        text-align: center;
+        margin-top: 15px;
+    }
+    
+    .forgot-link a {
+        color: #090a0c;
+        text-decoration: none;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    
+    .forgot-link a:hover {
+        text-decoration: underline;
+    }
+
+    /* Input group styles for modal */
+    .modal .input-group {
+        position: relative;
+        margin-bottom: 25px;
+    }
+    
+    .modal .input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        font-size: 16px;
+        transition: all 0.3s;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        z-index: 1;
+    }
+    
+    .modal .input-group input:focus {
+        border-color: #2196F3;
+        outline: none;
+        background: white;
+    }
+    
+    .modal .input-group input::placeholder {
+        color: transparent;
+    }
+    
+    .modal .input-group input:focus::placeholder {
+        color: #999;
+    }
+    
+    .modal .input-group label {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        color: #666;
+        font-size: 16px;
+        transition: all 0.3s;
+        pointer-events: none;
+        background: transparent;
+        z-index: 2;
+    }
+    
+    .modal .input-group input:focus + label,
+    .modal .input-group input:not(:placeholder-shown) + label {
+        top: -10px;
+        left: 10px;
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 0 5px;
+        color: #2196F3;
+    }
+
+    .modal h3 {
+        color: #333;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .modal p {
+        color: #555;
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const inputs = document.querySelectorAll('.input-group input');
@@ -98,16 +329,88 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add spinning animation on form submit
     loginForm.addEventListener('submit', function(e) {
-        // Add spinning class to button
         loginBtn.classList.add('spinning');
-        
-        // Disable the button to prevent multiple submissions
         loginBtn.disabled = true;
-        
-        // The form will continue to submit normally
-        // If you want to prevent submission for demo, uncomment the next line
-        // e.preventDefault();
     });
+});
+
+// Modal functionality
+const modal = document.getElementById('forgotPasswordModal');
+
+function openModal() {
+    modal.style.display = 'block';
+    document.getElementById('resetEmail').value = '';
+    document.getElementById('resetUsername').value = '';
+    document.getElementById('resetMessage').innerHTML = '';
+    
+    // Reset button state
+    const resetBtn = document.getElementById('resetBtn');
+    resetBtn.classList.remove('spinning');
+    resetBtn.disabled = false;
+    resetBtn.querySelector('.reset-btn-text').textContent = 'Send Reset Link';
+}
+
+document.querySelector('.close').onclick = function() {
+    modal.style.display = 'none';
+}
+
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Handle forgot password form submission
+document.getElementById('forgotPasswordForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('resetEmail').value.trim();
+    const username = document.getElementById('resetUsername').value.trim();
+    const messageDiv = document.getElementById('resetMessage');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    // Validate inputs
+    if (!email || !username) {
+        messageDiv.innerHTML = '<div class="reset-message error">✗ Please enter both email and username.</div>';
+        return;
+    }
+    
+    // Add spinning animation to button
+    resetBtn.classList.add('spinning');
+    resetBtn.disabled = true;
+    messageDiv.innerHTML = '';
+    
+    try {
+        // Using the new endpoint that doesn't require login
+        const response = await fetch('/ctumoalboal-comelec/login-forgot-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
+            body: JSON.stringify({ email: email, username: username })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            messageDiv.innerHTML = '<div class="reset-message success">✓ ' + data.message + '</div>';
+            document.getElementById('resetEmail').value = '';
+            document.getElementById('resetUsername').value = '';
+            // Close modal after 3 seconds
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 3000);
+        } else {
+            messageDiv.innerHTML = '<div class="reset-message error">✗ ' + data.message + '</div>';
+            resetBtn.classList.remove('spinning');
+            resetBtn.disabled = false;
+        }
+    } catch (error) {
+        messageDiv.innerHTML = '<div class="reset-message error">✗ An error occurred. Please try again.</div>';
+        resetBtn.classList.remove('spinning');
+        resetBtn.disabled = false;
+    }
 });
 </script>
 

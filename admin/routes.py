@@ -46,6 +46,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
 import traceback
+from datetime import datetime, timedelta
+import secrets
+import datetime
+from flask import request, jsonify, render_template_string
+from flask_mail import Mail, Message
+from extensions import mail
 
 try:
     from admin.models import TallyVote
@@ -515,6 +521,101 @@ def login():
 
     return render_template('admin_login.html', error=error)
 
+
+# ------------------- FORGOT PASSWORD FROM LOGIN PAGE (NO LOGIN REQUIRED) ------------------- #
+@admin_bp.route('/login-forgot-password', methods=['POST'])
+def login_forgot_password():
+    """
+    Send password reset email - Accessible from login page (no authentication required)
+    Uses the same password_reset_tokens dictionary
+    """
+    try:
+        if not request.is_json:
+            return jsonify({
+                'success': False,
+                'message': 'Request must be JSON'
+            }), 400
+        
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        username = data.get('username', '').strip()
+        
+        if not email or not username:
+            return jsonify({
+                'success': False,
+                'message': 'Email and username are required'
+            }), 400
+        
+        # Find admin by email AND username (don't use current_user since not logged in)
+        admin = Admin.query.filter(
+            func.lower(Admin.email) == email,
+            func.lower(Admin.username) == func.lower(username)
+        ).first()
+        
+        # Always return success even if admin not found (security - prevents email enumeration)
+        if not admin:
+            return jsonify({
+                'success': True,
+                'message': 'If an account matches your email and username, a reset link will be sent.'
+            }), 200
+        
+        # Check if admin is active
+        if admin.status != 'Active':
+            return jsonify({
+                'success': True,
+                'message': 'If an account matches your email and username, a reset link will be sent.'
+            }), 200
+        
+        # Generate reset token
+        token = secrets.token_urlsafe(48)
+        
+        # Store token with expiry (15 minutes) - using the same dictionary
+        password_reset_tokens[token] = {
+            'admin_id': admin.id,
+            'admin_username': admin.username,
+            'admin_name': f"{admin.first_name} {admin.last_name}",
+            'admin_email': admin.email,
+            'expiry': datetime.utcnow() + timedelta(minutes=15)
+        }
+        
+        # Generate reset URL (reusing your existing reset page)
+        reset_url = url_for('admin.reset_password_page', token=token, _external=True)
+        
+        # Render email template (reusing your existing template)
+        email_html = render_template('admin_password_reset_email.html',
+                                   admin_name=f"{admin.first_name} {admin.last_name}",
+                                   admin_username=admin.username,
+                                   reset_url=reset_url)
+        
+        # Send email
+        from flask_mail import Message
+        from extensions import mail
+        
+        msg = Message(
+            'Reset Your Admin Password - CTU COMELEC',
+            recipients=[admin.email]
+        )
+        msg.html = email_html
+        
+        mail.send(msg)
+        
+        # Audit log
+        log_audit(
+            action='PASSWORD_RESET_REQUESTED_FROM_LOGIN',
+            description=f"Password reset requested for admin '{admin.username}' from login page IP: {request.remote_addr}"
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password reset instructions sent to your email!'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error sending password reset from login: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
 
 
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
@@ -4424,7 +4525,7 @@ def get_deletion_request(request_id):
             student_id_number = req.student.id_number if req.student.id_number else "N/A"
         else:
             # For approved/deleted requests, try to get info from audit log
-            from models import DeletionRequestAudit
+            from admin.models import DeletionRequestAudit
             audit = DeletionRequestAudit.query.filter_by(original_request_id=req.id).first()
             if audit:
                 student_name = audit.student_name
@@ -4436,7 +4537,7 @@ def get_deletion_request(request_id):
             processed_by_name = req.admin.username
         elif req.processed_by_id:
             # Try to get admin even if relationship is lazy
-            from models import Admin
+            from admin.models import Admin
             admin = Admin.query.get(req.processed_by_id)
             if admin:
                 processed_by_name = admin.username
