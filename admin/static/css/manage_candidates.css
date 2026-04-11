@@ -577,7 +577,323 @@ body:not(.dark-mode) {
     color: white;
 }
 
-/* ---------------- Lightbox Photo Overlay ---------------- */
+/* ==================== MODAL STYLES (CRITICAL - MISSING BEFORE) ==================== */
+
+/* Lightbox Modal - Full screen overlay */
+.lightbox-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Modal Content */
+.lightbox-content {
+    background: var(--modal-bg);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 30px;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease;
+    color: var(--modal-text);
+}
+
+/* Scrollbar styling for modal content */
+.lightbox-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.lightbox-content::-webkit-scrollbar-track {
+    background: var(--gray-light);
+    border-radius: 10px;
+}
+
+.lightbox-content::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+.lightbox-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Close button */
+.lightbox-content .close {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.lightbox-content .close:hover {
+    color: var(--danger);
+    transform: scale(1.1);
+}
+
+/* Modal headings */
+.lightbox-content h2 {
+    margin-bottom: 25px;
+    color: var(--primary);
+    font-size: 1.8rem;
+    font-weight: 700;
+    border-bottom: 2px solid var(--primary);
+    display: inline-block;
+    padding-bottom: 8px;
+}
+
+/* Form styles inside modal */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.form-group .required {
+    color: var(--danger);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    background: var(--input-bg);
+    color: var(--text-color);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+
+.form-group textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.form-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Form row for two columns */
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.form-group.full-width {
+    flex: 1;
+}
+
+/* Button group in modal */
+.button-group {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--input-border);
+}
+
+.button-group button {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+}
+
+/* Modal notification */
+.modal-notification {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    animation: slideDown 0.3s ease;
+}
+
+.modal-notification.success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.modal-notification.error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.dark-mode .modal-notification.success {
+    background: #1e4620;
+    color: #d4edda;
+}
+
+.dark-mode .modal-notification.error {
+    background: #491217;
+    color: #f8d7da;
+}
+
+/* Position List Table */
+.positions-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+}
+
+.positions-list-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.positions-list-table th,
+.positions-list-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--input-border);
+}
+
+.positions-list-table th {
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+
+.positions-list-table tr:hover {
+    background: var(--table-row-hover);
+}
+
+/* Position edit/delete buttons in position list */
+.position-edit-btn,
+.position-delete-btn {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+    margin: 0 3px;
+}
+
+.position-edit-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.position-edit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);
+}
+
+.position-delete-btn {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.position-delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);
+}
+
+/* Color picker for positions (if used) */
+.color-preview {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin-right: 10px;
+    border: 1px solid var(--input-border);
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== LIGHTBOX PHOTO OVERLAY ==================== */
 #lightbox {
     position: fixed;
     top: 0;
@@ -588,7 +904,7 @@ body:not(.dark-mode) {
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 10000;
+    z-index: 100000;
     cursor: pointer;
     backdrop-filter: blur(5px);
 }
@@ -603,7 +919,7 @@ body:not(.dark-mode) {
     border: 1px solid var(--input-border);
 }
 
-/* ---------------- Pagination ---------------- */
+/* ==================== PAGINATION ==================== */
 .pagination {
     display: flex;
     justify-content: center;
@@ -659,7 +975,7 @@ body:not(.dark-mode) {
     box-shadow: none;
 }
 
-/* ---------------- Loading States ---------------- */
+/* ==================== LOADING STATES ==================== */
 .loading-spinner {
     display: inline-block;
     width: 16px;
@@ -695,7 +1011,7 @@ body:not(.dark-mode) {
     animation: spin 1s linear infinite;
 }
 
-/* ---------------- No Candidates Empty State ---------------- */
+/* ==================== NO CANDIDATES EMPTY STATE ==================== */
 .no-candidates-container {
     padding: 60px 20px;
     text-align: center;
@@ -787,52 +1103,59 @@ body:not(.dark-mode) {
     background: linear-gradient(135deg, #4a5bb0, #5a3d7a);
 }
 
-/* ---------------- Animations ---------------- */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* ==================== FLOATING NOTIFICATION ==================== */
+.floating-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100000;
+    min-width: 300px;
+    max-width: 450px;
+    animation: slideDown 0.3s ease-out;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    pointer-events: all;
 }
 
-@keyframes zoomIn {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+.floating-notification .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
 }
 
-@keyframes cardFadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+.floating-notification.success .notification-content {
+    background: linear-gradient(135deg, #00c851, #00a844);
+    border-left: 5px solid #007e33;
 }
 
-/* Stagger animations */
-.candidates-table,
-.pagination a,
-.pagination .current,
-.add-btn,
-.position-btn,
-.filter-form select {
-    animation: cardFadeIn 0.3s ease-out;
+.floating-notification.error .notification-content {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    border-left: 5px solid #a70000;
 }
 
-.position-list-btn { animation-delay: 0.05s; }
-.add-position-btn { animation-delay: 0.1s; }
-.add-btn { animation-delay: 0.15s; }
-.filter-form select { animation-delay: 0.2s; }
-.candidates-table { animation-delay: 0.25s; }
-
-/* Force repaint */
-.candidates-table,
-.pagination a,
-.pagination .current,
-.add-btn,
-.position-btn,
-.filter-form select {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
+.floating-notification .notification-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin-left: auto;
+    padding: 0 8px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
 }
 
-/* ---------------- Responsive Design ---------------- */
+.floating-notification .notification-close:hover {
+    opacity: 1;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1024px) {
     .container {
         margin-left: 280px;
@@ -919,6 +1242,30 @@ body:not(.dark-mode) {
         width: 100%;
         justify-content: center;
     }
+    
+    /* Modal responsive */
+    .lightbox-content {
+        width: 95%;
+        padding: 20px;
+        max-height: 95vh;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .form-row .form-group {
+        margin-bottom: 0;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .button-group button {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
@@ -963,8 +1310,11 @@ body:not(.dark-mode) {
         padding: 5px 8px;
         font-size: 0.75rem;
     }
+    
+    .lightbox-content h2 {
+        font-size: 1.4rem;
+    }
 }
-
 
 /* ULTIMATE FIX - Force edit button to match delete button */
 .candidates-table .edit-btn,
@@ -1007,5 +1357,59 @@ body:not(.dark-mode) {
         max-width: 55px !important;
         padding: 5px 8px !important;
         font-size: 0.75rem !important;
+    }
+}
+
+/* Consistent notification animations */
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+}
+
+/* Student validation notification styling */
+.student-validation-notification {
+    pointer-events: all;
+}
+
+.student-validation-notification .notification-content {
+    backdrop-filter: blur(5px);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.6s linear infinite;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .student-validation-notification .notification-content {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
 }

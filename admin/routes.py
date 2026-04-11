@@ -5964,13 +5964,13 @@ def manage_candidates():
         if candidate_type == 'studio':
             # ===== STUDIO CANDIDATE =====
             studio_name = request.form.get('studio_name', '').strip()
-            party_list = request.form.get('party_list')
-            platform = request.form.get('platform')
-            department_id_form = request.form.get('department_id', type=int)
-            course_id = request.form.get('course_id', type=int)
             position_id = request.form.get('position_id')
             election_id = request.form.get('election_id')
             scope = request.form.get('scope')
+            
+            # If scope is missing (disabled input doesn't submit), default to 'campus'
+            if not scope:
+                scope = 'campus'
             
             # Get election to verify
             election = Election.query.get(election_id)
@@ -5987,10 +5987,23 @@ def manage_candidates():
                 flash('Studio name is required.', 'danger')
                 return redirect(url_for('admin.manage_candidates'))
             
-            if not position_id or not election_id or not scope:
+            if not position_id:
                 if is_ajax:
-                    return jsonify({'success': False, 'message': 'Please fill in all required fields.'})
-                flash('Please fill in all required fields.', 'danger')
+                    return jsonify({'success': False, 'message': 'Position is required.'})
+                flash('Position is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not election_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Election is required.'})
+                flash('Election is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # For studio candidates, scope should always be 'campus'
+            if scope != 'campus':
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Studio candidates can only be added to campus-wide elections.'})
+                flash('Studio candidates can only be added to campus-wide elections.', 'danger')
                 return redirect(url_for('admin.manage_candidates'))
             
             # Check for duplicate studio candidate in the SAME election
@@ -6007,19 +6020,6 @@ def manage_candidates():
                 flash(error_msg, 'danger')
                 return redirect(url_for('admin.manage_candidates'))
             
-            # Validate department and course (required for ALL candidates)
-            if not department_id_form:
-                if is_ajax:
-                    return jsonify({'success': False, 'message': 'Department is required for all candidates.'}), 400
-                flash('Department is required for all candidates.', 'danger')
-                return redirect(url_for('admin.manage_candidates'))
-            
-            if not course_id:
-                if is_ajax:
-                    return jsonify({'success': False, 'message': 'Course is required for all candidates.'}), 400
-                flash('Course is required for all candidates.', 'danger')
-                return redirect(url_for('admin.manage_candidates'))
-            
             # Save photo if uploaded
             photo_file = request.files.get('photo')
             photo_filename = None
@@ -6032,20 +6032,20 @@ def manage_candidates():
                 photo_filename = f"{name}_{int(time.time())}{ext}"
                 photo_file.save(os.path.join(photo_folder, photo_filename))
             
-            # Create studio candidate
+            # Create studio candidate - ONLY these fields are populated
             new_candidate = Candidate(
                 candidate_type='studio',
                 studio_name=studio_name,
                 first_name=None,
                 last_name=None,
-                party_list=party_list if party_list else None,
-                platform=platform if platform else None,
-                department_id=department_id_form,
-                course_id=course_id,
+                party_list=None,
+                platform=None,
+                department_id=None,
+                course_id=None,
                 position_id=position_id,
                 election_id=election_id,
                 scope=scope,
-                year_level_id=None,  # Studio candidates don't have year level
+                year_level_id=None,
                 photo=photo_filename
             )
             
@@ -6055,17 +6055,14 @@ def manage_candidates():
             # Audit log for studio candidate
             username = getattr(current_user, 'username', 'Unknown')
             ip = request.remote_addr
-            department_name = new_candidate.department.name if new_candidate.department else 'N/A'
             position_name = new_candidate.position.name if new_candidate.position else 'N/A'
             election_title = new_candidate.election.title if new_candidate.election else 'N/A'
-            party_list_name = new_candidate.party_list if new_candidate.party_list else 'Independent'
-            platform_display = new_candidate.platform[:50] + '...' if new_candidate.platform and len(new_candidate.platform) > 50 else (new_candidate.platform or 'None')
             
             year_info = f" | Year: {year}" if year else ""
             
             log_audit(
                 action='CREATE_STUDIO_CANDIDATE',
-                description=f"Admin user '{username}' added studio candidate: {studio_name} from IP: {ip} | Party: {party_list_name} | Position: {position_name} | Department: {department_name} | Platform: {platform_display} | Election: {election_title} ({scope}){year_info}"
+                description=f"Admin user '{username}' added studio candidate: {studio_name} from IP: {ip} | Position: {position_name} | Election: {election_title} ({scope}){year_info}"
             )
             
             # Return JSON for AJAX requests
@@ -6076,11 +6073,6 @@ def manage_candidates():
                     'id': new_candidate.id,
                     'studio_name': new_candidate.studio_name,
                     'candidate_type': 'studio',
-                    'party_list': new_candidate.party_list,
-                    'platform': new_candidate.platform,
-                    'department': new_candidate.department.name if new_candidate.department else '',
-                    'department_id': new_candidate.department_id,
-                    'course_id': new_candidate.course_id,
                     'position': new_candidate.position.name,
                     'position_id': new_candidate.position_id,
                     'election_id': new_candidate.election_id,
@@ -6092,7 +6084,7 @@ def manage_candidates():
             return redirect(url_for('admin.manage_candidates'))
         
         else:
-            # ===== STUDENT CANDIDATE (Existing Logic) =====
+            # ===== STUDENT CANDIDATE =====
             first_name = request.form.get('first_name')
             last_name = request.form.get('last_name')
             party_list = request.form.get('party_list')
@@ -6112,11 +6104,71 @@ def manage_candidates():
                 flash('Selected election does not exist.', 'danger')
                 return redirect(url_for('admin.manage_candidates'))
             
-            # Validate required fields
-            if not all([first_name, last_name, position_id, election_id, scope]):
+            # Validate required fields for student
+            if not first_name:
                 if is_ajax:
-                    return jsonify({'success': False, 'message': 'Please fill in all required fields.'})
-                flash('Please fill in all required fields.', 'danger')
+                    return jsonify({'success': False, 'message': 'First name is required.'})
+                flash('First name is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not last_name:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Last name is required.'})
+                flash('Last name is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not position_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Position is required.'})
+                flash('Position is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not election_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Election is required.'})
+                flash('Election is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not scope:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Scope is required.'})
+                flash('Scope is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not year_level_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Year level is required.'})
+                flash('Year level is required.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # Validate department and course (required for student candidates)
+            if not department_id_form:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Department is required for student candidates.'})
+                flash('Department is required for student candidates.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            if not course_id:
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Course is required for student candidates.'})
+                flash('Course is required for student candidates.', 'danger')
+                return redirect(url_for('admin.manage_candidates'))
+            
+            # ===== VALIDATE STUDENT EXISTS IN STUDENT TABLE =====
+            # Check if student exists with matching first name, last name, department, course, and year level
+            existing_student = Student.query.filter(
+                Student.first_name.ilike(first_name),
+                Student.last_name.ilike(last_name),
+                Student.department_id == department_id_form,
+                Student.course_id == course_id,
+                Student.year_level_id == year_level_id
+            ).first()
+            
+            if not existing_student:
+                error_msg = f'Student "{first_name} {last_name}" not found in {department_id_form} department, course ID {course_id}, year level {year_level_id}. Please verify the student information.'
+                if is_ajax:
+                    return jsonify({'success': False, 'message': error_msg}), 400
+                flash(error_msg, 'danger')
                 return redirect(url_for('admin.manage_candidates'))
             
             # Check for duplicate candidate in the SAME election
@@ -6134,19 +6186,6 @@ def manage_candidates():
                 flash(error_msg, 'danger')
                 return redirect(url_for('admin.manage_candidates'))
             
-            # Validate department and course (required for ALL candidates)
-            if not department_id_form:
-                if is_ajax:
-                    return jsonify({'success': False, 'message': 'Department is required for all candidates.'}), 400
-                flash('Department is required for all candidates.', 'danger')
-                return redirect(url_for('admin.manage_candidates'))
-            
-            if not course_id:
-                if is_ajax:
-                    return jsonify({'success': False, 'message': 'Course is required for all candidates.'}), 400
-                flash('Course is required for all candidates.', 'danger')
-                return redirect(url_for('admin.manage_candidates'))
-            
             # Save photo if uploaded
             photo_file = request.files.get('photo')
             photo_filename = None
@@ -6159,7 +6198,7 @@ def manage_candidates():
                 photo_filename = f"{name}_{int(time.time())}{ext}"
                 photo_file.save(os.path.join(photo_folder, photo_filename))
             
-            # Create candidate with platform field
+            # Create student candidate
             new_candidate = Candidate(
                 candidate_type='student',
                 first_name=first_name,
@@ -6233,7 +6272,7 @@ def manage_candidates():
         positions=positions,
         departments=departments,
         year_levels=year_levels,
-        elections=dropdown_elections,  # DROPDOWN only gets upcoming/active
+        elections=dropdown_elections,
         campus_elections=campus_elections,
         department_elections=department_elections,
         selected_department=selected_department,
@@ -6242,6 +6281,7 @@ def manage_candidates():
     )
 
 
+         
 @admin_bp.route('/candidates/filter', methods=['GET'])
 @admin_required
 def filter_candidates():

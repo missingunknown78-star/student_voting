@@ -404,7 +404,7 @@
 </div>
 
 <!-- ================= CANDIDATE MODALS ================= -->
-<!-- ADD CANDIDATE MODAL -->
+<!-- Inside the ADD CANDIDATE MODAL section - replace the candidate type selector and fields -->
 <div id="addCandidateModal" class="lightbox-modal">
     <div class="lightbox-content">
         <span class="close" onclick="closeAddCandidateModal()">&times;</span>
@@ -450,9 +450,31 @@
                         <small class="form-hint">Current year level</small>
                     </div>
                 </div>
+                
+                <!-- Department and Course for Student (Moved from common area) -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Department <span class="required">*</span></label>
+                        <select name="department_id" id="add_department_student" required>
+                            <option value="">Select department</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-hint">Required for student candidates</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Course <span class="required">*</span></label>
+                        <select name="course_id" id="add_course_student" required>
+                            <option value="">Select course</option>
+                        </select>
+                        <small class="form-hint">Required for student candidates</small>
+                    </div>
+                </div>
             </div>
 
-            <!-- Studio Candidate Fields (Hidden by default) - NO PARTY LIST, NO PLATFORM -->
+            <!-- Studio Candidate Fields (Hidden by default) -->
             <div id="studioFields" style="display: none;">
                 <div class="form-row">
                     <div class="form-group full-width">
@@ -464,7 +486,7 @@
             </div>
 
             <!-- Common Fields for Both Types -->
-            <!-- Party List -->
+            <!-- Party List (Students only - will be hidden for studios) -->
             <div class="form-row" id="partyListField">
                 <div class="form-group">
                     <label>Party List</label>
@@ -473,44 +495,22 @@
                 </div>
             </div>
 
-            <!-- Platform Field (Full Width) -->
+            <!-- Platform Field (Students only - will be hidden for studios) -->
             <div class="form-group full-width" id="platformField">
                 <label>Platform</label>
                 <textarea name="platform" id="add_platform" rows="3" placeholder="Enter candidate's platform, goals, or manifesto..."></textarea>
                 <small class="form-hint">Optional: Describe the candidate's platform</small>
             </div>
 
-            <!-- Third Row: Election Scope and Department -->
+            <!-- Election Scope and Election (Common for both, but behavior differs) -->
             <div class="form-row">
                 <div class="form-group">
                     <label>Election Scope <span class="required">*</span></label>
-                    <select name="scope" id="add_scope" required onchange="filterElectionsByScope('add')">
+                    <select name="scope" id="add_scope" required>
                         <option value="" disabled selected>Select Scope</option>
                         <option value="campus">Campus-Wide Election</option>
                         <option value="department">Department Election</option>
                     </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Department <span class="required">*</span></label>
-                    <select name="department_id" id="add_department" required>
-                        <option value="">Select department</option>
-                        {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-hint">Required for all candidates</small>
-                </div>
-            </div>
-
-            <!-- Fourth Row: Course and Election -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Course <span class="required">*</span></label>
-                    <select name="course_id" id="add_course" required>
-                        <option value="">Select course</option>
-                    </select>
-                    <small class="form-hint">Required for all candidates</small>
                 </div>
 
                 <div class="form-group">
@@ -529,7 +529,7 @@
                 </div>
             </div>
 
-            <!-- Fifth Row: Position and Photo -->
+            <!-- Position and Photo -->
             <div class="form-row">
                 <div class="form-group">
                     <label>Position <span class="required">*</span></label>

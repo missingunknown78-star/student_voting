@@ -64,12 +64,48 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize department change for course loading
-    const addDepartment = document.getElementById('add_department');
-    if (addDepartment) {
-        addDepartment.addEventListener('change', function() {
-            loadCourses('add', this.value);
+    // Initialize department change for course loading (for student)
+    const addDepartmentStudent = document.getElementById('add_department_student');
+    if (addDepartmentStudent) {
+        addDepartmentStudent.addEventListener('change', function() {
+            loadCoursesForStudent('add', this.value);
+            // Clear validation when department changes
+            const existingNotification = document.querySelector('.student-validation-notification');
+            if (existingNotification) existingNotification.remove();
         });
+    }
+    
+    // Initialize course change for student validation
+    const addCourseStudent = document.getElementById('add_course_student');
+    if (addCourseStudent) {
+        addCourseStudent.addEventListener('change', function() {
+            validateStudentExists();
+        });
+    }
+    
+    // Initialize first name and last name validation
+    const addFirstName = document.getElementById('add_first_name');
+    const addLastName = document.getElementById('add_last_name');
+    const addYearLevel = document.getElementById('add_year_level');
+    
+    if (addFirstName) {
+        addFirstName.addEventListener('blur', validateStudentExists);
+        addFirstName.addEventListener('input', function() {
+            const existingNotification = document.querySelector('.student-validation-notification');
+            if (existingNotification) existingNotification.remove();
+        });
+    }
+    
+    if (addLastName) {
+        addLastName.addEventListener('blur', validateStudentExists);
+        addLastName.addEventListener('input', function() {
+            const existingNotification = document.querySelector('.student-validation-notification');
+            if (existingNotification) existingNotification.remove();
+        });
+    }
+    
+    if (addYearLevel) {
+        addYearLevel.addEventListener('change', validateStudentExists);
     }
     
     const editDepartment = document.getElementById('edit_department');
@@ -105,6 +141,173 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Function to validate if student exists in real-time (simplified)
+async function validateStudentExists() {
+    const candidateTypeSelect = document.getElementById('candidate_type_select');
+    const candidateType = candidateTypeSelect ? candidateTypeSelect.value : 'student';
+    
+    // Only validate for student candidates
+    if (candidateType !== 'student') {
+        return true;
+    }
+    
+    const firstName = document.getElementById('add_first_name')?.value?.trim();
+    const lastName = document.getElementById('add_last_name')?.value?.trim();
+    const courseId = document.getElementById('add_course_student')?.value;
+    const yearLevelId = document.getElementById('add_year_level')?.value;
+    
+    // Check if all required fields are filled
+    if (!firstName || !lastName || !courseId || !yearLevelId) {
+        const existingNotification = document.querySelector('.student-validation-notification');
+        if (existingNotification) existingNotification.remove();
+        return false;
+    }
+    
+    try {
+        let url = `/ctumoalboal-comelec/validate-student?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}&course_id=${courseId}`;
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        
+        // Remove existing validation notification
+        const existingNotification = document.querySelector('.student-validation-notification');
+        if (existingNotification) existingNotification.remove();
+        
+        // Simple notification - just show if verified or not
+        if (data.exists) {
+            showStudentValidationNotification('✓ Student Verified', 'success');
+            return true;
+        } else {
+            showStudentValidationNotification('✗ Student Not Found', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('Validation error:', error);
+        showStudentValidationNotification('✗ Validation Error', 'error');
+        return false;
+    }
+}
+
+// Consistent notification function - top center, size fits text
+function showStudentValidationNotification(message, type) {
+    // Remove existing notification
+    const existingNotification = document.querySelector('.student-validation-notification');
+    if (existingNotification) existingNotification.remove();
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `student-validation-notification ${type}`;
+    
+    // Use same gradient colors as floating notifications
+    const colors = type === 'success' 
+        ? { bg: 'linear-gradient(135deg, #00c851, #00a844)', border: '#007e33', icon: 'fa-check-circle' }
+        : { bg: 'linear-gradient(135deg, #ff4444, #cc0000)', border: '#a70000', icon: 'fa-exclamation-circle' };
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fa ${colors.icon}"></i>
+            <div class="notification-message">${message}</div>
+            <button class="notification-close">&times;</button>
+        </div>
+    `;
+    
+    // Style the notification - TOP CENTER (not vertical center)
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100001;
+        min-width: 300px;
+        max-width: 450px;
+        width: auto;
+        animation: slideDown 0.3s ease-out;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        pointer-events: all;
+    `;
+    
+    // Style the content
+    const contentDiv = notification.querySelector('.notification-content');
+    if (contentDiv) {
+        contentDiv.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            background: ${colors.bg};
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-left: 5px solid ${colors.border};
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        `;
+    }
+    
+    // Style the icon
+    const iconElement = notification.querySelector('.notification-content i:first-child');
+    if (iconElement) {
+        iconElement.style.cssText = `
+            font-size: 1.4rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        `;
+    }
+    
+    // Style the message
+    const messageElement = notification.querySelector('.notification-message');
+    if (messageElement) {
+        messageElement.style.cssText = `
+            flex: 1;
+            line-height: 1.4;
+            word-break: keep-all;
+            white-space: nowrap;
+        `;
+    }
+    
+    // Style the close button
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) {
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-left: auto;
+            padding: 0 8px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        `;
+        closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+        closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+        closeBtn.onclick = () => {
+            notification.style.animation = 'slideUp 0.3s ease-out forwards';
+            setTimeout(() => notification.remove(), 300);
+        };
+    }
+    
+    // Append to body
+    document.body.appendChild(notification);
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideUp 0.3s ease-out forwards';
+            setTimeout(() => {
+                if (notification.parentNode) notification.remove();
+            }, 300);
+        }
+    }, 3000);
+}
+
 // Function to attach edit button listeners to all edit buttons
 function attachEditButtonListeners() {
     document.querySelectorAll('.openEditModal').forEach(btn => {
@@ -115,7 +318,6 @@ function attachEditButtonListeners() {
 }
 
 // Handle edit button click - WITH PLATFORM HANDLING
-// Update the handleEditClick function to include studio data
 function handleEditClick(e) {
     e.preventDefault();
     
@@ -178,6 +380,8 @@ function handleEditClick(e) {
 function filterElectionsByScopeForEdit(scope, departmentId, selectedElectionId) {
     const editElection = document.getElementById('edit_election');
     
+    if (!editElection) return;
+    
     // Hide all options first
     for (let i = 0; i < editElection.options.length; i++) {
         editElection.options[i].style.display = 'none';
@@ -235,7 +439,7 @@ function displaySchoolYearInfo() {
     }
 }
 
-// Initialize functions (placeholders - implement as needed)
+// Initialize functions
 function initModals() {}
 function initFilters() {}
 function initSearch() {}
@@ -245,6 +449,12 @@ function initEditButtons() {
 }
 function initPhotoClick() {}
 function initAddCandidate() {}
+
+// Filter positions by election
+function filterPositionsByElection(mode) {
+    // This function can be implemented if needed
+    console.log("Filter positions by election called for mode:", mode);
+}
 
 /* PHOTO LIGHTBOX */
 document.querySelectorAll('.clickable-photo').forEach(img => {
@@ -263,10 +473,14 @@ const openAddBtn = document.getElementById('openAddCandidate');
 if (openAddBtn) {
     openAddBtn.onclick = e => {
         e.preventDefault();
-        document.getElementById('addCandidateModal').style.display = 'flex';
+        const modal = document.getElementById('addCandidateModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
         
         // Reset form and clear any notifications
-        document.getElementById('addCandidateForm').reset();
+        const form = document.getElementById('addCandidateForm');
+        if (form) form.reset();
         
         // Hide any existing notifications
         const addNotification = document.getElementById('addCandidateNotification');
@@ -274,9 +488,15 @@ if (openAddBtn) {
             addNotification.style.display = 'none';
         }
         
-        // Clear course dropdown
-        const addCourse = document.getElementById('add_course');
-        addCourse.innerHTML = '<option value="">Select course</option>';
+        // Remove validation notification
+        const existingValidation = document.querySelector('.student-validation-notification');
+        if (existingValidation) existingValidation.remove();
+        
+        // Clear course dropdown for student
+        const addCourseStudent = document.getElementById('add_course_student');
+        if (addCourseStudent) {
+            addCourseStudent.innerHTML = '<option value="">Select course</option>';
+        }
         
         // Clear platform field
         const addPlatform = document.getElementById('add_platform');
@@ -286,32 +506,50 @@ if (openAddBtn) {
         
         // Hide ALL election options initially
         const addElection = document.getElementById('add_election');
-        for (let i = 0; i < addElection.options.length; i++) {
-            addElection.options[i].style.display = 'none';
+        if (addElection) {
+            for (let i = 0; i < addElection.options.length; i++) {
+                addElection.options[i].style.display = 'none';
+            }
+            
+            // Show the placeholder option only
+            for (let i = 0; i < addElection.options.length; i++) {
+                if (addElection.options[i].value === "") {
+                    addElection.options[i].style.display = 'block';
+                    break;
+                }
+            }
         }
         
-        // Show the placeholder option only
-        for (let i = 0; i < addElection.options.length; i++) {
-            if (addElection.options[i].value === "") {
-                addElection.options[i].style.display = 'block';
-                break;
+        // Reset candidate type toggle
+        const candidateTypeSelect = document.getElementById('candidate_type_select');
+        if (candidateTypeSelect) {
+            candidateTypeSelect.value = 'student';
+            // Trigger the toggle function
+            if (typeof toggleCandidateFields === 'function') {
+                toggleCandidateFields();
             }
         }
     };
 }
 
 function closeAddCandidateModal() {
-    document.getElementById('addCandidateModal').style.display = 'none';
-    document.getElementById('addCandidateForm').reset();
+    const modal = document.getElementById('addCandidateModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    const form = document.getElementById('addCandidateForm');
+    if (form) form.reset();
     
     // Clear any notification
     const addNotification = document.getElementById('addCandidateNotification');
     if (addNotification) {
         addNotification.style.display = 'none';
     }
+    
+    // Remove validation notification
+    const existingValidation = document.querySelector('.student-validation-notification');
+    if (existingValidation) existingValidation.remove();
 }
-
-/* EDIT MODAL - REMOVED OLD EVENT LISTENERS, using new handleEditClick function */
 
 // Helper function to reset edit button state
 function resetEditButtonState() {
@@ -329,8 +567,12 @@ function resetEditButtonState() {
 }
 
 function closeEditModal() {
-    document.getElementById('editCandidateModal').style.display = 'none';
-    document.getElementById('editCandidateForm').reset();
+    const modal = document.getElementById('editCandidateModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    const form = document.getElementById('editCandidateForm');
+    if (form) form.reset();
     
     // Clear any notification
     const editNotification = document.getElementById('editCandidateNotification');
@@ -342,10 +584,15 @@ function closeEditModal() {
     resetEditButtonState();
 }
 
-/* Function to load courses based on department selection */
+/* Function to load courses based on department selection (for edit modal) */
 function loadCourses(mode, departmentId) {
     return new Promise((resolve, reject) => {
         const courseSelect = document.getElementById(mode + '_course');
+        
+        if (!courseSelect) {
+            resolve();
+            return;
+        }
         
         // Clear current options
         courseSelect.innerHTML = '<option value="">Select course</option>';
@@ -366,7 +613,6 @@ function loadCourses(mode, departmentId) {
         fetch(`/ctumoalboal-comelec/courses/by_department/${departmentId}`, {
             headers: {
                 'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
             }
         })
             .then(response => {
@@ -397,10 +643,63 @@ function loadCourses(mode, departmentId) {
     });
 }
 
+/* Function to load courses for student (add modal) */
+function loadCoursesForStudent(mode, departmentId) {
+    const courseSelect = document.getElementById(mode + '_course_student');
+    
+    if (!courseSelect) return;
+    
+    // Clear current options
+    courseSelect.innerHTML = '<option value="">Select course</option>';
+    
+    if (!departmentId) {
+        return;
+    }
+    
+    // Show loading state
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = 'Loading courses...';
+    loadingOption.disabled = true;
+    courseSelect.appendChild(loadingOption);
+    
+    fetch(`/ctumoalboal-comelec/courses/by_department/${departmentId}`, {
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            courseSelect.innerHTML = '<option value="">Select course</option>';
+            
+            if (data.courses && data.courses.length > 0) {
+                data.courses.forEach(course => {
+                    const option = document.createElement('option');
+                    option.value = course.id;
+                    option.textContent = course.course_name + (course.course_code ? ` (${course.course_code})` : '');
+                    courseSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Error loading courses:', err);
+            courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+        });
+}
+
 /* Filter elections by scope */
 function filterElectionsByScope(mode) {
-    const scope = document.getElementById(mode + '_scope').value;
+    const scope = document.getElementById(mode + '_scope');
     const electionSelect = document.getElementById(mode + '_election');
+    
+    if (!scope || !electionSelect) return;
+    
+    const scopeValue = scope.value;
     const options = electionSelect.options;
     
     // First, hide all options
@@ -416,11 +715,12 @@ function filterElectionsByScope(mode) {
         }
     }
     
-    if (scope === 'department') {
-        // Get selected department
-        const departmentId = document.getElementById(mode + '_department').value;
+    if (scopeValue === 'department') {
+        // Get selected department for student
+        const departmentId = document.getElementById(mode + '_department_student');
+        const deptValue = departmentId ? departmentId.value : null;
         
-        if (departmentId) {
+        if (deptValue) {
             // Show only department elections for the selected department
             for (let i = 0; i < options.length; i++) {
                 const option = options[i];
@@ -429,12 +729,12 @@ function filterElectionsByScope(mode) {
                 const optionScope = option.getAttribute('data-scope');
                 const optionDept = option.getAttribute('data-department');
                 
-                if (optionScope === 'department' && optionDept === departmentId) {
+                if (optionScope === 'department' && optionDept === deptValue) {
                     option.style.display = 'block';
                 }
             }
         }
-    } else if (scope === 'campus') {
+    } else if (scopeValue === 'campus') {
         // Show only campus elections
         for (let i = 0; i < options.length; i++) {
             const option = options[i];
@@ -451,99 +751,203 @@ function filterElectionsByScope(mode) {
     }
 }
 
-/* Validate department and course before submission - REQUIRED FOR ALL */
+/* Validate department and course before submission */
 function validateDepartmentAndCourse(mode) {
-    const deptSelect = document.getElementById(mode + '_department');
-    const courseSelect = document.getElementById(mode + '_course');
-    
-    if (!deptSelect.value) {
-        showFloatingNotification('Please select a department', 'error');
-        deptSelect.focus();
-        return false;
-    }
-    if (!courseSelect.value) {
-        showFloatingNotification('Please select a course', 'error');
-        courseSelect.focus();
-        return false;
+    // For add mode, check candidate type first
+    if (mode === 'add') {
+        const candidateTypeSelect = document.getElementById('candidate_type_select');
+        const candidateType = candidateTypeSelect ? candidateTypeSelect.value : 'student';
+        
+        // STUDIO CANDIDATES - skip department and course validation
+        if (candidateType === 'studio') {
+            console.log("Studio candidate - skipping department/course validation");
+            return true;
+        }
+        
+        // STUDENT CANDIDATES - require department and course
+        const deptSelect = document.getElementById('add_department_student');
+        const courseSelect = document.getElementById('add_course_student');
+        
+        if (!deptSelect || !deptSelect.value) {
+            showFloatingNotification('Please select a department', 'error');
+            if (deptSelect) deptSelect.focus();
+            return false;
+        }
+        if (!courseSelect || !courseSelect.value) {
+            showFloatingNotification('Please select a course', 'error');
+            if (courseSelect) courseSelect.focus();
+            return false;
+        }
+        
+    } else if (mode === 'edit') {
+        const candidateType = document.getElementById('edit_candidate_type');
+        const candidateTypeValue = candidateType ? candidateType.value : 'student';
+        
+        // STUDIO CANDIDATES - skip department and course validation
+        if (candidateTypeValue === 'studio') {
+            console.log("Studio candidate edit - skipping department/course validation");
+            return true;
+        }
+        
+        // STUDENT CANDIDATES - require department and course
+        const deptSelect = document.getElementById('edit_department');
+        const courseSelect = document.getElementById('edit_course');
+        
+        if (!deptSelect || !deptSelect.value) {
+            showFloatingNotification('Please select a department', 'error');
+            if (deptSelect) deptSelect.focus();
+            return false;
+        }
+        if (!courseSelect || !courseSelect.value) {
+            showFloatingNotification('Please select a course', 'error');
+            if (courseSelect) courseSelect.focus();
+            return false;
+        }
     }
     
     return true;
 }
 
-// Add change listeners for department dropdowns
-document.addEventListener('DOMContentLoaded', function() {
-    // Add department change listener
-    const addDept = document.getElementById('add_department');
-    if (addDept) {
-        addDept.addEventListener('change', function() {
-            const scope = document.getElementById('add_scope').value;
-            if (scope === 'department') {
-                filterElectionsByScope('add');
-            }
-            // Load courses when department changes
-            loadCourses('add', this.value);
-        });
-    }
+// Candidate Type Dropdown Toggle Function
+function toggleCandidateFields() {
+    const candidateTypeSelect = document.getElementById('candidate_type_select');
+    if (!candidateTypeSelect) return;
     
-    // Edit department change listener
-    const editDept = document.getElementById('edit_department');
-    if (editDept) {
-        editDept.addEventListener('change', function() {
-            const scope = document.getElementById('edit_scope').value;
-            if (scope === 'department') {
-                filterElectionsByScope('edit');
-            }
-            // Load courses when department changes
-            loadCourses('edit', this.value);
-        });
-    }
-
-    // Add scope change listener for add modal
-    const addScope = document.getElementById('add_scope');
-    if (addScope) {
-        addScope.addEventListener('change', function() {
+    const studentFields = document.getElementById('studentFields');
+    const studioFields = document.getElementById('studioFields');
+    const partyListField = document.getElementById('partyListField');
+    const platformField = document.getElementById('platformField');
+    const scopeSelect = document.getElementById('add_scope');
+    const electionSelect = document.getElementById('add_election');
+    
+    const selectedType = candidateTypeSelect.value;
+    
+    if (selectedType === 'student') {
+        // Show student fields, hide studio fields
+        if (studentFields) studentFields.style.display = 'block';
+        if (studioFields) studioFields.style.display = 'none';
+        
+        // Show party list and platform for students
+        if (partyListField) partyListField.style.display = 'block';
+        if (platformField) platformField.style.display = 'block';
+        
+        // Make student fields required
+        const firstName = document.getElementById('add_first_name');
+        const lastName = document.getElementById('add_last_name');
+        const yearLevel = document.getElementById('add_year_level');
+        const department = document.getElementById('add_department_student');
+        const course = document.getElementById('add_course_student');
+        
+        if (firstName) firstName.required = true;
+        if (lastName) lastName.required = true;
+        if (yearLevel) yearLevel.required = true;
+        if (department) department.required = true;
+        if (course) course.required = true;
+        
+        // Make studio fields not required
+        const studioName = document.getElementById('add_studio_name');
+        if (studioName) studioName.required = false;
+        
+        // Enable scope and election filtering
+        if (scopeSelect) scopeSelect.disabled = false;
+        if (electionSelect) electionSelect.disabled = false;
+        
+        // Reset scope to empty and trigger filter
+        if (scopeSelect) {
+            scopeSelect.value = '';
             filterElectionsByScope('add');
-        });
+        }
+        
+        // Remove validation notification when switching to student
+        const existingValidation = document.querySelector('.student-validation-notification');
+        if (existingValidation) existingValidation.remove();
+        
+    } else {
+        // STUDIO CANDIDATE
+        if (studentFields) studentFields.style.display = 'none';
+        if (studioFields) studioFields.style.display = 'block';
+        
+        // Hide party list and platform for studios
+        if (partyListField) partyListField.style.display = 'none';
+        if (platformField) platformField.style.display = 'none';
+        
+        // Make student fields not required
+        const firstName = document.getElementById('add_first_name');
+        const lastName = document.getElementById('add_last_name');
+        const yearLevel = document.getElementById('add_year_level');
+        const department = document.getElementById('add_department_student');
+        const course = document.getElementById('add_course_student');
+        
+        if (firstName) firstName.required = false;
+        if (lastName) lastName.required = false;
+        if (yearLevel) yearLevel.required = false;
+        if (department) department.required = false;
+        if (course) course.required = false;
+        
+        // Make studio fields required
+        const studioName = document.getElementById('add_studio_name');
+        if (studioName) studioName.required = true;
+        
+        // For studio candidates, only campus-wide elections should be shown
+        if (scopeSelect) {
+            scopeSelect.value = 'campus';
+            scopeSelect.disabled = true;
+            // Filter elections to show only campus-wide
+            filterElectionsForStudio();
+        }
+    }
+}
+
+// Function to filter elections for studio candidates (only campus-wide)
+function filterElectionsForStudio() {
+    const electionSelect = document.getElementById('add_election');
+    if (!electionSelect) return;
+    
+    const options = electionSelect.options;
+    
+    // Hide all options first
+    for (let i = 0; i < options.length; i++) {
+        options[i].style.display = 'none';
     }
     
-    // Add scope change listener for edit modal
-    const editScope = document.getElementById('edit_scope');
-    if (editScope) {
-        editScope.addEventListener('change', function() {
-            filterElectionsByScope('edit');
-        });
-    }
-
-    // Initialize add modal state
-    const addElection = document.getElementById('add_election');
-    if (addElection) {
-        // Hide all options initially
-        for (let i = 0; i < addElection.options.length; i++) {
-            addElection.options[i].style.display = 'none';
-        }
-        // Show the placeholder option
-        for (let i = 0; i < addElection.options.length; i++) {
-            if (addElection.options[i].value === "") {
-                addElection.options[i].style.display = 'block';
-                break;
-            }
+    // Show placeholder
+    for (let i = 0; i < options.length; i++) {
+        if (options[i].value === "") {
+            options[i].style.display = 'block';
+            break;
         }
     }
-
-    // Initialize filter listeners
-    initFilterListeners();
     
-    // Initial attachment of pagination listeners
-    setTimeout(function() {
-        attachPaginationListeners();
-    }, 200);
+    // Show only campus-wide elections
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option.value === "") continue;
+        
+        const optionScope = option.getAttribute('data-scope');
+        if (optionScope === 'campus') {
+            option.style.display = 'block';
+        }
+    }
+}
+
+// Attach event listener for candidate type toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const candidateTypeSelect = document.getElementById('candidate_type_select');
+    if (candidateTypeSelect) {
+        candidateTypeSelect.addEventListener('change', toggleCandidateFields);
+        toggleCandidateFields(); // Initial call
+    }
 });
 
 /* ============ AJAX FILTER FUNCTION WITH LOADING SPINNER ============ */
 function filterCandidates(page = null, keepPage = false) {
-    const scope = document.getElementById('filter_scope').value;
-    const departmentId = document.getElementById('filter_department').value;
-    const search = document.getElementById('search_input').value;
+    const scope = document.getElementById('filter_scope');
+    const departmentFilter = document.getElementById('filter_department');
+    const search = document.getElementById('search_input');
+    
+    const scopeValue = scope ? scope.value : '';
+    const departmentId = departmentFilter ? departmentFilter.value : '';
+    const searchValue = search ? search.value : '';
     
     // Get current page from URL or pagination
     let currentPage = 1;
@@ -567,33 +971,37 @@ function filterCandidates(page = null, keepPage = false) {
 
     // Show loading state on search button
     const searchBtn = document.getElementById('search_btn');
-    const buttonText = searchBtn.querySelector('.button-text');
-    const spinner = searchBtn.querySelector('.loading-spinner');
-    
-    buttonText.style.display = 'none';
-    spinner.style.display = 'inline-block';
-    searchBtn.disabled = true;
+    if (searchBtn) {
+        const buttonText = searchBtn.querySelector('.button-text');
+        const spinner = searchBtn.querySelector('.loading-spinner');
+        
+        if (buttonText) buttonText.style.display = 'none';
+        if (spinner) spinner.style.display = 'inline-block';
+        searchBtn.disabled = true;
+    }
 
     // Show loading state on table
     const tableContainer = document.getElementById('table-container');
-    tableContainer.classList.add('table-loading');
+    if (tableContainer) {
+        tableContainer.classList.add('table-loading');
+    }
 
     // Build URL with query parameters
     let url = `/ctumoalboal-comelec/candidates/filter?page=${currentPage}`;
-    if (scope) url += `&scope=${scope}`;
+    if (scopeValue) url += `&scope=${scopeValue}`;
     if (departmentId) url += `&department_id=${departmentId}`;
-    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (searchValue) url += `&search=${encodeURIComponent(searchValue)}`;
 
     // Update browser URL without reload
     const newUrl = new URL(window.location);
     newUrl.searchParams.set('page', currentPage);
-    if (scope) newUrl.searchParams.set('scope', scope);
+    if (scopeValue) newUrl.searchParams.set('scope', scopeValue);
     else newUrl.searchParams.delete('scope');
     
     if (departmentId) newUrl.searchParams.set('department_id', departmentId);
     else newUrl.searchParams.delete('department_id');
     
-    if (search) newUrl.searchParams.set('search', search);
+    if (searchValue) newUrl.searchParams.set('search', searchValue);
     else newUrl.searchParams.delete('search');
     
     window.history.pushState({}, '', newUrl);
@@ -602,7 +1010,6 @@ function filterCandidates(page = null, keepPage = false) {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
     .then(res => {
@@ -621,10 +1028,17 @@ function filterCandidates(page = null, keepPage = false) {
     })
     .finally(() => {
         // Hide loading states
-        buttonText.style.display = 'inline-block';
-        spinner.style.display = 'none';
-        searchBtn.disabled = false;
-        tableContainer.classList.remove('table-loading');
+        if (searchBtn) {
+            const buttonText = searchBtn.querySelector('.button-text');
+            const spinner = searchBtn.querySelector('.loading-spinner');
+            
+            if (buttonText) buttonText.style.display = 'inline-block';
+            if (spinner) spinner.style.display = 'none';
+            searchBtn.disabled = false;
+        }
+        if (tableContainer) {
+            tableContainer.classList.remove('table-loading');
+        }
     });
 }
 
@@ -726,10 +1140,16 @@ function updateTable(candidates, pagination) {
 
 // Helper function to reset filters
 function resetFilters() {
-    document.getElementById('filter_scope').value = '';
-    document.getElementById('filter_department').value = '';
-    document.getElementById('filter_department').style.display = 'none';
-    document.getElementById('search_input').value = '';
+    const filterScope = document.getElementById('filter_scope');
+    const filterDepartment = document.getElementById('filter_department');
+    const searchInput = document.getElementById('search_input');
+    
+    if (filterScope) filterScope.value = '';
+    if (filterDepartment) {
+        filterDepartment.value = '';
+        filterDepartment.style.display = 'none';
+    }
+    if (searchInput) searchInput.value = '';
     filterCandidates(1, false);
 }
 
@@ -806,8 +1226,12 @@ function attachEventListeners() {
     // Photo lightbox
     document.querySelectorAll('.clickable-photo').forEach(img => {
         img.onclick = () => {
-            document.getElementById('lightbox').style.display = 'flex';
-            document.getElementById('lightbox-img').src = img.src;
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            if (lightbox && lightboxImg) {
+                lightbox.style.display = 'flex';
+                lightboxImg.src = img.src;
+            }
         };
     });
 
@@ -834,41 +1258,55 @@ function initFilterListeners() {
 
     // Update department visibility
     function updateFilterDepartment() {
-        if (filterScope.value === 'department') {
-            filterDepartment.style.display = 'inline-block';
-        } else {
-            filterDepartment.style.display = 'none';
-            filterDepartment.value = "";
+        if (filterScope && filterDepartment) {
+            if (filterScope.value === 'department') {
+                filterDepartment.style.display = 'inline-block';
+            } else {
+                filterDepartment.style.display = 'none';
+                filterDepartment.value = "";
+            }
         }
     }
 
-    filterScope.addEventListener('change', () => {
-        updateFilterDepartment();
-        filterCandidates(1, false); // Reset to page 1 when filter changes
-    });
+    if (filterScope) {
+        filterScope.addEventListener('change', () => {
+            updateFilterDepartment();
+            filterCandidates(1, false);
+        });
+    }
 
-    filterDepartment.addEventListener('change', () => {
-        filterCandidates(1, false); // Reset to page 1 when filter changes
-    });
+    if (filterDepartment) {
+        filterDepartment.addEventListener('change', () => {
+            filterCandidates(1, false);
+        });
+    }
 
-    searchBtn.addEventListener('click', () => {
-        filterCandidates(1, false); // Reset to page 1 when search
-    });
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            filterCandidates(1, false);
+        });
+    }
 
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            filterCandidates(1, false); // Reset to page 1 when search
-        }
-    });
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                filterCandidates(1, false);
+            }
+        });
+    }
 
-    resetBtn.addEventListener('click', () => {
-        filterScope.value = '';
-        filterDepartment.value = '';
-        filterDepartment.style.display = 'none';
-        searchInput.value = '';
-        filterCandidates(1, false); // Reset to page 1
-    });
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (filterScope) filterScope.value = '';
+            if (filterDepartment) {
+                filterDepartment.value = '';
+                filterDepartment.style.display = 'none';
+            }
+            if (searchInput) searchInput.value = '';
+            filterCandidates(1, false);
+        });
+    }
 
     // Initial call to set department visibility
     updateFilterDepartment();
@@ -920,47 +1358,58 @@ function showFloatingNotification(message, type) {
         ? { bg: 'linear-gradient(135deg, #00c851, #00a844)', border: '#007e33' }
         : { bg: 'linear-gradient(135deg, #ff4444, #cc0000)', border: '#a70000' };
     
-    notification.querySelector('.notification-content').style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 20px;
-        background: ${colors.bg};
-        color: white;
-        font-size: 0.95rem;
-        font-weight: 500;
-        border-left: 5px solid ${colors.border};
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    `;
+    const contentDiv = notification.querySelector('.notification-content');
+    if (contentDiv) {
+        contentDiv.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            background: ${colors.bg};
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-left: 5px solid ${colors.border};
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        `;
+    }
     
     // Style the close button
     const closeBtn = notification.querySelector('.notification-close');
-    closeBtn.style.cssText = `
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        font-size: 1.2rem;
-        margin-left: auto;
-        padding: 0 8px;
-        opacity: 0.8;
-        transition: opacity 0.2s;
-    `;
-    closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
-    closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+    if (closeBtn) {
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-left: auto;
+            padding: 0 8px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        `;
+        closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+        closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+    }
     
     // Style the icon
-    notification.querySelector('i:first-child').style.cssText = `
-        font-size: 1.4rem;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-    `;
+    const iconElement = notification.querySelector('i:first-child');
+    if (iconElement) {
+        iconElement.style.cssText = `
+            font-size: 1.4rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        `;
+    }
     
     // Style the message
-    notification.querySelector('.notification-message').style.cssText = `
-        flex: 1;
-        line-height: 1.4;
-        word-break: break-word;
-    `;
+    const messageElement = notification.querySelector('.notification-message');
+    if (messageElement) {
+        messageElement.style.cssText = `
+            flex: 1;
+            line-height: 1.4;
+            word-break: break-word;
+        `;
+    }
     
     document.body.appendChild(notification);
     
@@ -985,28 +1434,46 @@ if (addCandidateForm) {
     addCandidateForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
+        // ========== DEBUG: Log candidate type and form data ==========
+        const candidateTypeSelect = document.getElementById('candidate_type_select');
+        console.log("=== SUBMITTING CANDIDATE ===");
+        console.log("Candidate Type:", candidateTypeSelect ? candidateTypeSelect.value : 'not found');
+        
+        // Log all form data
+        const debugFormData = new FormData(this);
+        for (let pair of debugFormData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+        console.log("===========================");
+        // ========== END DEBUG ==========
+
         // Validate department and course (required for ALL)
         if (!validateDepartmentAndCourse('add')) {
+            console.log("Validation failed for department/course");
             return; // Stop form submission
         }
 
-        // Validate student first using the function from student_validation.js
-        if (typeof validateBeforeSubmit === 'function') {
-            const isValid = await validateBeforeSubmit();
+        // For student candidates, check if student exists before submitting
+        const candidateType = candidateTypeSelect ? candidateTypeSelect.value : 'student';
+        if (candidateType === 'student') {
+            const isValid = await validateStudentExists();
             if (!isValid) {
+                showFloatingNotification('✗ Please verify student information before submitting.', 'error');
                 return; // Stop form submission
             }
         }
 
         // Show loading state
-        addSubmitBtn.disabled = true;
-        const buttonText = addSubmitBtn.querySelector('.button-text');
-        const spinner = addSubmitBtn.querySelector('.loading-spinner');
-        if (buttonText) {
-            buttonText.innerHTML = 'Adding...';
-            buttonText.style.opacity = '0.7';
+        if (addSubmitBtn) {
+            addSubmitBtn.disabled = true;
+            const buttonText = addSubmitBtn.querySelector('.button-text');
+            const spinner = addSubmitBtn.querySelector('.loading-spinner');
+            if (buttonText) {
+                buttonText.innerHTML = 'Adding...';
+                buttonText.style.opacity = '0.7';
+            }
+            if (spinner) spinner.style.display = 'inline-block';
         }
-        if (spinner) spinner.style.display = 'inline-block';
 
         const formData = new FormData(this);
 
@@ -1015,7 +1482,6 @@ if (addCandidateForm) {
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
             }
         })
         .then(res => {
@@ -1032,6 +1498,7 @@ if (addCandidateForm) {
             }
         })
         .then(data => {
+            console.log("Server response:", data);
             if(data.success) {
                 // Show floating success notification
                 showFloatingNotification('✓ Candidate added successfully!', 'success');
@@ -1041,11 +1508,15 @@ if (addCandidateForm) {
 
                 // Reset form fields but KEEP MODAL OPEN
                 addCandidateForm.reset();
-                document.getElementById('add_scope').value = '';
                 
-                // Clear course dropdown
-                const addCourse = document.getElementById('add_course');
-                addCourse.innerHTML = '<option value="">Select course</option>';
+                const addScope = document.getElementById('add_scope');
+                if (addScope) addScope.value = '';
+                
+                // Clear course dropdown for student
+                const addCourseStudent = document.getElementById('add_course_student');
+                if (addCourseStudent) {
+                    addCourseStudent.innerHTML = '<option value="">Select course</option>';
+                }
                 
                 // Clear platform field
                 const addPlatform = document.getElementById('add_platform');
@@ -1055,16 +1526,29 @@ if (addCandidateForm) {
                 
                 // Reset election dropdown - hide all and show placeholder only
                 const addElection = document.getElementById('add_election');
-                for (let i = 0; i < addElection.options.length; i++) {
-                    addElection.options[i].style.display = 'none';
-                }
-                // Show placeholder option
-                for (let i = 0; i < addElection.options.length; i++) {
-                    if (addElection.options[i].value === "") {
-                        addElection.options[i].style.display = 'block';
-                        break;
+                if (addElection) {
+                    for (let i = 0; i < addElection.options.length; i++) {
+                        addElection.options[i].style.display = 'none';
+                    }
+                    // Show placeholder option
+                    for (let i = 0; i < addElection.options.length; i++) {
+                        if (addElection.options[i].value === "") {
+                            addElection.options[i].style.display = 'block';
+                            break;
+                        }
                     }
                 }
+                
+                // Reset candidate type toggle
+                const candidateTypeSelectReset = document.getElementById('candidate_type_select');
+                if (candidateTypeSelectReset) {
+                    candidateTypeSelectReset.value = 'student';
+                    toggleCandidateFields();
+                }
+                
+                // Remove validation notification
+                const existingValidation = document.querySelector('.student-validation-notification');
+                if (existingValidation) existingValidation.remove();
 
             } else {
                 // Show floating error notification
@@ -1077,12 +1561,16 @@ if (addCandidateForm) {
         })
         .finally(() => {
             // Hide loading state
-            addSubmitBtn.disabled = false;
-            if (buttonText) {
-                buttonText.innerHTML = 'Add Candidate';
-                buttonText.style.opacity = '1';
+            if (addSubmitBtn) {
+                addSubmitBtn.disabled = false;
+                const buttonText = addSubmitBtn.querySelector('.button-text');
+                const spinner = addSubmitBtn.querySelector('.loading-spinner');
+                if (buttonText) {
+                    buttonText.innerHTML = 'Add Candidate';
+                    buttonText.style.opacity = '1';
+                }
+                if (spinner) spinner.style.display = 'none';
             }
-            if (spinner) spinner.style.display = 'none';
         });
     });
 }
@@ -1101,15 +1589,17 @@ if (editCandidateForm) {
         }
 
         // Show loading state - change button text to "Updating..."
-        editSubmitBtn.disabled = true;
-        const buttonText = editSubmitBtn.querySelector('.button-text');
-        const spinner = editSubmitBtn.querySelector('.loading-spinner');
-        
-        if (buttonText) {
-            buttonText.innerHTML = 'Updating...';
-            buttonText.style.opacity = '0.7';
+        if (editSubmitBtn) {
+            editSubmitBtn.disabled = true;
+            const buttonText = editSubmitBtn.querySelector('.button-text');
+            const spinner = editSubmitBtn.querySelector('.loading-spinner');
+            
+            if (buttonText) {
+                buttonText.innerHTML = 'Updating...';
+                buttonText.style.opacity = '0.7';
+            }
+            if (spinner) spinner.style.display = 'inline-block';
         }
-        if (spinner) spinner.style.display = 'inline-block';
 
         const formData = new FormData(this);
         const candidateId = document.getElementById('edit_id').value;
@@ -1119,7 +1609,6 @@ if (editCandidateForm) {
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
             }
         })
         .then(res => {
@@ -1151,12 +1640,16 @@ if (editCandidateForm) {
                 showFloatingNotification('✗ ' + (data.message || 'Failed to update candidate.'), 'error');
                 
                 // Reset button state but keep modal open
-                editSubmitBtn.disabled = false;
-                if (buttonText) {
-                    buttonText.innerHTML = 'Update Candidate';
-                    buttonText.style.opacity = '1';
+                if (editSubmitBtn) {
+                    editSubmitBtn.disabled = false;
+                    const buttonText = editSubmitBtn.querySelector('.button-text');
+                    const spinner = editSubmitBtn.querySelector('.loading-spinner');
+                    if (buttonText) {
+                        buttonText.innerHTML = 'Update Candidate';
+                        buttonText.style.opacity = '1';
+                    }
+                    if (spinner) spinner.style.display = 'none';
                 }
-                if (spinner) spinner.style.display = 'none';
             }
         })
         .catch(err => {
@@ -1164,12 +1657,16 @@ if (editCandidateForm) {
             showFloatingNotification('✗ ' + (err.message || 'Error updating candidate'), 'error');
             
             // Reset button state but keep modal open
-            editSubmitBtn.disabled = false;
-            if (buttonText) {
-                buttonText.innerHTML = 'Update Candidate';
-                buttonText.style.opacity = '1';
+            if (editSubmitBtn) {
+                editSubmitBtn.disabled = false;
+                const buttonText = editSubmitBtn.querySelector('.button-text');
+                const spinner = editSubmitBtn.querySelector('.loading-spinner');
+                if (buttonText) {
+                    buttonText.innerHTML = 'Update Candidate';
+                    buttonText.style.opacity = '1';
+                }
+                if (spinner) spinner.style.display = 'none';
             }
-            if (spinner) spinner.style.display = 'none';
         });
     });
 }
@@ -1205,7 +1702,6 @@ function deleteCandidate(candidateId) {
         headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
-            // REMOVED: 'X-CSRFToken': getCsrfToken()
         }
     })
     .then(res => {
@@ -1306,7 +1802,6 @@ function deleteCandidate(candidateId) {
     document.head.appendChild(style);
 })();
 
-
 // Setup edit modal type (for studio/student candidates)
 function setupEditModalType(candidateType, studioName, firstName, lastName, yearLevelId) {
     const editTypeDisplay = document.getElementById('edit_type_display');
@@ -1387,7 +1882,10 @@ function setupEditModalType(candidateType, studioName, firstName, lastName, year
     }
 }
 
-
 // Make functions available globally
 window.filterCandidates = filterCandidates;
 window.showFloatingNotification = showFloatingNotification;
+window.resetFilters = resetFilters;
+window.filterElectionsByScope = filterElectionsByScope;
+window.filterPositionsByElection = filterPositionsByElection;
+window.validateStudentExists = validateStudentExists;
