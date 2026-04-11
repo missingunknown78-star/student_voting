@@ -580,3 +580,98 @@ body {
         border: 1px solid #000;
     }
 }
+
+/* ==================== YEAR LEVEL STYLES ==================== */
+
+/* Year level select dropdown */
+.year-level-select {
+    width: 100%;
+    height: 28px;
+    padding: 4px 8px;
+    padding-right: 22px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    background: var(--input-bg);
+    color: var(--text-color);
+    transition: var(--transition);
+    box-sizing: border-box;
+    
+    /* Remove default arrow completely */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+/* Remove any IE/Edge default arrows */
+.year-level-select::-ms-expand {
+    display: none;
+}
+
+/* Show arrow only when enabled */
+.year-level-select:not(:disabled) {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 12px;
+}
+
+/* Dark mode arrow */
+:root.dark-mode .year-level-select:not(:disabled) {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Disabled state */
+.year-level-select:disabled {
+    background: var(--disabled-bg);
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-image: none;
+}
+
+/* Hover and focus states for enabled dropdowns */
+.year-level-select:not(:disabled):hover {
+    border-color: var(--button-primary);
+}
+
+.year-level-select:not(:disabled):focus {
+    outline: none;
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* Year level badge - different color to distinguish from program and course */
+.config-badge#year-badge- {
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+}
+
+/* Make year level icon match badge color */
+.config-label .fa-layer-group {
+    color: #9c27b0;
+}
+
+/* Optional: Different colors for different restriction badges (if you want) */
+.config-badge#program-badge- {
+    background: linear-gradient(135deg, var(--button-primary), #764ba2);
+}
+
+.config-badge#course-badge- {
+    background: linear-gradient(135deg, #ff9800, #e65100);
+}
+
+/* Responsive adjustments for year level */
+@media (max-width: 768px) {
+    .year-level-select {
+        font-size: 0.75rem;
+        height: 26px;
+        padding: 3px 6px;
+        padding-right: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .year-level-select {
+        font-size: 0.7rem;
+        height: 24px;
+    }
+}

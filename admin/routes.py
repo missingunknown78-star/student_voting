@@ -6878,7 +6878,7 @@ def delete_position(position_id):
     return jsonify({"success": True, "message": f'Position "{position_name}" deleted successfully!'})
 
 
-
+from admin.models import ElectionPosition
 @admin_bp.route('/configure-election-positions/<int:election_id>', methods=['GET', 'POST'])
 @admin_required
 def configure_election_positions(election_id):
@@ -6896,6 +6896,14 @@ def configure_election_positions(election_id):
     from student.models import ProgramType
     program_types = ProgramType.query.order_by(ProgramType.name).all()
     
+    # Year level options
+    year_levels = [
+        {'value': 1, 'label': '1st Year'},
+        {'value': 2, 'label': '2nd Year'},
+        {'value': 3, 'label': '3rd Year'},
+        {'value': 4, 'label': '4th Year'}
+    ]
+    
     # Get currently configured positions for this election
     configured_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
     configured_position_ids = [ep.position_id for ep in configured_positions]
@@ -6906,6 +6914,9 @@ def configure_election_positions(election_id):
     
     # Get program type restrictions for configured positions
     position_program_types = {ep.position_id: ep.program_type_id for ep in configured_positions if ep.program_type_id}
+    
+    # Get year level restrictions for configured positions
+    position_year_levels = {ep.position_id: ep.year_level for ep in configured_positions if ep.year_level}
     
     if request.method == 'POST':
         # ========== DEBUGGING: Print everything ==========
@@ -6926,7 +6937,8 @@ def configure_election_positions(election_id):
             max_votes = request.form.get(f'max_votes_{pos_id}')
             course_id = request.form.get(f'course_{pos_id}')
             program_type_id = request.form.get(f'program_type_{pos_id}')
-            print(f"Position {pos_id}: max_votes={max_votes}, course_id={course_id}, program_type_id={program_type_id}", file=sys.stderr)
+            year_level = request.form.get(f'year_level_{pos_id}')
+            print(f"Position {pos_id}: max_votes={max_votes}, course_id={course_id}, program_type_id={program_type_id}, year_level={year_level}", file=sys.stderr)
         
         print("=" * 60, file=sys.stderr)
         # ========== END DEBUGGING ==========
@@ -6959,6 +6971,10 @@ def configure_election_positions(election_id):
                 # Get program type restriction
                 program_type_id = request.form.get(f'program_type_{position_id}', type=int)
                 
+                # Get year level restriction
+                year_level_str = request.form.get(f'year_level_{position_id}')
+                year_level = int(year_level_str) if year_level_str and year_level_str != '' else None
+                
                 ep = ElectionPosition(
                     election_id=election_id,
                     position_id=position_id,
@@ -6966,6 +6982,7 @@ def configure_election_positions(election_id):
                     min_votes=1,  # Default minimum
                     course_id=course_id if course_id else None,
                     program_type_id=program_type_id if program_type_id else None,
+                    year_level=year_level,
                     department_id=None,  # Always None - department restriction removed
                     display_order=display_order
                 )
@@ -7011,10 +7028,12 @@ def configure_election_positions(election_id):
         all_positions=all_positions,
         all_courses=all_courses,
         program_types=program_types,
+        year_levels=year_levels,
         configured_position_ids=configured_position_ids,
         configured_positions=configured_positions_dict,
         position_courses=position_courses,
-        position_program_types=position_program_types
+        position_program_types=position_program_types,
+        position_year_levels=position_year_levels
     )
     
 
@@ -7591,6 +7610,7 @@ def election_results(election_id):
     """OPTIMIZED: Uses finder_hashes for live results, TallyVote for official results"""
     import json
     from collections import defaultdict
+    from datetime import datetime as dt
     
     election = Election.query.get_or_404(election_id)
     
@@ -7656,11 +7676,23 @@ def election_results(election_id):
         print("📊 Using finder_hashes for live results")
         vote_counts = get_admin_live_vote_counts(election_id)
     
-    # ===== DEBUG: Print vote counts for studio candidates =====
-    print("\n🔍 DEBUG: Vote counts for studio candidates:")
-    for candidate in candidates:
-        if candidate.candidate_type == 'studio':
-            print(f"   Studio: {candidate.studio_name} - Votes: {vote_counts.get(candidate.id, 0)}")
+    # ===== HELPER FUNCTION: Get vote timeline for a candidate =====
+    def get_candidate_vote_timeline(candidate_id, election_id):
+        """Get all timestamps when votes were cast for a candidate"""
+        all_votes = Vote.query.filter_by(election_id=election_id).all()
+        timestamps = []
+        
+        for vote in all_votes:
+            candidate_ids = vote.voted_candidate_ids
+            if candidate_id in candidate_ids:
+                # Use cast_timestamp (actual voting time) as primary
+                if vote.cast_timestamp:
+                    timestamps.append(vote.cast_timestamp)
+                elif vote.created_at:
+                    timestamps.append(vote.created_at)
+        
+        timestamps.sort()
+        return timestamps
     
     # ===== CALCULATE VOTERS PER POSITION =====
     position_voter_counts = {}
@@ -7710,22 +7742,6 @@ def election_results(election_id):
         position_voter_counts[position_id] = len(voters_for_position)
         print(f"📊 Position {position_name} (ID: {position_id}): Voters = {len(voters_for_position)}")
     
-    # ===== DEBUG: Print first 10 votes finder_hash to see structure =====
-    print("\n🔍 DEBUG: First 5 votes finder_hash structure:")
-    for i, vote in enumerate(all_votes[:5]):
-        if vote.finder_hash:
-            try:
-                finder_data = json.loads(vote.finder_hash)
-                print(f"Vote {i+1}: Type={type(finder_data).__name__}")
-                if isinstance(finder_data, dict):
-                    print(f"   Keys: {list(finder_data.keys())}")
-                    if 'hashes' in finder_data and finder_data['hashes']:
-                        print(f"   First hash: {finder_data['hashes'][0]}")
-                elif isinstance(finder_data, list) and finder_data:
-                    print(f"   First item: {finder_data[0]}")
-            except Exception as e:
-                print(f"Vote {i+1}: Error parsing - {e}")
-    
     # ===== GROUP CANDIDATES BY POSITION =====
     candidates_by_position = {}
     
@@ -7747,7 +7763,6 @@ def election_results(election_id):
         
         vote_count = vote_counts.get(candidate.id, 0)
         
-        # UPDATED: Added studio_name and candidate_type
         candidates_by_position[position_name]['candidates'].append({
             'id': candidate.id,
             'first_name': candidate.first_name or "",
@@ -7760,10 +7775,12 @@ def election_results(election_id):
             'position_id': position_id,
             'vote_count': vote_count,
             'voter_percentage': 0,
-            'is_winner': False
+            'is_winner': False,
+            'tie_broken': False,
+            'reached_at': None
         })
     
-    # ===== CALCULATE PERCENTAGES AND DETERMINE WINNERS =====
+    # ===== CALCULATE PERCENTAGES AND DETERMINE WINNERS WITH TIE-BREAKING =====
     for position_name, pos_data in candidates_by_position.items():
         voter_count = pos_data['voter_count']
         max_winners = pos_data['max_votes']
@@ -7784,21 +7801,81 @@ def election_results(election_id):
         # Sort candidates by vote count (descending)
         pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
         
-        # Determine winners - THIS IS THE CRITICAL PART FOR MULTI-WINNER
-        for i, candidate in enumerate(pos_data['candidates']):
-            # Mark as winner if:
-            # 1. Index is within max_winners limit
-            # 2. Vote count is greater than 0
-            if i < max_winners and candidate['vote_count'] > 0:
-                candidate['is_winner'] = True
-                # UPDATED: Use studio_name if available for logging
+        # Check for ties at the winner threshold
+        tie_vote_count = None
+        if len(pos_data['candidates']) > max_winners:
+            last_winner_index = max_winners - 1
+            last_winner_votes = pos_data['candidates'][last_winner_index]['vote_count']
+            next_candidate_votes = pos_data['candidates'][max_winners]['vote_count']
+            
+            if last_winner_votes == next_candidate_votes and last_winner_votes > 0:
+                tie_vote_count = last_winner_votes
+                print(f"⚠️ TIE DETECTED for {position_name} at {tie_vote_count} votes!")
+        
+        if tie_vote_count:
+            # Get all candidates tied for the last winner position
+            tied_candidates = [c for c in pos_data['candidates'] 
+                              if c['vote_count'] == tie_vote_count]
+            
+            # Get non-tied winners (those with more votes)
+            non_tied_winners = [c for c in pos_data['candidates'] 
+                               if c['vote_count'] > tie_vote_count]
+            
+            # For each tied candidate, find when they reached the tie_vote_count
+            for candidate in tied_candidates:
+                timestamps = get_candidate_vote_timeline(candidate['id'], election_id)
+                if len(timestamps) >= tie_vote_count:
+                    candidate['reached_at'] = timestamps[tie_vote_count - 1]
+                elif timestamps:
+                    candidate['reached_at'] = timestamps[-1]
+                else:
+                    candidate['reached_at'] = None
+                
+                candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
+                print(f"   {candidate_display}: Reached {tie_vote_count} votes at {candidate['reached_at']}")
+            
+            # Sort tied candidates by who reached first (earliest timestamp wins)
+            tied_candidates.sort(key=lambda x: x.get('reached_at') or dt.max)
+            
+            # Determine how many winners needed from tied group
+            winners_needed = max_winners - len(non_tied_winners)
+            
+            # Mark all candidates as winner or loser
+            for candidate in pos_data['candidates']:
+                if candidate['vote_count'] > tie_vote_count:
+                    candidate['is_winner'] = True
+                    candidate['tie_broken'] = False
+                elif candidate['vote_count'] == tie_vote_count:
+                    # Check if this candidate is among the earliest to reach
+                    if candidate in tied_candidates[:winners_needed]:
+                        candidate['is_winner'] = True
+                        candidate['tie_broken'] = True
+                        candidate['tie_broken_by'] = 'first_to_reach'
+                        candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
+                        print(f"  ✓ WINNER (tie-breaker): {candidate_display} - {candidate['vote_count']} votes (reached first at {candidate['reached_at']})")
+                    else:
+                        candidate['is_winner'] = False
+                        candidate['tie_broken'] = True
+                else:
+                    candidate['is_winner'] = False
+                    candidate['tie_broken'] = False
+            
+            # Also mark non-tied winners
+            for candidate in non_tied_winners:
                 candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
                 print(f"  ✓ WINNER: {candidate_display} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
-            else:
-                candidate['is_winner'] = False
+        
+        else:
+            # No tie, normal winner selection
+            for i, candidate in enumerate(pos_data['candidates']):
+                if i < max_winners and candidate['vote_count'] > 0:
+                    candidate['is_winner'] = True
+                    candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
+                    print(f"  ✓ WINNER: {candidate_display} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
+                else:
+                    candidate['is_winner'] = False
     
     # ===== SORT CANDIDATES_BY_POSITION BY POSITION ID =====
-    # Sort the candidates_by_position dictionary by position_id
     sorted_candidates_by_position = {}
     sorted_position_items = sorted(candidates_by_position.items(), key=lambda x: x[1].get('id', 999))
     for position_name, pos_data in sorted_position_items:
@@ -7806,12 +7883,10 @@ def election_results(election_id):
     
     # ===== BUILD WINNERS BY POSITION (MULTI-WINNER SUPPORT) =====
     winners_by_position = {}
-    for position_name, pos_data in sorted_candidates_by_position.items():  # Use sorted version
-        # Get all winners for this position (not just first one)
+    for position_name, pos_data in sorted_candidates_by_position.items():
         winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
         if winners:
             winners_by_position[position_name] = winners
-            # UPDATED: Log with studio name if applicable
             winner_names = []
             for w in winners:
                 if w['candidate_type'] == 'studio':
@@ -7820,17 +7895,9 @@ def election_results(election_id):
                     winner_names.append(f"{w['first_name']} {w['last_name']}")
             print(f"🏆 {position_name}: {len(winners)} winner(s) - {winner_names}")
     
-    # ===== SORT WINNERS BY POSITION ID (already sorted from above, but ensure) =====
-    ordered_winners_by_position = {}
-    for position_name, pos_data in sorted_candidates_by_position.items():
-        winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
-        if winners:
-            ordered_winners_by_position[position_name] = winners
-    
     # ===== CREATE FLAT CANDIDATE RESULTS LIST (SORTED BY POSITION ID) =====
     flat_candidate_results = []
     for position_name, pos_data in sorted_candidates_by_position.items():
-        # Sort candidates within each position by vote count (descending) for display
         sorted_candidates = sorted(pos_data['candidates'], key=lambda x: x['vote_count'], reverse=True)
         for candidate in sorted_candidates:
             flat_candidate_results.append(candidate)
@@ -7872,7 +7939,8 @@ def election_results(election_id):
         print(f"   Winners: {len([c for c in pos_data['candidates'] if c.get('is_winner')])}")
         for candidate in pos_data['candidates']:
             winner_status = "✓ WINNER" if candidate.get('is_winner') else "  Candidate"
-            # UPDATED: Display studio name or student name
+            if candidate.get('tie_broken'):
+                winner_status += " (tie-breaker)"
             candidate_display = candidate['studio_name'] if candidate['candidate_type'] == 'studio' else f"{candidate['first_name']} {candidate['last_name']}"
             print(f"   {winner_status}: {candidate_display} - {candidate['vote_count']} votes ({candidate['voter_percentage']}%)")
     print("="*60 + "\n")
@@ -7894,8 +7962,8 @@ def election_results(election_id):
         'election_results_detail.html',
         election=election,
         candidate_results=flat_candidate_results,
-        candidate_results_by_position=sorted_candidates_by_position,  # Sorted by position ID
-        winners_by_position=ordered_winners_by_position,  # Sorted by position ID
+        candidate_results_by_position=sorted_candidates_by_position,
+        winners_by_position=winners_by_position,
         total_voters=total_votes_cast,
         total_eligible_voters=total_eligible_voters or 0,
         voter_turnout=voter_turnout,
@@ -8479,6 +8547,8 @@ def get_tally_results(election_id):
 @admin_required
 def election_results_pdf(election_id):
     """Generate PDF using ReportLab - Footer in page footer area on last page only"""
+    from datetime import datetime as dt
+    
     election = Election.query.get_or_404(election_id)
     
     # Get chairman name
@@ -8544,6 +8614,24 @@ def election_results_pdf(election_id):
             return candidate.studio_name or "Unknown Studio"
         else:
             return f"{candidate.first_name or ''} {candidate.last_name or ''}".strip() or "Unknown Candidate"
+    
+    # ===== HELPER FUNCTION: Get vote timeline for a candidate (for tie-breaking) =====
+    def get_candidate_vote_timeline(candidate_id, election_id):
+        """Get all timestamps when votes were cast for a candidate"""
+        all_votes = Vote.query.filter_by(election_id=election_id).all()
+        timestamps = []
+        
+        for vote in all_votes:
+            candidate_ids = vote.voted_candidate_ids
+            if candidate_id in candidate_ids:
+                # Use cast_timestamp (actual voting time) as primary
+                if vote.cast_timestamp:
+                    timestamps.append(vote.cast_timestamp)
+                elif vote.created_at:
+                    timestamps.append(vote.created_at)
+        
+        timestamps.sort()
+        return timestamps
     
     # ===== CALCULATE POSITION-SPECIFIC VOTER COUNTS (for percentages) =====
     position_voter_counts = {}
@@ -8613,7 +8701,9 @@ def election_results_pdf(election_id):
             'position_id': candidate.position_id,
             'vote_count': vote_count,
             'percentage': percentage,
-            'is_winner': False
+            'is_winner': False,
+            'tie_broken': False,
+            'reached_at': None
         }
         candidate_results.append(candidate_data)
         
@@ -8626,18 +8716,84 @@ def election_results_pdf(election_id):
             }
         candidates_by_position[position_name]['candidates'].append(candidate_data)
     
-    # Determine winners
+    # ===== DETERMINE WINNERS WITH TIE-BREAKING (SAME AS RESULTS PAGE) =====
     winners_by_position = {}
     for position_name, pos_data in candidates_by_position.items():
+        # Sort candidates by vote count (descending)
         pos_data['candidates'].sort(key=lambda x: x['vote_count'], reverse=True)
         max_winners = pos_data['max_votes']
-        winners = []
-        for i, candidate in enumerate(pos_data['candidates']):
-            if i < max_winners and candidate['vote_count'] > 0:
-                candidate['is_winner'] = True
-                winners.append(candidate)
-        if winners:
-            winners_by_position[position_name] = winners
+        
+        # Check for ties at the winner threshold
+        tie_vote_count = None
+        if len(pos_data['candidates']) > max_winners:
+            last_winner_index = max_winners - 1
+            last_winner_votes = pos_data['candidates'][last_winner_index]['vote_count']
+            next_candidate_votes = pos_data['candidates'][max_winners]['vote_count']
+            
+            if last_winner_votes == next_candidate_votes and last_winner_votes > 0:
+                tie_vote_count = last_winner_votes
+                print(f"PDF - TIE DETECTED for {position_name} at {tie_vote_count} votes!")
+        
+        if tie_vote_count:
+            # Get all candidates tied for the last winner position
+            tied_candidates = [c for c in pos_data['candidates'] 
+                              if c['vote_count'] == tie_vote_count]
+            
+            # Get non-tied winners (those with more votes)
+            non_tied_winners = [c for c in pos_data['candidates'] 
+                               if c['vote_count'] > tie_vote_count]
+            
+            # For each tied candidate, find when they reached the tie_vote_count
+            for candidate in tied_candidates:
+                timestamps = get_candidate_vote_timeline(candidate['id'], election_id)
+                if len(timestamps) >= tie_vote_count:
+                    candidate['reached_at'] = timestamps[tie_vote_count - 1]
+                elif timestamps:
+                    candidate['reached_at'] = timestamps[-1]
+                else:
+                    candidate['reached_at'] = None
+                
+                candidate_display = candidate['display_name']
+                print(f"PDF - {candidate_display}: Reached {tie_vote_count} votes at {candidate['reached_at']}")
+            
+            # Sort tied candidates by who reached first (earliest timestamp wins)
+            tied_candidates.sort(key=lambda x: x.get('reached_at') or dt.max)
+            
+            # Determine how many winners needed from tied group
+            winners_needed = max_winners - len(non_tied_winners)
+            
+            # Mark all candidates as winner or loser
+            for candidate in pos_data['candidates']:
+                if candidate['vote_count'] > tie_vote_count:
+                    candidate['is_winner'] = True
+                    candidate['tie_broken'] = False
+                elif candidate['vote_count'] == tie_vote_count:
+                    # Check if this candidate is among the earliest to reach
+                    if candidate in tied_candidates[:winners_needed]:
+                        candidate['is_winner'] = True
+                        candidate['tie_broken'] = True
+                    else:
+                        candidate['is_winner'] = False
+                        candidate['tie_broken'] = True
+                else:
+                    candidate['is_winner'] = False
+                    candidate['tie_broken'] = False
+            
+            # Collect winners for display
+            winners = [c for c in pos_data['candidates'] if c.get('is_winner')]
+            if winners:
+                winners_by_position[position_name] = winners
+        else:
+            # No tie, normal winner selection
+            winners = []
+            for i, candidate in enumerate(pos_data['candidates']):
+                if i < max_winners and candidate['vote_count'] > 0:
+                    candidate['is_winner'] = True
+                    winners.append(candidate)
+                else:
+                    candidate['is_winner'] = False
+            if winners:
+                winners_by_position[position_name] = winners
     
     # Calculate overall statistics
     if election.department_id:
@@ -8898,6 +9054,7 @@ def election_results_pdf(election_id):
     
     for position_name, group in sorted_positions:
         candidates_list = group['candidates']
+        # Sort by vote count (descending) - for display, winners already determined
         candidates_list.sort(key=lambda x: x['vote_count'], reverse=True)
         max_winners = position_limits.get(group['id'], 1)
         
@@ -8910,7 +9067,9 @@ def election_results_pdf(election_id):
         # UPDATED: Show display_name (studio_name or full name) and percentage
         detail_data = [['Rank', 'Candidate', 'Votes', 'Percentage', 'Result']]
         for idx, candidate in enumerate(candidates_list[:max_winners+5], 1):
-            result = "✓ WINNER" if idx <= max_winners and candidate['vote_count'] > 0 else "—"
+            # Use the pre-determined winner status from tie-breaking logic
+            is_winner = candidate.get('is_winner', False)
+            result = "✓ WINNER" if is_winner and candidate['vote_count'] > 0 else "—"
             detail_data.append([str(idx),
                                candidate['display_name'],
                                str(candidate['vote_count']),

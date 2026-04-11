@@ -437,7 +437,7 @@
                     </div>
                 </div>
 
-                <!-- Second Row: Year Level -->
+                <!-- Second Row: Year Level AND Party List (moved here from below) -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Year Level <span class="required">*</span></label>
@@ -448,6 +448,13 @@
                             {% endfor %}
                         </select>
                         <small class="form-hint">Current year level</small>
+                    </div>
+
+                    <!-- Party List moved to the right column, beside Year Level -->
+                    <div class="form-group" id="partyListField">
+                        <label>Party List</label>
+                        <input type="text" name="party_list" id="add_party_list" placeholder="e.g., Lakas, Aksyon">
+                        <small class="form-hint">Optional - leave blank if independent</small>
                     </div>
                 </div>
                 
@@ -482,16 +489,6 @@
                         <input type="text" name="studio_name" id="add_studio_name" placeholder="Enter studio name (e.g., Studio A, Photography Studio)">
                         <small class="form-hint">Name of the studio/group running for election</small>
                     </div>
-                </div>
-            </div>
-
-            <!-- Common Fields for Both Types -->
-            <!-- Party List (Students only - will be hidden for studios) -->
-            <div class="form-row" id="partyListField">
-                <div class="form-group">
-                    <label>Party List</label>
-                    <input type="text" name="party_list" id="add_party_list" placeholder="e.g., Lakas, Aksyon">
-                    <small class="form-hint">Optional - leave blank if independent</small>
                 </div>
             </div>
 
@@ -595,7 +592,7 @@
                     </div>
                 </div>
 
-                <!-- Second Row: Year Level -->
+                <!-- Second Row: Year Level AND Party List (moved here from below) -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Year Level <span class="required">*</span></label>
@@ -606,6 +603,12 @@
                             {% endfor %}
                         </select>
                         <small class="form-hint">Current year level</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Party List</label>
+                        <input type="text" name="party_list" id="edit_party_list" placeholder="e.g., Lakas, Aksyon">
+                        <small class="form-hint">Optional</small>
                     </div>
                 </div>
             </div>
@@ -618,15 +621,6 @@
                         <input type="text" name="studio_name" id="edit_studio_name" placeholder="Enter studio name">
                         <small class="form-hint">Name of the studio/group</small>
                     </div>
-                </div>
-            </div>
-
-            <!-- Common Fields -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Party List</label>
-                    <input type="text" name="party_list" id="edit_party_list" placeholder="e.g., Lakas, Aksyon">
-                    <small class="form-hint">Optional</small>
                 </div>
             </div>
 

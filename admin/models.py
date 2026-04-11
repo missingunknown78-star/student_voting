@@ -439,6 +439,9 @@ class ElectionPosition(db.Model):
     # Program type restriction (Day/Night - for both campus and department elections)
     program_type_id = db.Column(db.Integer, db.ForeignKey('program_types.id', ondelete='SET NULL'), nullable=True)
     
+    # Year level restriction (1,2,3,4 - for year-specific positions)
+    year_level = db.Column(db.Integer, nullable=True)  # 1, 2, 3, 4, or NULL for "All Years"
+    
     # THIS IS THE KEY FIELD - how many votes allowed for this position in this election
     max_votes = db.Column(db.Integer, nullable=False, default=1)
     
@@ -450,7 +453,7 @@ class ElectionPosition(db.Model):
     
     # Timestamps - FIXED: Added default for updated_at
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # ← ADDED default
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
     # Relationships
     election = db.relationship('Election', backref=db.backref('election_positions', cascade='all, delete-orphan'))
@@ -472,6 +475,8 @@ class ElectionPosition(db.Model):
             parts.append(f' course={self.course_id}')
         if self.program_type_id:
             parts.append(f' program_type={self.program_type_id}')
+        if self.year_level:
+            parts.append(f' year_level={self.year_level}')
         parts.append('>')
         return ''.join(parts)
 

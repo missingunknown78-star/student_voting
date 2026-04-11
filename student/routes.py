@@ -2387,6 +2387,7 @@ def available_elections():
     
     # ROBUST FILTERING - Works with both old and new data
     # Uses multiple conditions for maximum compatibility
+    # CHANGED: Sort by created_at DESC (newest first) instead of start_date ASC
     elections = query.filter(
         Election.start_date <= now_naive,
         Election.end_date >= now_naive,
@@ -2420,7 +2421,7 @@ def available_elections():
                 Election.department_id == student_department_id
             )
         )
-    ).order_by(Election.start_date.asc()).all()
+    ).order_by(Election.created_at.desc()).all()  # ← CHANGED HERE: from start_date.asc() to created_at.desc()
 
     # Calculate voting progress for each election
     election_data = []
@@ -2610,6 +2611,32 @@ from flask import session
 @student_bp.route('/candidates')
 @login_required
 def candidates():
+    # Get current student
+    student = current_user
+    
+    # Check if student profile exists
+    if not student or not hasattr(student, 'department_id'):
+        flash('Student profile not found.', 'error')
+        return redirect(url_for('student.dashboard'))
+    
+    # Get student year level (extract numeric part like "1", "2", etc.)
+    student_year = None
+    student_year_display = None
+    if student.year_level:
+        year_name = student.year_level.year_name
+        student_year_display = year_name
+        import re
+        match = re.search(r'\d+', year_name)
+        if match:
+            student_year = match.group()
+        else:
+            student_year = "0"
+    else:
+        student_year = "0"
+    
+    student_year_str = str(student_year)
+    student_department_id = student.department_id
+    
     # Get school year from request, session, or default
     school_year = request.args.get('school_year')
     
@@ -2617,20 +2644,84 @@ def candidates():
     if not school_year:
         school_year = session.get('current_school_year')
     
-    # Get all elections to extract school years
-    elections = Election.query.all()
+    # Parse school year to date range
+    start_date = None
+    end_date = None
+    if school_year:
+        try:
+            start_year = int(school_year.split('-')[0])
+            end_year = int(school_year.split('-')[1])
+            start_date = datetime(start_year, 1, 1)
+            end_date = datetime(end_year, 12, 31)
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
     
-    # Extract unique school years
+    # Save to session for other pages
+    if school_year:
+        session['current_school_year'] = school_year
+    
+    # Philippines timezone
+    local_tz = pytz.timezone("Asia/Manila")
+    now_ph = datetime.now(local_tz)
+    now_naive = now_ph.replace(tzinfo=None)
+    
+    # Build query for eligible elections (SAME LOGIC as available_elections)
+    query = Election.query
+    
+    if start_date and end_date:
+        query = query.filter(
+            Election.start_date >= start_date,
+            Election.start_date <= end_date
+        )
+    
+    # Filter active elections that student is eligible for
+    eligible_elections = query.filter(
+        Election.start_date <= now_naive,
+        Election.end_date >= now_naive,
+        # Campus-wide OR Department-specific
+        db.or_(
+            # Campus-wide conditions
+            db.and_(
+                db.or_(
+                    Election.scope == 'campus',
+                    Election.election_type == 'SSG',
+                    Election.department_id.is_(None)
+                ),
+                # For campus elections, check year level filtering
+                db.or_(
+                    Election.year_levels == 'all',
+                    Election.year_levels.is_(None),
+                    db.and_(
+                        Election.year_levels.isnot(None),
+                        Election.year_levels != 'all',
+                        db.func.find_in_set(student_year_str, Election.year_levels) > 0
+                    )
+                )
+            ),
+            # Department-specific conditions
+            db.and_(
+                db.or_(
+                    Election.scope == 'department',
+                    Election.election_type == 'Department'
+                ),
+                Election.department_id == student_department_id
+            )
+        )
+    ).order_by(Election.start_date.asc()).all()
+    
+    # Get eligible election IDs
+    eligible_election_ids = [e.id for e in eligible_elections]
+    
+    # Extract unique school years from eligible elections
     school_years = []
-    for election in elections:
+    for election in eligible_elections:
         if election.start_date:
             year = election.start_date.year
-            # Only include if there are candidates for this election
-            if election.candidates:
-                next_year = year + 1
-                school_year_str = f"{year}-{next_year}"
-                if school_year_str not in school_years:
-                    school_years.append(school_year_str)
+            next_year = year + 1
+            school_year_str = f"{year}-{next_year}"
+            if school_year_str not in school_years:
+                school_years.append(school_year_str)
     
     # Sort school years (latest first)
     school_years.sort(reverse=True)
@@ -2643,8 +2734,13 @@ def candidates():
     if school_year:
         session['current_school_year'] = school_year
     
-    # Get all candidates
-    all_candidates = Candidate.query.order_by(Candidate.last_name).all()
+    # Get ALL candidates from eligible elections
+    # IMPORTANT: For campus elections, we show ALL candidates regardless of department
+    # For department elections, only candidates from that department will appear
+    # (but the election filter already ensures we only get department elections the student is eligible for)
+    all_candidates = Candidate.query.filter(
+        Candidate.election_id.in_(eligible_election_ids)
+    ).order_by(Candidate.last_name).all()
     
     # Filter candidates by school year if selected
     filtered_candidates = []
@@ -2654,15 +2750,14 @@ def candidates():
             end_year = int(school_year.split('-')[1])
             
             # Create datetime range
-            start_date = datetime(start_year, 1, 1)
-            end_date = datetime(end_year, 12, 31)
+            start_date_filter = datetime(start_year, 1, 1)
+            end_date_filter = datetime(end_year, 12, 31)
             
             for candidate in all_candidates:
                 if candidate.election and candidate.election.start_date:
-                    if start_date <= candidate.election.start_date <= end_date:
+                    if start_date_filter <= candidate.election.start_date <= end_date_filter:
                         filtered_candidates.append(candidate)
         except (ValueError, IndexError):
-            # If school year format is invalid, show all
             filtered_candidates = all_candidates
     else:
         filtered_candidates = all_candidates
@@ -2673,14 +2768,71 @@ def candidates():
                          current_sy=school_year)
 
 
-
 @student_bp.route('/candidate/<int:candidate_id>')
 @login_required
 def view_candidate(candidate_id):
     candidate = Candidate.query.get_or_404(candidate_id)
     
-    # Get election details
+    # Get current student
+    student = current_user
+    
+    if not student or not hasattr(student, 'department_id'):
+        flash('Student profile not found.', 'error')
+        return redirect(url_for('student.dashboard'))
+    
+    # Get student year level
+    student_year = None
+    if student.year_level:
+        import re
+        match = re.search(r'\d+', student.year_level.year_name)
+        if match:
+            student_year = match.group()
+        else:
+            student_year = "0"
+    else:
+        student_year = "0"
+    
+    student_year_str = str(student_year)
+    student_department_id = student.department_id
+    
+    # Check if student is eligible to view this candidate
     election = candidate.election
+    
+    if election:
+        now_ph = datetime.now(pytz.timezone("Asia/Manila"))
+        now_naive = now_ph.replace(tzinfo=None)
+        
+        # Check if election is active
+        if election.start_date and election.end_date:
+            if not (election.start_date <= now_naive <= election.end_date):
+                flash('This election is not currently active.', 'warning')
+                return redirect(url_for('student.candidates'))
+        
+        # Check eligibility using SAME logic as available_elections
+        is_eligible = False
+        
+        # Check scope eligibility
+        if election.scope == 'campus' or election.election_type == 'SSG' or election.department_id is None:
+            # Campus-wide: check year level
+            if election.year_levels and election.year_levels != 'all':
+                allowed_years = election.year_levels.split(',')
+                if student_year_str in allowed_years:
+                    is_eligible = True
+            else:
+                is_eligible = True
+        elif election.scope == 'department' or election.election_type == 'Department':
+            # Department-specific: check department AND year level
+            if election.department_id == student_department_id:
+                if election.year_levels and election.year_levels != 'all':
+                    allowed_years = election.year_levels.split(',')
+                    if student_year_str in allowed_years:
+                        is_eligible = True
+                else:
+                    is_eligible = True
+        
+        if not is_eligible:
+            flash('You are not eligible to view candidates from this election.', 'error')
+            return redirect(url_for('student.candidates'))
     
     # Get course details
     course_name = candidate.course.course_name if candidate.course else "Not specified"
@@ -2705,13 +2857,53 @@ def view_candidate(candidate_id):
                          position_name=position_name)
 
 
-
-
 @student_bp.route('/api/candidate/<int:candidate_id>')
 @login_required
 def get_candidate_api(candidate_id):
     """API endpoint to get candidate details as JSON"""
     candidate = Candidate.query.get_or_404(candidate_id)
+    
+    # Get current student
+    student = current_user
+    
+    if student and candidate.election:
+        # Get student year level
+        student_year = None
+        if student.year_level:
+            import re
+            match = re.search(r'\d+', student.year_level.year_name)
+            if match:
+                student_year = match.group()
+            else:
+                student_year = "0"
+        else:
+            student_year = "0"
+        
+        student_year_str = str(student_year)
+        student_department_id = student.department_id
+        election = candidate.election
+        
+        # Check eligibility using SAME logic
+        is_eligible = False
+        
+        if election.scope == 'campus' or election.election_type == 'SSG' or election.department_id is None:
+            if election.year_levels and election.year_levels != 'all':
+                allowed_years = election.year_levels.split(',')
+                if student_year_str in allowed_years:
+                    is_eligible = True
+            else:
+                is_eligible = True
+        elif election.scope == 'department' or election.election_type == 'Department':
+            if election.department_id == student_department_id:
+                if election.year_levels and election.year_levels != 'all':
+                    allowed_years = election.year_levels.split(',')
+                    if student_year_str in allowed_years:
+                        is_eligible = True
+                else:
+                    is_eligible = True
+        
+        if not is_eligible:
+            return jsonify({'error': 'You are not eligible to view this candidate'}), 403
     
     # Build response data
     data = {
@@ -2731,7 +2923,22 @@ def get_candidate_api(candidate_id):
         'photo': candidate.photo
     }
     
-    return jsonify(data)                        
+    return jsonify(data)
+
+
+def get_all_school_years():
+    """Helper function to get all available school years from elections"""
+    elections = Election.query.all()
+    school_years = []
+    for election in elections:
+        if election.start_date:
+            year = election.start_date.year
+            next_year = year + 1
+            school_year_str = f"{year}-{next_year}"
+            if school_year_str not in school_years:
+                school_years.append(school_year_str)
+    school_years.sort(reverse=True)
+    return school_years                  
 
 
 from datetime import datetime

@@ -146,9 +146,9 @@
         <h3>📋 How to Configure</h3>
         <p>Select which positions will be included in this election and set how many candidates students can vote for per position.</p>
         {% if election.scope == 'campus' %}
-        <p><strong>For Campus-Wide Elections:</strong> You can restrict positions to specific courses or program types (Day/Night).</p>
+        <p><strong>For Campus-Wide Elections:</strong> You can restrict positions to specific courses, year levels, or program types (Day/Night).</p>
         {% elif election.scope == 'department' %}
-        <p><strong>For Department Elections:</strong> You can restrict positions to specific courses within this department or program types (Day/Night).</p>
+        <p><strong>For Department Elections:</strong> You can restrict positions to specific courses within this department, year levels, or program types (Day/Night).</p>
         {% endif %}
     </div>
 
@@ -239,6 +239,39 @@
                                 {% for program_type in program_types %}
                                     {% if program_type.id == position_program_types.get(position.id) %}
                                         {{ program_type.name }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                All
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Year Level Restriction -->
+                    <div class="config-item">
+                        <div class="config-label">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>Year Level</span>
+                        </div>
+                        <div class="config-input-group">
+                            <select name="year_level_{{ position.id }}" 
+                                    id="year_level_{{ position.id }}" 
+                                    class="year-level-select"
+                                    {% if position.id not in configured_position_ids %}disabled{% endif %}>
+                                <option value="">All Years</option>
+                                {% for year_level in year_levels %}
+                                    <option value="{{ year_level.value }}" 
+                                            {% if position_year_levels.get(position.id) == year_level.value %}selected{% endif %}>
+                                        {{ year_level.label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="config-badge" id="year-badge-{{ position.id }}">
+                            {% if position_year_levels.get(position.id) %}
+                                {% for year_level in year_levels %}
+                                    {% if year_level.value == position_year_levels.get(position.id) %}
+                                        {{ year_level.label }}
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -378,7 +411,7 @@ function toggleAllPositions(isChecked) {
         });
         
         // Enable all configuration inputs
-        document.querySelectorAll('.vote-input, .program-select, .course-select').forEach(input => {
+        document.querySelectorAll('.vote-input, .program-select, .year-level-select, .course-select').forEach(input => {
             input.disabled = false;
         });
         
@@ -394,7 +427,7 @@ function toggleAllPositions(isChecked) {
     } else {
         // Remove all hidden inputs (nothing selected)
         // Disable all configuration inputs
-        document.querySelectorAll('.vote-input, .program-select, .course-select').forEach(input => {
+        document.querySelectorAll('.vote-input, .program-select, .year-level-select, .course-select').forEach(input => {
             input.disabled = true;
         });
         
@@ -463,6 +496,18 @@ function updateBadges() {
     document.querySelectorAll('.program-select:not(:disabled)').forEach(select => {
         const positionId = select.id.replace('program_type_', '');
         const badge = document.getElementById(`program-badge-${positionId}`);
+        if (badge && select.value) {
+            const selectedOption = select.options[select.selectedIndex];
+            badge.textContent = selectedOption.text;
+        } else if (badge && !select.value) {
+            badge.textContent = 'All';
+        }
+    });
+    
+    // Update year level badges
+    document.querySelectorAll('.year-level-select:not(:disabled)').forEach(select => {
+        const positionId = select.id.replace('year_level_', '');
+        const badge = document.getElementById(`year-badge-${positionId}`);
         if (badge && select.value) {
             const selectedOption = select.options[select.selectedIndex];
             badge.textContent = selectedOption.text;
@@ -602,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Update badges when dropdowns change
-    document.querySelectorAll('.program-select, .course-select').forEach(select => {
+    document.querySelectorAll('.program-select, .year-level-select, .course-select').forEach(select => {
         select.addEventListener('change', updateBadges);
     });
     

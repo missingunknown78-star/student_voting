@@ -186,11 +186,15 @@
                                              onclick="openCandidatePhoto(this)">
                                             {% if c.photo %}
                                                 <img src="{{ url_for('admin.static', filename='images/' ~ c.photo) }}" 
-                                                     alt="{{ c.first_name }} {{ c.last_name }}"
+                                                     alt="{% if c.candidate_type == 'studio' %}{{ c.studio_name }}{% else %}{{ c.first_name }} {{ c.last_name }}{% endif %}"
                                                      class="candidate-photo-img">
                                             {% else %}
                                                 <span class="candidate-initials">
-                                                    {{ c.first_name[0] }}{{ c.last_name[0] }}
+                                                    {% if c.candidate_type == 'studio' %}
+                                                        {{ c.studio_name[:2]|upper if c.studio_name else 'S' }}
+                                                    {% else %}
+                                                        {{ c.first_name[0] if c.first_name else '' }}{{ c.last_name[0] if c.last_name else '' }}
+                                                    {% endif %}
                                                 </span>
                                             {% endif %}
                                         </div>
@@ -198,7 +202,17 @@
                                     
                                     <!-- Candidate Info - Only Name and Party List -->
                                     <div class="candidate-info">
-                                        <h3 class="candidate-name">{{ c.first_name }} {{ c.last_name }}</h3>
+                                        <h3 class="candidate-name">
+                                            {% if c.candidate_type == 'studio' %}
+                                                {{ c.studio_name or 'Studio Candidate' }}
+                                            {% else %}
+                                                {% if c.first_name or c.last_name %}
+                                                    {{ c.first_name or '' }} {{ c.last_name or '' }}
+                                                {% else %}
+                                                    Candidate #{{ c.id }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </h3>
                                         
                                         {% if c.party_list %}
                                         <div class="party-badge">{{ c.party_list }}</div>
@@ -209,10 +223,24 @@
                                     
                                     <!-- Candidate Actions -->
                                     <div class="candidate-actions">
+                                        {# Determine display name for modal #}
+                                        {% set display_name = '' %}
+                                        {% if c.candidate_type == 'studio' %}
+                                            {% set display_name = c.studio_name or 'Studio Candidate' %}
+                                        {% else %}
+                                            {% set display_name = (c.first_name or '') + ' ' + (c.last_name or '') %}
+                                            {% if not display_name.strip() %}
+                                                {% set display_name = 'Candidate #' + c.id|string %}
+                                            {% endif %}
+                                        {% endif %}
+                                        
                                         {% set candidate_data = {
                                             'id': c.id,
                                             'first_name': c.first_name,
                                             'last_name': c.last_name,
+                                            'studio_name': c.studio_name,
+                                            'candidate_type': c.candidate_type,
+                                            'display_name': display_name,
                                             'party': c.party_list if c.party_list else '',
                                             'position': c.position.name if c.position else 'Position not specified',
                                             'course': c.course.course_name if c.course else 'Not specified',
@@ -397,15 +425,23 @@ function openCandidateProfileModal(candidate) {
     const photoElement = document.getElementById('modalProfilePhoto');
     if (photoElement) {
         if (photoUrl && !photoUrl.includes('default_user.png')) {
-            photoElement.innerHTML = `<img src="${photoUrl}" alt="${candidate.first_name} ${candidate.last_name}">`;
+            photoElement.innerHTML = `<img src="${photoUrl}" alt="${candidate.display_name || candidate.first_name + ' ' + candidate.last_name}">`;
         } else {
-            const initials = (candidate.first_name[0] + candidate.last_name[0]).toUpperCase();
-            photoElement.innerHTML = `<div class="initials">${initials}</div>`;
+            // Use display name for initials
+            if (candidate.candidate_type === 'studio') {
+                const initials = candidate.studio_name ? candidate.studio_name.slice(0, 2).toUpperCase() : 'S';
+                photoElement.innerHTML = `<div class="initials">${initials}</div>`;
+            } else {
+                const firstNameInitial = candidate.first_name ? candidate.first_name[0] : '';
+                const lastNameInitial = candidate.last_name ? candidate.last_name[0] : '';
+                const initials = (firstNameInitial + lastNameInitial).toUpperCase() || 'C';
+                photoElement.innerHTML = `<div class="initials">${initials}</div>`;
+            }
         }
     }
     
-    // Set basic info
-    document.getElementById('modalProfileName').textContent = `${candidate.first_name} ${candidate.last_name}`;
+    // Set basic info - USE DISPLAY NAME from candidate data
+    document.getElementById('modalProfileName').textContent = candidate.display_name || `${candidate.first_name || ''} ${candidate.last_name || ''}` || 'Candidate';
     document.getElementById('modalProfilePosition').textContent = candidate.position || 'Position not specified';
     
     // Set party list
