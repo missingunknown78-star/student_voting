@@ -7526,6 +7526,7 @@ def get_guidelines():
     })
 
 
+from admin.models import PdfResult
 @admin_bp.route('/results')
 @admin_required
 def results_page():
@@ -7579,6 +7580,11 @@ def results_page():
         election.tz_start = start_date_e
         election.tz_end = end_date_e
         
+        # ============ NEW: Check if result is published (has PDF) ============
+        from admin.models import PdfResult  # Make sure this import is at the top of your file
+        election.has_published_result = PdfResult.query.filter_by(election_id=election.id).first() is not None
+        # ====================================================================
+        
         # Categorize based on the dates
         if end_date_e < now:
             completed.append(election)
@@ -7590,15 +7596,13 @@ def results_page():
     # Get total elections count (unfiltered) for context
     total_elections = Election.query.count()
     
-    # 🚫 REMOVED: RESULTS_PAGE_VIEW audit log (page view - not a data modification)
-    
     return render_template(
         'admin_results.html',
         upcoming_elections=upcoming,
         active_elections=active,
         completed_elections=completed,
         now=now,
-        current_year=year,  # Changed from current_sy to current_year
+        current_year=year,
         total_filtered=len(elections),
         total_elections=total_elections
     )
