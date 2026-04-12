@@ -1,7 +1,4 @@
-// profile-edit.js
-
-// ==================== CSRF TOKEN HELPER - REMOVED ====================
-// CSRF protection has been disabled - removed getCsrfToken() function
+// profile-edit.js - UPDATED with SERVER-SIDE OTP verification
 
 document.addEventListener('DOMContentLoaded', function() {
     const displayMode = document.getElementById('profileDisplayMode');
@@ -13,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Modal elements
     const modal = document.getElementById('emailChangeModal');
-    const closeBtn = document.querySelector('.close');
+    const closeBtn = document.querySelector('#emailChangeModal .close');
     const waitingForConfirmation = document.getElementById('waitingForConfirmation');
     const otpVerification = document.getElementById('otpVerification');
     const oldEmailDisplay = document.getElementById('oldEmailDisplay');
@@ -150,9 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
     async function sendVerificationEmail() {
         if (!resendEmailBtn) return;
         
-        // Save original button text
-        const originalText = resendEmailBtn.innerHTML;
-        
         try {
             setButtonLoading(resendEmailBtn, true, 'Sending...');
             
@@ -177,8 +171,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             alert('Failed to send verification email: ' + error.message);
-            setButtonLoading(resendEmailBtn, false);
-            resendEmailBtn.innerHTML = originalText;
         } finally {
             setButtonLoading(resendEmailBtn, false);
         }
@@ -213,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
     }
     
-    // Resend email button with loading
+    // Resend email button
     if (resendEmailBtn) {
         resendEmailBtn.addEventListener('click', async function(e) {
             e.preventDefault();
@@ -269,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.status === 'confirmed') {
                 // Show success toast
+                toast.textContent = '✓ Email confirmed! Sending verification code...';
                 toast.style.display = 'block';
                 stopPolling();
                 
@@ -285,6 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
             } else if (data.status === 'rejected') {
                 // Show reject toast
+                toastReject.textContent = '❌ Email change rejected';
                 toastReject.style.display = 'block';
                 stopPolling();
                 
@@ -298,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Send OTP to new email with loading
+    // Send OTP to new email - STORES OTP ON SERVER (Flask session)
     async function sendOtpToNewEmail() {
         if (verifyOtpBtn) setButtonLoading(verifyOtpBtn, true, 'Sending...');
         
@@ -319,9 +313,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error || 'Failed to send OTP');
             }
             
-            // Store OTP for verification
-            sessionStorage.setItem('otpCode', data.code);
-            sessionStorage.setItem('otpExpiry', Date.now() + 600000); // 10 minutes
+            toast.textContent = '✓ Verification code sent to your new email!';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2000);
             
         } catch (error) {
             alert('Failed to send OTP: ' + error.message);
@@ -330,50 +326,83 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Verify OTP with loading
+    // ============ NEW: SERVER-SIDE OTP VERIFICATION ============
+    // This replaces the client-side sessionStorage comparison
     if (verifyOtpBtn) {
-        verifyOtpBtn.addEventListener('click', function() {
+        verifyOtpBtn.addEventListener('click', async function() {
             const enteredCode = simpleOtpInput.value.trim();
-            const storedCode = sessionStorage.getItem('otpCode');
-            const expiry = parseInt(sessionStorage.getItem('otpExpiry'));
             
-            if (!storedCode || Date.now() > expiry) {
-                otpError.textContent = 'OTP has expired. Please request a new one.';
+            if (!enteredCode || enteredCode.length !== 6) {
+                otpError.textContent = 'Please enter a valid 6-digit code';
                 return;
             }
             
-            if (enteredCode === storedCode) {
-                // Set loading on verify button
-                setButtonLoading(verifyOtpBtn, true, 'Verifying...');
-                
-                // OTP verified - submit the form
-                modal.style.display = 'none';
-                
-                const oldVerifiedInput = document.createElement('input');
-                oldVerifiedInput.type = 'hidden';
-                oldVerifiedInput.name = 'old_email_verified';
-                oldVerifiedInput.value = 'true';
-                editForm.appendChild(oldVerifiedInput);
-                
-                const newVerifiedInput = document.createElement('input');
-                newVerifiedInput.type = 'hidden';
-                newVerifiedInput.name = 'new_email_verified';
-                newVerifiedInput.value = 'true';
-                editForm.appendChild(newVerifiedInput);
-                
-                // Set loading on save button before submitting
-                if (saveChangesBtn) setButtonLoading(saveChangesBtn, true, 'Saving...');
-                
-                submitForm().finally(() => {
-                    setButtonLoading(verifyOtpBtn, false);
-                    if (saveChangesBtn) setButtonLoading(saveChangesBtn, false);
+            // Set loading state
+            setButtonLoading(verifyOtpBtn, true, 'Verifying...');
+            
+            try {
+                // Send OTP to SERVER for verification (not client-side!)
+                const response = await fetch('/student/verify-otp-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        otp: enteredCode,
+                        request_id: changeRequestId,
+                        email: pendingNewEmail
+                    })
                 });
                 
-                simpleOtpInput.value = '';
-                otpError.textContent = '';
-            } else {
-                otpError.textContent = 'Invalid OTP code';
-                simpleOtpInput.value = '';
+                const data = await response.json();
+                
+                if (data.success) {
+                    // OTP verified successfully on server
+                    toast.textContent = '✓ Code verified! Updating profile...';
+                    toast.style.display = 'block';
+                    
+                    // Close modal
+                    modal.style.display = 'none';
+                    
+                    // Add verification flags to form
+                    let oldVerifiedInput = editForm.querySelector('input[name="old_email_verified"]');
+                    let newVerifiedInput = editForm.querySelector('input[name="new_email_verified"]');
+                    
+                    if (!oldVerifiedInput) {
+                        oldVerifiedInput = document.createElement('input');
+                        oldVerifiedInput.type = 'hidden';
+                        oldVerifiedInput.name = 'old_email_verified';
+                        editForm.appendChild(oldVerifiedInput);
+                    }
+                    oldVerifiedInput.value = 'true';
+                    
+                    if (!newVerifiedInput) {
+                        newVerifiedInput = document.createElement('input');
+                        newVerifiedInput.type = 'hidden';
+                        newVerifiedInput.name = 'new_email_verified';
+                        editForm.appendChild(newVerifiedInput);
+                    }
+                    newVerifiedInput.value = 'true';
+                    
+                    // Clear OTP input
+                    simpleOtpInput.value = '';
+                    otpError.textContent = '';
+                    
+                    // Submit the form
+                    if (saveChangesBtn) setButtonLoading(saveChangesBtn, true, 'Saving...');
+                    await submitForm();
+                    if (saveChangesBtn) setButtonLoading(saveChangesBtn, false);
+                    
+                } else {
+                    otpError.textContent = data.message || 'Invalid verification code';
+                    simpleOtpInput.value = '';
+                }
+                
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                otpError.textContent = 'Error verifying code. Please try again.';
+            } finally {
+                setButtonLoading(verifyOtpBtn, false);
             }
         });
     }
@@ -386,6 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
             otpVerification.style.display = 'none';
             simpleOtpInput.value = '';
             otpError.textContent = '';
+            stopPolling();
         });
     }
     
@@ -397,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Submit form function with loading state
+    // Submit form function
     async function submitForm() {
         const formData = new FormData(editForm);
         
@@ -410,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.success) {
-                // Show success toast
                 toast.textContent = '✅ Profile updated successfully!';
                 toast.style.display = 'block';
                 
@@ -418,10 +447,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     toast.style.display = 'none';
                 }, 3000);
                 
+                // Update displayed values
                 document.getElementById('currentUsername').textContent = data.new_username || document.getElementById('currentUsername').textContent;
                 document.getElementById('currentEmail').textContent = data.new_email || pendingNewEmail || originalEmail;
-                document.getElementById('currentCourse').textContent = data.new_course || document.getElementById('currentCourse').textContent;
-                document.getElementById('currentYear').textContent = data.new_year || document.getElementById('currentYear').textContent;
+                const currentCourse = document.getElementById('currentCourse');
+                if (currentCourse && data.new_course) currentCourse.textContent = data.new_course;
+                const currentYear = document.getElementById('currentYear');
+                if (currentYear && data.new_year) currentYear.textContent = data.new_year;
                 
                 // Update original email reference
                 if (data.new_email) originalEmail = data.new_email;
@@ -452,7 +484,6 @@ document.addEventListener('DOMContentLoaded', function() {
         trustForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Set loading state on trust button
             const originalText = trustButton.innerHTML;
             setButtonLoading(trustButton, true, 
                 trustButton.innerHTML.includes('Remove') ? 'Removing...' : 'Trusting...');
@@ -466,7 +497,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Show success toast
                     toast.textContent = '✓ Device trust updated successfully!';
                     toast.style.display = 'block';
                     setTimeout(() => {

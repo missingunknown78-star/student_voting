@@ -3845,6 +3845,7 @@ from flask_mail import Message
 from datetime import datetime, timedelta
 import json
 from flask import current_app
+import traceback
 
 # Store verification codes temporarily (in production, use Redis or database)
 verification_codes = {}
@@ -4277,7 +4278,7 @@ def send_otp_to_new_email():
     # Generate 6-digit OTP
     otp = ''.join(random.choices(string.digits, k=6))
     
-    # Store OTP
+    # Store OTP in FLASK SESSION (server-side) - NOT browser sessionStorage
     session['new_email_otp'] = otp
     session['new_email_otp_expiry'] = (datetime.now() + timedelta(minutes=10)).timestamp()
     session['pending_new_email'] = email
@@ -4294,12 +4295,13 @@ def send_otp_to_new_email():
             <p>Your verification code for your new email address is:</p>
             <h1 style="font-size: 36px; letter-spacing: 5px; color: #2563eb;">{otp}</h1>
             <p>This code will expire in 10 minutes.</p>
+            <p style="font-size: 12px; color: #666;">If you didn't request this, please ignore this email.</p>
         </div>
         """
         
         mail.send(msg)
         
-        # In development, return code for testing
+        # IMPORTANT: Only return code in DEBUG mode, remove for production
         if current_app.config.get('DEBUG'):
             return jsonify({'success': True, 'code': otp})
         
@@ -4372,6 +4374,84 @@ def send_verification_code():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+
+@student_bp.route('/verify-otp-code', methods=['POST'])
+@login_required
+def verify_otp_code():
+    """Verify OTP code sent to new email - SERVER SIDE verification"""
+    print("\n" + "="*60)
+    print("STUDENT OTP VERIFICATION REQUEST RECEIVED")
+    print("="*60)
+    
+    try:
+        data = request.get_json()
+        entered_otp = data.get('otp')
+        request_id = data.get('request_id')
+        email = data.get('email')
+        
+        print(f"[DEBUG] OTP verification data:")
+        print(f"  - entered_otp: {entered_otp}")
+        print(f"  - request_id: {request_id}")
+        print(f"  - email: {email}")
+        
+        if not entered_otp or not request_id:
+            print(f"[DEBUG] Missing required fields")
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        # Get the stored OTP from Flask session (not browser sessionStorage!)
+        stored_otp = session.get('new_email_otp')
+        stored_expiry = session.get('new_email_otp_expiry')
+        stored_request_id = session.get('change_request_id')
+        
+        print(f"[DEBUG] Session values:")
+        print(f"  - stored_otp: {stored_otp}")
+        print(f"  - stored_expiry: {stored_expiry}")
+        print(f"  - stored_request_id: {stored_request_id}")
+        print(f"  - current time timestamp: {datetime.utcnow().timestamp()}")
+        
+        # Check if OTP exists and not expired
+        if not stored_otp or not stored_expiry:
+            print(f"[DEBUG] No OTP found in session")
+            return jsonify({'success': False, 'message': 'No verification code found. Please request a new one.'}), 400
+        
+        if datetime.utcnow().timestamp() > stored_expiry:
+            print(f"[DEBUG] OTP expired")
+            return jsonify({'success': False, 'message': 'Verification code has expired. Please request a new one.'}), 400
+        
+        # Verify OTP
+        print(f"[DEBUG] Comparing OTP: entered='{entered_otp}' vs stored='{stored_otp}'")
+        print(f"[DEBUG] Comparing request_id: entered='{request_id}' vs stored='{stored_request_id}'")
+        
+        if entered_otp == stored_otp and stored_request_id == request_id:
+            print(f"[DEBUG] OTP VERIFICATION SUCCESSFUL!")
+            # Clear OTP from session
+            session.pop('new_email_otp', None)
+            session.pop('new_email_otp_expiry', None)
+            session.pop('pending_new_email', None)
+            session.pop('change_request_id', None)
+            print(f"[DEBUG] Session cleared")
+            print("="*60 + "\n")
+            
+            return jsonify({'success': True, 'message': 'Code verified successfully'})
+        else:
+            print(f"[DEBUG] OTP VERIFICATION FAILED!")
+            print(f"  - OTP match: {entered_otp == stored_otp}")
+            print(f"  - Request ID match: {stored_request_id == request_id}")
+            print("="*60 + "\n")
+            return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
+            
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        print(f"[DEBUG ERROR] Exception in OTP verification:")
+        print(f"  - Error: {str(e)}")
+        print(f"  - Full traceback:\n{error_traceback}")
+        print("="*60 + "\n")
+        
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 
 def send_email_change_notification(student, old_email, new_email):
     """Send notification to old email about email change"""
