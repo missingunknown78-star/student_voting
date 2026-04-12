@@ -2666,7 +2666,7 @@ def candidates():
     now_ph = datetime.now(local_tz)
     now_naive = now_ph.replace(tzinfo=None)
     
-    # Build query for eligible elections (SAME LOGIC as available_elections)
+    # Build query for eligible elections (ALL elections, not just active)
     query = Election.query
     
     if start_date and end_date:
@@ -2675,10 +2675,9 @@ def candidates():
             Election.start_date <= end_date
         )
     
-    # Filter active elections that student is eligible for
+    # REMOVED the active date filter - now shows ALL elections (past, present, future)
+    # Filter elections that student is eligible for (based on scope, department, year level)
     eligible_elections = query.filter(
-        Election.start_date <= now_naive,
-        Election.end_date >= now_naive,
         # Campus-wide OR Department-specific
         db.or_(
             # Campus-wide conditions
@@ -2708,7 +2707,7 @@ def candidates():
                 Election.department_id == student_department_id
             )
         )
-    ).order_by(Election.start_date.asc()).all()
+    ).order_by(Election.start_date.desc()).all()  # Changed to desc() to show newest first
     
     # Get eligible election IDs
     eligible_election_ids = [e.id for e in eligible_elections]
@@ -2735,9 +2734,6 @@ def candidates():
         session['current_school_year'] = school_year
     
     # Get ALL candidates from eligible elections
-    # IMPORTANT: For campus elections, we show ALL candidates regardless of department
-    # For department elections, only candidates from that department will appear
-    # (but the election filter already ensures we only get department elections the student is eligible for)
     all_candidates = Candidate.query.filter(
         Candidate.election_id.in_(eligible_election_ids)
     ).order_by(Candidate.last_name).all()
@@ -2761,6 +2757,16 @@ def candidates():
             filtered_candidates = all_candidates
     else:
         filtered_candidates = all_candidates
+    
+    # OPTIONAL: Add status indicator to each candidate (active, upcoming, ended)
+    for candidate in filtered_candidates:
+        if candidate.election:
+            if candidate.election.start_date <= now_naive <= candidate.election.end_date:
+                candidate.election_status = 'active'
+            elif candidate.election.start_date > now_naive:
+                candidate.election_status = 'upcoming'
+            else:
+                candidate.election_status = 'ended'
     
     return render_template('candidates.html', 
                          candidates=filtered_candidates,

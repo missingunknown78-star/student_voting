@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize filters
     initFilters();
+
+    initFilterListeners();
     
     // Initialize search
     initSearch();
@@ -442,7 +444,34 @@ function displaySchoolYearInfo() {
 // Initialize functions
 function initModals() {}
 function initFilters() {}
-function initSearch() {}
+function initSearch() {
+    const searchBtn = document.getElementById('search_btn');
+    const searchInput = document.getElementById('search_input');
+    
+    if (searchBtn) {
+        // Remove old button and create new one to prevent duplicate listeners
+        const newBtn = searchBtn.cloneNode(true);
+        searchBtn.parentNode.replaceChild(newBtn, searchBtn);
+        
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log("Search clicked - filtering");
+            filterCandidates(1, false);
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                console.log("Enter pressed - filtering");
+                filterCandidates(1, false);
+            }
+        });
+    }
+}
+
+
 function initDeleteButtons() {}
 function initEditButtons() {
     attachEditButtonListeners();
@@ -952,20 +981,13 @@ function filterCandidates(page = null, keepPage = false) {
     // Get current page from URL or pagination
     let currentPage = 1;
     
-    if (page !== null) {
+    if (page !== null && page !== undefined) {
         currentPage = page;
     } else if (keepPage) {
         // Try to get page from current pagination
-        const currentPageElement = document.querySelector('.pagination .current');
-        if (currentPageElement) {
-            currentPage = parseInt(currentPageElement.textContent);
-        } else {
-            // Try to get from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlPage = urlParams.get('page');
-            if (urlPage) {
-                currentPage = parseInt(urlPage);
-            }
+        const currentPageSpan = document.querySelector('.pagination .current');
+        if (currentPageSpan) {
+            currentPage = parseInt(currentPageSpan.textContent);
         }
     }
 
@@ -1196,13 +1218,20 @@ function updatePagination(pagination) {
     attachPaginationListeners();
 }
 
-/* Attach pagination listeners */
 function attachPaginationListeners() {
     const paginationLinks = document.querySelectorAll('.pagination-link');
     paginationLinks.forEach(link => {
-        // Remove any existing listeners to prevent duplicates
-        link.removeEventListener('click', handlePaginationClick);
-        link.addEventListener('click', handlePaginationClick);
+        // Remove any existing listeners
+        const newLink = link.cloneNode(true);
+        link.parentNode.replaceChild(newLink, link);
+        
+        newLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const page = parseInt(this.dataset.page);
+            console.log("Pagination clicked - page:", page);
+            filterCandidates(page, true);
+        });
     });
 }
 
@@ -1248,16 +1277,15 @@ function attachEventListeners() {
     });
 }
 
-/* Initialize filter listeners */
 function initFilterListeners() {
     const filterScope = document.getElementById('filter_scope');
     const filterDepartment = document.getElementById('filter_department');
-    const searchBtn = document.getElementById('search_btn');
-    const searchInput = document.getElementById('search_input');
     const resetBtn = document.getElementById('reset_filter');
-
-    // Update department visibility
-    function updateFilterDepartment() {
+    
+    console.log("Filter listeners initializing...");
+    
+    // Update department dropdown visibility
+    function updateDepartmentVisibility() {
         if (filterScope && filterDepartment) {
             if (filterScope.value === 'department') {
                 filterDepartment.style.display = 'inline-block';
@@ -1267,49 +1295,51 @@ function initFilterListeners() {
             }
         }
     }
-
+    
+    // Scope filter change
     if (filterScope) {
-        filterScope.addEventListener('change', () => {
-            updateFilterDepartment();
+        // Remove existing listeners by cloning
+        const newScope = filterScope.cloneNode(true);
+        filterScope.parentNode.replaceChild(newScope, filterScope);
+        
+        newScope.addEventListener('change', function() {
+            console.log("Scope changed to:", this.value);
+            updateDepartmentVisibility();
             filterCandidates(1, false);
         });
     }
-
+    
+    // Department filter change
     if (filterDepartment) {
-        filterDepartment.addEventListener('change', () => {
+        const newDept = filterDepartment.cloneNode(true);
+        filterDepartment.parentNode.replaceChild(newDept, filterDepartment);
+        
+        newDept.addEventListener('change', function() {
+            console.log("Department changed to:", this.value);
             filterCandidates(1, false);
         });
     }
-
-    if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            filterCandidates(1, false);
-        });
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                filterCandidates(1, false);
-            }
-        });
-    }
-
+    
+    // Reset button
     if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
+        const newReset = resetBtn.cloneNode(true);
+        resetBtn.parentNode.replaceChild(newReset, resetBtn);
+        
+        newReset.addEventListener('click', function() {
+            console.log("Reset clicked");
             if (filterScope) filterScope.value = '';
             if (filterDepartment) {
                 filterDepartment.value = '';
                 filterDepartment.style.display = 'none';
             }
+            const searchInput = document.getElementById('search_input');
             if (searchInput) searchInput.value = '';
             filterCandidates(1, false);
         });
     }
-
-    // Initial call to set department visibility
-    updateFilterDepartment();
+    
+    // Initial setup
+    updateDepartmentVisibility();
 }
 
 /* ---------- FLOATING NOTIFICATION FUNCTION (ABOVE MODAL) ---------- */
