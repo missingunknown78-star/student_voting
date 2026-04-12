@@ -93,6 +93,50 @@
         font-size: 12px;
     }
     
+    /* Tally Status Badge Styles */
+    .tally-status-badge {
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 6px;
+    }
+    
+    .tally-status-badge.tallied {
+        background: rgba(32, 201, 151, 0.15);
+        color: #20c997;
+    }
+    
+    .tally-status-badge.not-tallied {
+        background: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+    }
+    
+    .tally-status-badge i {
+        font-size: 11px;
+    }
+    
+    /* Dark mode tally status */
+    :root.dark-mode .tally-status-badge.tallied {
+        background: rgba(32, 201, 151, 0.25);
+        color: #2ecc71;
+    }
+    
+    :root.dark-mode .tally-status-badge.not-tallied {
+        background: rgba(255, 193, 7, 0.25);
+        color: #f39c12;
+    }
+    
+    /* Tally Info Text */
+    .tally-info {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-left: 5px;
+    }
+    
     /* Ensure buttons are properly styled */
     .election-card .btn-primary {
         background: var(--primary-blue);
@@ -413,6 +457,20 @@
                 <div class="detail-item">
                     <i class="fa-solid fa-users"></i>
                     <span>{{ election.candidates|length }} Candidates</span>
+                </div>
+                
+                <!-- TALLY STATUS INDICATOR -->
+                <div class="detail-item">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    {% if election.tally_records and election.tally_records|length > 0 %}
+                        <span class="tally-status-badge tallied">
+                            <i class="fa-solid fa-check-circle"></i> Officially Tallied
+                        </span>
+                    {% else %}
+                        <span class="tally-status-badge not-tallied">
+                            <i class="fa-solid fa-clock"></i> Not Yet Tallied
+                        </span>
+                    {% endif %}
                 </div>
             </div>
             
