@@ -215,6 +215,29 @@
     color: #4299e1;
 }
 
+/* Result Publication Badge */
+.result-publication-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-top: 8px;
+    margin-left: 8px;
+}
+
+.published-badge {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success);
+}
+
+.not-published-badge {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+}
+
 /* Timestamps Container */
 .timestamps-container {
     background: #f8fafc;
@@ -253,6 +276,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 /* Vote Badge */
@@ -384,7 +409,6 @@
 @media (max-width: 320px) {
     .election-card-footer {
         flex-direction: column;
-        gap: 8px;
         align-items: flex-start;
     }
     
@@ -491,7 +515,7 @@ body.dark-mode .department-badge.wide-election {
             <i class="fa-solid fa-square-poll-vertical"></i> My Results
         </h1>
         <p class="results-subtitle">
-            Elections you've participated.
+            Elections you've participated in.
         </p>
     </div>
 
@@ -500,9 +524,13 @@ body.dark-mode .department-badge.wide-election {
         <div class="elections-grid">
             {% for election in voted_elections %}
                 {# Determine if election is ongoing using Manila time #}
-                {% set is_ongoing = election.status == 'ongoing' %}
-                {% set is_completed = election.status == 'completed' %}
-                {% set is_upcoming = election.status == 'upcoming' %}
+                {% set is_ongoing = election.is_ongoing %}
+                {% set is_completed = election.end_date_manila and election.end_date_manila < now %}
+                {% set is_upcoming = election.start_date_manila and election.start_date_manila > now %}
+                
+                {# Check if results are published #}
+                {% set has_pdf_results = election.pdf_results and election.pdf_results|length > 0 %}
+                {% set has_results_published = election.results_published or has_pdf_results %}
                 
                 <div class="election-card {% if is_ongoing %}ongoing-election{% endif %}">
                     <div class="election-card-header">
@@ -514,9 +542,9 @@ body.dark-mode .department-badge.wide-election {
                         </h3>
                         <div class="election-type">
                             {% if election.election_type == 'Department' %}
-                                {{ election.department.name if election.department else 'Department' }}
+                                {{ election.department if election.department else 'Department' }}
                             {% else %}
-                                SSG Election
+                                Campus Election
                             {% endif %}
                         </div>
                     </div>
@@ -534,7 +562,7 @@ body.dark-mode .department-badge.wide-election {
                             {% if election.department_id is none %}
                                 Wide Election
                             {% else %}
-                                {{ election.department.name if election.department else 'Department' }}
+                                {{ election.department if election.department else 'Department' }}
                             {% endif %}
                             
                             <span class="election-type-badge {% if election.department_id is none %}wide-election{% else %}department-election{% endif %}">
@@ -542,7 +570,7 @@ body.dark-mode .department-badge.wide-election {
                             </span>
                         </div>
                         
-                        <!-- UPDATED: Use Manila dates -->
+                        <!-- Election Dates -->
                         <div class="election-detail">
                             <i class="fa-regular fa-calendar"></i>
                             <span>
@@ -554,7 +582,7 @@ body.dark-mode .department-badge.wide-election {
                             </span>
                         </div>
                         
-                        <!-- UPDATED: Use Manila time for status -->
+                        <!-- Status based on actual dates -->
                         <div class="election-detail">
                             <i class="fa-regular fa-clock"></i>
                             <span>
@@ -577,20 +605,35 @@ body.dark-mode .department-badge.wide-election {
                             <span>You voted in this election</span>
                         </div>
                         
-                        <div class="election-status 
+                        <!-- Election Status Badges Row -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                            <!-- Election Running Status -->
+                            <div class="election-status 
+                                {% if is_completed %}
+                                    status-completed
+                                {% elif is_ongoing %}
+                                    status-active
+                                {% else %}
+                                    status-upcoming
+                                {% endif %}">
+                                {% if is_completed %}
+                                    <i class="fa-solid fa-check-circle"></i> Completed
+                                {% elif is_ongoing %}
+                                    <i class="fa-solid fa-hourglass-half"></i> Ongoing
+                                {% else %}
+                                    <i class="fa-solid fa-clock"></i> Upcoming
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Result Publication Status -->
                             {% if is_completed %}
-                                status-completed
-                            {% elif is_ongoing %}
-                                status-active
-                            {% else %}
-                                status-upcoming
-                            {% endif %}">
-                            {% if is_completed %}
-                                <i class="fa-solid fa-check-circle"></i> Completed
-                            {% elif is_ongoing %}
-                                <i class="fa-solid fa-hourglass-half"></i> Ongoing
-                            {% else %}
-                                <i class="fa-solid fa-clock"></i> Upcoming
+                                <div class="result-publication-badge {% if has_results_published %}published-badge{% else %}not-published-badge{% endif %}">
+                                    {% if has_results_published %}
+                                        <i class="fa-solid fa-file-pdf"></i> Results Published
+                                    {% else %}
+                                        <i class="fa-solid fa-hourglass-half"></i> No Results Yet
+                                    {% endif %}
+                                </div>
                             {% endif %}
                         </div>
                         

@@ -8795,6 +8795,20 @@ def election_results_pdf(election_id):
             if winners:
                 winners_by_position[position_name] = winners
     
+    # ===== SORT WINNERS TABLE BY POSITION ID =====
+    # Get all position IDs for sorting
+    position_id_map = {}
+    for position_name in winners_by_position.keys():
+        # Find position ID from candidates_by_position
+        for pos_name, pos_data in candidates_by_position.items():
+            if pos_name == position_name:
+                position_id_map[position_name] = pos_data['id']
+                break
+    
+    # Sort winners_by_position by position ID
+    sorted_winners = sorted(winners_by_position.items(), key=lambda x: position_id_map.get(x[0], 9999))
+    winners_by_position = dict(sorted_winners)
+    
     # Calculate overall statistics
     if election.department_id:
         total_eligible_voters = Student.query.filter_by(department_id=election.department_id).count()
@@ -8999,7 +9013,7 @@ def election_results_pdf(election_id):
     story.append(Paragraph("OFFICIAL ELECTION WINNERS", winners_title_style))
     story.append(Spacer(1, 0.05*inch))
     
-    # Winners table - UPDATED to show studio_name for studio candidates
+    # Winners table - SORTED BY POSITION ID (already sorted above)
     winners_data = [['Position', 'Winner(s)', 'Votes']]
     for position_name, winners in winners_by_position.items():
         if len(winners) == 1:

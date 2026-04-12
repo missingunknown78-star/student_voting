@@ -1801,50 +1801,39 @@ def vote_page(election_id):
         flash("Election not found.", "danger")
         return redirect(url_for('student.available_elections'))
 
-    # ===== ADD THIS: CHECK IF STUDENT IS ELIGIBLE FOR THIS ELECTION =====
-    # Check if student is eligible based on election scope
+    # ===== CHECK IF STUDENT IS ELIGIBLE FOR THIS ELECTION =====
     is_eligible = False
     
     if election.scope == 'department' or election.election_type == 'Department':
         # Department election - check if student belongs to the election's department
         if election.department_id and current_user.department_id == election.department_id:
             is_eligible = True
-        # Also check if election has course_id restriction (for course-specific elections)
         elif election.course_id and current_user.course_id == election.course_id:
             is_eligible = True
         else:
             # Check if any position in this election is restricted to the student's course/department
-            # This is more thorough - maybe the election is department-wide but positions have restrictions
             election_positions = ElectionPosition.query.filter_by(election_id=election_id).all()
             for ep in election_positions:
-                # Check course restriction
                 if ep.course_id and current_user.course_id == ep.course_id:
                     is_eligible = True
                     break
-                # Check department restriction  
                 if ep.department_id and current_user.department_id == ep.department_id:
                     is_eligible = True
                     break
-                # If no restrictions at position level, check election level
                 if not ep.course_id and not ep.department_id:
-                    # This position is open to all, so if election is department scope
-                    # and student is in that department, they're eligible
                     if election.department_id and current_user.department_id == election.department_id:
                         is_eligible = True
                         break
     else:
         # Campus-wide election (SSG)
-        # Check year level eligibility if specified
         if election.year_levels and election.year_levels != 'all':
             student_year = str(current_user.year_level_id) if current_user.year_level_id else None
             year_levels_list = election.year_levels.split(',')
             if student_year in year_levels_list:
                 is_eligible = True
         else:
-            # No year level restriction, all students can vote
             is_eligible = True
     
-    # If not eligible, redirect with message
     if not is_eligible:
         flash("You are not eligible to vote in this election.", "warning")
         return redirect(url_for('student.available_elections'))
@@ -1887,30 +1876,37 @@ def vote_page(election_id):
                     'program_type_name': program_type.name
                 }
     
-    # ===== CRITICAL FIX: Fetch ALL candidates and sort them by ID for consistency =====
-    all_candidates = Candidate.query.filter_by(election_id=election_id)\
-                                    .order_by(Candidate.id).all()  # ← SORT BY ID
+    # Get year level restrictions for positions
+    position_year_level_restrictions = {}
+    for ep in election_positions:
+        if ep.year_level:
+            position_year_level_restrictions[ep.position_id] = {
+                'year_level': ep.year_level,
+                'year_level_label': f"{ep.year_level}{get_year_level_suffix(ep.year_level)} Year"
+            }
     
-    # Filter candidates based on student's course, department, and program type
-    filtered_candidates = []
-    
-    # Get student's course_id, department_id, and program_type_id
+    # Get student information
     student_course_id = current_user.course_id
     student_department_id = current_user.department_id
     student_program_type_id = current_user.program_type_id
+    student_year_level = current_user.year_level_id
+    
+    # ===== CRITICAL FIX: Fetch ALL candidates and filter properly =====
+    all_candidates = Candidate.query.filter_by(election_id=election_id)\
+                                    .order_by(Candidate.id).all()
+    
+    # Filter candidates based on ALL restrictions
+    filtered_candidates = []
     
     for candidate in all_candidates:
         include_candidate = True
         candidate_position_id = candidate.position_id
         
-        # CHECK 1: COURSE RESTRICTIONS
+        # CHECK 1: COURSE RESTRICTIONS (Position level)
         if candidate_position_id in position_course_restrictions:
             restricted_course_id = position_course_restrictions[candidate_position_id]['course_id']
-            
-            if candidate.course_id and candidate.course_id == restricted_course_id:
-                if student_course_id != restricted_course_id:
-                    include_candidate = False
-            else:
+            # Student must match the restricted course
+            if student_course_id != restricted_course_id:
                 include_candidate = False
         
         # CHECK 2: PROGRAM TYPE RESTRICTIONS (Position level)
@@ -1919,7 +1915,13 @@ def vote_page(election_id):
             if student_program_type_id != restricted_program_type_id:
                 include_candidate = False
         
-        # CHECK 3: CANDIDATE'S OWN PROGRAM TYPE
+        # CHECK 3: YEAR LEVEL RESTRICTIONS (Position level) - THIS WAS MISSING!
+        if include_candidate and candidate_position_id in position_year_level_restrictions:
+            restricted_year_level = position_year_level_restrictions[candidate_position_id]['year_level']
+            if student_year_level != restricted_year_level:
+                include_candidate = False
+        
+        # CHECK 4: CANDIDATE'S OWN PROGRAM TYPE
         if include_candidate and candidate.is_program_type_restricted:
             if not candidate.matches_student_program_type(student_program_type_id):
                 include_candidate = False
@@ -1929,24 +1931,39 @@ def vote_page(election_id):
     
     # Group filtered candidates by position
     candidates_by_position = {}
-    all_candidate_ids = []  # ← This will be in SORTED order by candidate ID
+    all_candidate_ids = []
     
-    # IMPORTANT: filtered_candidates is already sorted by ID from the query above
     for c in filtered_candidates:
         if c.position:
             position_name = c.position.name
             if position_name not in candidates_by_position:
-                # Check if this position has course restrictions (for display only)
+                # Check if this position has restrictions (for display only)
                 course_restriction_info = position_course_restrictions.get(c.position_id)
+                program_type_restriction_info = position_program_type_restrictions.get(c.position_id)
+                year_level_restriction_info = position_year_level_restrictions.get(c.position_id)
+                
+                # Build restriction badge text
+                restriction_parts = []
+                if course_restriction_info:
+                    restriction_parts.append(course_restriction_info['course_name'])
+                if program_type_restriction_info:
+                    restriction_parts.append(program_type_restriction_info['program_type_name'])
+                if year_level_restriction_info:
+                    restriction_parts.append(year_level_restriction_info['year_level_label'])
+                
+                restriction_text = ' | '.join(restriction_parts) if restriction_parts else None
                 
                 candidates_by_position[position_name] = {
                     'candidates': [],
                     'position_id': c.position_id,
                     'max_votes': position_limits.get(c.position_id, 1),
-                    'restricted_to_course': course_restriction_info['course_name'] if course_restriction_info else None
+                    'restricted_to_course': course_restriction_info['course_name'] if course_restriction_info else None,
+                    'restricted_to_program_type': program_type_restriction_info['program_type_name'] if program_type_restriction_info else None,
+                    'restricted_to_year_level': year_level_restriction_info['year_level_label'] if year_level_restriction_info else None,
+                    'restriction_text': restriction_text
                 }
             candidates_by_position[position_name]['candidates'].append(c)
-            all_candidate_ids.append(c.id)  # ← Already in sorted order by ID
+            all_candidate_ids.append(c.id)
     
     # Sort positions by position ID for consistent display
     sorted_positions = sorted(
@@ -1965,9 +1982,21 @@ def vote_page(election_id):
         'vote_page.html',
         election=election,
         candidates_by_position=candidates_by_position,
-        all_candidate_ids=all_candidate_ids,  # ← Sorted by candidate ID
+        all_candidate_ids=all_candidate_ids,
         current_user=current_user
     )
+
+
+def get_year_level_suffix(year):
+    """Helper function to add suffix to year level (1st, 2nd, 3rd, 4th)"""
+    if year == 1:
+        return "st"
+    elif year == 2:
+        return "nd"
+    elif year == 3:
+        return "rd"
+    else:
+        return "th"
 
 
 @student_bp.route('/vote/<int:election_id>/submit', methods=['POST'])

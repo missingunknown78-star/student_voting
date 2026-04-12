@@ -7,6 +7,57 @@
     
     <link rel="stylesheet" href="{{ url_for('student.static', filename='css/vote.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Restriction badge styles */
+        .restriction-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        .restriction-badge i {
+            font-size: 0.65rem;
+            margin-right: 4px;
+        }
+        
+        /* Position header adjustments */
+        .position-title-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .position-title {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .course-restriction-badge-inline {
+            display: inline-block;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-left: 10px;
+        }
+        
+        .course-restriction-badge-inline i {
+            font-size: 0.65rem;
+            margin-right: 4px;
+        }
+    </style>
 </head>
 <body>
 
@@ -60,7 +111,11 @@
                 <div class="position-title-container">
                     <h3 class="position-title">
                         {{ position_name }}
-                        {% if position_data.restricted_to_course %}
+                        {% if position_data.restriction_text %}
+                            <span class="restriction-badge">
+                                <i class="fa-solid fa-filter"></i> {{ position_data.restriction_text }}
+                            </span>
+                        {% elif position_data.restricted_to_course %}
                             <span class="course-restriction-badge-inline">
                                 <i class="fa-solid fa-graduation-cap"></i> {{ position_data.restricted_to_course }}
                             </span>
