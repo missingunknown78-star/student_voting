@@ -3847,6 +3847,20 @@ import json
 from flask import current_app
 import traceback
 
+from datetime import datetime, timedelta
+import pytz
+import uuid
+import random
+import string
+import traceback
+
+# Define Philippine timezone once
+PHILIPPINE_TZ = pytz.timezone('Asia/Manila')
+
+def get_philippine_time():
+    """Get current time in Philippine Timezone (UTC+8)"""
+    return datetime.now(PHILIPPINE_TZ)
+
 # Store verification codes temporarily (in production, use Redis or database)
 verification_codes = {}
 # Store email change requests
@@ -3897,9 +3911,9 @@ def profile():
     from datetime import datetime
     import pytz
     
-    # Use timezone-aware datetime
+    # Use Philippine timezone
     tz = pytz.timezone('Asia/Manila')
-    now = datetime.now(tz)
+    now = get_philippine_time()
     
     # Check if student is qualified to apply (exists in qualified_candidates table)
     qualification = QualifiedCandidate.query.filter_by(student_id=current_user.id).first()
@@ -3909,7 +3923,7 @@ def profile():
     pending_application = PendingCandidate.query.filter_by(student_id=current_user.id, status='pending').first()
     has_pending_application = pending_application is not None
     
-    # Get pending application details if exists - FIXED: changed 'created_at' to 'applied_at'
+    # Get pending application details if exists
     pending_application_details = None
     if pending_application:
         # Fetch election and position details
@@ -3920,7 +3934,7 @@ def profile():
             'position_name': position.name if position else 'Unknown Position',
             'party_list': pending_application.party_list,
             'scope': pending_application.scope,
-            'applied_at': pending_application.applied_at  # FIXED: changed from created_at to applied_at
+            'applied_at': pending_application.applied_at
         }
     
     # Check if student's application was rejected
@@ -3938,8 +3952,8 @@ def profile():
             'position_name': position.name if position else 'Unknown Position',
             'party_list': rejected_application.party_list,
             'scope': rejected_application.scope,
-            'applied_at': rejected_application.applied_at,  # Added applied_at for rejected
-            'rejected_at': rejected_application.reviewed_at if hasattr(rejected_application, 'reviewed_at') else None  # Fixed: reviewed_at not updated_at
+            'applied_at': rejected_application.applied_at,
+            'rejected_at': rejected_application.reviewed_at if hasattr(rejected_application, 'reviewed_at') else None
         }
     
     # Check if student is already a candidate (approved)
@@ -3962,13 +3976,12 @@ def profile():
         }
     
     # ============= Get ACTIVE and UPCOMING elections (exclude ended) =============
-    # Get elections that haven't ended yet (active OR upcoming)
     # Use naive datetime for database comparison since DB stores naive datetimes
     naive_now = now.replace(tzinfo=None)
     
     available_elections = Election.query.filter(
-        Election.end_date >= naive_now  # End date is in the future
-    ).order_by(Election.start_date.asc()).all()  # Order by start date (soonest first)
+        Election.end_date >= naive_now
+    ).order_by(Election.start_date.asc()).all()
     
     # Filter elections based on student's eligibility and add display status
     eligible_elections = []
@@ -3987,9 +4000,9 @@ def profile():
         
         # If dates are naive, make them aware (assuming they're in Manila time)
         if election_start.tzinfo is None:
-            election_start = tz.localize(election_start)
+            election_start = PHILIPPINE_TZ.localize(election_start)
         if election_end.tzinfo is None:
-            election_end = tz.localize(election_end)
+            election_end = PHILIPPINE_TZ.localize(election_end)
         
         # Add status for display purposes
         if election_start <= now <= election_end:
@@ -4028,7 +4041,7 @@ def profile():
         rejected_application_details=rejected_application_details,
         rejection_reason=rejection_reason,
         # Pass eligible elections (active + upcoming) to template
-        active_elections=eligible_elections,  # This now contains both active AND upcoming
+        active_elections=eligible_elections,
         # Optional: pass separated lists if needed elsewhere
         active_only=active_elections,
         upcoming_only=upcoming_elections,
@@ -4132,6 +4145,7 @@ def edit_profile():
             'error': str(e)
         }), 500
 
+
 @student_bp.route('/send-email-change-verification', methods=['POST'])
 @login_required
 def send_email_change_verification():
@@ -4145,14 +4159,18 @@ def send_email_change_verification():
     # Generate unique request ID
     request_id = str(uuid.uuid4())
     
+    # FIX: Use Philippine time consistently
+    now_ph = get_philippine_time()
+    expiry_time = now_ph + timedelta(minutes=15)
+    
     # Store request
     email_change_requests[request_id] = {
         'student_id': current_user.id,
         'old_email': old_email,
         'new_email': new_email,
         'status': 'pending',
-        'created_at': datetime.now(),
-        'expiry': datetime.now() + timedelta(minutes=15)
+        'created_at': now_ph,
+        'expiry': expiry_time
     }
     
     try:
@@ -4192,6 +4210,7 @@ def send_email_change_verification():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @student_bp.route('/confirm-email-change/<request_id>/<action>')
 def confirm_email_change(request_id, action):
     if request_id not in email_change_requests:
@@ -4199,8 +4218,33 @@ def confirm_email_change(request_id, action):
     
     request_data = email_change_requests[request_id]
     
-    if datetime.now() > request_data['expiry']:
-        return "This request has expired", 400
+    # FIX: Use Philippine time for comparison
+    now_ph = get_philippine_time()
+    
+    if now_ph > request_data['expiry']:
+        # Clean up expired request
+        del email_change_requests[request_id]
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">⏰</div>
+                <h2>Request Expired</h2>
+                <p>This verification link has expired (15 minute limit).</p>
+                <p>Please request a new email change verification.</p>
+            </div>
+        </body>
+        </html>
+        """, 400
     
     if action == 'confirm':
         request_data['status'] = 'confirmed'
@@ -4227,6 +4271,8 @@ def confirm_email_change(request_id, action):
         """
     elif action == 'reject':
         request_data['status'] = 'rejected'
+        # Clean up rejected request
+        del email_change_requests[request_id]
         return """
         <html>
         <head>
@@ -4251,6 +4297,7 @@ def confirm_email_change(request_id, action):
     
     return "Invalid action", 400
 
+
 @student_bp.route('/email-change-status/<request_id>')
 @login_required
 def email_change_status(request_id):
@@ -4259,11 +4306,16 @@ def email_change_status(request_id):
     
     request_data = email_change_requests[request_id]
     
+    # FIX: Use Philippine time to check expiry
+    now_ph = get_philippine_time()
+    
     # Clean up expired requests
-    if datetime.now() > request_data['expiry']:
+    if now_ph > request_data['expiry']:
+        del email_change_requests[request_id]
         return jsonify({'status': 'expired'})
     
     return jsonify({'status': request_data['status']})
+
 
 @student_bp.route('/send-otp-to-new-email', methods=['POST'])
 @login_required
@@ -4278,9 +4330,13 @@ def send_otp_to_new_email():
     # Generate 6-digit OTP
     otp = ''.join(random.choices(string.digits, k=6))
     
+    # FIX: Use Philippine time for OTP expiry
+    now_ph = get_philippine_time()
+    otp_expiry = now_ph + timedelta(minutes=10)
+    
     # Store OTP in FLASK SESSION (server-side) - NOT browser sessionStorage
     session['new_email_otp'] = otp
-    session['new_email_otp_expiry'] = (datetime.now() + timedelta(minutes=10)).timestamp()
+    session['new_email_otp_expiry'] = otp_expiry.timestamp()
     session['pending_new_email'] = email
     session['change_request_id'] = request_id
     
@@ -4310,6 +4366,7 @@ def send_otp_to_new_email():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @student_bp.route('/send-verification-code', methods=['POST'])
 @login_required
 def send_verification_code():
@@ -4323,10 +4380,14 @@ def send_verification_code():
     # Generate 6-digit code
     code = ''.join(random.choices(string.digits, k=6))
     
+    # FIX: Use Philippine time for code expiry
+    now_ph = get_philippine_time()
+    expiry_time = now_ph + timedelta(minutes=10)
+    
     # Store code with expiry (10 minutes)
     verification_codes[f"{email}_{verification_type}"] = {
         'code': code,
-        'expiry': datetime.now() + timedelta(minutes=10),
+        'expiry': expiry_time,
         'user_id': current_user.id,
         'type': verification_type
     }
@@ -4376,7 +4437,6 @@ def send_verification_code():
         return jsonify({'error': str(e)}), 500
 
 
-
 @student_bp.route('/verify-otp-code', methods=['POST'])
 @login_required
 def verify_otp_code():
@@ -4409,14 +4469,20 @@ def verify_otp_code():
         print(f"  - stored_otp: {stored_otp}")
         print(f"  - stored_expiry: {stored_expiry}")
         print(f"  - stored_request_id: {stored_request_id}")
-        print(f"  - current time timestamp: {datetime.utcnow().timestamp()}")
+        
+        # FIX: Use Philippine time for expiry check
+        now_ph = get_philippine_time()
+        current_timestamp = now_ph.timestamp()
+        
+        print(f"  - current time (Philippine): {now_ph}")
+        print(f"  - current timestamp: {current_timestamp}")
         
         # Check if OTP exists and not expired
         if not stored_otp or not stored_expiry:
             print(f"[DEBUG] No OTP found in session")
             return jsonify({'success': False, 'message': 'No verification code found. Please request a new one.'}), 400
         
-        if datetime.utcnow().timestamp() > stored_expiry:
+        if current_timestamp > stored_expiry:
             print(f"[DEBUG] OTP expired")
             return jsonify({'success': False, 'message': 'Verification code has expired. Please request a new one.'}), 400
         
@@ -4452,7 +4518,6 @@ def verify_otp_code():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-
 def send_email_change_notification(student, old_email, new_email):
     """Send notification to old email about email change"""
     try:
@@ -4483,6 +4548,7 @@ def send_email_change_notification(student, old_email, new_email):
         print(f"Email change notification sent to {old_email}")
     except Exception as e:
         print(f"Failed to send email change notification: {e}")
+
 
 def mask_email(email):
     if not email or '@' not in email:
@@ -4515,14 +4581,13 @@ def send_deletion_request_notification(student, reason):
                 <p><strong>ID Number:</strong> {student.id_number}</p>
                 <p><strong>Email:</strong> {student.email}</p>
                 <p><strong>Reason:</strong> {reason}</p>
-                <p><strong>Request Date:</strong> {datetime.now().strftime('%B %d, %Y %I:%M %p')}</p>
+                <p><strong>Request Date:</strong> {get_philippine_time().strftime('%B %d, %Y %I:%M %p')}</p>
                 <p>Please review this request in the admin panel.</p>
             </div>
             """
             mail.send(msg)
     except Exception as e:
         print(f"Failed to send admin notification: {e}")
-
 
 
 def send_deletion_confirmation_email(student, reason):
