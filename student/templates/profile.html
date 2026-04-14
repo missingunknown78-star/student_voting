@@ -104,6 +104,155 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(155, 89, 182, 0.3);
     }
+
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: white;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 450px;
+        width: 90%;
+        position: relative;
+        animation: modalSlideIn 0.3s ease;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal .close {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .modal .close:hover {
+        color: #333;
+    }
+
+    .modal-icon {
+        font-size: 48px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .modal h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .warning-box {
+        background: #fff3e0;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 15px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .warning-icon {
+        font-size: 20px;
+    }
+
+    .btn-primary, .btn-secondary, .btn-danger {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #9b59b6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #8e44ad;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-danger {
+        background: #e53935;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c62828;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .button-group button {
+        flex: 1;
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.6s linear infinite;
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    #simpleOtpInput {
+        font-size: 1.2rem;
+        letter-spacing: 5px;
+        text-align: center;
+    }
 </style>
 {% endblock %}
 
@@ -193,11 +342,9 @@
             </div>
         </div>
 
-        <!-- Edit Mode (Hidden by default) - UPDATED: Course and Year Level made non-editable -->
+        <!-- Edit Mode (Hidden by default) -->
         <div id="profileEditMode" class="profile-info" style="display: none;">
             <form id="editProfileForm" method="POST" action="{{ url_for('student.edit_profile') }}">
-                <!-- CSRF Token - REMOVED -->
-                
                 <div class="info-group">
                     <label class="info-label">Student ID</label>
                     <div class="info-value disabled">{{ student.id_number }}</div>
@@ -229,7 +376,6 @@
                         {{ student.course_rel.course_name if student.course_rel else student.course }}
                     </div>
                     <p class="field-note">Course information cannot be edited.</p>
-                    <!-- Hidden field to preserve the value -->
                     <input type="hidden" name="course_id" value="{{ student.course_id }}">
                 </div>
 
@@ -240,7 +386,6 @@
                         {{ student.year_level.year_name if student.year_level else 'Not set' }}
                     </div>
                     <p class="field-note">Year level cannot be edited.</p>
-                    <!-- Hidden field to preserve the value -->
                     <input type="hidden" name="year_level_id" value="{{ student.year_level_id }}">
                 </div>
 
@@ -251,7 +396,6 @@
             </form>
         </div>
     </div>
-
 
     <!-- Security Settings -->
     <div class="card settings-card">
@@ -274,7 +418,6 @@
                     </div>
                 </div>
                 <form method="POST" action="{{ url_for('student.toggle_trust_device') }}" class="trust-form">
-                    <!-- CSRF Token - REMOVED -->
                     <button type="submit" class="btn btn-small {% if device_trusted %}btn-secondary{% else %}btn-primary{% endif %}">
                         {% if device_trusted %}
                             Remove Trust
@@ -340,7 +483,7 @@
     </div>
     {% endif %}
 
-    <!-- NEW: Application History Section -->
+    <!-- Application History Section -->
     {% if application_history %}
     <div class="card">
         <h2 class="card-title">
@@ -384,7 +527,7 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+             </>
         </div>
     </div>
     {% endif %}
@@ -408,7 +551,7 @@
                 {% endif %}
             </button>
 
-            <!-- Candidate Application Button - Moved inside Account Actions -->
+            <!-- Candidate Application Button -->
             {% if is_qualified %}
             <a href="{{ url_for('student.apply_as_candidate_page') }}" class="action-btn candidate">
                 <span class="btn-icon">⭐</span>
@@ -425,7 +568,7 @@
     </div>
 </div>
 
-<!-- Email Change Verification Modal -->
+<!-- Email Change Verification Modal - MANUAL SEND VERSION -->
 <div id="emailChangeModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
         <span class="close">&times;</span>
@@ -433,23 +576,44 @@
         <div class="modal-icon">📧</div>
         <h3>Verify Email Change</h3>
         
-        <div id="waitingForConfirmation">
-            <p style="font-size: 0.9rem; color: #4b5563;">We sent a verification email to:</p>
+        <!-- Step 1: Show old email and ask to send verification -->
+        <div id="step1WaitingForConfirmation">
+            <p style="font-size: 0.9rem; color: #4b5563;">We'll send a verification link to:</p>
             <p style="font-weight: 600; color: #111827; word-break: break-all; background: #f3f4f6; padding: 8px; border-radius: 6px; font-size: 0.9rem;" id="oldEmailDisplay"></p>
-            <p style="font-size: 0.85rem; color: #4b5563;">Please check your email and click <strong>Yes, it's me</strong> to confirm.</p>
+            
+            <div class="warning-box" style="background: #fff3e0; margin: 15px 0; padding: 12px; border-radius: 8px;">
+                <span class="warning-icon">⚠️</span>
+                <p style="font-size: 0.85rem; color: #f59e0b; margin: 0;">You must verify this email change by clicking the link sent to your OLD email address.</p>
+            </div>
+            
+            <button id="sendVerificationEmailBtn" class="btn-primary" style="width: 100%; padding: 12px; background: #9b59b6; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; margin-top: 10px;">
+                <span class="btn-icon">📧</span>
+                Send Verification Email
+            </button>
+            
+            <div id="sendTimerText" style="font-size: 0.75rem; color: #6b7280; margin-top: 8px;"></div>
+            
+            <a href="#" id="cancelChangeStep1Btn" style="display: block; margin-top: 15px; color: #dc3545; text-decoration: none; font-size: 0.85rem;">Cancel</a>
+        </div>
+        
+        <!-- Step 2: Waiting for user to click confirmation link -->
+        <div id="step2WaitingForConfirmation" style="display: none;">
+            <p style="font-size: 0.9rem; color: #4b5563;">Verification email sent to:</p>
+            <p style="font-weight: 600; color: #111827; word-break: break-all; background: #f3f4f6; padding: 8px; border-radius: 6px; font-size: 0.9rem;" id="oldEmailDisplay2"></p>
+            <p style="font-size: 0.85rem; color: #4b5563;">Please check your email and click <strong>Confirm Email Change</strong>.</p>
             
             <div style="height: 1px; background: #e5e7eb; margin: 15px 0;"></div>
             
-            <button id="resendEmailBtn" class="btn-secondary" style="width: 100%; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Resend Verification Email</button>
+            <button id="resendEmailBtn2" class="btn-secondary" style="width: 100%; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Resend Verification Email</button>
             
-            <div id="timerText" style="font-size: 0.75rem; color: #6b7280; margin-top: 8px;"></div>
+            <div id="timerText2" style="font-size: 0.75rem; color: #6b7280; margin-top: 8px;"></div>
             
-            <a href="#" id="cancelChangeBtn" style="display: block; margin-top: 12px; color: #dc3545; text-decoration: none; font-size: 0.85rem;">Cancel</a>
+            <a href="#" id="cancelChangeStep2Btn" style="display: block; margin-top: 12px; color: #dc3545; text-decoration: none; font-size: 0.85rem;">Cancel</a>
         </div>
         
-        <!-- Simple OTP Input -->
+        <!-- Step 3: OTP verification for new email -->
         <div id="otpVerification" style="display: none;">
-            <p style="font-size: 0.9rem; color: #4b5563;">Enter the 6-digit code sent to your new email:</p>
+            <p style="font-size: 0.9rem; color: #4b5563;">✓ Old email verified! Now enter the 6-digit code sent to your new email:</p>
             <input type="text" id="simpleOtpInput" maxlength="6" pattern="\d*" inputmode="numeric" 
                    style="width: 100%; padding: 10px; font-size: 1.1rem; text-align: center; letter-spacing: 3px; border: 2px solid #dee2e6; border-radius: 6px; margin: 10px 0;">
             <div id="otpError" style="color: #dc3545; font-size: 0.8rem; min-height: 20px;"></div>
@@ -462,7 +626,7 @@
     </div>
 </div>
 
-<!-- Account Deletion Modal - Fixed Version -->
+<!-- Account Deletion Modal -->
 <div id="deletionModal" class="modal" style="display: none;">
     <div class="modal-content">
         <span class="close">&times;</span>
@@ -475,8 +639,6 @@
         </div>
         
         <form id="deletionForm">
-            <!-- CSRF Token - REMOVED -->
-            
             <div class="form-group">
                 <label class="form-label">
                     Reason for deletion <span class="required-star">*</span>
@@ -526,7 +688,4 @@
 <div id="toast" class="toast" style="display: none; position: fixed; top: 20px; right: 20px; background: #16a34a; color: white; padding: 12px 16px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; font-size: 0.9rem;">✅ Success!</div>
 <div id="toastReject" class="toast reject" style="display: none; position: fixed; top: 20px; right: 20px; background: #e53935; color: white; padding: 12px 16px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; font-size: 0.9rem;">❌ Error</div>
 
-<script>
-// CSRF Token Helper Function - REMOVED (CSRF protection disabled)
-</script>
 {% endblock %}
