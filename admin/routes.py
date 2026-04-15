@@ -267,6 +267,20 @@ def get_candidate_color(candidate_name, position_name, index, total):
 
 
 
+from datetime import datetime, timedelta
+import pytz
+
+# Define Philippine timezone once
+PHILIPPINE_TZ = pytz.timezone('Asia/Manila')
+
+def get_philippine_time():
+    """Get current time in Philippine Timezone (UTC+8)"""
+    return datetime.now(PHILIPPINE_TZ)
+
+def get_philippine_time_naive():
+    """Get current time in Philippine Timezone as naive datetime (for database)"""
+    return datetime.now(PHILIPPINE_TZ).replace(tzinfo=None)
+
 # ------------------- Configuration ------------------- #
 MAX_ATTEMPTS = 3          # max allowed failed username/password attempts
 COOLDOWN_TIME = 300       # cooldown in seconds (5 minutes)
@@ -1854,13 +1868,19 @@ def update_access_code():
                 'message': 'Access code must be at least 4 characters long'
             }), 400
         
+        # FIX: Use Philippine time
+        from datetime import datetime, timedelta
+        import pytz
+        ph_tz = pytz.timezone('Asia/Manila')
+        now_ph = datetime.now(ph_tz).replace(tzinfo=None)  # Naive for DB
+        
         # Get current active access code
         current_code = AccessCode.get_active_code()
         
         if current_code:
             # Deactivate current code
             current_code.is_active = False
-            current_code.updated_at = datetime.utcnow()
+            current_code.updated_at = now_ph  # FIXED: Use Philippine time
             current_code.updated_by = current_user.id
         
         # Create new access code
@@ -1869,7 +1889,9 @@ def update_access_code():
             description=f"Updated by {current_user.username}",
             is_active=True,
             created_by=current_user.id,
-            updated_by=current_user.id
+            updated_by=current_user.id,
+            created_at=now_ph,  # Add this if your model has it
+            updated_at=now_ph   # Add this if your model has it
         )
         
         # Set expiration if provided
@@ -1877,7 +1899,8 @@ def update_access_code():
             try:
                 days = int(expiration)
                 if days > 0:
-                    new_access_code.expires_at = datetime.utcnow() + timedelta(days=days)
+                    # FIXED: Use Philippine time for expiration
+                    new_access_code.expires_at = now_ph + timedelta(days=days)
             except (ValueError, TypeError):
                 pass
         
@@ -1906,7 +1929,7 @@ def update_access_code():
 
 
 
-# Dictionary to store email change requests (similar to student's)
+# Dictionary to store email change requests
 email_change_requests = {}
 
 @admin_bp.route('/send-email-change-verification', methods=['POST'])
@@ -1925,14 +1948,18 @@ def send_email_change_verification():
         import uuid
         request_id = str(uuid.uuid4())
         
+        # FIX: Use Philippine time consistently
+        now_ph = get_philippine_time_naive()
+        expiry_time = now_ph + timedelta(minutes=15)
+        
         # Store request
         email_change_requests[request_id] = {
             'admin_id': current_user.id,
             'old_email': old_email,
             'new_email': new_email,
             'status': 'pending',
-            'created_at': datetime.utcnow(),
-            'expiry': datetime.utcnow() + timedelta(minutes=15)
+            'created_at': now_ph,
+            'expiry': expiry_time
         }
         
         # Mask email for display
@@ -1958,7 +1985,7 @@ def send_email_change_verification():
                            action='reject', 
                            _external=True)
         
-        # Render the email template (you'll need to create this template)
+        # Render the email template
         from flask import render_template
         email_html = render_template('verify_admin_email_change.html',
                                    masked_email=masked_new_email,
@@ -1994,8 +2021,33 @@ def confirm_email_change(request_id, action):
     
     request_data = email_change_requests[request_id]
     
-    if datetime.utcnow() > request_data['expiry']:
-        return "This request has expired", 400
+    # FIX: Use Philippine time for comparison
+    now_ph = get_philippine_time_naive()
+    
+    if now_ph > request_data['expiry']:
+        # Clean up expired request
+        del email_change_requests[request_id]
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">⏰</div>
+                <h2>Request Expired</h2>
+                <p>This verification link has expired (15 minute limit).</p>
+                <p>Please request a new email change verification.</p>
+            </div>
+        </body>
+        </html>
+        """, 400
     
     if action == 'confirm':
         request_data['status'] = 'confirmed'
@@ -2022,6 +2074,8 @@ def confirm_email_change(request_id, action):
         """
     elif action == 'reject':
         request_data['status'] = 'rejected'
+        # Clean up rejected request
+        del email_change_requests[request_id]
         return """
         <html>
         <head>
@@ -2056,8 +2110,12 @@ def email_change_status(request_id):
     
     request_data = email_change_requests[request_id]
     
+    # FIX: Use Philippine time to check expiry
+    now_ph = get_philippine_time_naive()
+    
     # Clean up expired requests
-    if datetime.utcnow() > request_data['expiry']:
+    if now_ph > request_data['expiry']:
+        del email_change_requests[request_id]
         return jsonify({'status': 'expired'})
     
     return jsonify({'status': request_data['status']})
@@ -2080,9 +2138,13 @@ def send_otp_to_new_email():
         import string
         otp = ''.join(random.choices(string.digits, k=6))
         
-        # Store OTP in session
+        # FIX: Use Philippine time for OTP expiry
+        now_ph = get_philippine_time()
+        otp_expiry = now_ph + timedelta(minutes=10)
+        
+        # Store OTP in session with Philippine time
         session['new_email_otp'] = otp
-        session['new_email_otp_expiry'] = (datetime.utcnow() + timedelta(minutes=10)).timestamp()
+        session['new_email_otp_expiry'] = otp_expiry.timestamp()
         session['pending_new_email'] = email
         session['change_request_id'] = request_id
         
@@ -2099,6 +2161,7 @@ def send_otp_to_new_email():
             <p>Your verification code for your new email address is:</p>
             <h1 style="font-size: 36px; letter-spacing: 5px; color: #2563eb;">{otp}</h1>
             <p>This code will expire in 10 minutes.</p>
+            <p><strong>Philippine Time (UTC+8):</strong> {now_ph.strftime('%I:%M %p')}</p>
         </div>
         """
         
@@ -2121,7 +2184,7 @@ def send_otp_to_new_email():
 def verify_otp_code():
     """Verify OTP code sent to new email"""
     print("\n" + "="*60)
-    print("OTP VERIFICATION REQUEST RECEIVED")
+    print("ADMIN OTP VERIFICATION REQUEST RECEIVED")
     print("="*60)
     
     try:
@@ -2148,14 +2211,20 @@ def verify_otp_code():
         print(f"  - stored_otp: {stored_otp}")
         print(f"  - stored_expiry: {stored_expiry}")
         print(f"  - stored_request_id: {stored_request_id}")
-        print(f"  - current time timestamp: {datetime.utcnow().timestamp()}")
+        
+        # FIX: Use Philippine time for expiry check
+        now_ph = get_philippine_time()
+        current_timestamp = now_ph.timestamp()
+        
+        print(f"  - current time (Philippine): {now_ph}")
+        print(f"  - current timestamp: {current_timestamp}")
         
         # Check if OTP exists and not expired
         if not stored_otp or not stored_expiry:
             print(f"[DEBUG] No OTP found in session")
             return jsonify({'success': False, 'message': 'No verification code found. Please request a new one.'}), 400
         
-        if datetime.utcnow().timestamp() > stored_expiry:
+        if current_timestamp > stored_expiry:
             print(f"[DEBUG] OTP expired")
             return jsonify({'success': False, 'message': 'Verification code has expired. Please request a new one.'}), 400
         
@@ -2366,9 +2435,17 @@ def send_admin_email_change_notification(admin, old_email, new_email):
 import secrets
 import hashlib
 from datetime import datetime, timedelta
+import pytz
 from flask import render_template, request, jsonify, url_for, redirect, flash
 from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash
+
+# Philippine Timezone helper
+PHILIPPINE_TZ = pytz.timezone('Asia/Manila')
+
+def get_ph_time():
+    """Get current Philippine time as naive datetime (for database)"""
+    return datetime.now(PHILIPPINE_TZ).replace(tzinfo=None)
 
 # Dictionary to store password reset tokens
 password_reset_tokens = {}
@@ -2404,23 +2481,30 @@ def forgot_password():
         # Generate reset token
         token = secrets.token_urlsafe(48)
         
-        # Store token with expiry (15 minutes)
+        # FIXED: Use Philippine time for expiry (15 minutes)
+        now_ph = get_ph_time()
+        expiry_time = now_ph + timedelta(minutes=15)
+        
+        # Store token with expiry
         password_reset_tokens[token] = {
             'admin_id': current_user.id,
             'admin_username': current_user.username,
             'admin_name': f"{current_user.first_name} {current_user.last_name}",
             'admin_email': current_user.email,
-            'expiry': datetime.utcnow() + timedelta(minutes=15)
+            'expiry': expiry_time,  # FIXED: Now uses Philippine time
+            'created_at': now_ph
         }
         
         # Generate reset URL
         reset_url = url_for('admin.reset_password_page', token=token, _external=True)
         
-        # Render email template
+        # Render email template with Philippine time display
         email_html = render_template('admin_password_reset_email.html',
                                    admin_name=f"{current_user.first_name} {current_user.last_name}",
                                    admin_username=current_user.username,
-                                   reset_url=reset_url)
+                                   reset_url=reset_url,
+                                   expiry_minutes=15,
+                                   current_time=datetime.now(PHILIPPINE_TZ).strftime('%B %d, %Y at %I:%M %p PHT'))
         
         # Send email
         from flask_mail import Message
@@ -2456,6 +2540,9 @@ def forgot_password():
 @admin_bp.route('/reset-password/<token>')
 def reset_password_page(token):
     """Display password reset page"""
+    # FIXED: Use Philippine time for expiry check
+    now_ph = get_ph_time()
+    
     # Check if token exists and is valid
     if token not in password_reset_tokens:
         return render_template('admin_reset_password.html', 
@@ -2463,8 +2550,8 @@ def reset_password_page(token):
     
     token_data = password_reset_tokens[token]
     
-    # Check if token expired
-    if datetime.utcnow() > token_data['expiry']:
+    # Check if token expired using Philippine time
+    if now_ph > token_data['expiry']:  # FIXED: Compare with Philippine time
         del password_reset_tokens[token]  # Clean up expired token
         return render_template('admin_reset_password.html', 
                              error='This reset link has expired. Please request a new one.')
@@ -2478,15 +2565,25 @@ def reset_password_page(token):
     # Get current secret path for back to login link
     secret_path = AccessCode.get_secret_path()
     
+    # Calculate remaining time for display
+    remaining_seconds = int((token_data['expiry'] - now_ph).total_seconds())
+    remaining_minutes = remaining_seconds // 60
+    remaining_seconds = remaining_seconds % 60
+    
     return render_template('admin_reset_password.html',
                          token=token,
                          admin_username=admin.username,
-                         secret_path=secret_path)
+                         secret_path=secret_path,
+                         remaining_minutes=remaining_minutes,
+                         remaining_seconds=remaining_seconds)
 
 
 @admin_bp.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
     """Handle password reset form submission"""
+    # FIXED: Use Philippine time for expiry check
+    now_ph = get_ph_time()
+    
     # Check if token exists and is valid
     if token not in password_reset_tokens:
         return render_template('admin_reset_password.html', 
@@ -2495,8 +2592,8 @@ def reset_password(token):
     
     token_data = password_reset_tokens[token]
     
-    # Check if token expired
-    if datetime.utcnow() > token_data['expiry']:
+    # Check if token expired using Philippine time
+    if now_ph > token_data['expiry']:  # FIXED: Compare with Philippine time
         del password_reset_tokens[token]  # Clean up expired token
         return render_template('admin_reset_password.html', 
                              error='This reset link has expired. Please request a new one.',
@@ -2561,6 +2658,9 @@ def reset_password(token):
         # Hash new password
         from extensions import bcrypt
         admin.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        
+        # FIXED: Update timestamps with Philippine time
+        admin.updated_at = get_ph_time()  # If your model has this field
         db.session.commit()
         
         # Clean up used token
