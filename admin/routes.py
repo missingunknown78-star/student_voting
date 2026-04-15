@@ -541,7 +541,7 @@ def login():
 def login_forgot_password():
     """
     Send password reset email - Accessible from login page (no authentication required)
-    Uses the same password_reset_tokens dictionary
+    Uses reset_token column in admins table (SAME as student pattern that works!)
     """
     try:
         if not request.is_json:
@@ -560,7 +560,7 @@ def login_forgot_password():
                 'message': 'Email and username are required'
             }), 400
         
-        # Find admin by email AND username (don't use current_user since not logged in)
+        # Find admin by email AND username
         admin = Admin.query.filter(
             func.lower(Admin.email) == email,
             func.lower(Admin.username) == func.lower(username)
@@ -580,22 +580,17 @@ def login_forgot_password():
                 'message': 'If an account matches your email and username, a reset link will be sent.'
             }), 200
         
-        # Generate reset token
-        token = secrets.token_urlsafe(48)
+        # Generate reset token (using secrets, same as student)
+        token = secrets.token_urlsafe(32)
         
-        # Store token with expiry (15 minutes) - using the same dictionary
-        password_reset_tokens[token] = {
-            'admin_id': admin.id,
-            'admin_username': admin.username,
-            'admin_name': f"{admin.first_name} {admin.last_name}",
-            'admin_email': admin.email,
-            'expiry': datetime.utcnow() + timedelta(minutes=15)
-        }
+        # Store token in the reset_token column (NO expiry time, just like student!)
+        admin.reset_token = token
+        db.session.commit()
         
-        # Generate reset URL (reusing your existing reset page)
+        # Generate reset URL
         reset_url = url_for('admin.reset_password_page', token=token, _external=True)
         
-        # Render email template (reusing your existing template)
+        # Render email template
         email_html = render_template('admin_password_reset_email.html',
                                    admin_name=f"{admin.first_name} {admin.last_name}",
                                    admin_username=admin.username,
@@ -630,6 +625,7 @@ def login_forgot_password():
             'success': False,
             'message': f'Error: {str(e)}'
         }), 500
+
 
 
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
@@ -2454,7 +2450,8 @@ password_reset_tokens = {}
 @admin_required
 def forgot_password():
     """
-    Send password reset email
+    Send password reset email - Admin is already logged in (from settings page)
+    Uses reset_token column in admins table
     """
     try:
         if not request.is_json:
@@ -2479,32 +2476,20 @@ def forgot_password():
             }), 400
         
         # Generate reset token
-        token = secrets.token_urlsafe(48)
+        token = secrets.token_urlsafe(32)
         
-        # FIXED: Use Philippine time for expiry (15 minutes)
-        now_ph = get_ph_time()
-        expiry_time = now_ph + timedelta(minutes=15)
-        
-        # Store token with expiry
-        password_reset_tokens[token] = {
-            'admin_id': current_user.id,
-            'admin_username': current_user.username,
-            'admin_name': f"{current_user.first_name} {current_user.last_name}",
-            'admin_email': current_user.email,
-            'expiry': expiry_time,  # FIXED: Now uses Philippine time
-            'created_at': now_ph
-        }
+        # Store token in reset_token column (NO expiry time, just like student!)
+        current_user.reset_token = token
+        db.session.commit()
         
         # Generate reset URL
         reset_url = url_for('admin.reset_password_page', token=token, _external=True)
         
-        # Render email template with Philippine time display
+        # Render email template
         email_html = render_template('admin_password_reset_email.html',
                                    admin_name=f"{current_user.first_name} {current_user.last_name}",
                                    admin_username=current_user.username,
-                                   reset_url=reset_url,
-                                   expiry_minutes=15,
-                                   current_time=datetime.now(PHILIPPINE_TZ).strftime('%B %d, %Y at %I:%M %p PHT'))
+                                   reset_url=reset_url)
         
         # Send email
         from flask_mail import Message
@@ -2537,66 +2522,36 @@ def forgot_password():
         }), 500
 
 
+
+
 @admin_bp.route('/reset-password/<token>')
 def reset_password_page(token):
-    """Display password reset page"""
-    # FIXED: Use Philippine time for expiry check
-    now_ph = get_ph_time()
+    """Display password reset page - USES reset_token column (like student)"""
+    # Find admin by reset_token
+    admin = Admin.query.filter_by(reset_token=token).first()
     
-    # Check if token exists and is valid
-    if token not in password_reset_tokens:
-        return render_template('admin_reset_password.html', 
-                             error='Invalid or expired reset link. Please request a new one.')
-    
-    token_data = password_reset_tokens[token]
-    
-    # Check if token expired using Philippine time
-    if now_ph > token_data['expiry']:  # FIXED: Compare with Philippine time
-        del password_reset_tokens[token]  # Clean up expired token
-        return render_template('admin_reset_password.html', 
-                             error='This reset link has expired. Please request a new one.')
-    
-    # Get admin details
-    admin = Admin.query.get(token_data['admin_id'])
     if not admin:
         return render_template('admin_reset_password.html', 
-                             error='Admin account not found.')
+                             error='Invalid or expired reset link. Please request a new one.')
     
     # Get current secret path for back to login link
     secret_path = AccessCode.get_secret_path()
     
-    # Calculate remaining time for display
-    remaining_seconds = int((token_data['expiry'] - now_ph).total_seconds())
-    remaining_minutes = remaining_seconds // 60
-    remaining_seconds = remaining_seconds % 60
-    
     return render_template('admin_reset_password.html',
                          token=token,
                          admin_username=admin.username,
-                         secret_path=secret_path,
-                         remaining_minutes=remaining_minutes,
-                         remaining_seconds=remaining_seconds)
+                         secret_path=secret_path)
 
 
 @admin_bp.route('/reset-password/<token>', methods=['POST'])
 def reset_password(token):
-    """Handle password reset form submission"""
-    # FIXED: Use Philippine time for expiry check
-    now_ph = get_ph_time()
+    """Handle password reset form submission - USES reset_token column (like student)"""
+    # Find admin by reset_token
+    admin = Admin.query.filter_by(reset_token=token).first()
     
-    # Check if token exists and is valid
-    if token not in password_reset_tokens:
+    if not admin:
         return render_template('admin_reset_password.html', 
                              error='Invalid or expired reset link. Please request a new one.',
-                             token=token)
-    
-    token_data = password_reset_tokens[token]
-    
-    # Check if token expired using Philippine time
-    if now_ph > token_data['expiry']:  # FIXED: Compare with Philippine time
-        del password_reset_tokens[token]  # Clean up expired token
-        return render_template('admin_reset_password.html', 
-                             error='This reset link has expired. Please request a new one.',
                              token=token)
     
     # Get form data
@@ -2607,64 +2562,48 @@ def reset_password(token):
     if not password or not confirm_password:
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error='All fields are required.')
     
     if password != confirm_password:
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error='Passwords do not match.')
     
     # Validate password strength
     if len(password) < 8:
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error='Password must be at least 8 characters long.')
     
     if not any(c.isupper() for c in password):
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error='Password must contain at least one uppercase letter.')
     
     if not any(c.islower() for c in password):
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error='Password must contain at least one lowercase letter.')
     
     if not any(c.isdigit() for c in password):
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error='Password must contain at least one number.')
-    
-    if not any(c in '!@#$%^&*()_+-=[]{};\':"\\|,.<>/?~' for c in password):
-        return render_template('admin_reset_password.html',
-                             token=token,
-                             admin_username=token_data['admin_username'],
-                             error='Password must contain at least one special character.')
     
     try:
         # Update password
-        admin = Admin.query.get(token_data['admin_id'])
-        if not admin:
-            return render_template('admin_reset_password.html',
-                                 token=token,
-                                 error='Admin account not found.')
-        
-        # Hash new password
         from extensions import bcrypt
         admin.password = bcrypt.generate_password_hash(password).decode('utf-8')
         
-        # FIXED: Update timestamps with Philippine time
-        admin.updated_at = get_ph_time()  # If your model has this field
+        # Clear the reset_token (important! same as student)
+        admin.reset_token = None
         db.session.commit()
-        
-        # Clean up used token
-        del password_reset_tokens[token]
         
         # Audit log
         log_audit(
@@ -2683,8 +2622,9 @@ def reset_password(token):
         current_app.logger.error(f"Error resetting password: {str(e)}")
         return render_template('admin_reset_password.html',
                              token=token,
-                             admin_username=token_data['admin_username'],
+                             admin_username=admin.username,
                              error=f'Error resetting password: {str(e)}')
+
 
 
 

@@ -18,8 +18,11 @@ class Admin(db.Model, UserMixin):
     role = db.Column(db.String(50), nullable=False, default='Admin')  # link to admin_roles
     status = db.Column(db.String(20), default='Active')
     
-    # ✅ Add this line back for 2FA
+    # 2FA
     totp_secret = db.Column(db.String(32), nullable=True)  # 32-char base32 key
+    
+    # ✅ ADD THIS LINE FOR PASSWORD RESET (same as student model!)
+    reset_token = db.Column(db.String(100), nullable=True, unique=True)
 
 
 
