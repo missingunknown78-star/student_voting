@@ -4156,36 +4156,42 @@ def send_email_change_verification():
     if not old_email or not new_email:
         return jsonify({'error': 'Emails are required'}), 400
     
-    # Generate unique request ID
-    request_id = str(uuid.uuid4())
+    # Check if new email is already taken by another student
+    existing_student = Student.query.filter_by(email=new_email).first()
+    if existing_student and existing_student.id != current_user.id:
+        return jsonify({'error': 'New email already in use'}), 400
     
-    # FIX: Use Philippine time consistently
+    # Generate unique token
+    token = secrets.token_urlsafe(32)
+    
+    # Get Philippine time and convert to naive for database storage
     now_ph = get_philippine_time()
     expiry_time = now_ph + timedelta(minutes=15)
     
-    # Store request
-    email_change_requests[request_id] = {
-        'student_id': current_user.id,
-        'old_email': old_email,
-        'new_email': new_email,
-        'status': 'pending',
-        'created_at': now_ph,
-        'expiry': expiry_time
-    }
+    # Convert to naive datetime for MySQL storage
+    naive_now = now_ph.replace(tzinfo=None)
+    naive_expiry = expiry_time.replace(tzinfo=None)
+    
+    # Store in database
+    current_user.email_change_token = token
+    current_user.new_email_pending = new_email
+    current_user.email_change_requested_at = naive_now
+    current_user.email_change_expires_at = naive_expiry
+    db.session.commit()
     
     try:
-        # Mask email for display
-        masked_new_email = mask_email(new_email)
-        
         # Generate confirm and reject URLs
         confirm_url = url_for('student.confirm_email_change', 
-                            request_id=request_id, 
+                            token=token, 
                             action='confirm', 
                             _external=True)
         reject_url = url_for('student.confirm_email_change', 
-                           request_id=request_id, 
+                           token=token, 
                            action='reject', 
                            _external=True)
+        
+        # Mask email for display
+        masked_new_email = mask_email(new_email)
         
         # Render the email template
         email_html = render_template('verify_email_change.html',
@@ -4204,26 +4210,66 @@ def send_email_change_verification():
         
         return jsonify({
             'success': True,
-            'request_id': request_id
+            'message': 'Verification email sent to your current email address'
         })
         
     except Exception as e:
+        # Rollback on error
+        current_user.email_change_token = None
+        current_user.new_email_pending = None
+        current_user.email_change_requested_at = None
+        current_user.email_change_expires_at = None
+        db.session.commit()
+        
         return jsonify({'error': str(e)}), 500
 
 
-@student_bp.route('/confirm-email-change/<request_id>/<action>')
-def confirm_email_change(request_id, action):
-    if request_id not in email_change_requests:
-        return "Invalid or expired request", 404
+@student_bp.route('/confirm-email-change/<token>/<action>')
+def confirm_email_change(token, action):
+    """Handle email change confirmation/rejection via link click"""
+    # Find student by token
+    student = Student.query.filter_by(email_change_token=token).first()
     
-    request_data = email_change_requests[request_id]
+    if not student:
+        return """
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
+                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+                h2 { color: #1f2937; }
+                p { color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="icon">🔍</div>
+                <h2>Invalid Request</h2>
+                <p>This email change request does not exist or has already been processed.</p>
+                <p>Please request a new email change from your profile.</p>
+            </div>
+        </body>
+        </html>
+        """, 400
     
-    # FIX: Use Philippine time for comparison
+    # Check expiry - FIX TIMEZONE COMPARISON
     now_ph = get_philippine_time()
     
-    if now_ph > request_data['expiry']:
-        # Clean up expired request
-        del email_change_requests[request_id]
+    # Make email_change_expires_at timezone-aware if it's naive
+    if student.email_change_expires_at.tzinfo is None:
+        email_expires = PHILIPPINE_TZ.localize(student.email_change_expires_at)
+    else:
+        email_expires = student.email_change_expires_at
+    
+    if now_ph > email_expires:
+        # Clear expired token
+        student.email_change_token = None
+        student.new_email_pending = None
+        student.email_change_requested_at = None
+        student.email_change_expires_at = None
+        db.session.commit()
+        
         return """
         <html>
         <head>
@@ -4240,14 +4286,24 @@ def confirm_email_change(request_id, action):
                 <div class="icon">⏰</div>
                 <h2>Request Expired</h2>
                 <p>This verification link has expired (15 minute limit).</p>
-                <p>Please request a new email change verification.</p>
+                <p>Please request a new email change verification from your profile.</p>
             </div>
         </body>
         </html>
         """, 400
     
     if action == 'confirm':
-        request_data['status'] = 'confirmed'
+        # Store the confirmation in session for the OTP step
+        # The email hasn't been changed yet - just confirmed old email ownership
+        session['email_change_confirmed'] = True
+        session['email_change_token'] = token
+        session['pending_new_email'] = student.new_email_pending
+        
+        # Don't clear the token yet - we need it for OTP step
+        # Just mark that old email is confirmed
+        student.email_change_token = token  # Keep it for now
+        db.session.commit()
+        
         return """
         <html>
         <head>
@@ -4262,17 +4318,28 @@ def confirm_email_change(request_id, action):
         <body>
             <div class="card">
                 <div class="icon">✅</div>
-                <h2>Email Change Confirmed!</h2>
-                <p>You can now return to the application and enter the OTP code.</p>
+                <h2>Email Ownership Confirmed!</h2>
+                <p>You have successfully confirmed ownership of your current email address.</p>
+                <p>Please return to the application and wait for the OTP to be sent to your new email.</p>
                 <p>This window can be closed.</p>
             </div>
         </body>
         </html>
         """
+        
     elif action == 'reject':
-        request_data['status'] = 'rejected'
-        # Clean up rejected request
-        del email_change_requests[request_id]
+        # Clear everything - user rejected the change
+        student.email_change_token = None
+        student.new_email_pending = None
+        student.email_change_requested_at = None
+        student.email_change_expires_at = None
+        db.session.commit()
+        
+        # Also clear session
+        session.pop('email_change_confirmed', None)
+        session.pop('email_change_token', None)
+        session.pop('pending_new_email', None)
+        
         return """
         <html>
         <head>
@@ -4298,47 +4365,55 @@ def confirm_email_change(request_id, action):
     return "Invalid action", 400
 
 
-@student_bp.route('/email-change-status/<request_id>')
+@student_bp.route('/check-email-confirmation', methods=['GET'])
 @login_required
-def email_change_status(request_id):
-    if request_id not in email_change_requests:
-        return jsonify({'status': 'unknown'})
+def check_email_confirmation():
+    """Check if old email has been confirmed via link click"""
+    # Check session for confirmation flag
+    is_confirmed = session.get('email_change_confirmed', False)
+    token = session.get('email_change_token')
+    pending_email = session.get('pending_new_email')
     
-    request_data = email_change_requests[request_id]
-    
-    # FIX: Use Philippine time to check expiry
-    now_ph = get_philippine_time()
-    
-    # Clean up expired requests
-    if now_ph > request_data['expiry']:
-        del email_change_requests[request_id]
-        return jsonify({'status': 'expired'})
-    
-    return jsonify({'status': request_data['status']})
+    if is_confirmed and token and pending_email:
+        return jsonify({
+            'confirmed': True,
+            'token': token,
+            'new_email': pending_email
+        })
+    else:
+        return jsonify({'confirmed': False})
 
 
 @student_bp.route('/send-otp-to-new-email', methods=['POST'])
 @login_required
 def send_otp_to_new_email():
+    """Send OTP to new email after old email is confirmed"""
     data = request.get_json()
     email = data.get('email')
-    request_id = data.get('request_id')
+    token = data.get('token')
     
     if not email:
         return jsonify({'error': 'Email is required'}), 400
     
+    # Verify that old email was confirmed
+    if not session.get('email_change_confirmed'):
+        return jsonify({'error': 'Please confirm your old email first'}), 400
+    
+    # Verify token matches
+    student = Student.query.filter_by(email_change_token=token).first()
+    if not student or student.new_email_pending != email:
+        return jsonify({'error': 'Invalid or expired session'}), 400
+    
     # Generate 6-digit OTP
     otp = ''.join(random.choices(string.digits, k=6))
     
-    # FIX: Use Philippine time for OTP expiry
+    # Store OTP in session (this is fine - it's short-lived and user-specific)
     now_ph = get_philippine_time()
     otp_expiry = now_ph + timedelta(minutes=10)
     
-    # Store OTP in FLASK SESSION (server-side) - NOT browser sessionStorage
     session['new_email_otp'] = otp
     session['new_email_otp_expiry'] = otp_expiry.timestamp()
-    session['pending_new_email'] = email
-    session['change_request_id'] = request_id
+    session['email_change_token_temp'] = token
     
     try:
         msg = Message(
@@ -4357,82 +4432,8 @@ def send_otp_to_new_email():
         
         mail.send(msg)
         
-        # IMPORTANT: Only return code in DEBUG mode, remove for production
-        if current_app.config.get('DEBUG'):
-            return jsonify({'success': True, 'code': otp})
-        
         return jsonify({'success': True})
         
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@student_bp.route('/send-verification-code', methods=['POST'])
-@login_required
-def send_verification_code():
-    data = request.get_json()
-    email = data.get('email')
-    verification_type = data.get('type', 'new')  # 'old' or 'new'
-    
-    if not email:
-        return jsonify({'error': 'Email is required'}), 400
-    
-    # Generate 6-digit code
-    code = ''.join(random.choices(string.digits, k=6))
-    
-    # FIX: Use Philippine time for code expiry
-    now_ph = get_philippine_time()
-    expiry_time = now_ph + timedelta(minutes=10)
-    
-    # Store code with expiry (10 minutes)
-    verification_codes[f"{email}_{verification_type}"] = {
-        'code': code,
-        'expiry': expiry_time,
-        'user_id': current_user.id,
-        'type': verification_type
-    }
-    
-    try:
-        # Customize email based on verification type
-        if verification_type == 'old':
-            subject = "Verify Your Identity - Email Change Request"
-            email_body = f"""
-            <div style="font-family: Arial, sans-serif; text-align: center;">
-                <h2>Cebu Technological University Moalboal Campus</h2>
-                <p>Hello <strong>{current_user.first_name}</strong>,</p>
-                <p>We received a request to change your email address.</p>
-                <p>Your <strong>verification code</strong> is:</p>
-                <h1 style="font-size: 32px; letter-spacing: 5px;">{code}</h1>
-                <p>This code will expire in 10 minutes.</p>
-                <p>If you did not request this change, please ignore this email or contact support.</p>
-            </div>
-            """
-        else:
-            subject = "Verify Your New Email Address"
-            email_body = f"""
-            <div style="font-family: Arial, sans-serif; text-align: center;">
-                <h2>Cebu Technological University Moalboal Campus</h2>
-                <p>Hello <strong>{current_user.first_name}</strong>,</p>
-                <p>Please verify your new email address.</p>
-                <p>Your <strong>verification code</strong> is:</p>
-                <h1 style="font-size: 32px; letter-spacing: 5px;">{code}</h1>
-                <p>This code will expire in 10 minutes.</p>
-            </div>
-            """
-        
-        msg = Message(
-            subject=subject,
-            recipients=[email]
-        )
-        msg.html = email_body
-        
-        mail.send(msg)
-        
-        # In development, return code for testing
-        if current_app.config.get('DEBUG'):
-            return jsonify({'success': True, 'code': code})
-        
-        return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -4440,7 +4441,7 @@ def send_verification_code():
 @student_bp.route('/verify-otp-code', methods=['POST'])
 @login_required
 def verify_otp_code():
-    """Verify OTP code sent to new email - SERVER SIDE verification"""
+    """Verify OTP code sent to new email"""
     print("\n" + "="*60)
     print("STUDENT OTP VERIFICATION REQUEST RECEIVED")
     print("="*60)
@@ -4448,73 +4449,78 @@ def verify_otp_code():
     try:
         data = request.get_json()
         entered_otp = data.get('otp')
-        request_id = data.get('request_id')
         email = data.get('email')
         
         print(f"[DEBUG] OTP verification data:")
         print(f"  - entered_otp: {entered_otp}")
-        print(f"  - request_id: {request_id}")
         print(f"  - email: {email}")
         
-        if not entered_otp or not request_id:
-            print(f"[DEBUG] Missing required fields")
-            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        if not entered_otp:
+            return jsonify({'success': False, 'message': 'Verification code is required'}), 400
         
-        # Get the stored OTP from Flask session (not browser sessionStorage!)
+        # Get stored OTP from session
         stored_otp = session.get('new_email_otp')
         stored_expiry = session.get('new_email_otp_expiry')
-        stored_request_id = session.get('change_request_id')
+        stored_token = session.get('email_change_token_temp')
         
         print(f"[DEBUG] Session values:")
         print(f"  - stored_otp: {stored_otp}")
         print(f"  - stored_expiry: {stored_expiry}")
-        print(f"  - stored_request_id: {stored_request_id}")
+        print(f"  - stored_token: {stored_token}")
         
-        # FIX: Use Philippine time for expiry check
-        now_ph = get_philippine_time()
-        current_timestamp = now_ph.timestamp()
-        
-        print(f"  - current time (Philippine): {now_ph}")
-        print(f"  - current timestamp: {current_timestamp}")
-        
-        # Check if OTP exists and not expired
+        # Check if OTP exists
         if not stored_otp or not stored_expiry:
-            print(f"[DEBUG] No OTP found in session")
             return jsonify({'success': False, 'message': 'No verification code found. Please request a new one.'}), 400
         
-        if current_timestamp > stored_expiry:
-            print(f"[DEBUG] OTP expired")
+        # Check expiry
+        now_ph = get_philippine_time()
+        if now_ph.timestamp() > stored_expiry:
             return jsonify({'success': False, 'message': 'Verification code has expired. Please request a new one.'}), 400
         
         # Verify OTP
-        print(f"[DEBUG] Comparing OTP: entered='{entered_otp}' vs stored='{stored_otp}'")
-        print(f"[DEBUG] Comparing request_id: entered='{request_id}' vs stored='{stored_request_id}'")
-        
-        if entered_otp == stored_otp and stored_request_id == request_id:
+        if entered_otp == stored_otp:
             print(f"[DEBUG] OTP VERIFICATION SUCCESSFUL!")
-            # Clear OTP from session
-            session.pop('new_email_otp', None)
-            session.pop('new_email_otp_expiry', None)
-            session.pop('pending_new_email', None)
-            session.pop('change_request_id', None)
-            print(f"[DEBUG] Session cleared")
-            print("="*60 + "\n")
             
-            return jsonify({'success': True, 'message': 'Code verified successfully'})
+            # Now actually update the email in database
+            student = Student.query.filter_by(email_change_token=stored_token).first()
+            
+            if student and student.new_email_pending == email:
+                # Update the email
+                old_email = student.email
+                student.email = email
+                
+                # Clear email change fields
+                student.email_change_token = None
+                student.new_email_pending = None
+                student.email_change_requested_at = None
+                student.email_change_expires_at = None
+                
+                db.session.commit()
+                
+                # Clear session
+                session.pop('new_email_otp', None)
+                session.pop('new_email_otp_expiry', None)
+                session.pop('email_change_confirmed', None)
+                session.pop('email_change_token', None)
+                session.pop('pending_new_email', None)
+                session.pop('email_change_token_temp', None)
+                
+                # Send notification to old email
+                send_email_change_notification(student, old_email, email)
+                
+                print(f"[DEBUG] Email successfully changed from {old_email} to {email}")
+                print("="*60 + "\n")
+                
+                return jsonify({'success': True, 'message': 'Email changed successfully!'})
+            else:
+                return jsonify({'success': False, 'message': 'Session expired. Please restart the email change process.'}), 400
         else:
-            print(f"[DEBUG] OTP VERIFICATION FAILED!")
-            print(f"  - OTP match: {entered_otp == stored_otp}")
-            print(f"  - Request ID match: {stored_request_id == request_id}")
-            print("="*60 + "\n")
+            print(f"[DEBUG] OTP VERIFICATION FAILED - Invalid code")
             return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
             
     except Exception as e:
         error_traceback = traceback.format_exc()
-        print(f"[DEBUG ERROR] Exception in OTP verification:")
-        print(f"  - Error: {str(e)}")
-        print(f"  - Full traceback:\n{error_traceback}")
-        print("="*60 + "\n")
-        
+        print(f"[DEBUG ERROR] Exception in OTP verification: {str(e)}\n{error_traceback}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 

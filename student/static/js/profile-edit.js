@@ -1,4 +1,4 @@
-// profile-edit.js - MANUAL EMAIL SENDING VERSION
+// profile-edit.js - DATABASE-BACKED EMAIL CHANGE VERSION (Works on PythonAnywhere)
 
 document.addEventListener('DOMContentLoaded', function() {
     const displayMode = document.getElementById('profileDisplayMode');
@@ -41,9 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let originalEmail = document.getElementById('currentEmail').textContent.trim();
     let pendingNewEmail = '';
-    let changeRequestId = null;
     let pollInterval = null;
     let resendCooldown = false;
+    let emailChangeToken = null;
+    let pendingNewEmailForChange = null;
     
     // Helper function to show loading state on a button
     function setButtonLoading(button, isLoading, loadingText = 'Processing...') {
@@ -153,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return email;
     }
     
-    // Send verification email (manual button click)
+    // Send verification email (manual button click) - DATABASE VERSION
     async function sendVerificationEmail() {
         if (!sendVerificationBtn) return;
         
@@ -176,8 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error || 'Failed to send email');
             }
             
-            changeRequestId = data.request_id;
-            
             // Move to Step 2 (waiting for confirmation)
             step1Div.style.display = 'none';
             step2Div.style.display = 'block';
@@ -189,11 +188,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 toast.style.display = 'none';
             }, 3000);
             
-            // Start resend cooldown for Step 2
-            startResendCooldown();
-            
-            // Start polling for confirmation
-            startPolling();
+            // Start checking for confirmation (polling)
+            startCheckingConfirmation();
             
         } catch (error) {
             toastReject.textContent = '❌ Error: ' + error.message;
@@ -203,6 +199,95 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 3000);
         } finally {
             setButtonLoading(sendVerificationBtn, false);
+        }
+    }
+    
+    // Start checking for email confirmation (polling) - DATABASE VERSION
+    function startCheckingConfirmation() {
+        if (pollInterval) clearInterval(pollInterval);
+        
+        pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/student/check-email-confirmation', {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.confirmed) {
+                    // Old email confirmed!
+                    emailChangeToken = data.token;
+                    pendingNewEmailForChange = data.new_email;
+                    
+                    toast.textContent = '✓ Old email confirmed! Sending verification code to new email...';
+                    toast.style.display = 'block';
+                    stopPolling();
+                    
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                        
+                        // Hide step 2, show OTP input
+                        step2Div.style.display = 'none';
+                        otpVerification.style.display = 'block';
+                        
+                        // Send OTP to new email
+                        sendOtpToNewEmail();
+                    }, 1500);
+                }
+            } catch (error) {
+                console.error('Error checking confirmation:', error);
+            }
+        }, 3000);
+        
+        // Auto-stop after 5 minutes (token expiry)
+        setTimeout(() => {
+            if (pollInterval) {
+                stopPolling();
+                if (step2Div.style.display !== 'none') {
+                    toastReject.textContent = '❌ Verification link expired. Please request again.';
+                    toastReject.style.display = 'block';
+                    setTimeout(() => {
+                        toastReject.style.display = 'none';
+                        modal.style.display = 'none';
+                        // Reset to step 1
+                        step1Div.style.display = 'block';
+                        step2Div.style.display = 'none';
+                        otpVerification.style.display = 'none';
+                    }, 2000);
+                }
+            }
+        }, 5 * 60 * 1000); // 5 minutes
+    }
+    
+    // Send OTP to new email - DATABASE VERSION
+    async function sendOtpToNewEmail() {
+        try {
+            const response = await fetch('/student/send-otp-to-new-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email: pendingNewEmailForChange,
+                    token: emailChangeToken
+                })
+            });
+            
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to send OTP');
+            }
+            
+            toast.textContent = '✓ Verification code sent to your new email!';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2000);
+            
+        } catch (error) {
+            alert('Failed to send OTP: ' + error.message);
+            // Reset modal
+            modal.style.display = 'none';
+            step1Div.style.display = 'block';
+            step2Div.style.display = 'none';
+            otpVerification.style.display = 'none';
         }
     }
     
@@ -240,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sendVerificationBtn.addEventListener('click', sendVerificationEmail);
     }
     
-    // Resend email button (Step 2)
+    // Resend email button (Step 2) - UPDATED FOR DATABASE
     if (resendEmailBtn2) {
         resendEmailBtn2.addEventListener('click', async function(e) {
             e.preventDefault();
@@ -265,8 +350,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(data.error || 'Failed to send email');
                 }
                 
-                changeRequestId = data.request_id;
-                
                 toast.textContent = '✓ Verification email resent! Please check your inbox.';
                 toast.style.display = 'block';
                 setTimeout(() => {
@@ -278,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Restart polling
                 stopPolling();
-                startPolling();
+                startCheckingConfirmation();
                 
             } catch (error) {
                 toastReject.textContent = '❌ Error: ' + error.message;
@@ -317,15 +400,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Start polling for email confirmation status
-    function startPolling() {
-        if (pollInterval) clearInterval(pollInterval);
-        
-        pollInterval = setInterval(() => {
-            checkEmailConfirmationStatus();
-        }, 3000);
-    }
-    
     function stopPolling() {
         if (pollInterval) {
             clearInterval(pollInterval);
@@ -333,103 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Check email confirmation status
-    async function checkEmailConfirmationStatus() {
-        if (!changeRequestId) return;
-        
-        try {
-            const response = await fetch(`/student/email-change-status/${changeRequestId}`, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            const data = await response.json();
-            
-            if (data.status === 'confirmed') {
-                // Show success toast
-                toast.textContent = '✓ Old email confirmed! Sending verification code to new email...';
-                toast.style.display = 'block';
-                stopPolling();
-                
-                setTimeout(() => {
-                    toast.style.display = 'none';
-                    
-                    // Hide step 2, show OTP input
-                    step2Div.style.display = 'none';
-                    otpVerification.style.display = 'block';
-                    
-                    // Send OTP to new email
-                    sendOtpToNewEmail();
-                }, 1500);
-                
-            } else if (data.status === 'rejected') {
-                // Show reject toast
-                toastReject.textContent = '❌ Email change rejected';
-                toastReject.style.display = 'block';
-                stopPolling();
-                
-                setTimeout(() => {
-                    toastReject.style.display = 'none';
-                    modal.style.display = 'none';
-                    // Reset to step 1
-                    step1Div.style.display = 'block';
-                    step2Div.style.display = 'none';
-                    otpVerification.style.display = 'none';
-                }, 2000);
-            } else if (data.status === 'expired') {
-                toastReject.textContent = '❌ Verification link expired. Please request again.';
-                toastReject.style.display = 'block';
-                stopPolling();
-                
-                setTimeout(() => {
-                    toastReject.style.display = 'none';
-                    modal.style.display = 'none';
-                    // Reset to step 1
-                    step1Div.style.display = 'block';
-                    step2Div.style.display = 'none';
-                    otpVerification.style.display = 'none';
-                }, 2000);
-            }
-        } catch (error) {
-            console.error('Error checking status:', error);
-        }
-    }
-    
-    // Send OTP to new email
-    async function sendOtpToNewEmail() {
-        if (verifyOtpBtn) setButtonLoading(verifyOtpBtn, true, 'Sending OTP...');
-        
-        try {
-            const response = await fetch('/student/send-otp-to-new-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    email: pendingNewEmail,
-                    request_id: changeRequestId
-                })
-            });
-            
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to send OTP');
-            }
-            
-            toast.textContent = '✓ Verification code sent to your new email!';
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 2000);
-            
-        } catch (error) {
-            alert('Failed to send OTP: ' + error.message);
-        } finally {
-            if (verifyOtpBtn) setButtonLoading(verifyOtpBtn, false);
-        }
-    }
-    
-    // Verify OTP code
+    // Verify OTP code - UPDATED FOR DATABASE
     if (verifyOtpBtn) {
         verifyOtpBtn.addEventListener('click', async function() {
             const enteredCode = simpleOtpInput.value.trim();
@@ -450,8 +428,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: JSON.stringify({ 
                         otp: enteredCode,
-                        request_id: changeRequestId,
-                        email: pendingNewEmail
+                        email: pendingNewEmailForChange,
+                        token: emailChangeToken
                     })
                 });
                 

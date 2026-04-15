@@ -43,6 +43,11 @@ class Student(db.Model, UserMixin):
     
     # 🔐 Forgot Password Token
     reset_token = db.Column(db.String(100), nullable=True)
+
+    email_change_token = db.Column(db.String(100), nullable=True)
+    new_email_pending = db.Column(db.String(120), nullable=True)
+    email_change_requested_at = db.Column(db.DateTime, nullable=True)
+    email_change_expires_at = db.Column(db.DateTime, nullable=True)
     
     # 📝 Account Deletion Tracking
     deletion_requested = db.Column(db.Boolean, default=False)

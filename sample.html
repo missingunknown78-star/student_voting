@@ -2,1047 +2,559 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Elysian | Manage Departments & Courses</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COMELEC Dashboard - Redesigned</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     <style>
-        /* ========== PROFESSIONAL DESIGN - ALL TEXT BLACK IN LIGHT MODE, WHITE IN DARK MODE ========== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* LIGHT MODE (default) */
         body {
-            background: #f5f7fa;
-            font-family: 'Inter', sans-serif;
-            color: #1a1a2e;
-            line-height: 1.5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #ffffff;
+            color: #000000;
         }
 
-        /* DARK MODE */
-        :root.dark-mode body {
-            background: #0f0f1a;
-            color: #ffffff;
-        }
-
-        /* Main content with sidebar margin */
-        .main-content {
-            margin-left: 280px;
-            transition: margin-left 0.3s ease;
+        /* Admin Layout */
+        .admin-wrapper {
+            display: flex;
             min-height: 100vh;
         }
 
-        .main-content {
-            background: #f5f7fa;
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+            color: #e2e8f0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
         }
 
-        :root.dark-mode .main-content {
-            background: #0f0f1a;
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        @media (max-width: 1024px) {
-            .main-content { margin-left: 250px; }
-        }
-
-        @media (max-width: 768px) {
-            .main-content { margin-left: 0; }
-        }
-
-        /* Container */
-        .container {
-            padding: 32px 40px;
-            max-width: 1400px;
-        }
-
-        /* Page Header */
-        .page-header {
-            margin-bottom: 32px;
-        }
-
-        .page-header h2 {
-            font-size: 1.8rem;
+        .sidebar-header h2 {
+            font-size: 1.3rem;
             font-weight: 700;
-            margin-bottom: 8px;
-            color: #1a1a2e;
-        }
-
-        :root.dark-mode .page-header h2 {
-            color: #ffffff;
-        }
-
-        .page-header p {
-            font-size: 0.9rem;
-            color: #64748b;
-        }
-
-        :root.dark-mode .page-header p {
-            color: #94a3b8;
-        }
-
-        /* Cards */
-        .card {
-            background: white;
-            border-radius: 24px;
-            padding: 24px 28px;
-            margin-bottom: 32px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e8ecf0;
-            transition: all 0.2s ease;
-        }
-
-        :root.dark-mode .card {
-            background: #1a1a2a;
-            border-color: #2a2a3a;
-        }
-
-        .card:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        }
-
-        .card h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #1a1a2e;
             display: flex;
             align-items: center;
             gap: 10px;
+            color: white;
         }
 
-        :root.dark-mode .card h3 {
-            color: #ffffff;
+        .sidebar-nav {
+            padding: 20px 0;
         }
 
-        /* Forms */
-        .form-row {
+        .nav-item {
+            padding: 12px 24px;
             display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            align-items: flex-end;
+            align-items: center;
+            gap: 12px;
+            color: #cbd5e1;
+            transition: all 0.2s;
+            cursor: pointer;
         }
 
-        .form-group {
+        .nav-item:hover, .nav-item.active {
+            background: rgba(59,130,246,0.2);
+            color: white;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .nav-item i {
+            width: 24px;
+        }
+
+        /* Main Content */
+        .main-content {
             flex: 1;
-            min-width: 200px;
+            margin-left: 280px;
+            padding: 24px 32px;
+            background: #ffffff;
+            min-height: 100vh;
         }
 
-        .form-group label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #475569;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        /* Dashboard Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 20px;
         }
 
-        :root.dark-mode .form-group label {
-            color: #94a3b8;
+        .dashboard-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000000;
+            letter-spacing: -0.02em;
         }
 
-        input[type="text"], select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #e2e8f0;
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Year Select Dropdown */
+        .school-year-select {
+            padding: 10px 16px;
             border-radius: 12px;
-            font-size: 0.9rem;
-            font-family: 'Inter', sans-serif;
-            background: white;
-            color: #1a1a2e;
+            font-size: 14px;
+            font-weight: 500;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            color: #000000;
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        :root.dark-mode input[type="text"],
-        :root.dark-mode select {
-            background: #0f0f1a;
-            border-color: #2a2a3a;
-            color: #ffffff;
-        }
-
-        input[type="text"]:focus, select:focus {
-            outline: none;
+        .school-year-select:hover {
             border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
-        /* Buttons */
-        .btn-primary {
+        .settings-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            color: #000000;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .settings-icon:hover {
+            background: #f3f4f6;
+            transform: rotate(15deg);
+        }
+
+        /* Stats Grid - 4 Columns */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 40px;
+            border-radius: 14px;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: #000000;
+            line-height: 1.2;
+            margin: 8px 0 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
             font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            color: #000000;
+            margin-bottom: 4px;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(59, 130, 246, 0.3);
+        .stat-note {
+            font-size: 11px;
+            color: #6b7280;
         }
 
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #1a1a2e;
-            border: 1px solid #e2e8f0;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+        /* Recent Elections Section */
+        .recent-elections-container {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+            padding: 20px;
         }
 
-        :root.dark-mode .btn-secondary {
-            background: #1e1e2e;
-            color: #ffffff;
-            border-color: #2a2a3a;
-        }
-
-        .btn-secondary:hover {
-            transform: translateY(-1px);
-            background: #e2e8f0;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-            transform: translateY(-1px);
-        }
-
-        .btn-success {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-success:hover {
-            background: #059669;
-        }
-
-        /* Action Bar */
-        .action-bar {
-            display: flex;
-            gap: 12px;
+        .recent-elections-container h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #000000;
             margin-bottom: 20px;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .action-buttons-group {
             display: flex;
+            align-items: center;
             gap: 10px;
         }
 
-        /* Tables */
-        .data-table {
+        .recent-elections-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .data-table th {
+        .recent-elections-table th {
             text-align: left;
-            padding: 14px 12px;
-            background: #f8fafc;
+            padding: 12px 12px;
+            background: #f9fafb;
             font-weight: 600;
-            font-size: 0.8rem;
-            color: #475569;
-            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
         }
 
-        :root.dark-mode .data-table th {
-            background: #151525;
-            color: #94a3b8;
-            border-bottom-color: #2a2a3a;
+        .recent-elections-table td {
+            padding: 12px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+            color: #4b5563;
         }
 
-        .data-table td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #e8ecf0;
-            color: #1a1a2e;
+        .recent-elections-table tr:hover {
+            background: #f9fafb;
         }
 
-        :root.dark-mode .data-table td {
-            border-bottom-color: #2a2a3a;
-            color: #ffffff;
-        }
-
-        .data-table tr:hover td {
-            background: #f8fafc;
-        }
-
-        :root.dark-mode .data-table tr:hover td {
-            background: #151525;
-        }
-
-        /* Checkbox column */
-        .select-col {
-            width: 40px;
-            text-align: center;
-        }
-
-        .select-col input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #3b82f6;
-        }
-
-        /* Inline Edit Styles */
-        .view-mode {
-            display: inline-block;
-        }
-
-        .edit-mode-input {
-            display: none;
-            padding: 8px 12px;
-            border: 2px solid #3b82f6;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            width: 100%;
-            max-width: 250px;
-            background: white;
-        }
-
-        :root.dark-mode .edit-mode-input {
-            background: #0f0f1a;
-            color: white;
-            border-color: #3b82f6;
-        }
-
-        .inline-action-btns {
-            display: flex;
-            gap: 8px;
-            white-space: nowrap;
-        }
-
-        .inline-edit-btn, .inline-save-btn, .inline-cancel-btn {
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .inline-edit-btn {
-            background: #f59e0b;
-            color: white;
-        }
-
-        .inline-save-btn {
-            background: #10b981;
-            color: white;
-        }
-
-        .inline-cancel-btn {
-            background: #64748b;
-            color: white;
-        }
-
-        /* Floating Message */
-        .floating-message {
-            position: fixed;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            z-index: 10000;
-            padding: 14px 28px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            max-width: 90%;
-            min-width: 300px;
-            pointer-events: none;
-        }
-
-        .floating-message.show {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .floating-message.success {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-        }
-
-        .floating-message.error {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-
-        .floating-message i {
-            margin-right: 10px;
-        }
-
-        /* Loading Spinner */
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .btn-loading {
-            position: relative;
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        .btn-loading::after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            top: 50%;
-            left: 50%;
-            margin-left: -8px;
-            margin-top: -8px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .btn-loading span {
-            visibility: hidden;
-        }
-
-        /* Badges */
+        /* Status Badges */
         .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .bg-success {
+            background: linear-gradient(135deg, #10b98120, #10b98110);
+            color: #10b981;
+            border: 1px solid #10b98130;
+        }
+
+        .bg-warning {
+            background: linear-gradient(135deg, #f59e0b20, #f59e0b10);
+            color: #f59e0b;
+            border: 1px solid #f59e0b30;
+        }
+
+        .bg-danger {
+            background: linear-gradient(135deg, #ef444420, #ef444410);
+            color: #ef4444;
+            border: 1px solid #ef444430;
+        }
+
+        /* Pagination */
+        .pagination-wrapper {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
             font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid #e5e7eb;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .badge-primary {
-            background: #dbeafe;
-            color: #1e40af;
+        .pagination-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            transform: translateY(-2px);
         }
 
-        :root.dark-mode .badge-primary {
-            background: #1e3a8a;
-            color: #bfdbfe;
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-number {
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid #e5e7eb;
+            text-decoration: none;
+        }
+
+        .page-number.active {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border-color: transparent;
+        }
+
+        .page-number:hover:not(.active) {
+            background: #f3f4f6;
+            transform: translateY(-2px);
+        }
+
+        .page-dots {
+            padding: 8px 4px;
+            color: #6b7280;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            color: #6b7280;
         }
 
         /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+        }
+
         @media (max-width: 768px) {
-            .container { padding: 20px; }
-            .form-row { flex-direction: column; }
-            .action-bar { flex-direction: column; align-items: stretch; }
-            .action-buttons-group { justify-content: flex-start; }
-            .data-table { font-size: 0.8rem; }
-            .data-table th, .data-table td { padding: 10px 8px; }
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 1000;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .pagination-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .pagination-controls {
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
-<div class="main-content">
-    <div class="container">
-        <!-- Page Header -->
-        <div class="page-header">
-            <h2><i class="fa-solid fa-building"></i> Departments & Courses</h2>
-            <p>Manage academic departments and their associated courses</p>
+<div class="admin-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fa-solid fa-vote-yea"></i> VoteSphere</h2>
+            <p style="font-size:0.7rem; margin-top:6px;">Election Management System</p>
         </div>
+        <nav class="sidebar-nav">
+            <div class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</div>
+            <div class="nav-item"><i class="fa-solid fa-chart-pie"></i> Results</div>
+            <div class="nav-item"><i class="fa-solid fa-users"></i> Voters</div>
+            <div class="nav-item"><i class="fa-solid fa-user-check"></i> Candidates</div>
+            <div class="nav-item"><i class="fa-solid fa-gear"></i> Settings</div>
+        </nav>
+    </aside>
 
-        <!-- Add Department Card -->
-        <div class="card">
-            <h3><i class="fa-solid fa-plus-circle"></i> Add Department</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Department Name</label>
-                    <input type="text" id="deptName" placeholder="e.g., College of Engineering">
-                </div>
-                <div>
-                    <button class="btn-primary" id="addDeptBtn">
-                        <i class="fa-solid fa-plus"></i> Add Department
-                    </button>
-                </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="dashboard-header">
+            <h1>COMELEC Dashboard</h1>
+            <div class="header-actions">
+                <select class="school-year-select">
+                    <option value="">Select Year</option>
+                    <option value="2025">2025</option>
+                    <option value="2024" selected>2024</option>
+                    <option value="2023">2023</option>
+                </select>
+                <a href="#" class="settings-icon">
+                    <i class="fa-solid fa-gear"></i>
+                </a>
             </div>
         </div>
 
-        <!-- Departments Table Card -->
-        <div class="card">
-            <div class="action-bar">
-                <h3><i class="fa-solid fa-list"></i> Departments</h3>
-                <div class="action-buttons-group">
-                    <button class="btn-secondary" id="editDeptsBtn">
-                        <i class="fa-solid fa-pen"></i> Edit Mode
-                    </button>
-                    <button class="btn-danger" id="deleteDeptsBtn" style="display: none;">
-                        <i class="fa-solid fa-trash"></i> Delete Selected
-                    </button>
-                    <button class="btn-secondary" id="selectAllDeptsBtn" style="display: none;">
-                        <i class="fa-solid fa-check-double"></i> Select All
-                    </button>
-                </div>
+        <!-- Stats Grid - 4 Columns -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                <div class="stat-number">1,284</div>
+                <div class="stat-label">Total Students</div>
+                <div class="stat-note">Registered voters</div>
             </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="stat-number">3</div>
+                <div class="stat-label">Ongoing Elections</div>
+                <div class="stat-note">Currently active</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-file-pen"></i></div>
+                <div class="stat-number">12</div>
+                <div class="stat-label">Application Requests</div>
+                <div class="stat-note">Click to manage</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-user-minus"></i></div>
+                <div class="stat-number">4</div>
+                <div class="stat-label">Delete Requests</div>
+                <div class="stat-note">Click to review</div>
+            </div>
+        </div>
 
-            <table class="data-table" id="departmentsTable">
+        <!-- Recent Elections Table -->
+        <div class="recent-elections-container">
+            <h3><i class="fa-solid fa-clock"></i> Recent Elections</h3>
+            
+            <table class="recent-elections-table">
                 <thead>
                     <tr>
-                        <th class="select-col" style="display: none;"><input type="checkbox" id="selectAllDepts"></th>
-                        <th>Department Name</th>
-                        <th class="actions-col" style="display: none;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="deptsTableBody">
-                    <!-- Populated by JS -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Add Course Card -->
-        <div class="card">
-            <h3><i class="fa-solid fa-plus-circle"></i> Add Course</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Department</label>
-                    <select id="courseDept">
-                        <option value="">Select Department</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Course Name</label>
-                    <input type="text" id="courseName" placeholder="e.g., Computer Science">
-                </div>
-                <div>
-                    <button class="btn-primary" id="addCourseBtn">
-                        <i class="fa-solid fa-plus"></i> Add Course
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Courses Table Card -->
-        <div class="card">
-            <div class="action-bar">
-                <h3><i class="fa-solid fa-book"></i> Courses</h3>
-                <div class="action-buttons-group">
-                    <button class="btn-secondary" id="editCoursesBtn">
-                        <i class="fa-solid fa-pen"></i> Edit Mode
-                    </button>
-                    <button class="btn-danger" id="deleteCoursesBtn" style="display: none;">
-                        <i class="fa-solid fa-trash"></i> Delete Selected
-                    </button>
-                    <button class="btn-secondary" id="selectAllCoursesBtn" style="display: none;">
-                        <i class="fa-solid fa-check-double"></i> Select All
-                    </button>
-                </div>
-            </div>
-
-            <table class="data-table" id="coursesTable">
-                <thead>
-                    <tr>
-                        <th class="select-col" style="display: none;"><input type="checkbox" id="selectAllCourses"></th>
-                        <th>Course Name</th>
+                        <th>Title</th>
                         <th>Department</th>
-                        <th class="actions-col" style="display: none;">Actions</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
-                <tbody id="coursesTableBody">
-                    <!-- Populated by JS -->
+                <tbody>
+                    <tr>
+                        <td>SSG General Elections 2024</td>
+                        <td>General</td>
+                        <td>2024-03-10 08:00</td>
+                        <td>2024-03-18 17:00</td>
+                        <td><span class="badge bg-success"><i class="fa-solid fa-check"></i> Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Engineering Department Elections</td>
+                        <td>Engineering</td>
+                        <td>2024-03-15 08:00</td>
+                        <td>2024-03-22 17:00</td>
+                        <td><span class="badge bg-success"><i class="fa-solid fa-check"></i> Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Business Administration Polls</td>
+                        <td>Business</td>
+                        <td>2024-04-01 08:00</td>
+                        <td>2024-04-08 17:00</td>
+                        <td><span class="badge bg-warning"><i class="fa-solid fa-clock"></i> Upcoming</span></td>
+                    </tr>
+                    <tr>
+                        <td>IT Department Elections</td>
+                        <td>IT</td>
+                        <td>2024-02-10 08:00</td>
+                        <td>2024-02-17 17:00</td>
+                        <td><span class="badge bg-success"><i class="fa-solid fa-check"></i> Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Student Council 2024</td>
+                        <td>General</td>
+                        <td>2024-01-15 08:00</td>
+                        <td>2024-01-22 17:00</td>
+                        <td><span class="badge bg-success"><i class="fa-solid fa-check"></i> Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Graduate School Elections</td>
+                        <td>Graduate Studies</td>
+                        <td>2024-05-05 08:00</td>
+                        <td>2024-05-12 17:00</td>
+                        <td><span class="badge bg-warning"><i class="fa-solid fa-clock"></i> Upcoming</span></td>
+                    </tr>
                 </tbody>
             </table>
+
+            <!-- Pagination -->
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    Showing 1 to 6 of 12 elections
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" disabled>
+                        <i class="fa-solid fa-chevron-left"></i> Previous
+                    </button>
+                    <span class="page-number active">1</span>
+                    <a href="#" class="page-number">2</a>
+                    <a href="#" class="page-number">3</a>
+                    <a href="#" class="pagination-btn">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 </div>
 
 <script>
-    // Mock Data
-    let departments = [
-        { id: 1, name: "Engineering Department" },
-        { id: 2, name: "Business School" },
-        { id: 3, name: "Arts & Humanities" },
-        { id: 4, name: "Information Technology" }
-    ];
-
-    let courses = [
-        { id: 1, name: "Computer Science", department_id: 1, department_name: "Engineering Department" },
-        { id: 2, name: "Civil Engineering", department_id: 1, department_name: "Engineering Department" },
-        { id: 3, name: "Business Administration", department_id: 2, department_name: "Business School" },
-        { id: 4, name: "Marketing Management", department_id: 2, department_name: "Business School" },
-        { id: 5, name: "Fine Arts", department_id: 3, department_name: "Arts & Humanities" },
-        { id: 6, name: "Multimedia Arts", department_id: 3, department_name: "Arts & Humanities" },
-        { id: 7, name: "Data Science", department_id: 4, department_name: "Information Technology" }
-    ];
-
-    // Edit mode states
-    let deptEditMode = false;
-    let courseEditMode = false;
-
-    // Helper: Show floating message
-    function showMessage(message, type = 'success') {
-        const existing = document.querySelector('.floating-message');
-        if (existing) existing.remove();
-
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `floating-message ${type}`;
-        const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
-        msgDiv.innerHTML = `<i class="fa ${icon}"></i> ${message}`;
-        document.body.appendChild(msgDiv);
-
-        setTimeout(() => msgDiv.classList.add('show'), 10);
-        setTimeout(() => {
-            msgDiv.classList.remove('show');
-            setTimeout(() => msgDiv.remove(), 300);
-        }, 3000);
-    }
-
-    // Render Departments Table
-    function renderDepartments() {
-        const tbody = document.getElementById('deptsTableBody');
-        tbody.innerHTML = '';
-        
-        departments.forEach(dept => {
-            const row = tbody.insertRow();
-            row.dataset.id = dept.id;
-            row.dataset.type = 'department';
-            
-            // Select checkbox cell
-            const selectCell = row.insertCell(0);
-            selectCell.className = 'select-col';
-            selectCell.style.display = deptEditMode ? 'table-cell' : 'none';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'select-dept';
-            checkbox.value = dept.id;
-            selectCell.appendChild(checkbox);
-            
-            // Name cell
-            const nameCell = row.insertCell(1);
-            const viewSpan = document.createElement('span');
-            viewSpan.className = 'view-mode';
-            viewSpan.textContent = dept.name;
-            const editInput = document.createElement('input');
-            editInput.type = 'text';
-            editInput.className = 'edit-mode-input';
-            editInput.value = dept.name;
-            editInput.style.display = 'none';
-            nameCell.appendChild(viewSpan);
-            nameCell.appendChild(editInput);
-            
-            // Actions cell
-            const actionsCell = row.insertCell(2);
-            actionsCell.className = 'actions-col';
-            actionsCell.style.display = deptEditMode ? 'table-cell' : 'none';
-            actionsCell.innerHTML = `
-                <div class="inline-action-btns">
-                    <button class="inline-edit-btn" onclick="startDeptEdit(this)">Edit</button>
-                    <button class="inline-save-btn" onclick="saveDeptEdit(this)" style="display:none;">Save</button>
-                    <button class="inline-cancel-btn" onclick="cancelDeptEdit(this)" style="display:none;">Cancel</button>
-                </div>
-            `;
-        });
-        
-        updateDeptSelectAllState();
-    }
-
-    // Render Courses Table
-    function renderCourses() {
-        const tbody = document.getElementById('coursesTableBody');
-        tbody.innerHTML = '';
-        
-        courses.forEach(course => {
-            const row = tbody.insertRow();
-            row.dataset.id = course.id;
-            row.dataset.type = 'course';
-            
-            // Select checkbox cell
-            const selectCell = row.insertCell(0);
-            selectCell.className = 'select-col';
-            selectCell.style.display = courseEditMode ? 'table-cell' : 'none';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'select-course';
-            checkbox.value = course.id;
-            selectCell.appendChild(checkbox);
-            
-            // Course name cell
-            const nameCell = row.insertCell(1);
-            const viewName = document.createElement('span');
-            viewName.className = 'view-mode';
-            viewName.textContent = course.name;
-            const editName = document.createElement('input');
-            editName.type = 'text';
-            editName.className = 'edit-mode-input';
-            editName.value = course.name;
-            editName.style.display = 'none';
-            nameCell.appendChild(viewName);
-            nameCell.appendChild(editName);
-            
-            // Department cell
-            const deptCell = row.insertCell(2);
-            const viewDept = document.createElement('span');
-            viewDept.className = 'view-mode';
-            viewDept.textContent = course.department_name;
-            const editDept = document.createElement('select');
-            editDept.className = 'edit-mode-input';
-            editDept.style.display = 'none';
-            departments.forEach(d => {
-                const option = document.createElement('option');
-                option.value = d.id;
-                option.textContent = d.name;
-                if (d.id === course.department_id) option.selected = true;
-                editDept.appendChild(option);
-            });
-            deptCell.appendChild(viewDept);
-            deptCell.appendChild(editDept);
-            
-            // Actions cell
-            const actionsCell = row.insertCell(3);
-            actionsCell.className = 'actions-col';
-            actionsCell.style.display = courseEditMode ? 'table-cell' : 'none';
-            actionsCell.innerHTML = `
-                <div class="inline-action-btns">
-                    <button class="inline-edit-btn" onclick="startCourseEdit(this)">Edit</button>
-                    <button class="inline-save-btn" onclick="saveCourseEdit(this)" style="display:none;">Save</button>
-                    <button class="inline-cancel-btn" onclick="cancelCourseEdit(this)" style="display:none;">Cancel</button>
-                </div>
-            `;
-        });
-        
-        updateCourseSelectAllState();
-    }
-
-    // Department Edit Functions
-    function startDeptEdit(btn) {
-        const row = btn.closest('tr');
-        const viewSpan = row.querySelector('.view-mode');
-        const editInput = row.querySelector('.edit-mode-input');
-        const editBtn = row.querySelector('.inline-edit-btn');
-        const saveBtn = row.querySelector('.inline-save-btn');
-        const cancelBtn = row.querySelector('.inline-cancel-btn');
-        
-        viewSpan.style.display = 'none';
-        editInput.style.display = 'block';
-        editBtn.style.display = 'none';
-        saveBtn.style.display = 'inline-block';
-        cancelBtn.style.display = 'inline-block';
-        editInput.focus();
-    }
-
-    function cancelDeptEdit(btn) {
-        const row = btn.closest('tr');
-        const viewSpan = row.querySelector('.view-mode');
-        const editInput = row.querySelector('.edit-mode-input');
-        const editBtn = row.querySelector('.inline-edit-btn');
-        const saveBtn = row.querySelector('.inline-save-btn');
-        const cancelBtn = row.querySelector('.inline-cancel-btn');
-        
-        editInput.value = viewSpan.textContent;
-        viewSpan.style.display = 'inline-block';
-        editInput.style.display = 'none';
-        editBtn.style.display = 'inline-block';
-        saveBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-    }
-
-    function saveDeptEdit(btn) {
-        const row = btn.closest('tr');
-        const id = parseInt(row.dataset.id);
-        const newName = row.querySelector('.edit-mode-input').value.trim();
-        
-        if (!newName) {
-            showMessage('Department name cannot be empty', 'error');
-            return;
-        }
-        
-        // Update in memory
-        const deptIndex = departments.findIndex(d => d.id === id);
-        if (deptIndex !== -1) {
-            departments[deptIndex].name = newName;
-            // Update related courses
-            courses.forEach(course => {
-                if (course.department_id === id) {
-                    course.department_name = newName;
-                }
-            });
-        }
-        
-        showMessage('Department updated successfully', 'success');
-        renderDepartments();
-        renderCourses();
-        updateDeptDropdowns();
-    }
-
-    // Course Edit Functions
-    function startCourseEdit(btn) {
-        const row = btn.closest('tr');
-        const viewName = row.querySelectorAll('.view-mode')[0];
-        const viewDept = row.querySelectorAll('.view-mode')[1];
-        const editName = row.querySelectorAll('.edit-mode-input')[0];
-        const editDept = row.querySelectorAll('.edit-mode-input')[1];
-        const editBtn = row.querySelector('.inline-edit-btn');
-        const saveBtn = row.querySelector('.inline-save-btn');
-        const cancelBtn = row.querySelector('.inline-cancel-btn');
-        
-        viewName.style.display = 'none';
-        viewDept.style.display = 'none';
-        editName.style.display = 'block';
-        editDept.style.display = 'block';
-        editBtn.style.display = 'none';
-        saveBtn.style.display = 'inline-block';
-        cancelBtn.style.display = 'inline-block';
-    }
-
-    function cancelCourseEdit(btn) {
-        const row = btn.closest('tr');
-        const viewName = row.querySelectorAll('.view-mode')[0];
-        const viewDept = row.querySelectorAll('.view-mode')[1];
-        const editName = row.querySelectorAll('.edit-mode-input')[0];
-        const editDept = row.querySelectorAll('.edit-mode-input')[1];
-        const editBtn = row.querySelector('.inline-edit-btn');
-        const saveBtn = row.querySelector('.inline-save-btn');
-        const cancelBtn = row.querySelector('.inline-cancel-btn');
-        
-        editName.value = viewName.textContent;
-        viewName.style.display = 'inline-block';
-        viewDept.style.display = 'inline-block';
-        editName.style.display = 'none';
-        editDept.style.display = 'none';
-        editBtn.style.display = 'inline-block';
-        saveBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-    }
-
-    function saveCourseEdit(btn) {
-        const row = btn.closest('tr');
-        const id = parseInt(row.dataset.id);
-        const newName = row.querySelectorAll('.edit-mode-input')[0].value.trim();
-        const newDeptId = parseInt(row.querySelectorAll('.edit-mode-input')[1].value);
-        
-        if (!newName) {
-            showMessage('Course name cannot be empty', 'error');
-            return;
-        }
-        
-        const newDept = departments.find(d => d.id === newDeptId);
-        
-        const courseIndex = courses.findIndex(c => c.id === id);
-        if (courseIndex !== -1) {
-            courses[courseIndex].name = newName;
-            courses[courseIndex].department_id = newDeptId;
-            courses[courseIndex].department_name = newDept ? newDept.name : '';
-        }
-        
-        showMessage('Course updated successfully', 'success');
-        renderCourses();
-    }
-
-    // Add Department
-    document.getElementById('addDeptBtn').addEventListener('click', () => {
-        const name = document.getElementById('deptName').value.trim();
-        if (!name) {
-            showMessage('Please enter a department name', 'error');
-            return;
-        }
-        
-        const newId = Math.max(...departments.map(d => d.id), 0) + 1;
-        departments.push({ id: newId, name });
-        showMessage('Department added successfully', 'success');
-        document.getElementById('deptName').value = '';
-        renderDepartments();
-        updateDeptDropdowns();
-    });
-
-    // Add Course
-    document.getElementById('addCourseBtn').addEventListener('click', () => {
-        const deptId = parseInt(document.getElementById('courseDept').value);
-        const name = document.getElementById('courseName').value.trim();
-        
-        if (!deptId) {
-            showMessage('Please select a department', 'error');
-            return;
-        }
-        if (!name) {
-            showMessage('Please enter a course name', 'error');
-            return;
-        }
-        
-        const department = departments.find(d => d.id === deptId);
-        const newId = Math.max(...courses.map(c => c.id), 0) + 1;
-        courses.push({ 
-            id: newId, 
-            name, 
-            department_id: deptId, 
-            department_name: department ? department.name : '' 
-        });
-        
-        showMessage('Course added successfully', 'success');
-        document.getElementById('courseName').value = '';
-        renderCourses();
-    });
-
-    // Update department dropdowns
-    function updateDeptDropdowns() {
-        const deptSelect = document.getElementById('courseDept');
-        deptSelect.innerHTML = '<option value="">Select Department</option>';
-        departments.forEach(dept => {
-            const option = document.createElement('option');
-            option.value = dept.id;
-            option.textContent = dept.name;
-            deptSelect.appendChild(option);
-        });
-    }
-
-    // Edit Mode Toggle - Departments
-    const editDeptsBtn = document.getElementById('editDeptsBtn');
-    const deleteDeptsBtn = document.getElementById('deleteDeptsBtn');
-    const selectAllDeptsBtn = document.getElementById('selectAllDeptsBtn');
-    
-    editDeptsBtn.addEventListener('click', () => {
-        deptEditMode = !deptEditMode;
-        document.querySelectorAll('#departmentsTable .select-col').forEach(col => {
-            col.style.display = deptEditMode ? 'table-cell' : 'none';
-        });
-        document.querySelectorAll('#departmentsTable .actions-col').forEach(col => {
-            col.style.display = deptEditMode ? 'table-cell' : 'none';
-        });
-        deleteDeptsBtn.style.display = deptEditMode ? 'inline-flex' : 'none';
-        selectAllDeptsBtn.style.display = deptEditMode ? 'inline-flex' : 'none';
-        
-        if (!deptEditMode) {
-            document.querySelectorAll('#departmentsTable .select-dept').forEach(cb => cb.checked = false);
-        }
-    });
-    
-    // Select All Departments
-    selectAllDeptsBtn.addEventListener('click', () => {
-        const checkboxes = document.querySelectorAll('#departmentsTable .select-dept');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        checkboxes.forEach(cb => cb.checked = !allChecked);
-    });
-    
-    // Delete Selected Departments
-    deleteDeptsBtn.addEventListener('click', () => {
-        const selected = Array.from(document.querySelectorAll('#departmentsTable .select-dept:checked')).map(cb => parseInt(cb.value));
-        if (selected.length === 0) {
-            showMessage('No departments selected', 'error');
-            return;
-        }
-        if (confirm(`Delete ${selected.length} department(s)? This will also delete related courses.`)) {
-            departments = departments.filter(d => !selected.includes(d.id));
-            courses = courses.filter(c => !selected.includes(c.department_id));
-            showMessage(`${selected.length} department(s) deleted`, 'success');
-            renderDepartments();
-            renderCourses();
-            updateDeptDropdowns();
-        }
-    });
-
-    // Edit Mode Toggle - Courses
-    const editCoursesBtn = document.getElementById('editCoursesBtn');
-    const deleteCoursesBtn = document.getElementById('deleteCoursesBtn');
-    const selectAllCoursesBtn = document.getElementById('selectAllCoursesBtn');
-    
-    editCoursesBtn.addEventListener('click', () => {
-        courseEditMode = !courseEditMode;
-        document.querySelectorAll('#coursesTable .select-col').forEach(col => {
-            col.style.display = courseEditMode ? 'table-cell' : 'none';
-        });
-        document.querySelectorAll('#coursesTable .actions-col').forEach(col => {
-            col.style.display = courseEditMode ? 'table-cell' : 'none';
-        });
-        deleteCoursesBtn.style.display = courseEditMode ? 'inline-flex' : 'none';
-        selectAllCoursesBtn.style.display = courseEditMode ? 'inline-flex' : 'none';
-        
-        if (!courseEditMode) {
-            document.querySelectorAll('#coursesTable .select-course').forEach(cb => cb.checked = false);
-        }
-    });
-    
-    // Select All Courses
-    selectAllCoursesBtn.addEventListener('click', () => {
-        const checkboxes = document.querySelectorAll('#coursesTable .select-course');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        checkboxes.forEach(cb => cb.checked = !allChecked);
-    });
-    
-    // Delete Selected Courses
-    deleteCoursesBtn.addEventListener('click', () => {
-        const selected = Array.from(document.querySelectorAll('#coursesTable .select-course:checked')).map(cb => parseInt(cb.value));
-        if (selected.length === 0) {
-            showMessage('No courses selected', 'error');
-            return;
-        }
-        if (confirm(`Delete ${selected.length} course(s)?`)) {
-            courses = courses.filter(c => !selected.includes(c.id));
-            showMessage(`${selected.length} course(s) deleted`, 'success');
-            renderCourses();
-        }
-    });
-
-    function updateDeptSelectAllState() {
-        const selectAllDepts = document.getElementById('selectAllDepts');
-        if (selectAllDepts) {
-            selectAllDepts.checked = false;
-        }
+    // Year filter change handler
+    function changeYear(year) {
+        console.log('Year changed to:', year);
+        // In real implementation, this would reload the page with the selected year
     }
     
-    function updateCourseSelectAllState() {
-        const selectAllCourses = document.getElementById('selectAllCourses');
-        if (selectAllCourses) {
-            selectAllCourses.checked = false;
-        }
-    }
-
-    // Theme synchronization
-    function applyTheme() {
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-        
-        if (isDark) {
-            document.documentElement.classList.add('dark-mode');
-        } else {
-            document.documentElement.classList.remove('dark-mode');
-        }
-    }
-
-    // Initialize
-    applyTheme();
-    renderDepartments();
-    renderCourses();
-    updateDeptDropdowns();
-    
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'theme') applyTheme();
+    // Add click handlers to stat cards
+    document.querySelectorAll('.stat-card').forEach(card => {
+        card.addEventListener('click', () => {
+            console.log('Card clicked:', card.querySelector('.stat-label').innerText);
+        });
     });
 </script>
 </body>
