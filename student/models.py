@@ -48,6 +48,7 @@ class Student(db.Model, UserMixin):
     new_email_pending = db.Column(db.String(120), nullable=True)
     email_change_requested_at = db.Column(db.DateTime, nullable=True)
     email_change_expires_at = db.Column(db.DateTime, nullable=True)
+    email_change_confirmed = db.Column(db.Boolean, default=False) 
     
     # 📝 Account Deletion Tracking
     deletion_requested = db.Column(db.Boolean, default=False)

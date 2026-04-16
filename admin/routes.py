@@ -1928,10 +1928,12 @@ def update_access_code():
 # Dictionary to store email change requests
 email_change_requests = {}
 
+# ==================== ADMIN EMAIL CHANGE (DATABASE-BACKED) ====================
+
 @admin_bp.route('/send-email-change-verification', methods=['POST'])
 @admin_required
 def send_email_change_verification():
-    """Send verification email to old email address"""
+    """Send verification email to old email address - DATABASE VERSION"""
     try:
         data = request.get_json()
         old_email = data.get('old_email')
@@ -1940,23 +1942,25 @@ def send_email_change_verification():
         if not old_email or not new_email:
             return jsonify({'error': 'Emails are required'}), 400
         
-        # Generate unique request ID
-        import uuid
-        request_id = str(uuid.uuid4())
+        # Check if new email already exists
+        existing_admin = Admin.query.filter_by(email=new_email).first()
+        if existing_admin and existing_admin.id != current_user.id:
+            return jsonify({'error': 'New email already in use'}), 400
         
-        # FIX: Use Philippine time consistently
+        # Generate unique token
+        import secrets
+        token = secrets.token_urlsafe(32)
+        
+        # Get Philippine time (naive for DB)
         now_ph = get_philippine_time_naive()
         expiry_time = now_ph + timedelta(minutes=15)
         
-        # Store request
-        email_change_requests[request_id] = {
-            'admin_id': current_user.id,
-            'old_email': old_email,
-            'new_email': new_email,
-            'status': 'pending',
-            'created_at': now_ph,
-            'expiry': expiry_time
-        }
+        # Store in database (not in-memory dictionary!)
+        current_user.email_change_token = token
+        current_user.new_email_pending = new_email
+        current_user.email_change_requested_at = now_ph
+        current_user.email_change_expires_at = expiry_time
+        db.session.commit()
         
         # Mask email for display
         def mask_email(email):
@@ -1973,80 +1977,86 @@ def send_email_change_verification():
         
         # Generate confirm and reject URLs
         confirm_url = url_for('admin.confirm_email_change', 
-                            request_id=request_id, 
+                            token=token, 
                             action='confirm', 
                             _external=True)
         reject_url = url_for('admin.confirm_email_change', 
-                           request_id=request_id, 
+                           token=token, 
                            action='reject', 
                            _external=True)
         
         # Render the email template
-        from flask import render_template
         email_html = render_template('verify_admin_email_change.html',
                                    masked_email=masked_new_email,
                                    confirm_url=confirm_url,
                                    reject_url=reject_url)
         
         # Send verification email to OLD email
-        from flask_mail import Message
         msg = Message(
             'Confirm Email Change Request - Admin Account',
             recipients=[old_email]
         )
         msg.html = email_html
         
-        from extensions import mail
         mail.send(msg)
         
         return jsonify({
             'success': True,
-            'request_id': request_id
+            'message': 'Verification email sent to your current email address'
         })
         
     except Exception as e:
+        # Rollback on error
+        current_user.email_change_token = None
+        current_user.new_email_pending = None
+        current_user.email_change_requested_at = None
+        current_user.email_change_expires_at = None
+        db.session.commit()
+        
         current_app.logger.error(f"Error sending verification email: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
-@admin_bp.route('/confirm-email-change/<request_id>/<action>')
-def confirm_email_change(request_id, action):
-    """Handle email confirmation from link"""
-    if request_id not in email_change_requests:
-        return "Invalid or expired request", 404
+@admin_bp.route('/confirm-email-change/<token>/<action>')
+def confirm_email_change(token, action):
+    """Handle email confirmation from link - DATABASE VERSION"""
+    print("\n" + "="*60)
+    print(f"CONFIRM EMAIL CHANGE CALLED")
+    print(f"Token: {token}")
+    print(f"Action: {action}")
+    print("="*60)
     
-    request_data = email_change_requests[request_id]
+    # Find admin by token
+    admin = Admin.query.filter_by(email_change_token=token).first()
     
-    # FIX: Use Philippine time for comparison
+    if not admin:
+        return "Invalid request", 404
+    
+    print(f"[DEBUG] Found admin: {admin.username}")
+    
+    # Check expiry
     now_ph = get_philippine_time_naive()
     
-    if now_ph > request_data['expiry']:
-        # Clean up expired request
-        del email_change_requests[request_id]
-        return """
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
-                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-                .icon { font-size: 64px; margin-bottom: 20px; }
-                h2 { color: #1f2937; }
-                p { color: #4b5563; }
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <div class="icon">⏰</div>
-                <h2>Request Expired</h2>
-                <p>This verification link has expired (15 minute limit).</p>
-                <p>Please request a new email change verification.</p>
-            </div>
-        </body>
-        </html>
-        """, 400
+    if now_ph > admin.email_change_expires_at:
+        print(f"[ERROR] Token expired!")
+        admin.email_change_token = None
+        admin.new_email_pending = None
+        admin.email_change_requested_at = None
+        admin.email_change_expires_at = None
+        admin.email_change_confirmed = False
+        db.session.commit()
+        return "Request expired", 400
     
     if action == 'confirm':
-        request_data['status'] = 'confirmed'
+        print(f"[DEBUG] ACTION: CONFIRM - UPDATING DATABASE")
+        
+        # ✅ STORE CONFIRMATION IN DATABASE (not session!)
+        admin.email_change_confirmed = True
+        db.session.commit()
+        
+        print(f"[DEBUG] admin.email_change_confirmed = {admin.email_change_confirmed}")
+        print("="*60 + "\n")
+        
         return """
         <html>
         <head>
@@ -2056,65 +2066,63 @@ def confirm_email_change(request_id, action):
                 .icon { font-size: 64px; margin-bottom: 20px; }
                 h2 { color: #1f2937; }
                 p { color: #4b5563; }
+                .success { color: #10b981; }
             </style>
         </head>
         <body>
             <div class="card">
                 <div class="icon">✅</div>
-                <h2>Email Change Confirmed!</h2>
-                <p>You can now return to the admin panel and enter the OTP code.</p>
+                <h2 class="success">Email Ownership Confirmed!</h2>
+                <p>You have successfully confirmed ownership of your current email address.</p>
+                <p>Please return to the admin panel on your laptop.</p>
+                <p>The OTP code will be sent automatically.</p>
                 <p>This window can be closed.</p>
             </div>
         </body>
         </html>
         """
+        
     elif action == 'reject':
-        request_data['status'] = 'rejected'
-        # Clean up rejected request
-        del email_change_requests[request_id]
-        return """
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial; text-align: center; padding: 50px; background: #f4f6fb; }
-                .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-                .icon { font-size: 64px; margin-bottom: 20px; }
-                h2 { color: #1f2937; }
-                p { color: #4b5563; }
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <div class="icon">❌</div>
-                <h2>Email Change Rejected</h2>
-                <p>The email change request has been cancelled.</p>
-                <p>This window can be closed.</p>
-            </div>
-        </body>
-        </html>
-        """
+        print(f"[DEBUG] ACTION: REJECT")
+        admin.email_change_token = None
+        admin.new_email_pending = None
+        admin.email_change_requested_at = None
+        admin.email_change_expires_at = None
+        admin.email_change_confirmed = False
+        db.session.commit()
+        return "Email change rejected", 200
     
     return "Invalid action", 400
 
 
-@admin_bp.route('/email-change-status/<request_id>')
+@admin_bp.route('/check-email-confirmation', methods=['GET'])
 @admin_required
-def email_change_status(request_id):
-    """Check status of email change request"""
-    if request_id not in email_change_requests:
-        return jsonify({'status': 'unknown'})
+def check_email_confirmation():
+    """Check if old email has been confirmed via link click"""
+    print("\n" + "="*40)
+    print("CHECK EMAIL CONFIRMATION CALLED")
     
-    request_data = email_change_requests[request_id]
+    # ✅ CHECK DATABASE FOR CONFIRMATION STATUS
+    admin = current_user
     
-    # FIX: Use Philippine time to check expiry
-    now_ph = get_philippine_time_naive()
+    print(f"[DEBUG] Admin: {admin.username}")
+    print(f"[DEBUG] Admin email_change_confirmed: {admin.email_change_confirmed}")
+    print(f"[DEBUG] Admin email_change_token: {admin.email_change_token}")
+    print(f"[DEBUG] Admin new_email_pending: {admin.new_email_pending}")
     
-    # Clean up expired requests
-    if now_ph > request_data['expiry']:
-        del email_change_requests[request_id]
-        return jsonify({'status': 'expired'})
-    
-    return jsonify({'status': request_data['status']})
+    if admin.email_change_confirmed and admin.email_change_token and admin.new_email_pending:
+        print(f"[DEBUG] Confirmation found in DATABASE!")
+        print("="*40 + "\n")
+        
+        return jsonify({
+            'confirmed': True,
+            'token': admin.email_change_token,
+            'new_email': admin.new_email_pending
+        })
+    else:
+        print(f"[DEBUG] No confirmation found")
+        print("="*40 + "\n")
+        return jsonify({'confirmed': False})
 
 
 @admin_bp.route('/send-otp-to-new-email', methods=['POST'])
@@ -2124,28 +2132,36 @@ def send_otp_to_new_email():
     try:
         data = request.get_json()
         email = data.get('email')
-        request_id = data.get('request_id')
+        token = data.get('token')
         
         if not email:
             return jsonify({'error': 'Email is required'}), 400
+        
+        admin = current_user
+        
+        # ✅ CHECK DATABASE FOR CONFIRMATION
+        if not admin.email_change_confirmed:
+            return jsonify({'error': 'Please confirm your old email first'}), 400
+        
+        if admin.email_change_token != token:
+            return jsonify({'error': 'Invalid session'}), 400
+        
+        if admin.new_email_pending != email:
+            return jsonify({'error': 'Email mismatch'}), 400
         
         # Generate 6-digit OTP
         import random
         import string
         otp = ''.join(random.choices(string.digits, k=6))
         
-        # FIX: Use Philippine time for OTP expiry
+        # Store OTP in session (short-term only)
         now_ph = get_philippine_time()
         otp_expiry = now_ph + timedelta(minutes=10)
         
-        # Store OTP in session with Philippine time
-        session['new_email_otp'] = otp
-        session['new_email_otp_expiry'] = otp_expiry.timestamp()
-        session['pending_new_email'] = email
-        session['change_request_id'] = request_id
+        session['admin_new_email_otp'] = otp
+        session['admin_new_email_otp_expiry'] = otp_expiry.timestamp()
         
         # Send OTP email
-        from flask_mail import Message
         msg = Message(
             'Verify Your New Email Address - Admin Account',
             recipients=[email]
@@ -2157,16 +2173,10 @@ def send_otp_to_new_email():
             <p>Your verification code for your new email address is:</p>
             <h1 style="font-size: 36px; letter-spacing: 5px; color: #2563eb;">{otp}</h1>
             <p>This code will expire in 10 minutes.</p>
-            <p><strong>Philippine Time (UTC+8):</strong> {now_ph.strftime('%I:%M %p')}</p>
         </div>
         """
         
-        from extensions import mail
         mail.send(msg)
-        
-        # In development, return code for testing
-        if current_app.config.get('DEBUG'):
-            return jsonify({'success': True, 'code': otp})
         
         return jsonify({'success': True})
         
@@ -2176,85 +2186,81 @@ def send_otp_to_new_email():
 
 
 @admin_bp.route('/verify-otp-code', methods=['POST'])
-@login_required
+@admin_required
 def verify_otp_code():
-    """Verify OTP code sent to new email"""
-    print("\n" + "="*60)
-    print("ADMIN OTP VERIFICATION REQUEST RECEIVED")
-    print("="*60)
-    
+    """Verify OTP code and complete email change"""
     try:
         data = request.get_json()
         entered_otp = data.get('otp')
-        request_id = data.get('request_id')
         email = data.get('email')
         
-        print(f"[DEBUG] OTP verification data:")
-        print(f"  - entered_otp: {entered_otp}")
-        print(f"  - request_id: {request_id}")
-        print(f"  - email: {email}")
+        if not entered_otp:
+            return jsonify({'success': False, 'message': 'Code required'}), 400
         
-        if not entered_otp or not request_id:
-            print(f"[DEBUG] Missing required fields")
-            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        # Get stored OTP from session
+        stored_otp = session.get('admin_new_email_otp')
+        stored_expiry = session.get('admin_new_email_otp_expiry')
         
-        # Get the stored OTP from session
-        stored_otp = session.get('new_email_otp')
-        stored_expiry = session.get('new_email_otp_expiry')
-        stored_request_id = session.get('change_request_id')
+        if not stored_otp:
+            return jsonify({'success': False, 'message': 'No code found'}), 400
         
-        print(f"[DEBUG] Session values:")
-        print(f"  - stored_otp: {stored_otp}")
-        print(f"  - stored_expiry: {stored_expiry}")
-        print(f"  - stored_request_id: {stored_request_id}")
+        if datetime.now().timestamp() > stored_expiry:
+            return jsonify({'success': False, 'message': 'Code expired'}), 400
         
-        # FIX: Use Philippine time for expiry check
-        now_ph = get_philippine_time()
-        current_timestamp = now_ph.timestamp()
-        
-        print(f"  - current time (Philippine): {now_ph}")
-        print(f"  - current timestamp: {current_timestamp}")
-        
-        # Check if OTP exists and not expired
-        if not stored_otp or not stored_expiry:
-            print(f"[DEBUG] No OTP found in session")
-            return jsonify({'success': False, 'message': 'No verification code found. Please request a new one.'}), 400
-        
-        if current_timestamp > stored_expiry:
-            print(f"[DEBUG] OTP expired")
-            return jsonify({'success': False, 'message': 'Verification code has expired. Please request a new one.'}), 400
-        
-        # Verify OTP
-        print(f"[DEBUG] Comparing OTP: entered='{entered_otp}' vs stored='{stored_otp}'")
-        print(f"[DEBUG] Comparing request_id: entered='{request_id}' vs stored='{stored_request_id}'")
-        
-        if entered_otp == stored_otp and stored_request_id == request_id:
-            print(f"[DEBUG] OTP VERIFICATION SUCCESSFUL!")
-            # Clear OTP from session
-            session.pop('new_email_otp', None)
-            session.pop('new_email_otp_expiry', None)
-            session.pop('pending_new_email', None)
-            session.pop('change_request_id', None)
-            print(f"[DEBUG] Session cleared")
-            print("="*60 + "\n")
+        if entered_otp == stored_otp:
+            admin = current_user
             
-            return jsonify({'success': True, 'message': 'Code verified successfully'})
+            # Update email
+            old_email = admin.email
+            admin.email = email
+            
+            # Clear all email change fields
+            admin.email_change_token = None
+            admin.new_email_pending = None
+            admin.email_change_requested_at = None
+            admin.email_change_expires_at = None
+            admin.email_change_confirmed = False  # Reset flag
+            
+            db.session.commit()
+            
+            # Clear session
+            session.pop('admin_new_email_otp', None)
+            session.pop('admin_new_email_otp_expiry', None)
+            
+            # Send notification
+            send_admin_email_change_notification(admin, old_email, email)
+            
+            return jsonify({'success': True, 'message': 'Email changed successfully!'})
         else:
-            print(f"[DEBUG] OTP VERIFICATION FAILED!")
-            print(f"  - OTP match: {entered_otp == stored_otp}")
-            print(f"  - Request ID match: {stored_request_id == request_id}")
-            print("="*60 + "\n")
-            return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
+            return jsonify({'success': False, 'message': 'Invalid code'}), 400
             
     except Exception as e:
-        error_traceback = traceback.format_exc()
-        print(f"[DEBUG ERROR] Exception in OTP verification:")
-        print(f"  - Error: {str(e)}")
-        print(f"  - Full traceback:\n{error_traceback}")
-        print("="*60 + "\n")
-        
-        current_app.logger.error(f"Error verifying OTP: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+def send_admin_email_change_notification(admin, old_email, new_email):
+    """Send notification to old email about email change"""
+    try:
+        msg = Message(
+            'Your Admin Email Has Been Changed',
+            recipients=[old_email]
+        )
+        msg.html = f"""
+        <div style="font-family: Arial, sans-serif;">
+            <h2>Cebu Technological University Moalboal Campus</h2>
+            <h3>Admin Account Email Change</h3>
+            <p>Hello <strong>{admin.username}</strong>,</p>
+            <p>Your email address for your admin account has been changed.</p>
+            <p><strong>Old email:</strong> {old_email}<br>
+            <strong>New email:</strong> {new_email}</p>
+            <p>If you did not make this change, please contact the system administrator immediately.</p>
+        </div>
+        """
+        
+        mail.send(msg)
+        current_app.logger.info(f"Email change notification sent to {old_email}")
+    except Exception as e:
+        current_app.logger.error(f"Failed to send email change notification: {e}")
 
 
 @admin_bp.route('/settings/profile/update', methods=['POST'])
@@ -2400,32 +2406,7 @@ def settings_profile_update():
         }), 500
     
 
-def send_admin_email_change_notification(admin, old_email, new_email):
-    """Send notification to old email about email change"""
-    try:
-        from flask_mail import Message
-        from extensions import mail
-        
-        msg = Message(
-            'Your Admin Email Has Been Changed',
-            recipients=[old_email]
-        )
-        msg.html = f"""
-        <div style="font-family: Arial, sans-serif;">
-            <h2>Cebu Technological University Moalboal Campus</h2>
-            <h3>Admin Account Email Change</h3>
-            <p>Hello <strong>{admin.username}</strong>,</p>
-            <p>Your email address for your admin account has been changed.</p>
-            <p><strong>Old email:</strong> {old_email}<br>
-            <strong>New email:</strong> {new_email}</p>
-            <p>If you did not make this change, please contact the system administrator immediately.</p>
-        </div>
-        """
-        
-        mail.send(msg)
-        current_app.logger.info(f"Email change notification sent to {old_email}")
-    except Exception as e:
-        current_app.logger.error(f"Failed to send email change notification: {e}")
+
 
 
 import secrets

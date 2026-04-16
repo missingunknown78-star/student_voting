@@ -21,8 +21,19 @@ class Admin(db.Model, UserMixin):
     # 2FA
     totp_secret = db.Column(db.String(32), nullable=True)  # 32-char base32 key
     
-    # ✅ ADD THIS LINE FOR PASSWORD RESET (same as student model!)
+    # Password Reset Token
     reset_token = db.Column(db.String(100), nullable=True, unique=True)
+    
+    # ✉️ Email Change Verification (ADD THESE 4 COLUMNS)
+    email_change_token = db.Column(db.String(100), nullable=True)
+    new_email_pending = db.Column(db.String(120), nullable=True)
+    email_change_requested_at = db.Column(db.DateTime, nullable=True)
+    email_change_expires_at = db.Column(db.DateTime, nullable=True)
+    email_change_confirmed = db.Column(db.Boolean, default=False) 
+
+    
+    def get_id(self):
+        return str(self.id)
 
 
 

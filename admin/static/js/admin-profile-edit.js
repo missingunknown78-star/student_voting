@@ -1,6 +1,10 @@
-// admin-profile-edit.js - Profile Edit & Email Change
+// admin-profile-edit.js - DATABASE-BACKED VERSION (Works on PythonAnywhere)
 
 let originalProfileValues = {};
+let pollInterval = null;
+let adminEmailChangeToken = null;
+let adminPendingNewEmail = null;
+let resendCountdownInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeProfileEdit();
@@ -25,6 +29,10 @@ function initializeProfileEdit() {
             e.preventDefault();
             if (typeof window.saveProfileChanges === 'function') {
                 window.saveProfileChanges();
+            } else if (typeof performProfileUpdate === 'function') {
+                const username = document.getElementById('newUsername').value.trim();
+                const email = document.getElementById('newEmail').value.trim();
+                performProfileUpdate(username, email, true);
             }
         };
     }
@@ -129,6 +137,66 @@ window.handleForgotPassword = function() {
     });
 };
 
+// ==================== PROFILE UPDATE FUNCTION ====================
+window.performProfileUpdate = async function(username, email, emailVerified) {
+    console.log('=== performProfileUpdate called ===');
+    console.log('Username:', username);
+    console.log('Email:', email);
+    console.log('Email Verified:', emailVerified);
+    
+    const editForm = document.getElementById('editProfileForm');
+    if (!editForm) return;
+    
+    const saveBtn = document.querySelector('#profileActions .btn-primary');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+    }
+    
+    try {
+        const response = await fetch('/ctumoalboal-comelec/settings/profile/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                old_email_verified: emailVerified,
+                new_email_verified: emailVerified
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Profile updated successfully!', 'success');
+            
+            // Update displayed values
+            const currentUsername = document.getElementById('currentUsername');
+            const currentEmail = document.getElementById('currentEmail');
+            
+            if (currentUsername) currentUsername.textContent = data.new_username || username;
+            if (currentEmail) currentEmail.textContent = data.new_email || email;
+            
+            // Switch back to display mode
+            cancelProfileEdit();
+            
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification(data.message || 'Failed to update profile', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showNotification('Network error. Please try again.', 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Save Changes';
+        }
+    }
+};
+
 // ==================== EMAIL CHANGE MODAL FUNCTIONS ====================
 function showEmailChangeModal(username, newEmail) {
     console.log('=== showEmailChangeModal called ===');
@@ -165,17 +233,7 @@ function maskEmail(email) {
     return name[0] + '***' + name.slice(-1) + '@' + domain;
 }
 
-let emailChangeRequestId = null;
-let pollInterval = null;
-let isSendingEmail = false;
-let resendCountdownInterval = null;
-
 function sendEmailChangeVerification(oldEmail, newEmail) {
-    if (isSendingEmail) {
-        console.log('Already sending email, skipping duplicate request...');
-        return;
-    }
-    
     const resendBtn = document.getElementById('resendEmailBtn');
     const timerText = document.getElementById('timerText');
     
@@ -185,8 +243,6 @@ function sendEmailChangeVerification(oldEmail, newEmail) {
     }
     if (timerText) timerText.textContent = 'Sending verification email...';
     
-    isSendingEmail = true;
-    
     fetch('/ctumoalboal-comelec/send-email-change-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,10 +251,9 @@ function sendEmailChangeVerification(oldEmail, newEmail) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            emailChangeRequestId = data.request_id;
-            console.log('Email change request ID:', emailChangeRequestId);
-            startPolling();
+            console.log('Verification email sent successfully');
             showNotification('Verification email sent! Please check your inbox.', 'success');
+            startCheckingConfirmation();
             startResendCooldown();
         } else {
             showNotification(data.error || 'Failed to send verification email', 'error');
@@ -217,10 +272,58 @@ function sendEmailChangeVerification(oldEmail, newEmail) {
             resendBtn.innerHTML = 'Resend Verification Email';
         }
         if (timerText) timerText.textContent = '';
-    })
-    .finally(() => {
-        isSendingEmail = false;
     });
+}
+
+function startCheckingConfirmation() {
+    if (pollInterval) clearInterval(pollInterval);
+    
+    pollInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/ctumoalboal-comelec/check-email-confirmation', {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            
+            if (data.confirmed) {
+                // Old email confirmed!
+                adminEmailChangeToken = data.token;
+                adminPendingNewEmail = data.new_email;
+                
+                showNotification('✓ Old email confirmed! Sending verification code to new email...', 'success');
+                stopPolling();
+                
+                setTimeout(() => {
+                    const waitingDiv = document.getElementById('waitingForConfirmation');
+                    const otpDiv = document.getElementById('otpVerification');
+                    if (waitingDiv) waitingDiv.style.display = 'none';
+                    if (otpDiv) otpDiv.style.display = 'block';
+                    sendOtpToNewEmail();
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('Error checking confirmation:', error);
+        }
+    }, 3000);
+    
+    // Auto-stop after 5 minutes
+    setTimeout(() => {
+        if (pollInterval) {
+            stopPolling();
+            const waitingDiv = document.getElementById('waitingForConfirmation');
+            if (waitingDiv && waitingDiv.style.display !== 'none') {
+                showNotification('Verification link expired. Please request again.', 'error');
+                closeEmailModal();
+            }
+        }
+    }, 5 * 60 * 1000);
+}
+
+function stopPolling() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
 }
 
 function startResendCooldown() {
@@ -250,43 +353,8 @@ function startResendCooldown() {
     }, 1000);
 }
 
-function startPolling() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(checkEmailConfirmationStatus, 3000);
-}
-
-function stopPolling() {
-    if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-    }
-}
-
-function checkEmailConfirmationStatus() {
-    if (!emailChangeRequestId) return;
-    
-    fetch(`/ctumoalboal-comelec/email-change-status/${emailChangeRequestId}`, {
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'confirmed') {
-            console.log('Email confirmation received!');
-            stopPolling();
-            document.getElementById('waitingForConfirmation').style.display = 'none';
-            document.getElementById('otpVerification').style.display = 'block';
-            sendOtpToNewEmail();
-        } else if (data.status === 'rejected') {
-            stopPolling();
-            showNotification('Email change was rejected. Please try again.', 'error');
-            closeEmailModal();
-        }
-    })
-    .catch(error => console.error('Error checking status:', error));
-}
-
 function sendOtpToNewEmail() {
-    const newEmail = window.pendingProfileData?.newEmail;
+    const newEmail = adminPendingNewEmail || window.pendingProfileData?.newEmail;
     if (!newEmail) return;
     
     console.log('Sending OTP to new email:', newEmail);
@@ -300,17 +368,15 @@ function sendOtpToNewEmail() {
     fetch('/ctumoalboal-comelec/send-otp-to-new-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newEmail, request_id: emailChangeRequestId })
+        body: JSON.stringify({ 
+            email: newEmail, 
+            token: adminEmailChangeToken 
+        })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             showNotification('Verification code sent to your new email!', 'success');
-            if (data.code) {
-                console.log('OTP code (dev mode):', data.code);
-                sessionStorage.setItem('otpCode', data.code);
-                sessionStorage.setItem('otpExpiry', Date.now() + 600000);
-            }
         } else {
             showNotification(data.error || 'Failed to send verification code', 'error');
         }
@@ -331,19 +397,16 @@ function closeEmailModal() {
     const modal = document.getElementById('emailChangeModal');
     if (modal) modal.style.display = 'none';
     stopPolling();
-    emailChangeRequestId = null;
-    isSendingEmail = false;
-    window.pendingProfileData = null;
     
-    const resendBtn = document.getElementById('resendEmailBtn');
-    if (resendBtn) {
-        resendBtn.disabled = false;
-        resendBtn.innerHTML = 'Resend Verification Email';
-    }
     if (resendCountdownInterval) {
         clearInterval(resendCountdownInterval);
         resendCountdownInterval = null;
     }
+    
+    window.pendingProfileData = null;
+    adminEmailChangeToken = null;
+    adminPendingNewEmail = null;
+    
     const timerText = document.getElementById('timerText');
     if (timerText) timerText.textContent = '';
     
@@ -352,6 +415,11 @@ function closeEmailModal() {
     
     const otpError = document.getElementById('otpError');
     if (otpError) otpError.textContent = '';
+    
+    const waitingDiv = document.getElementById('waitingForConfirmation');
+    const otpDiv = document.getElementById('otpVerification');
+    if (waitingDiv) waitingDiv.style.display = 'block';
+    if (otpDiv) otpDiv.style.display = 'none';
 }
 
 function initializeEmailChangeModal() {
@@ -373,11 +441,10 @@ function initializeEmailChangeModal() {
             
             console.log('=== VERIFY OTP BUTTON CLICKED ===');
             console.log('Entered OTP:', enteredCode);
-            console.log('emailChangeRequestId:', emailChangeRequestId);
-            console.log('pendingProfileData:', window.pendingProfileData);
             
             if (!enteredCode || enteredCode.length !== 6) {
-                document.getElementById('otpError').textContent = 'Please enter a valid 6-digit code';
+                const otpError = document.getElementById('otpError');
+                if (otpError) otpError.textContent = 'Please enter a valid 6-digit code';
                 return;
             }
             
@@ -389,8 +456,7 @@ function initializeEmailChangeModal() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     otp: enteredCode,
-                    request_id: emailChangeRequestId,
-                    email: window.pendingProfileData?.newEmail
+                    email: adminPendingNewEmail || window.pendingProfileData?.newEmail
                 })
             })
             .then(response => response.json())
@@ -401,42 +467,31 @@ function initializeEmailChangeModal() {
                     console.log('✅ OTP VERIFICATION SUCCESSFUL!');
                     showNotification('Code verified! Updating profile...', 'success');
                     
-                    // Store the pending data before closing modal
                     const pendingData = window.pendingProfileData;
-                    
                     closeEmailModal();
                     
-                    // Check if performProfileUpdate exists
-                    console.log('Checking if window.performProfileUpdate exists:', typeof window.performProfileUpdate);
-                    console.log('Pending data:', pendingData);
-                    
-                    // 🔥 CRITICAL FIX: Call the profile update with verification flags
                     if (pendingData && typeof window.performProfileUpdate === 'function') {
-                        console.log('Calling performProfileUpdate with:', pendingData.username, pendingData.newEmail, true);
                         window.performProfileUpdate(
                             pendingData.username,
                             pendingData.newEmail,
-                            true  // This indicates email was verified
+                            true
                         );
-                    } else {
-                        console.error('ERROR: performProfileUpdate not available or pendingData missing!');
-                        console.log('performProfileUpdate type:', typeof window.performProfileUpdate);
-                        console.log('pendingData:', pendingData);
-                        showNotification('Error: Could not update profile', 'error');
                     }
                     
                     window.pendingProfileData = null;
                 } else {
                     console.log('❌ OTP VERIFICATION FAILED:', data.message);
-                    document.getElementById('otpError').textContent = data.message || 'Invalid verification code';
-                    otpInput.value = '';
+                    const otpError = document.getElementById('otpError');
+                    if (otpError) otpError.textContent = data.message || 'Invalid verification code';
+                    if (otpInput) otpInput.value = '';
                     verifyOtpBtn.disabled = false;
                     verifyOtpBtn.innerHTML = 'Verify';
                 }
             })
             .catch(error => {
                 console.error('Error verifying OTP:', error);
-                document.getElementById('otpError').textContent = 'Error verifying code. Please try again.';
+                const otpError = document.getElementById('otpError');
+                if (otpError) otpError.textContent = 'Error verifying code. Please try again.';
                 verifyOtpBtn.disabled = false;
                 verifyOtpBtn.innerHTML = 'Verify';
             });
@@ -445,10 +500,6 @@ function initializeEmailChangeModal() {
     
     if (resendBtn) {
         resendBtn.onclick = function() {
-            if (isSendingEmail) {
-                showNotification('Already sending, please wait...', 'warning');
-                return;
-            }
             const currentEmail = document.getElementById('currentEmail').textContent.trim();
             const newEmail = window.pendingProfileData?.newEmail;
             if (currentEmail && newEmail) {
@@ -463,9 +514,48 @@ function initializeEmailChangeModal() {
 }
 
 function showNotification(message, type = 'info') {
+    // Check if global showNotification exists
     if (typeof window.showNotification === 'function') {
         window.showNotification(message, type);
     } else {
-        alert(message);
+        // Create temporary notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease forwards';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
+}
+
+// Add animation styles if not present
+if (!document.querySelector('#notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
 }

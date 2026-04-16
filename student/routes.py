@@ -4226,7 +4226,13 @@ def send_email_change_verification():
 
 @student_bp.route('/confirm-email-change/<token>/<action>')
 def confirm_email_change(token, action):
-    """Handle email change confirmation/rejection via link click"""
+    """Handle email change confirmation/rejection via link click - DATABASE VERSION"""
+    print("\n" + "="*60)
+    print(f"STUDENT CONFIRM EMAIL CHANGE CALLED")
+    print(f"Token: {token}")
+    print(f"Action: {action}")
+    print("="*60)
+    
     # Find student by token
     student = Student.query.filter_by(email_change_token=token).first()
     
@@ -4253,7 +4259,7 @@ def confirm_email_change(token, action):
         </html>
         """, 400
     
-    # Check expiry - FIX TIMEZONE COMPARISON
+    # Check expiry
     now_ph = get_philippine_time()
     
     # Make email_change_expires_at timezone-aware if it's naive
@@ -4268,6 +4274,7 @@ def confirm_email_change(token, action):
         student.new_email_pending = None
         student.email_change_requested_at = None
         student.email_change_expires_at = None
+        student.email_change_confirmed = False
         db.session.commit()
         
         return """
@@ -4293,16 +4300,14 @@ def confirm_email_change(token, action):
         """, 400
     
     if action == 'confirm':
-        # Store the confirmation in session for the OTP step
-        # The email hasn't been changed yet - just confirmed old email ownership
-        session['email_change_confirmed'] = True
-        session['email_change_token'] = token
-        session['pending_new_email'] = student.new_email_pending
+        print(f"[DEBUG] ACTION: CONFIRM - UPDATING DATABASE")
         
-        # Don't clear the token yet - we need it for OTP step
-        # Just mark that old email is confirmed
-        student.email_change_token = token  # Keep it for now
+        # ✅ STORE CONFIRMATION IN DATABASE (not session!)
+        student.email_change_confirmed = True
         db.session.commit()
+        
+        print(f"[DEBUG] student.email_change_confirmed = {student.email_change_confirmed}")
+        print("="*60 + "\n")
         
         return """
         <html>
@@ -4313,14 +4318,15 @@ def confirm_email_change(token, action):
                 .icon { font-size: 64px; margin-bottom: 20px; }
                 h2 { color: #1f2937; }
                 p { color: #4b5563; }
+                .success { color: #10b981; }
             </style>
         </head>
         <body>
             <div class="card">
                 <div class="icon">✅</div>
-                <h2>Email Ownership Confirmed!</h2>
+                <h2 class="success">Email Ownership Confirmed!</h2>
                 <p>You have successfully confirmed ownership of your current email address.</p>
-                <p>Please return to the application and wait for the OTP to be sent to your new email.</p>
+                <p>Please check the new gmail - the OTP will be sent automatically.</p>
                 <p>This window can be closed.</p>
             </div>
         </body>
@@ -4328,11 +4334,12 @@ def confirm_email_change(token, action):
         """
         
     elif action == 'reject':
-        # Clear everything - user rejected the change
+        print(f"[DEBUG] ACTION: REJECT")
         student.email_change_token = None
         student.new_email_pending = None
         student.email_change_requested_at = None
         student.email_change_expires_at = None
+        student.email_change_confirmed = False
         db.session.commit()
         
         # Also clear session
@@ -4368,26 +4375,37 @@ def confirm_email_change(token, action):
 @student_bp.route('/check-email-confirmation', methods=['GET'])
 @login_required
 def check_email_confirmation():
-    """Check if old email has been confirmed via link click"""
-    # Check session for confirmation flag
-    is_confirmed = session.get('email_change_confirmed', False)
-    token = session.get('email_change_token')
-    pending_email = session.get('pending_new_email')
+    """Check if old email has been confirmed via link click - DATABASE VERSION"""
+    print("\n" + "="*40)
+    print("STUDENT CHECK EMAIL CONFIRMATION CALLED")
     
-    if is_confirmed and token and pending_email:
+    # ✅ CHECK DATABASE FOR CONFIRMATION STATUS
+    student = current_user
+    
+    print(f"[DEBUG] Student: {student.username}")
+    print(f"[DEBUG] Student email_change_confirmed: {student.email_change_confirmed}")
+    print(f"[DEBUG] Student email_change_token: {student.email_change_token}")
+    print(f"[DEBUG] Student new_email_pending: {student.new_email_pending}")
+    
+    if student.email_change_confirmed and student.email_change_token and student.new_email_pending:
+        print(f"[DEBUG] Confirmation found in DATABASE!")
+        print("="*40 + "\n")
+        
         return jsonify({
             'confirmed': True,
-            'token': token,
-            'new_email': pending_email
+            'token': student.email_change_token,
+            'new_email': student.new_email_pending
         })
     else:
+        print(f"[DEBUG] No confirmation found in database")
+        print("="*40 + "\n")
         return jsonify({'confirmed': False})
 
 
 @student_bp.route('/send-otp-to-new-email', methods=['POST'])
 @login_required
 def send_otp_to_new_email():
-    """Send OTP to new email after old email is confirmed"""
+    """Send OTP to new email after old email is confirmed - DATABASE VERSION"""
     data = request.get_json()
     email = data.get('email')
     token = data.get('token')
@@ -4395,19 +4413,23 @@ def send_otp_to_new_email():
     if not email:
         return jsonify({'error': 'Email is required'}), 400
     
-    # Verify that old email was confirmed
-    if not session.get('email_change_confirmed'):
+    student = current_user
+    
+    # ✅ CHECK DATABASE FOR CONFIRMATION
+    if not student.email_change_confirmed:
         return jsonify({'error': 'Please confirm your old email first'}), 400
     
     # Verify token matches
-    student = Student.query.filter_by(email_change_token=token).first()
-    if not student or student.new_email_pending != email:
+    if student.email_change_token != token:
         return jsonify({'error': 'Invalid or expired session'}), 400
+    
+    if student.new_email_pending != email:
+        return jsonify({'error': 'Email mismatch'}), 400
     
     # Generate 6-digit OTP
     otp = ''.join(random.choices(string.digits, k=6))
     
-    # Store OTP in session (this is fine - it's short-lived and user-specific)
+    # Store OTP in session (short-term only)
     now_ph = get_philippine_time()
     otp_expiry = now_ph + timedelta(minutes=10)
     
@@ -4494,6 +4516,7 @@ def verify_otp_code():
                 student.new_email_pending = None
                 student.email_change_requested_at = None
                 student.email_change_expires_at = None
+                student.email_change_confirmed = False  # ✅ ADD THIS LINE - Reset confirmation flag
                 
                 db.session.commit()
                 
