@@ -1929,7 +1929,6 @@ def update_access_code():
 email_change_requests = {}
 
 # ==================== ADMIN EMAIL CHANGE (DATABASE-BACKED) ====================
-
 @admin_bp.route('/send-email-change-verification', methods=['POST'])
 @admin_required
 def send_email_change_verification():
@@ -1955,7 +1954,10 @@ def send_email_change_verification():
         now_ph = get_philippine_time_naive()
         expiry_time = now_ph + timedelta(minutes=15)
         
-        # Store in database (not in-memory dictionary!)
+        # ========== FIX #1: RESET confirmed flag for new request ==========
+        current_user.email_change_confirmed = False  # <-- ADD THIS LINE
+        
+        # Store in database
         current_user.email_change_token = token
         current_user.new_email_pending = new_email
         current_user.email_change_requested_at = now_ph
@@ -2011,6 +2013,7 @@ def send_email_change_verification():
         current_user.new_email_pending = None
         current_user.email_change_requested_at = None
         current_user.email_change_expires_at = None
+        current_user.email_change_confirmed = False  # Also reset on error
         db.session.commit()
         
         current_app.logger.error(f"Error sending verification email: {str(e)}")
@@ -2050,7 +2053,7 @@ def confirm_email_change(token, action):
     if action == 'confirm':
         print(f"[DEBUG] ACTION: CONFIRM - UPDATING DATABASE")
         
-        # ✅ STORE CONFIRMATION IN DATABASE (not session!)
+        # STORE CONFIRMATION IN DATABASE
         admin.email_change_confirmed = True
         db.session.commit()
         
@@ -2083,14 +2086,16 @@ def confirm_email_change(token, action):
         """
         
     elif action == 'reject':
-        print(f"[DEBUG] ACTION: REJECT")
+        print(f"[DEBUG] ACTION: REJECT - CLEARING ALL DATA")
         admin.email_change_token = None
         admin.new_email_pending = None
         admin.email_change_requested_at = None
         admin.email_change_expires_at = None
         admin.email_change_confirmed = False
         db.session.commit()
-        return "Email change rejected", 200
+        print(f"[DEBUG] All email change data cleared for admin: {admin.username}")
+        print("="*60 + "\n")
+        return "Email change rejected. You can close this window.", 200
     
     return "Invalid action", 400
 
