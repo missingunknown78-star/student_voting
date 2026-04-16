@@ -147,7 +147,6 @@ class Candidate(db.Model):
 
 
 # admin/models.py - Complete Election class with caching fields
-
 class Election(db.Model):
     __tablename__ = 'elections'
     __table_args__ = {'extend_existing': True}
@@ -212,7 +211,7 @@ class Election(db.Model):
         else:
             return "Open"
     
-    # ========== NEW PROPERTIES FOR TIMEZONE-AWARE DATES ==========
+    # ========== TIMEZONE-AWARE PROPERTIES ==========
     @property
     def start_date_manila(self):
         """Get start_date as Manila timezone-aware"""
@@ -244,7 +243,28 @@ class Election(db.Model):
             now = datetime.now(pytz.timezone('Asia/Manila'))
             return self.start_date_manila <= now <= self.end_date_manila
         return False
-    # ========== END OF NEW PROPERTIES ==========
+    
+    @property
+    def days_left(self):
+        """Calculate days remaining until election ends"""
+        from datetime import datetime
+        import pytz
+        
+        if not self.end_date:
+            return 0
+        
+        tz = pytz.timezone('Asia/Manila')
+        now = datetime.now(tz)
+        
+        # Make end_date timezone-aware if it's naive
+        if self.end_date.tzinfo is None:
+            end_date = tz.localize(self.end_date)
+        else:
+            end_date = self.end_date
+        
+        days = (end_date - now).days
+        return max(0, days)
+    # ========== END OF TIMEZONE PROPERTIES ==========
     
     @property
     def year_levels_list(self):
@@ -299,28 +319,6 @@ class Election(db.Model):
         self.cached_voter_turnout = voter_turnout
         self.cached_total_votes = total_votes
         self.cached_at = datetime.now(pytz.timezone('Asia/Manila'))
-
-
-    @property
-    def days_left(self):
-        """Calculate days remaining until election ends"""
-        from datetime import datetime
-        import pytz
-        
-        if not self.end_date:
-            return 0
-        
-        tz = pytz.timezone('Asia/Manila')
-        now = datetime.now(tz)
-        
-        # Make end_date timezone-aware if it's naive
-        if self.end_date.tzinfo is None:
-            end_date = tz.localize(self.end_date)
-        else:
-            end_date = self.end_date
-        
-        days = (end_date - now).days
-        return max(0, days)
     
     def __repr__(self):
         return f'<Election {self.id}: {self.title}>'
