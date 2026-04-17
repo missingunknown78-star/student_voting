@@ -3,82 +3,38 @@
 {% block title %}Announcements{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<style>
-    /* FIX: Remove top spacing - minimal gap at the very top edge */
-    .announcements-page {
-        margin-top: 0 !important;
-        padding-top: 5px !important;
-    }
-    
-    /* Spinning button animation */
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .submit-btn.loading {
-        opacity: 0.8;
-        cursor: wait;
-        pointer-events: none;
-    }
-    
-    .submit-btn .fa-spinner {
-        animation: spin 0.8s linear infinite;
-    }
-    
-    /* Floating Toast Message - Top Center */
-    .floating-toast {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-100px);
-        z-index: 10000;
-        padding: 14px 28px;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        text-align: center;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        backdrop-filter: blur(10px);
-        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        max-width: 90%;
-        min-width: 300px;
-        pointer-events: none;
-        background: linear-gradient(135deg, #27ae60, #2ecc71);
-        color: white;
-        border-left: 4px solid #fff;
-    }
-    
-    .floating-toast.show {
-        transform: translateX(-50%) translateY(0);
-    }
-    
-    .floating-toast i {
-        margin-right: 10px;
-        font-size: 1.1rem;
-    }
-    
-    .floating-toast.error {
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-    }
-    
-    /* Dark mode support */
-    .dark-mode .floating-toast {
-        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="announcements-page">
+    <!-- Page Header -->
     <div class="page-header">
-        <h2 class="announcements-title">📢 Announcements & Reminders</h2>
-        <p class="page-description">Create and manage announcements for students and departments</p>
+        <div class="header-left">
+            <h1 class="page-title">
+                <i class="fas fa-bullhorn" style="margin-right: 10px;"></i>
+                Announcements & Reminders
+            </h1>
+            <p class="page-description">Create and manage announcements for students and departments.</p>
+        </div>
+        <div class="header-right">
+            <div class="button-group">
+                <button class="btn btn-primary" id="openModalBtn">
+                    <i class="fas fa-plus"></i> Add Announcement
+                </button>
+                <a href="{{ url_for('admin.help_settings') }}" class="btn btn-secondary">
+                    <i class="fas fa-gear"></i> Help Settings
+                </a>
+                <a href="{{ url_for('admin.guidelines_settings') }}" class="btn btn-secondary">
+                    <i class="fas fa-book"></i> Guidelines
+                </a>
+            </div>
+        </div>
     </div>
 
-    <!-- Flash Messages - Hidden, will be converted to floating toast -->
+    <!-- Flash Messages as Toast -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div id="flashData" style="display:none;" 
@@ -91,293 +47,193 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Add this after the Add Announcement button -->
-    <div style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
-        <button class="add-announcement-btn" id="openModalBtn">
-            <i class="fa-solid fa-plus"></i> Add Announcement
-        </button>
-        
-        <a href="{{ url_for('admin.help_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #10b981, #059669); text-decoration: none;">
-            <i class="fa-solid fa-gear"></i> Help Settings
-        </a>
-        
-        <a href="{{ url_for('admin.guidelines_settings') }}" class="add-announcement-btn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); text-decoration: none;">
-            <i class="fa-solid fa-book"></i> Guidelines Settings
-        </a>
-    </div>
-
-    <!-- Add Modal - Desktop Style Layout -->
-    <div id="addModal" class="modal">
-        <div class="modal-content desktop-modal">
-            <span class="close-btn" id="closeAddModalBtn">&times;</span>
-            <h3><i class="fa-solid fa-bullhorn"></i> Add New Announcement</h3>
-            <form id="addAnnouncementForm" method="POST" action="{{ url_for('admin.announcements') }}" class="desktop-form">
-                
-                <div class="form-left">
-                    <div class="form-group">
-                        <label for="add_title">Title</label>
-                        <input type="text" id="add_title" name="title" placeholder="Enter announcement title" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="add_date">Date</label>
-                            <input type="date" id="add_date" name="date" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="add_department">Department</label>
-                            <select id="add_department" name="department" required>
-                                <option value="all">All Departments</option>
-                                {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-right">
-                    <div class="form-group">
-                        <label for="add_content">Content</label>
-                        <textarea id="add_content" name="content" rows="6" placeholder="Enter announcement details" required></textarea>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="submit-btn" id="publishBtn">
-                        <i class="fa-solid fa-check"></i> Publish Announcement
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Edit Modal - Desktop Style Layout -->
-    <div id="editModal" class="modal">
-        <div class="modal-content desktop-modal">
-            <span class="close-btn" id="closeEditModalBtn">&times;</span>
-            <h3><i class="fa-solid fa-pen"></i> Edit Announcement</h3>
-            <form id="editAnnouncementForm" method="POST" action="" class="desktop-form">
-                <input type="hidden" id="edit_id" name="id">
-                
-                <div class="form-left">
-                    <div class="form-group">
-                        <label for="edit_title">Title</label>
-                        <input type="text" id="edit_title" name="title" placeholder="Enter announcement title" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="edit_date">Date</label>
-                            <input type="date" id="edit_date" name="date" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="edit_department">Department</label>
-                            <select id="edit_department" name="department" required>
-                                <option value="all">All Departments</option>
-                                {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-right">
-                    <div class="form-group">
-                        <label for="edit_content">Content</label>
-                        <textarea id="edit_content" name="content" rows="6" placeholder="Enter announcement details" required></textarea>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="submit-btn edit-submit" id="updateBtn">
-                        <i class="fa-solid fa-save"></i> Update Announcement
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="modal">
-        <div class="modal-content delete-modal">
-            <span class="close-btn" id="closeDeleteModalBtn">&times;</span>
-            <div class="delete-icon">
-                <i class="fa-solid fa-exclamation-triangle"></i>
-            </div>
-            <h3>Delete Announcement</h3>
-            <p>Are you sure you want to delete "<span id="deleteTitle"></span>"?</p>
-            <p class="delete-warning">This action cannot be undone.</p>
-            
-            <form id="deleteAnnouncementForm" method="POST" action="">
-                <input type="hidden" id="delete_id" name="id">
-                <div class="delete-actions">
-                    <button type="button" class="cancel-delete-btn" id="cancelDeleteBtn">
-                        <i class="fa-solid fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="confirm-delete-btn">
-                        <i class="fa-solid fa-trash"></i> Delete
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Announcements List -->
     <div class="announcements-list">
         {% if announcements %}
             {% for announcement in announcements %}
             <div class="announcement-card" id="announcement-{{ announcement.id }}">
-                <div class="announcement-header">
-                    <div class="announcement-title-section">
+                <div class="card-header">
+                    <div class="card-title-section">
                         <h3>{{ announcement.title }}</h3>
-                        <div class="announcement-badges">
+                        <div class="badge-group">
                             {% if announcement.department_id %}
-                                <span class="dept-badge">
-                                    <i class="fa-solid fa-building"></i> {{ announcement.department.name }}
+                                <span class="badge badge-department">
+                                    <i class="fas fa-building"></i> {{ announcement.department.name }}
                                 </span>
                             {% else %}
-                                <span class="dept-badge all-depts">
-                                    <i class="fa-solid fa-globe"></i> All Departments
+                                <span class="badge badge-all">
+                                    <i class="fas fa-globe"></i> All Departments
                                 </span>
                             {% endif %}
-                            <span class="date-badge">
-                                <i class="fa-solid fa-calendar"></i> {{ announcement.date.strftime('%b %d, %Y') }}
+                            <span class="badge badge-date">
+                                <i class="fas fa-calendar"></i> {{ announcement.date.strftime('%b %d, %Y') }}
                             </span>
                         </div>
                     </div>
-                    <div class="announcement-actions">
-                        <button class="edit-btn" onclick="openEditModal({{ announcement.id }}, event)">
-                            <i class="fa-solid fa-pen"></i> Edit
+                    <div class="card-actions">
+                        <button class="btn-icon edit" onclick="openEditModal({{ announcement.id }}, event)">
+                            <i class="fas fa-pen"></i> Edit
                         </button>
-                        <button class="delete-btn" onclick="openDeleteModal({{ announcement.id }}, '{{ announcement.title|escape }}')">
-                            <i class="fa-solid fa-trash"></i> Delete
+                        <button class="btn-icon delete" onclick="openDeleteModal({{ announcement.id }}, '{{ announcement.title|escape }}')">
+                            <i class="fas fa-trash-alt"></i> Delete
                         </button>
                     </div>
                 </div>
-                <div class="announcement-content">
+                <div class="card-content">
                     <p>{{ announcement.content }}</p>
                 </div>
-                <div class="announcement-footer">
+                <div class="card-footer">
                     <span class="timestamp">
-                        <i class="fa-solid fa-clock"></i> 
+                        <i class="fas fa-clock"></i> 
                         Posted {{ announcement.created_at.strftime('%b %d, %Y at %I:%M %p') if announcement.created_at else announcement.date.strftime('%b %d, %Y') }}
                     </span>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="no-announcements">
-                <i class="fa-solid fa-bullhorn"></i>
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
                 <h3>No Announcements Yet</h3>
                 <p>Click the "Add Announcement" button to create your first announcement.</p>
+                <button class="btn btn-primary" onclick="document.getElementById('openModalBtn').click()">
+                    <i class="fas fa-plus"></i> Create First Announcement
+                </button>
             </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Floating Toast Container -->
-<div id="floatingToast" class="floating-toast">
-    <i class="fa-solid fa-circle-check"></i>
+<!-- Add Modal -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-plus-circle"></i> Add New Announcement</h2>
+            <button class="modal-close" id="closeAddModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addAnnouncementForm" method="POST" action="{{ url_for('admin.announcements') }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add_title">Title <span class="required">*</span></label>
+                        <input type="text" id="add_title" name="title" placeholder="Enter announcement title" required>
+                    </div>
+                </div>
+                <div class="form-row two-columns">
+                    <div class="form-group">
+                        <label for="add_date">Date <span class="required">*</span></label>
+                        <input type="date" id="add_date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_department">Department</label>
+                        <select id="add_department" name="department">
+                            <option value="all">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="add_content">Content <span class="required">*</span></label>
+                        <textarea id="add_content" name="content" rows="6" placeholder="Enter announcement details..." required></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="publishBtn">
+                        <i class="fas fa-check"></i> Publish Announcement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-edit"></i> Edit Announcement</h2>
+            <button class="modal-close" id="closeEditModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editAnnouncementForm" method="POST" action="">
+                <input type="hidden" id="edit_id" name="id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_title">Title <span class="required">*</span></label>
+                        <input type="text" id="edit_title" name="title" placeholder="Enter announcement title" required>
+                    </div>
+                </div>
+                <div class="form-row two-columns">
+                    <div class="form-group">
+                        <label for="edit_date">Date <span class="required">*</span></label>
+                        <input type="date" id="edit_date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_department">Department</label>
+                        <select id="edit_department" name="department">
+                            <option value="all">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_content">Content <span class="required">*</span></label>
+                        <textarea id="edit_content" name="content" rows="6" placeholder="Enter announcement details..." required></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="updateBtn">
+                        <i class="fas fa-save"></i> Update Announcement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content delete-modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-trash-alt"></i> Confirm Deletion</h2>
+            <button class="modal-close" id="closeDeleteModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <p class="warning-text">Are you sure you want to delete "<span id="deleteTitle"></span>"?</p>
+            <p class="warning-subtext">This action cannot be undone.</p>
+            <form id="deleteAnnouncementForm" method="POST" action="">
+                <input type="hidden" id="delete_id" name="id">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Delete Announcement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Toast -->
+<div id="floatingToast" class="toast-notification">
+    <i class="fas fa-check-circle"></i>
     <span id="toastMessage">Success!</span>
 </div>
 
 <script>
-// =============== FLOATING TOAST FUNCTION ===============
-function showFloatingToast(message, isError = false) {
-    const toast = document.getElementById('floatingToast');
-    const toastMessage = document.getElementById('toastMessage');
-    const toastIcon = toast.querySelector('i');
-    
-    if (!toast) return;
-    
-    // Clean the message - remove any remaining announcements_page: prefix just in case
-    let cleanMessage = message.replace(/announcements_page:/g, '');
-    toastMessage.textContent = cleanMessage;
-    
-    if (isError) {
-        toast.classList.add('error');
-        toastIcon.className = 'fa-solid fa-circle-exclamation';
-    } else {
-        toast.classList.remove('error');
-        toastIcon.className = 'fa-solid fa-circle-check';
-    }
-    
-    toast.classList.add('show');
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 5000);
-}
-
-// =============== CAPTURE FLASH MESSAGES AS FLOATING TOAST ===============
-function showFlashAsToast() {
-    const flashData = document.getElementById('flashData');
-    if (flashData) {
-        const messagesAttr = flashData.getAttribute('data-messages');
-        if (messagesAttr) {
-            try {
-                const messages = JSON.parse(messagesAttr);
-                messages.forEach(function(msg) {
-                    let message = msg.message;
-                    let isError = (msg.category === 'error' || msg.category === 'danger');
-                    // Remove the announcements_page: prefix if it somehow survived
-                    message = message.replace(/announcements_page:/g, '');
-                    showFloatingToast(message, isError);
-                });
-            } catch(e) {
-                console.error('Error parsing flash messages:', e);
-            }
-        }
-    }
-}
-
-// =============== SPINNING BUTTON FUNCTION ===============
-function makeButtonSpin(button) {
-    if (!button) return;
-    
-    const originalIcon = button.innerHTML;
-    button.classList.add('loading');
-    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + button.textContent.trim();
-    button.disabled = true;
-    
-    return function restoreButton() {
-        button.classList.remove('loading');
-        button.innerHTML = originalIcon;
-        button.disabled = false;
-    };
-}
-
-// =============== FORM SUBMIT HANDLERS WITH SPINNING ===============
-document.addEventListener('DOMContentLoaded', function() {
-    // Show flash messages as floating toast
-    showFlashAsToast();
-    
-    // Add form submit spinner for Publish button
-    const addForm = document.getElementById('addAnnouncementForm');
-    const publishBtn = document.getElementById('publishBtn');
-    
-    if (addForm && publishBtn) {
-        addForm.addEventListener('submit', function(e) {
-            makeButtonSpin(publishBtn);
-        });
-    }
-    
-    // Add form submit spinner for Update button
-    const editForm = document.getElementById('editAnnouncementForm');
-    const updateBtn = document.getElementById('updateBtn');
-    
-    if (editForm && updateBtn) {
-        editForm.addEventListener('submit', function(e) {
-            makeButtonSpin(updateBtn);
-        });
-    }
-});
-
-// Apply theme to main content
+// ==================== THEME MANAGEMENT ====================
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
@@ -391,365 +247,229 @@ function applyThemeToMainContent() {
     } else {
         mainContent.classList.remove('dark-mode');
     }
-    
-    mainContent.classList.add('theme-applied');
 }
 
-// Apply immediately when page loads
 (function() {
     applyThemeToMainContent();
-    
     setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
     document.addEventListener('click', function(e) {
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
+            setTimeout(applyThemeToMainContent, 50);
         }
     });
     
     window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
+        if (e.key === 'theme') applyThemeToMainContent();
     });
     
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
-            }
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') applyThemeToMainContent();
         });
-        mainContentObserver.observe(mainContent, { attributes: true });
-    }
+    });
+    observer.observe(document.documentElement, { attributes: true });
 })();
 
-// ==================== MODAL FUNCTIONALITY ====================
-document.addEventListener('DOMContentLoaded', () => {
-    // Get all modals
-    const addModal = document.getElementById('addModal');
-    const editModal = document.getElementById('editModal');
-    const deleteModal = document.getElementById('deleteModal');
+// ==================== TOAST NOTIFICATION ====================
+function showToast(message, isError = false) {
+    const toast = document.getElementById('floatingToast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastIcon = toast.querySelector('i');
     
-    // Get all buttons
-    const openAddBtn = document.getElementById('openModalBtn');
-    const closeAddBtn = document.getElementById('closeAddModalBtn');
-    const closeEditBtn = document.getElementById('closeEditModalBtn');
-    const closeDeleteBtn = document.getElementById('closeDeleteModalBtn');
-    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
-
-    // Open Add Modal
-    if (openAddBtn && addModal) {
-        openAddBtn.addEventListener('click', () => {
-            addModal.classList.add('show');
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    }
-
-    // Close Add Modal
-    if (closeAddBtn && addModal) {
-        closeAddBtn.addEventListener('click', () => {
-            addModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    }
-
-    // Close Edit Modal
-    if (closeEditBtn && editModal) {
-        closeEditBtn.addEventListener('click', () => {
-            editModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    }
-
-    // Close Delete Modal
-    if (closeDeleteBtn && deleteModal) {
-        closeDeleteBtn.addEventListener('click', () => {
-            deleteModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    }
-
-    // Cancel Delete
-    if (cancelDeleteBtn && deleteModal) {
-        cancelDeleteBtn.addEventListener('click', () => {
-            deleteModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        });
-    }
-
-    // Close modals when clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === addModal) {
-            addModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        }
-        if (e.target === editModal) {
-            editModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        }
-        if (e.target === deleteModal) {
-            deleteModal.classList.remove('show');
-            setTimeout(applyThemeToMainContent, 10);
-        }
-    });
-});
-
-// ==================== ENHANCED EDIT FUNCTION WITH DEBUGGING ====================
-function openEditModal(announcementId, event) {
-    if (event) {
-        event.preventDefault();
+    if (!toast) return;
+    
+    let cleanMessage = message.replace(/announcements_page:/g, '');
+    toastMessage.textContent = cleanMessage;
+    
+    if (isError) {
+        toast.classList.add('error');
+        toastIcon.className = 'fas fa-exclamation-circle';
+    } else {
+        toast.classList.remove('error');
+        toastIcon.className = 'fas fa-check-circle';
     }
     
-    console.log('🔍 Opening edit modal for announcement ID:', announcementId);
+    toast.classList.add('show');
     
-    const editBtn = event ? event.target.closest('.edit-btn') : document.querySelector(`.edit-btn[onclick*="${announcementId}"]`);
-    let originalText = '';
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 5000);
+}
+
+// ==================== FLASH MESSAGES ====================
+function showFlashAsToast() {
+    const flashData = document.getElementById('flashData');
+    if (flashData) {
+        const messagesAttr = flashData.getAttribute('data-messages');
+        if (messagesAttr) {
+            try {
+                const messages = JSON.parse(messagesAttr);
+                messages.forEach(function(msg) {
+                    let message = msg.message.replace(/announcements_page:/g, '');
+                    let isError = (msg.category === 'error' || msg.category === 'danger');
+                    showToast(message, isError);
+                });
+            } catch(e) {
+                console.error('Error parsing flash messages:', e);
+            }
+        }
+    }
+}
+
+// ==================== SPINNING BUTTON ====================
+function makeButtonSpin(button) {
+    if (!button) return;
+    
+    const originalHtml = button.innerHTML;
+    button.classList.add('loading');
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + button.textContent.trim();
+    button.disabled = true;
+    
+    return function restore() {
+        button.classList.remove('loading');
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+    };
+}
+
+// ==================== MODAL FUNCTIONS ====================
+const addModal = document.getElementById('addModal');
+const editModal = document.getElementById('editModal');
+const deleteModal = document.getElementById('deleteModal');
+
+function openAddModal() {
+    if (addModal) addModal.classList.add('show');
+}
+
+function closeAddModal() {
+    if (addModal) addModal.classList.remove('show');
+}
+
+function closeEditModal() {
+    if (editModal) editModal.classList.remove('show');
+}
+
+function closeDeleteModal() {
+    if (deleteModal) deleteModal.classList.remove('show');
+}
+
+// ==================== EDIT ANNOUNCEMENT ====================
+window.openEditModal = function(announcementId, event) {
+    if (event) event.preventDefault();
+    
+    console.log('Opening edit modal for ID:', announcementId);
+    
+    const editBtn = event ? event.target.closest('.edit') : null;
+    let originalHtml = '';
     
     if (editBtn) {
-        originalText = editBtn.innerHTML;
-        editBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+        originalHtml = editBtn.innerHTML;
+        editBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
         editBtn.disabled = true;
     }
     
-    fetch(`/ctumoalboal-comelec/get-announcement/${announcementId}`, {
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-        .then(response => {
-            console.log('📡 Response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+    fetch(`/ctumoalboal-comelec/get-announcement/${announcementId}`)
+        .then(response => response.json())
         .then(data => {
-            console.log('📦 Received data:', data);
-            
             if (data.success) {
-                const idField = document.getElementById('edit_id');
-                const titleField = document.getElementById('edit_title');
-                const contentField = document.getElementById('edit_content');
-                const dateField = document.getElementById('edit_date');
+                document.getElementById('edit_id').value = data.announcement.id;
+                document.getElementById('edit_title').value = data.announcement.title;
+                document.getElementById('edit_content').value = data.announcement.content;
+                document.getElementById('edit_date').value = data.announcement.date;
+                
                 const deptSelect = document.getElementById('edit_department');
+                deptSelect.value = data.announcement.department_id || 'all';
+                
                 const form = document.getElementById('editAnnouncementForm');
-                const modal = document.getElementById('editModal');
+                form.action = `/ctumoalboal-comelec/update-announcement/${announcementId}`;
                 
-                if (!idField || !titleField || !contentField || !dateField || !deptSelect || !form || !modal) {
-                    console.error('❌ Missing form elements');
-                    alert('System error: Could not find form elements');
-                    
-                    if (editBtn) {
-                        editBtn.innerHTML = originalText;
-                        editBtn.disabled = false;
-                    }
-                    return;
-                }
-                
-                idField.value = data.announcement.id || '';
-                titleField.value = data.announcement.title || '';
-                contentField.value = data.announcement.content || '';
-                dateField.value = data.announcement.date || '';
-                
-                if (data.announcement.department_id) {
-                    deptSelect.value = data.announcement.department_id;
-                } else {
-                    deptSelect.value = 'all';
-                }
-                
-                const actionUrl = `/ctumoalboal-comelec/update-announcement/${announcementId}`;
-                form.action = actionUrl;
-                
-                modal.classList.add('show');
+                if (editModal) editModal.classList.add('show');
                 setTimeout(applyThemeToMainContent, 10);
-                
-                if (editBtn) {
-                    editBtn.innerHTML = originalText;
-                    editBtn.disabled = false;
-                }
             } else {
-                console.error('❌ Server returned success: false', data);
-                alert('Failed to load announcement data: Server returned error');
-                
-                if (editBtn) {
-                    editBtn.innerHTML = originalText;
-                    editBtn.disabled = false;
-                }
+                showToast('Failed to load announcement data', true);
             }
         })
         .catch(error => {
-            console.error('❌ Error fetching announcement:', error);
-            alert('Failed to load announcement data. Check console for details.');
-            
+            console.error('Error:', error);
+            showToast('Error loading announcement', true);
+        })
+        .finally(() => {
             if (editBtn) {
-                editBtn.innerHTML = originalText;
+                editBtn.innerHTML = originalHtml;
                 editBtn.disabled = false;
             }
         });
-}
+};
 
-// ==================== ENHANCED DELETE FUNCTION ====================
-function openDeleteModal(announcementId, announcementTitle) {
-    console.log('🗑️ Opening delete modal for:', announcementId, announcementTitle);
+// ==================== DELETE ANNOUNCEMENT ====================
+window.openDeleteModal = function(announcementId, announcementTitle) {
+    document.getElementById('deleteTitle').textContent = announcementTitle;
+    document.getElementById('delete_id').value = announcementId;
     
-    const modal = document.getElementById('deleteModal');
     const form = document.getElementById('deleteAnnouncementForm');
-    const titleSpan = document.getElementById('deleteTitle');
-    const idField = document.getElementById('delete_id');
+    form.action = `/ctumoalboal-comelec/delete-announcement/${announcementId}`;
     
-    if (!modal || !form || !titleSpan || !idField) {
-        console.error('❌ Missing delete modal elements');
-        alert('System error: Could not find delete modal elements');
-        return;
-    }
-    
-    titleSpan.textContent = announcementTitle;
-    idField.value = announcementId;
-    
-    const actionUrl = `/ctumoalboal-comelec/delete-announcement/${announcementId}`;
-    form.action = actionUrl;
-    
-    modal.classList.add('show');
+    if (deleteModal) deleteModal.classList.add('show');
     setTimeout(applyThemeToMainContent, 10);
-}
+};
 
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.edit-btn')) {
-        console.log('✏️ Edit button clicked');
+// ==================== FORM SUBMIT HANDLERS ====================
+document.addEventListener('DOMContentLoaded', function() {
+    showFlashAsToast();
+    
+    // Add form
+    const addForm = document.getElementById('addAnnouncementForm');
+    const publishBtn = document.getElementById('publishBtn');
+    if (addForm && publishBtn) {
+        addForm.addEventListener('submit', function() {
+            makeButtonSpin(publishBtn);
+        });
     }
+    
+    // Edit form
+    const editForm = document.getElementById('editAnnouncementForm');
+    const updateBtn = document.getElementById('updateBtn');
+    if (editForm && updateBtn) {
+        editForm.addEventListener('submit', function() {
+            makeButtonSpin(updateBtn);
+        });
+    }
+    
+    // Modal triggers
+    const openBtn = document.getElementById('openModalBtn');
+    if (openBtn) openBtn.addEventListener('click', openAddModal);
+    
+    const closeAdd = document.getElementById('closeAddModalBtn');
+    if (closeAdd) closeAdd.addEventListener('click', closeAddModal);
+    
+    const closeEdit = document.getElementById('closeEditModalBtn');
+    if (closeEdit) closeEdit.addEventListener('click', closeEditModal);
+    
+    const closeDelete = document.getElementById('closeDeleteModalBtn');
+    if (closeDelete) closeDelete.addEventListener('click', closeDeleteModal);
+    
+    const cancelDelete = document.getElementById('cancelDeleteBtn');
+    if (cancelDelete) cancelDelete.addEventListener('click', closeDeleteModal);
+    
+    // Close modals on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target === addModal) closeAddModal();
+        if (e.target === editModal) closeEditModal();
+        if (e.target === deleteModal) closeDeleteModal();
+    });
+    
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    const addDate = document.getElementById('add_date');
+    if (addDate) addDate.value = today;
+    
+    const editDate = document.getElementById('edit_date');
+    if (editDate && !editDate.value) editDate.value = today;
+    
+    applyThemeToMainContent();
 });
 </script>
-
-<style>
-/* Flash message styles - only for announcements page */
-.flash-container {
-    margin-bottom: 20px;
-    position: relative;
-}
-
-.flash-message {
-    padding: 12px 20px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    animation: slideInDown 0.5s ease forwards;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-left: 5px solid transparent;
-    position: relative;
-    overflow: hidden;
-}
-
-.flash-message.success {
-    background: #d4edda;
-    color: #155724;
-    border-left-color: #28a745;
-}
-
-.flash-message.error {
-    background: #f8d7da;
-    color: #721c24;
-    border-left-color: #dc3545;
-}
-
-.flash-message.info {
-    background: #d1ecf1;
-    color: #0c5460;
-    border-left-color: #17a2b8;
-}
-
-.flash-message i {
-    font-size: 1.2rem;
-}
-
-.flash-close-btn {
-    margin-left: auto;
-    background: none;
-    border: none;
-    color: inherit;
-    font-size: 1.5rem;
-    cursor: pointer;
-    opacity: 0.7;
-    padding: 0 5px;
-    transition: opacity 0.3s ease;
-}
-
-.flash-close-btn:hover {
-    opacity: 1;
-}
-
-.flash-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    background: rgba(0, 0, 0, 0.2);
-    animation: progress 5s linear forwards;
-}
-
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateY(-10px);
-        display: none;
-    }
-}
-
-@keyframes progress {
-    from { width: 100%; }
-    to { width: 0%; }
-}
-
-/* Dark mode adjustments */
-.dark-mode .flash-message.success {
-    background: #1e3a2a;
-    color: #a3d8a3;
-    border-left-color: #28a745;
-}
-
-.dark-mode .flash-message.error {
-    background: #3a1e1e;
-    color: #f8a5a5;
-    border-left-color: #dc3545;
-}
-
-.dark-mode .flash-message.info {
-    background: #1e3a3a;
-    color: #a8d8d8;
-    border-left-color: #17a2b8;
-}
-
-/* Loading spinner animation */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.fa-spinner {
-    animation: spin 1s linear infinite;
-}
-</style>
 {% endblock %}

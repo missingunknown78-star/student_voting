@@ -143,11 +143,6 @@
                 {% for ann in announcements[:3] %}
                 <div class="announcement-item">
                     <div class="announcement-header">
-                        {% if loop.first %}
-                        <span class="announcement-badge">NEW</span>
-                        {% else %}
-                        <span class="announcement-badge">UPDATE</span>
-                        {% endif %}
                         <span class="announcement-date">{{ ann.date.strftime('%b %d, %Y') }}</span>
                     </div>
                     <h4 class="announcement-title">{{ ann.title }}</h4>

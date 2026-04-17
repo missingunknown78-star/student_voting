@@ -3,315 +3,474 @@
 {% block title %}Help Page Settings{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('admin.static', filename='css/announcements.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
+/* ================================
+   HELP SETTINGS PAGE CSS
+   MATCHING ANNOUNCEMENTS PAGE DESIGN
+   ================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* LIGHT MODE (default) - ALL TEXT BLACK */
+:root {
+    --text-primary: #000000;
+    --text-secondary: #5a6e7c;
+    --card-bg: #ffffff;
+    --border-color: #e2edf4;
+    --input-bg: #ffffff;
+    --info-bg: #d1ecf1;
+    --info-text: #0c5460;
+}
+
+/* DARK MODE - ALL TEXT WHITE */
+:root.dark-mode {
+    --text-primary: #ffffff;
+    --text-secondary: #cbd5e1;
+    --card-bg: #2d2d2d;
+    --border-color: #404040;
+    --input-bg: #404040;
+    --info-bg: #1e3a3a;
+    --info-text: #a8d8d8;
+}
+
+body {
+    background: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+:root.dark-mode body {
+    background: #1a1a1a;
+}
+
+/* Main content with sidebar margin - FULL WIDTH STRETCH */
+.main-content {
+    margin-left: 280px;
+    transition: margin-left 0.3s ease;
+    min-height: 100vh;
+    width: calc(100% - 280px);
+}
+
+.main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%);
+}
+
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
+/* Page container - FULL WIDTH */
+.help-settings-container {
+    width: 100%;
+    padding: 28px 32px;
+    box-sizing: border-box;
+}
+
+/* Responsive sidebar */
+@media (max-width: 1024px) {
+    .main-content {
+        width: calc(100% - 250px);
+        margin-left: 250px;
+    }
+    
     .help-settings-container {
-        margin-left: 280px;
-        padding: 20px 40px;
+        padding: 20px 24px;
     }
-    
-    .settings-card {
-        background: var(--card-bg);
-        border-radius: 12px;
-        padding: 25px 30px;
-        margin-bottom: 20px;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--border-color);
-    }
-    
-    .settings-card h3 {
-        margin-top: 0;
-        margin-bottom: 20px;
-        color: var(--text-color);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .form-group {
-        margin-bottom: 20px;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: var(--text-color);
-    }
-    
-    .form-group input,
-    .form-group textarea {
+}
+
+@media (max-width: 768px) {
+    .main-content {
         width: 100%;
-        padding: 10px 12px;
-        border-radius: 6px;
-        border: 1px solid var(--border-color);
-        background: var(--card-bg);
-        color: var(--text-color);
-        font-size: 0.95rem;
+        margin-left: 0;
     }
     
-    .form-group textarea {
-        min-height: 150px;
-        resize: vertical;
+    .help-settings-container {
+        padding: 16px 20px;
     }
-    
-    .save-btn {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
+}
+
+@media (max-width: 480px) {
+    .help-settings-container {
+        padding: 12px 16px;
     }
-    
-    .save-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+}
+
+/* ========== PAGE HEADER ========== */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.announcements-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-description {
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+}
+
+/* ========== INFO NOTE ========== */
+.info-note {
+    background: var(--info-bg);
+    color: var(--info-text);
+    padding: 14px 20px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    border-left: 5px solid #17a2b8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+
+.info-note i {
+    font-size: 1.2rem;
+}
+
+/* ========== SETTINGS CARDS ========== */
+.settings-card {
+    background: var(--card-bg);
+    border-radius: 28px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border-color);
+    transition: all 0.25s ease;
+}
+
+.settings-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -12px rgba(0, 32, 64, 0.12);
+    border-color: #2c7cb6;
+}
+
+:root.dark-mode .settings-card:hover {
+    border-color: #2c7cb6;
+}
+
+.settings-card h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ========== FORM STYLES ========== */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 16px;
+    font-size: 0.9rem;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: #2c7cb6;
+    box-shadow: 0 0 0 3px rgba(44, 124, 182, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 150px;
+}
+
+/* ========== BOTTOM ACTIONS ========== */
+.bottom-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* ========== BUTTONS ========== */
+.save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(100deg, #2c7cb6, #1f6392);
+    border: none;
+    border-radius: 60px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 14px rgba(44, 124, 182, 0.25);
+}
+
+.save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(44, 124, 182, 0.35);
+}
+
+.save-btn.submitting {
+    opacity: 0.8;
+    cursor: wait;
+    pointer-events: none;
+}
+
+/* Spinning animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.save-btn.spinning .btn-icon {
+    animation: spin 0.5s ease-in-out;
+}
+
+.btn-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spinner-rotate 0.8s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spinner-rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Back Link */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #f0f4f9;
+    color: #000000;
+    border: 1px solid #dee9f0;
+    border-radius: 60px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+
+:root.dark-mode .back-link {
+    background: #404040;
+    color: #ffffff;
+    border-color: #555;
+}
+
+.back-link:hover {
+    background: #e2e8f0;
+    transform: translateX(-3px);
+}
+
+:root.dark-mode .back-link:hover {
+    background: #555;
+}
+
+/* ========== FLASH TOAST MESSAGES - TOP CENTER ========== */
+.flash-container {
+    position: fixed;
+    top: 20px;
+    left: calc(50% + 140px);
+    transform: translateX(-50%);
+    z-index: 10000;
+    min-width: 300px;
+    max-width: 500px;
+    pointer-events: none;
+}
+
+.flash-message {
+    background: white;
+    border-radius: 50px;
+    padding: 14px 24px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease forwards;
+    pointer-events: auto;
+    position: relative;
+    overflow: hidden;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.flash-message.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.flash-message.error,
+.flash-message.danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.flash-message.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.flash-message.info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.flash-message i {
+    font-size: 1.1rem;
+}
+
+.flash-message .close-btn {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.flash-message .close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
     }
-    
-    /* Spinning animation for button */
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
-        }
-        100% {
-            transform: rotate(360deg);
-        }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
-    
-    .save-btn.spinning .btn-icon {
-        animation: spin 0.5s ease-in-out;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
     }
-    
-    /* Disabled button state */
-    .save-btn.submitting {
-        opacity: 0.8;
-        cursor: wait;
-        pointer-events: none;
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+        display: none;
     }
-    
-    /* Circular spinner */
-    @keyframes spinner-rotate {
-        0% {
-            transform: rotate(0deg);
-        }
-        100% {
-            transform: rotate(360deg);
-        }
-    }
-    
-    .btn-spinner {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: white;
-        animation: spinner-rotate 0.8s linear infinite;
-        margin-right: 8px;
-    }
-    
-    .back-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--text-color);
-        text-decoration: none;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-    
-    .back-link:hover {
-        color: var(--primary-blue);
-        transform: translateX(-3px);
-    }
-    
-    /* Bottom action bar */
-    .bottom-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 30px;
-        gap: 20px;
-        flex-wrap: wrap;
-    }
-    
-    .info-note {
-        background: #d1ecf1;
-        color: #0c5460;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        border-left: 5px solid #17a2b8;
-    }
-    
-    .dark-mode .info-note {
-        background: #1e3a3a;
-        color: #a8d8d8;
-        border-left-color: #17a2b8;
-    }
-    
-    /* ==================== FLOATING FLASH MESSAGES ==================== */
+}
+
+/* Mobile flash adjustment */
+@media (max-width: 768px) {
     .flash-container {
-        position: fixed;
-        top: 20px;
         left: 50%;
-        transform: translateX(-50%);
-        z-index: 10000;
-        min-width: 300px;
-        max-width: 500px;
-        pointer-events: none;
+        width: 90%;
+        min-width: auto;
     }
     
     .flash-message {
-        background: white;
-        border-radius: 12px;
-        padding: 14px 20px;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        animation: slideDown 0.3s ease forwards;
-        pointer-events: auto;
-        border-left: 5px solid;
-        position: relative;
-        overflow: hidden;
+        padding: 12px 18px;
+        font-size: 0.85rem;
+    }
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .bottom-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
     }
     
-    .flash-message.success {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        border-left-color: #064e3b;
-    }
-    
-    .flash-message.error,
-    .flash-message.danger {
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-        border-left-color: #7f1d1d;
-    }
-    
-    .flash-message.warning {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-        border-left-color: #78350f;
-    }
-    
-    .flash-message.info {
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
-        color: white;
-        border-left-color: #1e3a8a;
-    }
-    
-    .flash-message i {
-        font-size: 20px;
-    }
-    
-    .flash-message .close-btn {
-        margin-left: auto;
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
+    .save-btn {
         justify-content: center;
-        transition: all 0.3s ease;
     }
     
-    .flash-message .close-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: scale(1.1);
+    .back-link {
+        justify-content: center;
     }
     
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .settings-card {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .announcements-title {
+        font-size: 1.5rem;
     }
     
-    @keyframes fadeOut {
-        from {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        to {
-            opacity: 0;
-            transform: translateY(-20px);
-            display: none;
-        }
+    .settings-card {
+        padding: 16px;
     }
-    
-    /* Dark mode flash messages */
-    .dark-mode .flash-message {
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .help-settings-container {
-            margin-left: 0;
-            padding: 20px;
-        }
-        
-        .flash-container {
-            width: 90%;
-            min-width: auto;
-        }
-        
-        .flash-message {
-            padding: 12px 16px;
-            font-size: 14px;
-        }
-        
-        .bottom-actions {
-            flex-direction: column-reverse;
-            align-items: stretch;
-        }
-        
-        .save-btn {
-            justify-content: center;
-        }
-        
-        .back-link {
-            justify-content: center;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-        }
-    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="help-settings-container">
-    <h2 class="announcements-title">📞 Help Page Settings</h2>
-    <p class="page-description">Customize the contact information and content shown on the student help page</p>
-    
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2 class="announcements-title">
+            <i class="fa-solid fa-headset"></i> Help Page Settings
+        </h2>
+        <p class="page-description">Customize the contact information and content shown on the student help page.</p>
+    </div>
+
+    <!-- Info Note -->
     <div class="info-note">
         <i class="fa-solid fa-info-circle"></i> 
-        Changes made here will immediately reflect on the student help page.
+        <span>Changes made here will immediately reflect on the student help page.</span>
     </div>
-    
+
     <form method="POST" action="{{ url_for('admin.help_settings') }}" id="helpSettingsForm">
         <!-- Contact Information Card -->
         <div class="settings-card">
@@ -340,7 +499,7 @@
         
         <!-- Common Issues Card -->
         <div class="settings-card">
-            <h3><i class="fa-solid fa-gear"></i> Common Issues</h3>
+            <h3><i class="fa-solid fa-circle-question"></i> Common Issues</h3>
             <p class="page-description" style="margin-bottom: 15px;">Enter each issue on a new line. Use bullet points (•) for formatting.</p>
             
             <div class="form-group">
@@ -351,7 +510,7 @@
             </div>
         </div>
         
-        <!-- Bottom Actions: Save Button (Left) and Back Button (Right) -->
+        <!-- Bottom Actions -->
         <div class="bottom-actions">
             <button type="submit" class="save-btn" id="saveBtn">
                 <i class="fa-solid fa-save btn-icon"></i> Save Changes
@@ -364,13 +523,13 @@
     </form>
 </div>
 
-<!-- Flash Messages Container (Floating) -->
+<!-- Flash Messages Container (Floating Top Center) -->
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         <div class="flash-container" id="flashContainer">
             {% for category, message in messages %}
                 <div class="flash-message {{ category }}">
-                    <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' or category == 'danger' %}fa-exclamation-circle{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-info-circle{% endif %}"></i>
+                    <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'error' or category == 'danger' %}fa-circle-exclamation{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
                     <span>{{ message|replace('announcements_page:', '') }}</span>
                     <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
                 </div>
@@ -380,34 +539,60 @@
 {% endwith %}
 
 <script>
-// Add spinning effect to button on click
-function addSpinningEffect(button) {
-    button.classList.add('spinning');
-    setTimeout(() => {
-        button.classList.remove('spinning');
-    }, 500);
+// ==================== THEME MANAGEMENT ====================
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
 }
 
-// Handle form submission
+(function() {
+    applyThemeToMainContent();
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
+    
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            setTimeout(applyThemeToMainContent, 50);
+        }
+    });
+    
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') applyThemeToMainContent();
+    });
+    
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') applyThemeToMainContent();
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+})();
+
+// ==================== FORM SUBMIT HANDLER ====================
 const form = document.getElementById('helpSettingsForm');
 const saveBtn = document.getElementById('saveBtn');
 
-if (form) {
+if (form && saveBtn) {
     form.addEventListener('submit', function(e) {
-        if (saveBtn) {
-            // Add spinning effect
-            addSpinningEffect(saveBtn);
-            
-            // Change button to submitting state
-            saveBtn.classList.add('submitting');
-            saveBtn.innerHTML = '<span class="btn-spinner"></span> Saving Changes...';
-            saveBtn.disabled = true;
-        }
-        // Allow form to submit normally
+        saveBtn.classList.add('spinning');
+        saveBtn.classList.add('submitting');
+        saveBtn.innerHTML = '<span class="btn-spinner"></span> Saving Changes...';
+        saveBtn.disabled = true;
     });
 }
 
-// Auto-dismiss flash messages after 5 seconds
+// ==================== AUTO-DISMISS FLASH MESSAGES ====================
 document.addEventListener('DOMContentLoaded', function() {
     const flashMessages = document.querySelectorAll('.flash-message');
     
@@ -419,8 +604,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(() => {
                     if (message.parentElement) {
                         message.remove();
-                        
-                        // Remove container if empty
                         const container = document.getElementById('flashContainer');
                         if (container && container.children.length === 0) {
                             container.remove();
@@ -438,8 +621,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(() => {
                     if (message.parentElement) {
                         message.remove();
-                        
-                        // Remove container if empty
                         const container = document.getElementById('flashContainer');
                         if (container && container.children.length === 0) {
                             container.remove();
@@ -449,6 +630,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+    
+    applyThemeToMainContent();
 });
 </script>
 {% endblock %}

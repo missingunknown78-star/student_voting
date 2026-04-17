@@ -17,9 +17,6 @@
             {% for ann in announcements %}
                 <div class="announcement-card">
                     <div class="announcement-badge">
-                        {% if loop.first %}
-                            <span class="badge-new">NEW</span>
-                        {% endif %}
                     </div>
                     <h3 class="announcement-title">{{ ann.title }}</h3>
                     <p class="announcement-content">{{ ann.content }}</p>

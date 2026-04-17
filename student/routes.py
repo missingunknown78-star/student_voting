@@ -1595,7 +1595,7 @@ def dashboard():
             Announcement.date <= end_date
         )
     
-    announcements = announcements_query.order_by(Announcement.date.desc()).all()
+    announcements = announcements_query.order_by(Announcement.created_at.desc()).all()
 
     # ================================================
     # 🔥 REMOVED: Expensive vote counting for leading candidates
@@ -1734,7 +1734,7 @@ def student_announcements():
             Announcement.date <= end_date
         )
     
-    announcements = query.order_by(Announcement.date.desc()).all()
+    announcements = query.order_by(Announcement.created_at.desc()).all()
 
     return render_template(
         'student_announcements.html',
