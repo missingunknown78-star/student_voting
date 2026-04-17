@@ -319,6 +319,18 @@ class DeletionRequest(db.Model):
     )
     admin = db.relationship('Admin', foreign_keys=[processed_by])
 
+    @property
+    def processed_by_id(self):
+        """Compatibility property for routes expecting processed_by_id"""
+        if hasattr(self, 'processed_by') and self.processed_by:
+            return self.processed_by.id
+        return None
+    
+    @property
+    def admin(self):
+        """Alias for processed_by for compatibility"""
+        return self.processed_by
+
     
 
 class ContactInfo(db.Model):

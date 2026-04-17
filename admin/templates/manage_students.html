@@ -3,430 +3,152 @@
 {% block title %}Manage Students{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_students.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-/* ================= FILTER BAR: FORCE ONE LINE ================= */
-.filter-bar {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: nowrap;              /* NEVER WRAP */
-    overflow-x: auto;               /* Allow scroll if needed */
-}
-
-.filter-bar select,
-.filter-bar input,
-.filter-bar button {
-    height: 36px;                   /* Match all heights */
-    font-size: 0.9rem;
-    white-space: nowrap;
-    box-sizing: border-box;
-}
-
-/* Fixed widths for predictable layout */
-#filterScope     { width: 180px; }
-#filterElection  { width: 220px; }
-#filterType      { width: 170px; }
-#filterValue     { width: 180px; }
-#searchInput     { width: 200px; }
-.export-btn      { min-width: 150px; }
-
-/* Disabled state styling */
-#filterElection:disabled {
-    background-color: #f5f5f5;
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-/* Dark mode disabled state */
-:root.dark-mode #filterElection:disabled {
-    background-color: #2d3748;
-    opacity: 0.5;
-}
-
-/* ---------------- PAGINATION ---------------- */
-.pagination {
-    margin-top: 20px;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-.pagination button {
-    padding: 6px 12px;
-    border: 1px solid var(--border-color);
-    background-color: var(--card-bg);
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    transition: all 0.2s ease;
-    min-width: 36px;
-}
-.pagination button:hover:not(:disabled) {
-    background-color: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
-}
-.pagination button:disabled {
-    background-color: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
-    cursor: default;
-}
-
-/* ---------------- STATUS BADGES ---------------- */
-.status-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    min-width: 80px;
-    text-align: center;
-}
-.status-badge.voted { background-color: #27ae60; color: #fff; }
-.status-badge.not-voted { background-color: #c0392b; color: #fff; }
-
-/* ==================== EMPTY STATE STYLES ==================== */
-.empty-state-container {
-    padding: 40px 20px;
-    text-align: center;
-    background: var(--card-bg);
-    border-radius: 12px;
-    margin: 20px 0;
-    border: 1px dashed var(--border-color);
-}
-
-.empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    opacity: 0.7;
-}
-
-.empty-state-icon i {
-    font-size: 4rem;
-    color: var(--text-secondary);
-}
-
-.empty-state-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--text-primary);
-}
-
-.empty-state-message {
-    font-size: 1rem;
-    color: var(--text-secondary);
-    margin-bottom: 25px;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.6;
-}
-
-.empty-state-suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.suggestion-item {
-    background: rgba(67, 97, 238, 0.1);
-    padding: 12px 20px;
-    border-radius: 30px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    border: 1px solid rgba(67, 97, 238, 0.2);
-}
-
-.suggestion-item i {
-    font-size: 1rem;
-}
-
-.suggestion-item.highlight {
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-    color: white;
-    border: none;
-    box-shadow: 0 4px 15px rgba(102, 176, 255, 0.4);
-}
-
-.suggestion-item.highlight i {
-    color: white;
-}
-
-/* Scope selection empty state */
-.scope-empty-state {
-    padding: 60px 20px;
-}
-
-.scope-empty-icon {
-    font-size: 5rem;
-    margin-bottom: 20px;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 0.7; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.05); }
-    100% { opacity: 0.7; transform: scale(1); }
-}
-
-/* No elections empty state */
-.no-elections-empty-state {
-    background: rgba(247, 37, 133, 0.05);
-    border-color: rgba(247, 37, 133, 0.3);
-}
-
-.no-elections-icon {
-    color: #f72585;
-}
-
-/* No students empty state */
-.no-students-empty-state {
-    background: rgba(255, 193, 7, 0.05);
-    border-color: rgba(255, 193, 7, 0.3);
-}
-
-.no-students-icon {
-    color: #ffc107;
-}
-
-/* Loading spinner */
-.loading-spinner {
-    display: inline-block;
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(67, 97, 238, 0.3);
-    border-radius: 50%;
-    border-top-color: var(--accent-color);
-    animation: spin 1s ease-in-out infinite;
-    margin: 30px auto;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Year level badge in election dropdown (for the select options) */
-.election-year-badge {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    margin-left: 5px;
-    background: linear-gradient(135deg, #6c5ce7, #a363d9);
-    color: white;
-    vertical-align: middle;
-}
-
-/* ==================== THEME TRANSITION FIXES ==================== */
-.main-content {
-    transition: background-color 0.3s ease, background-image 0.3s ease !important;
-}
-
-.manage-students-page {
-    background: transparent !important;
-}
-
-/* Make sure the floating toggle from base is visible */
-.floating-theme-toggle {
-    display: block !important;
-    z-index: 10000;
-}
-
-/* Disable transitions during theme change */
-.no-transition * {
-    transition: none !important;
-}
-
-/* Header right container - now flex row to accommodate elements */
-.header-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 15px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .header-right {
-        flex-direction: column;
-        width: 100%;
-        gap: 10px;
-    }
-    
-    .request-deletion-btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="manage-students-page">
-
-    <div class="page-header-with-button">
+    <!-- Page Header -->
+    <div class="page-header">
         <div class="header-left">
-            <h1 class="page-title">Manage Students</h1>
+            <h1 class="page-title">
+                <i class="fas fa-users" style="margin-right: 10px;"></i>
+                Manage Students
+            </h1>
+            <p class="page-description">View and monitor registered voters' participation in elections.</p>
         </div>
-        <div class="header-center"></div>
         <div class="header-right">
-            <!-- NEW: Manage All Students Button -->
             <a href="{{ url_for('admin.all_registered_students') }}" class="manage-all-btn">
-                <i class="fa-solid fa-users"></i> Manage All Students
+                <i class="fas fa-user-plus"></i> Manage All Students
             </a>
-            
-            <a href="{{ url_for('admin.account_deletion_requests') }}" class="request-deletion-btn">
-                <i class="fa-solid fa-clock"></i> Request Deletion
+            <a href="{{ url_for('admin.account_deletion_requests') }}" class="deletion-requests-btn">
+                <i class="fas fa-trash-alt"></i> Deletion Requests
             </a>
         </div>
     </div>
-    <p class="page-description">View and monitor registered voters' participation.</p>
 
-    <!-- ================= FILTER BAR ================= -->
-    <div class="filter-bar">
+    <!-- Filter Bar -->
+    <div class="filter-card">
+        <div class="filter-bar">
+            <select id="filterScope" class="filter-select">
+                <option value="">-- Select Scope --</option>
+                <option value="campus">Campus-Wide Election</option>
+                <option value="department">Department Election</option>
+            </select>
 
-        <!-- 1. SCOPE FILTER -->
-        <select id="filterScope">
-            <option value="">-- Select Scope --</option>
-            <option value="campus">Campus-Wide Election</option>
-            <option value="department">Department Election</option>
-        </select>
+            <select id="filterElection" class="filter-select" disabled>
+                <option value="all">All Elections</option>
+            </select>
 
-        <!-- 2. ELECTION FILTER - Initially empty/disabled -->
-        <select id="filterElection" disabled>
-            <option value="all">All Elections</option>
-        </select>
+            <select id="filterType" class="filter-select">
+                <option value="all">All Students</option>
+                <option value="department">By Department</option>
+                <option value="course">By Course</option>
+            </select>
 
-        <!-- 3. FILTER TYPE (All/Department/Course) -->
-        <select id="filterType">
-            <option value="all">All Students</option>
-            <option value="department">By Department</option>
-            <option value="course">By Course</option>
-        </select>
+            <select id="filterValue" class="filter-select" style="display:none"></select>
 
-        <!-- 4. FILTER VALUE (Dynamic based on filter type) -->
-        <select id="filterValue" style="display:none"></select>
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by ID, name, or course...">
+            </div>
 
-        <!-- 5. SEARCH INPUT -->
-        <input type="text" id="searchInput" placeholder="Search by ID, name, or course...">
-
-        <!-- 6. EXPORT BUTTON -->
-        <button class="export-btn" onclick="exportExcel()">
-            <i class="fa-solid fa-file-excel"></i> Export Excel
-        </button>
-
+            <button class="export-btn" onclick="exportExcel()">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </div>
     </div>
 
-    <!-- ================= TABLE CONTAINER ================= -->
-    <div class="table-container">
-        <!-- Students Table - Actions column removed -->
-        <table class="students-table" id="studentsTable" style="display: none;">
-            <thead>
-                <tr>
-                    <th>Student ID</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Course</th>
-                    <th>Year Level</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="studentsBody">
-                <!-- AJAX CONTENT -->
-            </tbody>
-        </table>
+    <!-- Table Container -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="data-table" id="studentsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Course</th>
+                        <th>Year Level</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody"></tbody>
+            </table>
+        </div>
 
         <!-- Empty State: No Scope Selected -->
-        <div id="noScopeState" class="empty-state-container scope-empty-state">
-            <div class="empty-state-icon scope-empty-icon">
-                <i class="fa-solid fa-magnifying-glass"></i>
+        <div id="noScopeState" class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-magnifying-glass"></i>
             </div>
-            <h3 class="empty-state-title">Select an Election Scope</h3>
-            <p class="empty-state-message">
-                Please select whether you want to view students for Campus-Wide or Department elections.
-                This will help filter the elections available and monitor students' participation in election process effectively.
-            </p>
+            <h3>Select an Election Scope</h3>
+            <p>Please select whether you want to view students for Campus-Wide or Department elections.</p>
             <div class="empty-state-suggestions">
-                <div class="suggestion-item">
-                    <i class="fa-solid fa-globe"></i>
+                <div class="suggestion-badge">
+                    <i class="fas fa-globe"></i>
                     <span>Campus-Wide Elections</span>
                 </div>
-                <div class="suggestion-item">
-                    <i class="fa-solid fa-building"></i>
+                <div class="suggestion-badge">
+                    <i class="fas fa-building"></i>
                     <span>Department Elections</span>
                 </div>
             </div>
         </div>
 
-        <!-- Empty State: No Elections Available for Selected Scope -->
-        <div id="noElectionsState" class="empty-state-container no-elections-empty-state" style="display: none;">
-            <div class="empty-state-icon no-elections-icon">
-                <i class="fa-solid fa-calendar-xmark"></i>
+        <!-- Empty State: No Elections Available -->
+        <div id="noElectionsState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">
+                <i class="fas fa-calendar-xmark"></i>
             </div>
-            <h3 class="empty-state-title">No Elections Available</h3>
-            <p class="empty-state-message" id="noElectionsMessage">
-                There are no elections available for the selected scope.
-            </p>
+            <h3>No Elections Available</h3>
+            <p id="noElectionsMessage">There are no elections available for the selected scope.</p>
             <div class="empty-state-suggestions">
-                <a href="{{ url_for('admin.create_election') }}" class="suggestion-item highlight">
-                    <i class="fa-solid fa-plus-circle"></i>
+                <a href="{{ url_for('admin.create_election') }}" class="suggestion-badge highlight">
+                    <i class="fas fa-plus-circle"></i>
                     <span>Create New Election</span>
                 </a>
-                <div class="suggestion-item">
-                    <i class="fa-solid fa-arrow-left"></i>
+                <div class="suggestion-badge">
+                    <i class="fas fa-arrow-left"></i>
                     <span>Select Different Scope</span>
                 </div>
             </div>
         </div>
 
         <!-- Empty State: No Students Found -->
-        <div id="noStudentsState" class="empty-state-container no-students-empty-state" style="display: none;">
-            <div class="empty-state-icon no-students-icon">
-                <i class="fa-solid fa-users-slash"></i>
+        <div id="noStudentsState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">
+                <i class="fas fa-users-slash"></i>
             </div>
-            <h3 class="empty-state-title">No Students Found</h3>
-            <p class="empty-state-message" id="noStudentsMessage">
-                No students match your current filter criteria.
-            </p>
+            <h3>No Students Found</h3>
+            <p id="noStudentsMessage">No students match your current filter criteria.</p>
             <div class="empty-state-suggestions">
-                <div class="suggestion-item" onclick="clearAllFilters()" style="cursor: pointer;">
-                    <i class="fa-solid fa-eraser"></i>
+                <div class="suggestion-badge" onclick="clearAllFilters()">
+                    <i class="fas fa-eraser"></i>
                     <span>Clear All Filters</span>
                 </div>
             </div>
         </div>
 
         <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="loading-spinner" style="display: none;"></div>
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading students...</p>
+        </div>
 
         <!-- Pagination -->
         <div class="pagination" id="pagination"></div>
     </div>
-
 </div>
 
-<!-- ================= SAFE JSON DATA ================= -->
 <script type="application/json" id="departments-data">{{ departments | tojson }}</script>
 <script type="application/json" id="courses-data">{{ courses | tojson }}</script>
 <script type="application/json" id="elections-data">{{ elections | tojson }}</script>
 
-<!-- ================= JAVASCRIPT ================= -->
 <script>
-// === DATA ===
+// ==================== DATA ====================
 const departments = JSON.parse(document.getElementById("departments-data").textContent);
 const courses = JSON.parse(document.getElementById("courses-data").textContent);
 const allElections = JSON.parse(document.getElementById("elections-data").textContent);
@@ -437,7 +159,6 @@ const filterElectionEl = document.getElementById("filterElection");
 const filterTypeEl = document.getElementById("filterType");
 const filterValueEl = document.getElementById("filterValue");
 
-// DOM Elements for empty states
 const studentsTable = document.getElementById("studentsTable");
 const noScopeState = document.getElementById("noScopeState");
 const noElectionsState = document.getElementById("noElectionsState");
@@ -446,262 +167,7 @@ const loadingSpinner = document.getElementById("loadingSpinner");
 const noElectionsMessage = document.getElementById("noElectionsMessage");
 const noStudentsMessage = document.getElementById("noStudentsMessage");
 
-// === FILTER ELECTIONS BY SCOPE ===
-function filterElectionsByScope(scope) {
-    // Clear current options
-    filterElectionEl.innerHTML = '<option value="all">All Elections</option>';
-    
-    if (!scope) {
-        // No scope selected - disable election filter
-        filterElectionEl.disabled = true;
-        
-        // Show no scope state, hide others
-        showEmptyState('noScope');
-        return;
-    }
-    
-    // Filter elections based on scope
-    const filteredElections = allElections.filter(election => {
-        if (scope === 'campus') {
-            return election.scope === 'campus';
-        } else if (scope === 'department') {
-            return election.scope === 'department';
-        }
-        return false;
-    });
-    
-    // Add filtered elections to dropdown with year level info
-    filteredElections.forEach(election => {
-        const option = document.createElement('option');
-        option.value = election.id;
-        
-        // Add year level info to the display text
-        let displayText = election.title;
-        if (election.scope === 'campus' && election.year_levels) {
-            if (election.year_levels === 'all') {
-                displayText += ' (All Years)';
-            } else {
-                // Format year levels nicely
-                const years = election.year_levels.split(',');
-                const yearText = years.map(y => y + (y === '1' ? 'st' : y === '2' ? 'nd' : y === '3' ? 'rd' : 'th') + ' Year').join(', ');
-                displayText += ` (${yearText})`;
-            }
-        }
-        
-        option.textContent = displayText;
-        filterElectionEl.appendChild(option);
-    });
-    
-    if (filteredElections.length === 0) {
-        // No elections for this scope
-        filterElectionEl.innerHTML = '<option value="all">No Elections Available</option>';
-        filterElectionEl.disabled = true;
-        
-        // Show no elections state
-        let scopeText = scope === 'campus' ? 'Campus-Wide' : 'Department';
-        noElectionsMessage.textContent = `There are no ${scopeText} elections available for the selected school year. Create one to get started.`;
-        showEmptyState('noElections');
-    } else {
-        // Elections found - enable dropdown and load data
-        filterElectionEl.disabled = false;
-        loadStudents(1);
-    }
-}
-
-// === SHOW EMPTY STATE ===
-function showEmptyState(type) {
-    // Hide all
-    studentsTable.style.display = 'none';
-    noScopeState.style.display = 'none';
-    noElectionsState.style.display = 'none';
-    noStudentsState.style.display = 'none';
-    document.getElementById('pagination').innerHTML = '';
-    
-    // Show requested state
-    if (type === 'noScope') {
-        noScopeState.style.display = 'block';
-    } else if (type === 'noElections') {
-        noElectionsState.style.display = 'block';
-    } else if (type === 'noStudents') {
-        noStudentsState.style.display = 'block';
-    }
-}
-
-// === SHOW LOADING ===
-function showLoading(show) {
-    if (show) {
-        loadingSpinner.style.display = 'block';
-        studentsTable.style.display = 'none';
-        noScopeState.style.display = 'none';
-        noElectionsState.style.display = 'none';
-        noStudentsState.style.display = 'none';
-        document.getElementById('pagination').innerHTML = '';
-    } else {
-        loadingSpinner.style.display = 'none';
-    }
-}
-
-// === CLEAR ALL FILTERS ===
-function clearAllFilters() {
-    filterScopeEl.value = '';
-    filterElectionEl.innerHTML = '<option value="all">All Elections</option>';
-    filterElectionEl.disabled = true;
-    filterTypeEl.value = 'all';
-    filterValueEl.style.display = 'none';
-    filterValueEl.innerHTML = '';
-    document.getElementById('searchInput').value = '';
-    
-    showEmptyState('noScope');
-}
-
-// === LOAD STUDENTS ===
-function loadStudents(page = 1) {
-    currentPage = page;
-    const search = document.getElementById("searchInput").value;
-    const filterType = filterTypeEl.value;
-    const filterValue = filterValueEl.value;
-    const electionId = filterElectionEl.value;
-    const scope = filterScopeEl.value;
-
-    // Don't load if no scope selected
-    if (!scope) {
-        showEmptyState('noScope');
-        return;
-    }
-
-    // Check if election dropdown is disabled (no elections available)
-    if (filterElectionEl.disabled && filterElectionEl.options.length === 1 && filterElectionEl.options[0].text === 'No Elections Available') {
-        showEmptyState('noElections');
-        return;
-    }
-
-    // Show loading spinner
-    showLoading(true);
-
-    let url = `/ctumoalboal-comelec/students/data?page=${page}&search=${encodeURIComponent(search)}`;
-    if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
-    if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
-
-    fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            // Hide loading spinner
-            showLoading(false);
-            
-            const body = document.getElementById("studentsBody");
-            const pagination = document.getElementById("pagination");
-            body.innerHTML = "";
-            pagination.innerHTML = "";
-
-            if (data.students.length === 0) {
-                // No students found
-                studentsTable.style.display = 'none';
-                
-                // Customize message based on filters
-                let message = 'No students match your current filter criteria.';
-                if (search) {
-                    message = `No students found matching "${search}".`;
-                } else if (filterType !== 'all' && filterValue) {
-                    const filterName = filterType === 'department' ? 'department' : 'course';
-                    message = `No students found in this ${filterName}.`;
-                } else if (electionId && electionId !== 'all') {
-                    // Get election title
-                    const selectedElection = Array.from(filterElectionEl.options).find(opt => opt.value === electionId);
-                    const electionTitle = selectedElection ? selectedElection.text : 'this election';
-                    message = `No eligible students found for ${electionTitle}.`;
-                }
-                
-                noStudentsMessage.textContent = message;
-                showEmptyState('noStudents');
-                return;
-            }
-
-            // Show table
-            studentsTable.style.display = 'table';
-            
-            // Populate table - Actions column removed
-            data.students.forEach(s => {
-                const statusClass = s.has_voted ? "voted" : "not-voted";
-                const statusText = s.has_voted ? "Voted" : "Not Voted";
-
-                body.innerHTML += `
-                <tr>
-                    <td>${s.id_number || ""}</td>
-                    <td>${s.first_name || ""}</td>
-                    <td>${s.last_name || ""}</td>
-                    <td>${s.course || ""}</td>
-                    <td>${s.year_level || ""}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                </tr>`;
-            });
-
-            // Pagination
-            for (let i = 1; i <= data.total_pages; i++) {
-                pagination.innerHTML += `<button onclick="loadStudents(${i})" ${i === data.current_page ? "disabled" : ""}>${i}</button>`;
-            }
-            
-            // Ensure theme is applied to newly loaded content
-            applyThemeToMainContent();
-        })
-        .catch(error => {
-            console.error('Error loading students:', error);
-            showLoading(false);
-            alert('Error loading students. Please try again.');
-        });
-}
-
-// === SCOPE CHANGE HANDLER ===
-filterScopeEl.addEventListener("change", () => {
-    const scope = filterScopeEl.value;
-    filterElectionsByScope(scope);
-    
-    // Reset other filters
-    filterTypeEl.value = "all";
-    filterValueEl.style.display = "none";
-    filterValueEl.innerHTML = "";
-    document.getElementById('searchInput').value = '';
-});
-
-// === FILTER TYPE CHANGE HANDLER ===
-filterTypeEl.addEventListener("change", () => {
-    filterValueEl.innerHTML = "";
-    if (filterTypeEl.value === "all") {
-        filterValueEl.style.display = "none";
-        loadStudents(1);
-        return;
-    }
-    filterValueEl.style.display = "inline-block";
-    const data = filterTypeEl.value === "department" ? departments : courses;
-    data.forEach(item => filterValueEl.innerHTML += `<option value="${item.id}">${item.name}</option>`);
-    loadStudents(1);
-});
-
-// === OTHER EVENT HANDLERS ===
-filterValueEl.addEventListener("change", () => loadStudents(1));
-document.getElementById("searchInput").addEventListener("keyup", () => loadStudents(1));
-filterElectionEl.addEventListener("change", () => loadStudents(1));
-
-// === EXPORT ===
-function exportExcel() {
-    const scope = filterScopeEl.value;
-    if (!scope) {
-        alert("Please select a scope first");
-        return;
-    }
-    
-    const filterType = filterTypeEl.value;
-    const filterValue = filterValueEl.value;
-    const search = document.getElementById("searchInput").value;
-    const electionId = filterElectionEl.value;
-
-    let url = `/ctumoalboal-comelec/students/export-excel?search=${encodeURIComponent(search)}`;
-    if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
-    if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
-
-    window.location.href = url;
-}
-
-// =============== SIMPLE THEME FUNCTION ===============
+// ==================== THEME MANAGEMENT ====================
 function applyThemeToMainContent() {
     const mainContent = document.querySelector('.main-content');
     if (!mainContent) return;
@@ -715,56 +181,255 @@ function applyThemeToMainContent() {
     } else {
         mainContent.classList.remove('dark-mode');
     }
-    
-    mainContent.classList.add('theme-applied');
 }
 
-// Apply immediately when page loads
 (function() {
     applyThemeToMainContent();
-    
     setTimeout(applyThemeToMainContent, 10);
     setTimeout(applyThemeToMainContent, 50);
     setTimeout(applyThemeToMainContent, 100);
     
-    // Listen for theme toggle clicks (floating button)
     document.addEventListener('click', function(e) {
         if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
+            setTimeout(applyThemeToMainContent, 50);
         }
     });
     
-    // Watch for storage changes (theme changed in another tab)
     window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
+        if (e.key === 'theme') applyThemeToMainContent();
     });
     
-    // Watch for class changes on html
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
-                applyThemeToMainContent();
-            }
+            if (mutation.attributeName === 'class') applyThemeToMainContent();
         });
     });
-    
     observer.observe(document.documentElement, { attributes: true });
 })();
 
-// Handle AJAX-loaded content
-if (typeof $ !== 'undefined') {
-    $(document).ajaxComplete(function() {
-        setTimeout(applyThemeToMainContent, 50);
+// ==================== FILTER ELECTIONS BY SCOPE ====================
+function filterElectionsByScope(scope) {
+    filterElectionEl.innerHTML = '<option value="all">All Elections</option>';
+    
+    if (!scope) {
+        filterElectionEl.disabled = true;
+        showEmptyState('noScope');
+        return;
+    }
+    
+    const filteredElections = allElections.filter(election => election.scope === scope);
+    
+    filteredElections.forEach(election => {
+        const option = document.createElement('option');
+        option.value = election.id;
+        let displayText = election.title;
+        if (election.scope === 'campus' && election.year_levels && election.year_levels !== 'all') {
+            const years = election.year_levels.split(',');
+            const yearText = years.map(y => y + (y === '1' ? 'st' : y === '2' ? 'nd' : y === '3' ? 'rd' : 'th')).join(', ');
+            displayText += ` (${yearText} Year)`;
+        }
+        option.textContent = displayText;
+        filterElectionEl.appendChild(option);
     });
+    
+    if (filteredElections.length === 0) {
+        filterElectionEl.innerHTML = '<option value="all">No Elections Available</option>';
+        filterElectionEl.disabled = true;
+        const scopeText = scope === 'campus' ? 'Campus-Wide' : 'Department';
+        noElectionsMessage.textContent = `There are no ${scopeText} elections available. Create one to get started.`;
+        showEmptyState('noElections');
+    } else {
+        filterElectionEl.disabled = false;
+        loadStudents(1);
+    }
 }
 
-// === INIT ===
+// ==================== SHOW EMPTY STATE ====================
+function showEmptyState(type) {
+    studentsTable.style.display = 'none';
+    noScopeState.style.display = 'none';
+    noElectionsState.style.display = 'none';
+    noStudentsState.style.display = 'none';
+    document.getElementById('pagination').innerHTML = '';
+    
+    if (type === 'noScope') noScopeState.style.display = 'block';
+    else if (type === 'noElections') noElectionsState.style.display = 'block';
+    else if (type === 'noStudents') noStudentsState.style.display = 'block';
+}
+
+// ==================== SHOW LOADING ====================
+function showLoading(show) {
+    if (show) {
+        loadingSpinner.style.display = 'block';
+        studentsTable.style.display = 'none';
+        noScopeState.style.display = 'none';
+        noElectionsState.style.display = 'none';
+        noStudentsState.style.display = 'none';
+        document.getElementById('pagination').innerHTML = '';
+    } else {
+        loadingSpinner.style.display = 'none';
+    }
+}
+
+// ==================== CLEAR ALL FILTERS ====================
+function clearAllFilters() {
+    filterScopeEl.value = '';
+    filterElectionEl.innerHTML = '<option value="all">All Elections</option>';
+    filterElectionEl.disabled = true;
+    filterTypeEl.value = 'all';
+    filterValueEl.style.display = 'none';
+    filterValueEl.innerHTML = '';
+    document.getElementById('searchInput').value = '';
+    showEmptyState('noScope');
+}
+
+// ==================== LOAD STUDENTS ====================
+function loadStudents(page = 1) {
+    currentPage = page;
+    const search = document.getElementById("searchInput").value;
+    const filterType = filterTypeEl.value;
+    const filterValue = filterValueEl.value;
+    const electionId = filterElectionEl.value;
+    const scope = filterScopeEl.value;
+
+    if (!scope) {
+        showEmptyState('noScope');
+        return;
+    }
+
+    if (filterElectionEl.disabled && filterElectionEl.options.length === 1 && filterElectionEl.options[0].text === 'No Elections Available') {
+        showEmptyState('noElections');
+        return;
+    }
+
+    showLoading(true);
+
+    let url = `/ctumoalboal-comelec/students/data?page=${page}&search=${encodeURIComponent(search)}`;
+    if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
+    if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            showLoading(false);
+            
+            const body = document.getElementById("studentsBody");
+            const pagination = document.getElementById("pagination");
+            body.innerHTML = "";
+            pagination.innerHTML = "";
+
+            if (data.students.length === 0) {
+                studentsTable.style.display = 'none';
+                let message = 'No students match your current filter criteria.';
+                if (search) message = `No students found matching "${search}".`;
+                else if (filterType !== 'all' && filterValue) {
+                    const filterName = filterType === 'department' ? 'department' : 'course';
+                    message = `No students found in this ${filterName}.`;
+                }
+                noStudentsMessage.textContent = message;
+                showEmptyState('noStudents');
+                return;
+            }
+
+            studentsTable.style.display = 'table';
+            
+            data.students.forEach(s => {
+                const statusClass = s.has_voted ? "voted" : "not-voted";
+                const statusText = s.has_voted ? "Voted" : "Not Voted";
+                body.innerHTML += `
+                    <tr>
+                        <td>${escapeHtml(s.id_number || "")}</td>
+                        <td>${escapeHtml(s.first_name || "")}</td>
+                        <td>${escapeHtml(s.last_name || "")}</td>
+                        <td>${escapeHtml(s.course || "")}</td>
+                        <td>${escapeHtml(s.year_level || "")}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            });
+
+            for (let i = 1; i <= data.total_pages; i++) {
+                pagination.innerHTML += `<button class="page-btn ${i === data.current_page ? 'active' : ''}" onclick="loadStudents(${i})">${i}</button>`;
+            }
+            
+            applyThemeToMainContent();
+        })
+        .catch(error => {
+            console.error('Error loading students:', error);
+            showLoading(false);
+            alert('Error loading students. Please try again.');
+        });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ==================== EVENT HANDLERS ====================
+filterScopeEl.addEventListener("change", () => {
+    filterElectionsByScope(filterScopeEl.value);
+    filterTypeEl.value = "all";
+    filterValueEl.style.display = "none";
+    filterValueEl.innerHTML = "";
+    document.getElementById('searchInput').value = '';
+});
+
+filterTypeEl.addEventListener("change", () => {
+    filterValueEl.innerHTML = "";
+    if (filterTypeEl.value === "all") {
+        filterValueEl.style.display = "none";
+        loadStudents(1);
+        return;
+    }
+    filterValueEl.style.display = "inline-block";
+    const data = filterTypeEl.value === "department" ? departments : courses;
+    data.forEach(item => filterValueEl.innerHTML += `<option value="${item.id}">${escapeHtml(item.name)}</option>`);
+    loadStudents(1);
+});
+
+filterValueEl.addEventListener("change", () => loadStudents(1));
+document.getElementById("searchInput").addEventListener("keyup", () => loadStudents(1));
+filterElectionEl.addEventListener("change", () => loadStudents(1));
+
+// ==================== EXPORT WITH SPINNING ANIMATION ====================
+function exportExcel() {
+    const scope = filterScopeEl.value;
+    if (!scope) {
+        alert("Please select a scope first");
+        return;
+    }
+    
+    const exportBtn = document.querySelector('.export-btn');
+    const originalIcon = exportBtn.innerHTML;
+    
+    // Change button to loading state
+    exportBtn.classList.add('exporting');
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+    
+    const filterType = filterTypeEl.value;
+    const filterValue = filterValueEl.value;
+    const search = document.getElementById("searchInput").value;
+    const electionId = filterElectionEl.value;
+
+    let url = `/ctumoalboal-comelec/students/export-excel?search=${encodeURIComponent(search)}`;
+    if (electionId && electionId !== "all") url += `&election_id=${electionId}`;
+    if (filterType !== "all" && filterValue) url += `&filter_type=${filterType}&filter_id=${filterValue}`;
+
+    // Trigger download
+    window.location.href = url;
+    
+    // Reset button after 2 seconds (enough time for download to start)
+    setTimeout(() => {
+        exportBtn.classList.remove('exporting');
+        exportBtn.innerHTML = originalIcon;
+    }, 2000);
+}
+
+// ==================== INITIALIZE ====================
 document.addEventListener("DOMContentLoaded", () => {
-    // Initially, show no scope selected state
     showEmptyState('noScope');
     applyThemeToMainContent();
 });

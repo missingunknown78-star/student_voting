@@ -4537,49 +4537,60 @@ def get_deletion_requests_stats():
 @admin_bp.route('/deletion-requests/<int:request_id>')
 @admin_required
 def get_deletion_request(request_id):
-    """Get details of a specific deletion request - handles both pending and processed requests"""
+    """Get details of a specific deletion request - fetches from audit table for processed requests"""
     try:
-        req = DeletionRequest.query.get_or_404(request_id)
+        # First try to get from deletion_requests table (pending requests)
+        req = DeletionRequest.query.get(request_id)
         
-        # Handle student info - for approved requests, the student may be deleted
-        student_name = "Unknown"
-        student_id_number = "N/A"
+        if req:
+            # This is a pending request - student still exists
+            student_name = "Unknown"
+            student_id_number = "N/A"
+            
+            if req.student:
+                student_name = f"{req.student.first_name} {req.student.last_name}"
+                student_id_number = req.student.id_number if req.student.id_number else "N/A"
+            
+            return jsonify({
+                'success': True,
+                'from_audit': False,
+                'id': req.id,
+                'student_name': student_name,
+                'student_id_number': student_id_number,
+                'reason': req.reason,
+                'request_date': req.request_date.isoformat() if req.request_date else None,
+                'status': req.status,
+                'admin_notes': req.admin_notes,
+                'processed_by_name': req.processed_by.username if req.processed_by else None,
+                'processed_date': req.processed_date.isoformat() if req.processed_date else None
+            })
         
-        # Try to get student info safely
-        if req.student:
-            student_name = f"{req.student.first_name} {req.student.last_name}"
-            student_id_number = req.student.id_number if req.student.id_number else "N/A"
-        else:
-            # For approved/deleted requests, try to get info from audit log
-            from admin.models import DeletionRequestAudit
-            audit = DeletionRequestAudit.query.filter_by(original_request_id=req.id).first()
-            if audit:
-                student_name = audit.student_name
-                student_id_number = audit.student_id_number
+        # If not found in deletion_requests, check the audit table (processed requests)
+        audit = DeletionRequestAudit.query.filter_by(original_request_id=request_id).first()
         
-        # Get processed by admin name
-        processed_by_name = None
-        if req.admin:
-            processed_by_name = req.admin.username
-        elif req.processed_by_id:
-            # Try to get admin even if relationship is lazy
-            from admin.models import Admin
-            admin = Admin.query.get(req.processed_by_id)
-            if admin:
-                processed_by_name = admin.username
+        if audit:
+            # This is a processed request - get data from audit table
+            return jsonify({
+                'success': True,
+                'from_audit': True,
+                'id': audit.id,
+                'original_request_id': audit.original_request_id,
+                'student_name': audit.student_name,
+                'student_id_number': audit.student_id_number,
+                'reason': audit.reason,
+                'request_date': audit.request_date.isoformat() if audit.request_date else None,
+                'status': audit.status,
+                'admin_notes': audit.admin_notes,
+                'processed_by_name': audit.processed_by_username,
+                'processed_date': audit.processed_date.isoformat() if audit.processed_date else None,
+                'votes_anonymized': audit.votes_anonymized
+            })
         
+        # Not found in either table
         return jsonify({
-            'success': True,
-            'id': req.id,
-            'student_name': student_name,
-            'student_id_number': student_id_number,
-            'reason': req.reason,
-            'request_date': req.request_date.isoformat() if req.request_date else None,
-            'status': req.status,
-            'admin_notes': req.admin_notes,
-            'processed_by_name': processed_by_name,
-            'processed_date': req.processed_date.isoformat() if req.processed_date else None
-        })
+            'success': False,
+            'error': 'Deletion request not found'
+        }), 404
         
     except Exception as e:
         current_app.logger.error(f"Error getting deletion request {request_id}: {str(e)}")
@@ -4616,9 +4627,9 @@ def process_deletion_request(request_id):
         student_id = student.id
         student_id_number = student.id_number
         
-        # Store data for audit log BEFORE any deletion
+        # Store data for audit log
         audit_data = {
-            'original_request_id': req.id,
+            'original_request_id': req.id,  # IMPORTANT: Store the original request ID
             'student_id': student_id,
             'student_name': student_name,
             'student_id_number': student_id_number,
@@ -4634,70 +4645,57 @@ def process_deletion_request(request_id):
         vote_count = 0
         
         if action == 'approve':
-            print(f"✅ APPROVING - Cleaning up all records for student ID: {student_id}")
-            
-            # ========== STEP 1: Handle ALL related tables ==========
+            print(f"✅ APPROVING - Cleaning up records for student ID: {student_id}")
             
             # 1. Votes - anonymize them
             votes = Vote.query.filter_by(student_id=student_id).all()
             vote_count = len(votes)
-            print(f"📊 Anonymizing {vote_count} votes")
             for vote in votes:
                 vote.original_student_id = student_id
                 vote.anonymized_at = datetime.utcnow()
                 vote.student_id = None
             
-            # 2. Pending Candidates - delete them
+            # 2. Delete related records
             pending = PendingCandidate.query.filter_by(student_id=student_id).all()
-            print(f"📊 Deleting {len(pending)} pending candidates")
             for p in pending:
                 db.session.delete(p)
             
-            # 3. Qualified Candidates - delete them
             qualified = QualifiedCandidate.query.filter_by(student_id=student_id).all()
-            print(f"📊 Deleting {len(qualified)} qualified candidates")
             for q in qualified:
                 db.session.delete(q)
             
-            # 4. Trusted Devices - delete them
             devices = TrustedDevice.query.filter_by(student_id=student_id).all()
-            print(f"📊 Deleting {len(devices)} trusted devices")
             for d in devices:
                 db.session.delete(d)
             
-            # 5. Other tables (set to NULL)
-            guidelines = GuidelinesContent.query.filter_by(updated_by=student_id).all()
-            for g in guidelines:
-                g.updated_by = None
-            
-            contacts = ContactInfo.query.filter_by(updated_by=student_id).all()
-            for c in contacts:
-                c.updated_by = None
-            
-            help_contents = HelpPageContent.query.filter_by(updated_by=student_id).all()
-            for h in help_contents:
-                h.updated_by = None
-            
-            # ========== STEP 2: Create audit log entry ==========
+            # 3. Create audit log entry
             audit_entry = DeletionRequestAudit(
                 **audit_data,
                 status='approved',
                 votes_anonymized=vote_count
             )
             db.session.add(audit_entry)
-            print(f"📝 Created audit log entry")
             
-            # ========== STEP 3: Delete the current deletion request ==========
-            print(f"📊 Deleting current deletion request")
-            db.session.delete(req)
+            # 4. Update the deletion request status (DO NOT DELETE)
+            req.status = 'approved'
+            req.processed_date = datetime.utcnow()
+            req.processed_by = current_user.id
+            req.admin_notes = admin_notes
             
-            # ========== STEP 4: Delete the student ==========
-            print(f"🗑️ Deleting student record")
-            db.session.delete(student)
+            # 5. Anonymize student data
+            student.first_name = f"Deleted_{student.id}"
+            student.last_name = "User"
+            student.email = f"deleted_{student.id}@deleted.local"
+            student.username = f"deleted_{student.id}"
+            student.id_number = None
+            student.password = None
+            student.deletion_requested = True
+            student.deletion_request_date = datetime.utcnow()
+            student.deletion_processed = True
+            student.deletion_processed_date = datetime.utcnow()
             
-            # ========== STEP 5: Commit everything ==========
             db.session.commit()
-            print(f"✅ Student {student_name} deleted successfully!")
+            print(f"✅ Student {student_name} anonymized, request marked approved")
             
         else:  # reject
             print(f"🚫 REJECTING - Creating audit log")
@@ -4710,11 +4708,12 @@ def process_deletion_request(request_id):
             )
             db.session.add(audit_entry)
             
-            # ========== STEP 3: Delete the current deletion request ==========
-            print(f"📊 Deleting current deletion request")
-            db.session.delete(req)
+            # Update the deletion request status (DO NOT DELETE)
+            req.status = 'rejected'
+            req.processed_date = datetime.utcnow()
+            req.processed_by = current_user.id
+            req.admin_notes = admin_notes
             
-            # ========== STEP 4: Commit ==========
             db.session.commit()
             print(f"✅ Request rejected, audit log created")
         
@@ -9081,7 +9080,7 @@ def election_results_pdf(election_id):
                                          backColor=colors.HexColor('#b8d9f5'),
                                          spaceAfter=8, spaceBefore=8,
                                          borderPadding=8, fontName='Helvetica-Bold')
-    story.append(Paragraph("📊 DETAILED RESULTS BY POSITION", detail_title_style))
+    story.append(Paragraph("DETAILED RESULTS BY POSITION", detail_title_style))
     story.append(Spacer(1, 0.05*inch))
     
     # Group by position

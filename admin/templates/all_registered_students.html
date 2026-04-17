@@ -3,328 +3,363 @@
 {% block title %}All Registered Students{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/all_students.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-    /* Additional styles for search bar - full width matching table */
-    .search-wrapper {
-        margin-bottom: 25px;
-        width: 100%;
-    }
-    
-    .search-container {
-        position: relative;
-        width: 100%;
-    }
-    
-    .search-container input {
-        width: 100%;
-        padding: 12px 20px 12px 48px;
-        border: 2px solid var(--border-color);
-        border-radius: 50px;
-        background: var(--input-bg);
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
-        outline: none;
-        box-sizing: border-box;
-    }
-    
-    .search-container input:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(102, 176, 255, 0.2);
-    }
-    
-    .search-container .search-icon {
-        position: absolute;
-        left: 18px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-secondary);
-        font-size: 1rem;
-        pointer-events: none;
-    }
-    
-    .search-container .search-loading {
-        position: absolute;
-        right: 18px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        display: none;
-    }
-    
-    .search-container.loading .search-loading {
-        display: block;
-    }
-    
-    .search-container.loading input {
-        padding-right: 45px;
-    }
-    
-    .search-hint {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        margin-top: 8px;
-        text-align: left;
-    }
-    
-    .search-hint i {
-        margin-right: 5px;
-    }
-    
-    /* Dark mode support for search */
-    :root.dark-mode .search-container input {
-        background: #2d2d2d;
-        border-color: #404040;
-    }
-    
-    :root.dark-mode .search-container input:focus {
-        border-color: var(--accent-color);
-    }
-    
-    /* Student count badge */
-    .page-header-left {
-        display: flex;
-        align-items: baseline;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-    
-    .student-count-badge {
-        background: var(--accent-color);
-        color: white;
-        padding: 6px 14px;
-        border-radius: 30px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        white-space: nowrap;
-    }
-    
-    .student-count-badge i {
-        font-size: 0.9rem;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="all-students-page">
-    
-    <!-- Page Header with Title and Count Badge -->
+    <!-- Page Header -->
     <div class="page-header">
-        <div>
-            <div class="page-header-left">
-                <h1 class="page-title">All Registered Students</h1>
-                <span class="student-count-badge" id="studentCountBadge">
-                    <i class="fa-solid fa-users"></i>
-                    <span id="studentCount">0</span> Students
-                </span>
-            </div>
-            <p class="page-description">View and manage all registered students.</p>
+        <div class="header-left">
+            <h1 class="page-title">
+                <i class="fas fa-users" style="margin-right: 10px;"></i>
+                All Registered Students
+            </h1>
+            <p class="page-description">View and manage all registered students in the system.</p>
         </div>
-        <a href="{{ url_for('admin.manage_students') }}" class="back-btn">
-            <i class="fa-solid fa-arrow-left"></i> Back
-        </a>
+        <div class="header-right">
+            <div class="student-count-badge" id="studentCountBadge">
+                <i class="fas fa-user-graduate"></i>
+                <span id="studentCount">0</span> Students
+            </div>
+            <a href="{{ url_for('admin.manage_students') }}" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
     </div>
-    
-    <!-- Search Bar Only - Full Width -->
-    <div class="search-wrapper">
-        <div class="search-container" id="searchContainer">
-            <span class="search-icon">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-wrapper">
+            <i class="fas fa-search"></i>
             <input type="text" 
                    id="searchInput" 
+                   class="search-input" 
                    placeholder="Search by name or ID number..." 
                    autocomplete="off">
-            <span class="search-loading">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-            </span>
+            <div class="search-loading" id="searchLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
         </div>
     </div>
-    
+
     <!-- Table Container -->
-    <div class="table-container" id="tableContainer">
-        <div id="studentsTableContainer">
-            {% include 'partials/students_table.html' %}
+    <div class="table-card">
+        <div class="table-responsive" id="studentsTableContainer">
+            <!-- Content will be loaded here -->
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading students...</p>
         </div>
     </div>
-    
 </div>
 
 <!-- Delete Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Confirm Deletion</h3>
-            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-trash-alt"></i> Confirm Deletion</h2>
+            <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <p>Delete this student? This cannot be undone.</p>
-            <div class="student-info">
-                <p><strong>ID:</strong> <span id="modalStudentId"></span></p>
-                <p><strong>Name:</strong> <span id="modalStudentName"></span></p>
-                <p><strong>Course:</strong> <span id="modalStudentCourse"></span></p>
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <p class="warning-text">Delete this student? This action cannot be undone.</p>
+            <div class="student-info-card">
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-id-card"></i> Student ID:</span>
+                    <span class="info-value" id="modalStudentId">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-user"></i> Name:</span>
+                    <span class="info-value" id="modalStudentName">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-graduation-cap"></i> Course:</span>
+                    <span class="info-value" id="modalStudentCourse">---</span>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
-            <button class="confirm-delete-btn" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+            <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn">
+                <i class="fas fa-trash-alt"></i> Delete Student
+            </button>
         </div>
     </div>
 </div>
 
-<div id="loadingSpinner" class="loading-spinner"></div>
-
 <script>
-    // CSRF Token Helper Function - REMOVED (CSRF protection disabled)
+// ==================== THEME MANAGEMENT ====================
+function applyThemeToMainContent() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    if (isDark) {
+        mainContent.classList.add('dark-mode');
+    } else {
+        mainContent.classList.remove('dark-mode');
+    }
+}
 
-    let currentStudentId = null;
-    let currentPage = 1;
-    let searchTimeout = null;
+(function() {
+    applyThemeToMainContent();
+    setTimeout(applyThemeToMainContent, 10);
+    setTimeout(applyThemeToMainContent, 50);
+    setTimeout(applyThemeToMainContent, 100);
     
-    // Elements
-    const searchInput = document.getElementById('searchInput');
-    const tableContainer = document.getElementById('tableContainer');
-    const searchContainer = document.getElementById('searchContainer');
-    const studentsTableContainer = document.getElementById('studentsTableContainer');
-    const studentCountSpan = document.getElementById('studentCount');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const deleteModal = document.getElementById('deleteModal');
-    const closeModalBtn = document.querySelector('.close-modal');
-    const modalStudentId = document.getElementById('modalStudentId');
-    const modalStudentName = document.getElementById('modalStudentName');
-    const modalStudentCourse = document.getElementById('modalStudentCourse');
-    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    
-    // REAL-TIME SEARCH - triggers on every keystroke
-    searchInput.addEventListener('input', function() {
-        // Clear previous timeout
-        if (searchTimeout) {
-            clearTimeout(searchTimeout);
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
+            setTimeout(applyThemeToMainContent, 50);
         }
+    });
+    
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') applyThemeToMainContent();
+    });
+    
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') applyThemeToMainContent();
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+})();
+
+// ==================== GLOBAL VARIABLES ====================
+let currentStudentId = null;
+let currentPage = 1;
+let searchTimeout = null;
+
+// DOM Elements
+const searchInput = document.getElementById('searchInput');
+const studentsTableContainer = document.getElementById('studentsTableContainer');
+const searchLoading = document.getElementById('searchLoading');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const studentCountSpan = document.getElementById('studentCount');
+const deleteModal = document.getElementById('deleteModal');
+
+// ==================== SEARCH WITH DEBOUNCE ====================
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        if (searchTimeout) clearTimeout(searchTimeout);
         
         const searchTerm = this.value;
         
-        // If search is empty, load immediately
         if (searchTerm === '') {
             loadStudents(1);
             return;
         }
         
-        // Show loading indicator
-        searchContainer.classList.add('loading');
-        tableContainer.classList.add('loading');
+        if (searchLoading) searchLoading.style.display = 'flex';
         
-        // Debounce to avoid too many requests while typing fast
         searchTimeout = setTimeout(() => {
             loadStudents(1);
         }, 300);
     });
+}
+
+// ==================== LOAD STUDENTS ====================
+function loadStudents(page = 1) {
+    currentPage = page;
     
-    function loadStudents(page = 1) {
-        currentPage = page;
-        
-        const params = new URLSearchParams({
-            page: page,
-            search: searchInput.value || ''
-        });
-        
-        fetch(`{{ url_for('admin.all_students_data') }}?${params}`)
-            .then(response => response.json())
-            .then(data => {
-                // Update table
-                studentsTableContainer.innerHTML = data.html;
-                currentPage = data.current_page;
-                
-                // Update student count
-                const totalCount = data.total_count || 0;
-                studentCountSpan.textContent = totalCount.toLocaleString();
-                
-                // Hide loading
-                searchContainer.classList.remove('loading');
-                tableContainer.classList.remove('loading');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                searchContainer.classList.remove('loading');
-                tableContainer.classList.remove('loading');
-                alert('Error loading students');
-            });
-    }
+    const params = new URLSearchParams({
+        page: page,
+        search: searchInput ? searchInput.value : ''
+    });
     
-    function openDeleteModal(id, idNum, name, course) {
-        currentStudentId = id;
-        modalStudentId.textContent = idNum;
-        modalStudentName.textContent = name;
-        modalStudentCourse.textContent = course;
-        deleteModal.style.display = 'flex';
-    }
+    if (loadingSpinner) loadingSpinner.style.display = 'block';
     
-    function closeDeleteModal() {
-        deleteModal.style.display = 'none';
-        currentStudentId = null;
-    }
-    
-    function confirmDelete() {
-        if (!currentStudentId) {
-            console.error('No student ID selected');
-            return;
-        }
-        
-        confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
-        
-        const url = `/ctumoalboal-comelec/delete-all-student/${currentStudentId}`;
-        
-        fetch(url, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+    fetch(`{{ url_for('admin.all_students_data') }}?${params}`)
+        .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                closeDeleteModal();
-                loadStudents(currentPage);
-                alert(data.message || 'Student deleted successfully');
-            } else {
-                alert('Error: ' + (data.message || 'Unknown error'));
-            }
+            if (studentsTableContainer) studentsTableContainer.innerHTML = data.html;
+            currentPage = data.current_page;
+            
+            const totalCount = data.total_count || 0;
+            if (studentCountSpan) studentCountSpan.textContent = totalCount.toLocaleString();
+            
+            if (searchLoading) searchLoading.style.display = 'none';
+            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            
+            applyThemeToMainContent();
+            
+            // Re-attach delete button event listeners after loading new content
+            attachDeleteButtonListeners();
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error deleting student. Please try again.');
-        })
-        .finally(() => {
-            confirmDeleteBtn.disabled = false;
-            confirmDeleteBtn.innerHTML = 'Delete';
+            if (searchLoading) searchLoading.style.display = 'none';
+            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            
+            if (studentsTableContainer) {
+                studentsTableContainer.innerHTML = `
+                    <div class="empty-state-container error-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3 class="empty-state-title">Error Loading Students</h3>
+                        <p class="empty-state-message">There was a problem loading the student data. Please try again.</p>
+                        <button class="retry-btn" onclick="location.reload()">
+                            <i class="fas fa-sync-alt"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
         });
+}
+
+// ==================== ATTACH DELETE BUTTON LISTENERS ====================
+function attachDeleteButtonListeners() {
+    // Use event delegation for dynamically loaded buttons
+    document.querySelectorAll('.delete-student-btn').forEach(button => {
+        // Remove existing listener to avoid duplicates
+        button.removeEventListener('click', handleDeleteClick);
+        button.addEventListener('click', handleDeleteClick);
+    });
+}
+
+function handleDeleteClick(event) {
+    const button = event.currentTarget;
+    const studentId = button.getAttribute('data-student-id');
+    const studentIdNum = button.getAttribute('data-student-id-num');
+    const studentName = button.getAttribute('data-student-name');
+    const studentCourse = button.getAttribute('data-student-course');
+    
+    openDeleteModal(studentId, studentIdNum, studentName, studentCourse);
+}
+
+// ==================== DELETE MODAL FUNCTIONS ====================
+window.openDeleteModal = function(id, idNum, name, course) {
+    console.log('Opening delete modal for:', {id, idNum, name, course});
+    
+    currentStudentId = id;
+    
+    const modalStudentId = document.getElementById('modalStudentId');
+    const modalStudentName = document.getElementById('modalStudentName');
+    const modalStudentCourse = document.getElementById('modalStudentCourse');
+    
+    if (modalStudentId) modalStudentId.textContent = idNum || 'N/A';
+    if (modalStudentName) modalStudentName.textContent = name || 'Unknown Student';
+    if (modalStudentCourse) modalStudentCourse.textContent = course || 'N/A';
+    
+    if (deleteModal) {
+        deleteModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+window.closeDeleteModal = function() {
+    if (deleteModal) {
+        deleteModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    currentStudentId = null;
+}
+
+// ==================== CONFIRM DELETE ====================
+window.confirmDelete = function() {
+    console.log('Confirm delete called for student ID:', currentStudentId);
+    
+    if (!currentStudentId) {
+        showToast('No student selected', 'error');
+        return;
     }
     
-    // Modal close handlers
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', closeDeleteModal);
-    }
-    window.addEventListener('click', (e) => {
-        if (e.target === deleteModal) closeDeleteModal();
-    });
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    if (!confirmBtn) return;
     
-    // Initial load
-    document.addEventListener('DOMContentLoaded', function() {
-        loadStudents(1);
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    
+    // Use the correct URL with the blueprint prefix
+    const url = `/ctumoalboal-comelec/delete-all-student/${currentStudentId}`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            closeDeleteModal();
+            loadStudents(currentPage);
+            showToast(data.message || 'Student deleted successfully', 'success');
+        } else {
+            showToast(data.message || 'Error deleting student', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error deleting student. Please try again.', 'error');
+    })
+    .finally(() => {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Student';
     });
+}
+
+// ==================== TOAST NOTIFICATION ====================
+function showToast(message, type = 'success') {
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ==================== MODAL CLOSE HANDLERS ====================
+window.addEventListener('click', (e) => {
+    if (e.target === deleteModal) closeDeleteModal();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && deleteModal && deleteModal.style.display === 'flex') {
+        closeDeleteModal();
+    }
+});
+
+// Attach confirm delete button event listener when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', confirmDelete);
+    }
+    
+    loadStudents(1);
+    applyThemeToMainContent();
+});
 </script>
 {% endblock %}

@@ -1,674 +1,586 @@
 /* ================================
    MANAGE STUDENTS PAGE CSS
-   WITH PROPER DARK THEME SUPPORT
+   MATCHING CREATE ELECTIONS PAGE DESIGN
    ================================ */
 
-/* ==================== PREVENT FOUC ==================== */
-/* Set initial dark background to prevent flash */
-html {
-    background-color: #1a1a1a; /* Dark background as default */
-    transition: background-color 0.3s ease;
-}
-
-/* Light mode override */
-:root:not(.dark-mode) {
-    background-color: #f5f7fb;
-}
-
-/* Quick fade-in to hide any remaining flash */
-@keyframes quickFadeIn {
-    from { opacity: 0.99; }
-    to { opacity: 1; }
-}
-
-.manage-students-page {
-    animation: quickFadeIn 0.1s ease-out;
-    padding-top: 5px !important; /* Slight padding to prevent content shift during animation */
-}
-
-/* ==================== CSS VARIABLES ==================== */
-:root {
-    /* Light mode colors - from sample_testing.css */
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --accent-color: #0066cc;
-    --accent-hover: #0052a3;
-    --border-color: #dddddd;
-    --card-bg: #ffffff;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --toggle-bg: #e0e0e0;
-    --toggle-color: #333;
-    --header-bg: #ffffff;
-    --table-header-bg: #f5f5f5;
-    --table-hover: #f9f9f9;
-    --modal-overlay: rgba(0, 0, 0, 0.5);
-    --filter-bg: #f8f9fa;
-    --success-green: #27ae60;
-    --danger-red: #c0392b;
-    --sidebar-width: 280px;
-    --card-radius: 12px;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Dark mode variables - exactly like sample_testing.css */
-:root.dark-mode {
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2d2d2d;
-    --text-primary: #f0f0f0;
-    --text-secondary: #b0b0b0;
-    --accent-color: #66b0ff;
-    --accent-hover: #88c0ff;
-    --border-color: #404040;
-    --card-bg: #2d2d2d;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --toggle-bg: #404040;
-    --toggle-color: #f0f0f0;
-    --header-bg: #1a1a1a;
-    --table-header-bg: #2d2d2d;
-    --table-hover: #3d3d3d;
-    --modal-overlay: rgba(0, 0, 0, 0.8);
-    --filter-bg: #2d2d2d;
-    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-/* System preference - only if no manual override */
-@media (prefers-color-scheme: dark) {
-    :root:not(.light-mode):not(.dark-mode) {
-        --bg-primary: #1a1a1a;
-        --bg-secondary: #2d2d2d;
-        --text-primary: #f0f0f0;
-        --text-secondary: #b0b0b0;
-        --accent-color: #66b0ff;
-        --accent-hover: #88c0ff;
-        --border-color: #404040;
-        --card-bg: #2d2d2d;
-        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        --toggle-bg: #404040;
-        --toggle-color: #f0f0f0;
-        --header-bg: #1a1a1a;
-        --table-header-bg: #2d2d2d;
-        --table-hover: #3d3d3d;
-        --modal-overlay: rgba(0, 0, 0, 0.8);
-        --filter-bg: #2d2d2d;
-    }
-}
-
-/* ==================== PAGE LAYOUT ==================== */
-.manage-students-page {
-    margin-left: var(--sidebar-width);
-    padding: 30px 40px;
-    min-height: 100vh;
-    background: transparent;
+   * {
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
-    transition: var(--transition);
 }
 
-/* Header */
-.manage-students-page .page-title {
-    font-size: 1.8rem;
+/* LIGHT MODE (default) */
+body {
+    background: #f1f5f9;
+    font-family: 'Inter', sans-serif;
+    color: #000000;
+    line-height: 1.5;
+}
+
+/* DARK MODE */
+:root.dark-mode body {
+    background: #1a1a1a;
+    color: #ffffff;
+}
+
+/* Main content with sidebar margin */
+.main-content {
+    margin-left: 280px;
+    transition: margin-left 0.3s ease;
+    min-height: 100vh;
+}
+
+.main-content {
+    background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%);
+}
+
+:root.dark-mode .main-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+}
+
+@media (max-width: 1024px) {
+    .main-content { margin-left: 250px; }
+}
+
+@media (max-width: 768px) {
+    .main-content { margin-left: 0; }
+}
+
+.manage-students-page {
+    padding: 28px 32px;
+    max-width: 1400px;
+}
+
+/* ========== PAGE HEADER ========== */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.header-left .page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #000000;
+    letter-spacing: -0.3px;
+    margin: 0 0 8px 0;
+}
+
+:root.dark-mode .header-left .page-title {
+    color: #ffffff;
+}
+
+.page-description {
+    margin-top: 0.3rem;
+    font-weight: 400;
+    color: #000000;
+    font-size: 0.9rem;
+}
+
+:root.dark-mode .page-description {
+    color: #ffffff;
+}
+
+/* Header Right Buttons */
+.header-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.manage-all-btn, .deletion-requests-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(100deg, #2c7cb6, #1f6392);
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 60px;
     font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-    transition: var(--transition);
+    font-size: 0.85rem;
+    color: white;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 14px rgba(44, 124, 182, 0.25);
 }
 
-.manage-students-page .page-description {
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-    margin-bottom: 25px;
-    transition: var(--transition);
-}
-
-/* Table Container - FLOATING CARD */
-.manage-students-page .table-container {
-    background: var(--card-bg);
-    border-radius: var(--card-radius);
-    padding: 25px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    margin-bottom: 25px;
-    transition: var(--transition);
-}
-
-.manage-students-page .table-container:hover {
-    box-shadow: var(--shadow-lg);
+.manage-all-btn:hover, .deletion-requests-btn:hover {
     transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(44, 124, 182, 0.35);
 }
 
-/* Filter Bar */
-.manage-students-page .filter-bar {
-    background: var(--filter-bg);
-    border-radius: 8px;
-    padding: 15px 20px;
-    margin-bottom: 25px;
+.deletion-requests-btn {
+    background: linear-gradient(100deg, #e67e22, #d35400);
+    box-shadow: 0 6px 14px rgba(230, 126, 34, 0.25);
+}
+
+.deletion-requests-btn:hover {
+    box-shadow: 0 12px 22px rgba(230, 126, 34, 0.35);
+}
+
+/* ========== FILTER CARD ========== */
+.filter-card {
+    background: white;
+    border-radius: 28px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2edf4;
+    transition: all 0.25s ease;
+}
+
+:root.dark-mode .filter-card {
+    background: #2d2d2d;
+    border-color: #404040;
+}
+
+.filter-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -12px rgba(0, 32, 64, 0.12);
+    border-color: #2c7cb6;
+}
+
+:root.dark-mode .filter-card:hover {
+    border-color: #2c7cb6;
+}
+
+.filter-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-    border: 1px solid var(--border-color);
-    transition: var(--transition);
 }
 
-.manage-students-page .filter-bar select,
-.manage-students-page .filter-bar input {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-    font-size: 0.9rem;
-    background: var(--card-bg);
-    color: var(--text-primary);
-    transition: var(--transition);
-}
-
-.manage-students-page .filter-bar select:focus,
-.manage-students-page .filter-bar input:focus {
+.filter-select {
+    padding: 10px 16px;
+    border-radius: 40px;
+    border: 1.5px solid #dee9f0;
+    font-size: 0.85rem;
+    background: white;
+    color: #000000;
+    transition: all 0.2s ease;
     outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(102, 176, 255, 0.2);
-}
-
-.manage-students-page .filter-bar select {
-    min-width: 180px;
     cursor: pointer;
+    font-family: 'Inter', sans-serif;
 }
 
-.manage-students-page .filter-bar input {
-    min-width: 220px;
-    flex-grow: 1;
-    max-width: 300px;
+:root.dark-mode .filter-select {
+    background: #404040;
+    border-color: #555;
+    color: #ffffff;
+}
+
+.filter-select:focus {
+    border-color: #2c7cb6;
+    box-shadow: 0 0 0 3px rgba(44, 124, 182, 0.1);
+}
+
+.filter-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Search Wrapper */
+.search-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8a9ba8;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 16px 10px 42px;
+    border: 1.5px solid #dee9f0;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    background: white;
+    color: #000000;
+    transition: all 0.2s ease;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+}
+
+:root.dark-mode .search-input {
+    background: #404040;
+    border-color: #555;
+    color: #ffffff;
+}
+
+.search-input:focus {
+    border-color: #2c7cb6;
+    box-shadow: 0 0 0 3px rgba(44, 124, 182, 0.1);
+}
+
+.search-input::placeholder {
+    color: #8a9ba8;
 }
 
 /* Export Button */
-.manage-students-page .export-btn {
-    padding: 8px 16px;
-    background: var(--success-green);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
+.export-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: var(--transition);
+    padding: 10px 20px;
+    background: linear-gradient(100deg, #2e7d32, #1b5e20);
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.25s ease;
     white-space: nowrap;
 }
 
-.manage-students-page .export-btn:hover {
-    background: var(--success-green);
-    opacity: 0.9;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+.export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(46, 125, 50, 0.3);
 }
 
-/* Table Styling */
-.manage-students-page .students-table {
+/* ========== TABLE CARD ========== */
+.table-card {
+    background: white;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2edf4;
+}
+
+:root.dark-mode .table-card {
+    background: #2d2d2d;
+    border-color: #404040;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 0.9rem;
-    transition: var(--transition);
 }
 
-.manage-students-page .students-table th {
-    background-color: var(--accent-color);
-    color: white;
-    padding: 12px 15px;
+.data-table th {
     text-align: left;
+    padding: 16px 20px;
+    background: #f8fafd;
+    color: #475569;
     font-weight: 600;
-    border: none;
-    transition: var(--transition);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #eef2f7;
 }
 
-.manage-students-page .students-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-primary);
-    transition: var(--transition);
+:root.dark-mode .data-table th {
+    background: #151d28;
+    color: #cbd5e1;
+    border-bottom-color: #2a3442;
 }
 
-/* Zebra stripes for better readability */
-.manage-students-page .students-table tbody tr:nth-child(even) {
-    background-color: var(--filter-bg);
-}
-
-.manage-students-page .students-table tr:hover {
-    background-color: var(--table-hover);
-}
-
-/* Status Badge */
-.manage-students-page .status-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    min-width: 80px;
-    text-align: center;
-}
-
-.manage-students-page .status-badge.voted {
-    background-color: var(--success-green);
-    color: #fff;
-}
-
-.manage-students-page .status-badge.not-voted {
-    background-color: var(--danger-red);
-    color: #fff;
-}
-
-/* Action Buttons */
-.manage-students-page .action-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.manage-students-page .edit-btn,
-.manage-students-page .delete-btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
+.data-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #eef2f7;
+    color: #000000;
     font-size: 0.85rem;
-    cursor: pointer;
+}
+
+:root.dark-mode .data-table td {
+    border-bottom-color: #2a3442;
+    color: #ffffff;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+    background: #f8fafd;
+}
+
+:root.dark-mode .data-table tbody tr:hover {
+    background: #3d3d3d;
+}
+
+/* ========== STATUS BADGES ========== */
+.status-badge {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 32px;
-    transition: var(--transition);
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-.manage-students-page .edit-btn {
-    background-color: var(--accent-color);
-    color: #fff;
+.status-badge.voted {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2e7d32;
 }
 
-.manage-students-page .edit-btn:hover {
-    background-color: var(--accent-hover);
-    transform: translateY(-1px);
+.status-badge.not-voted {
+    background: rgba(211, 47, 47, 0.1);
+    color: #d32f2f;
 }
 
-.manage-students-page .delete-btn {
-    background-color: var(--danger-red);
-    color: #fff;
+:root.dark-mode .status-badge.voted {
+    background: rgba(46, 125, 50, 0.2);
+    color: #4caf50;
 }
 
-.manage-students-page .delete-btn:hover {
-    background-color: var(--danger-red);
-    opacity: 0.9;
-    transform: translateY(-1px);
+:root.dark-mode .status-badge.not-voted {
+    background: rgba(211, 47, 47, 0.2);
+    color: #ef5350;
 }
 
-/* Pagination */
-.manage-students-page .pagination {
-    margin-top: 20px;
+/* ========== PAGINATION ========== */
+.pagination {
     display: flex;
-    gap: 6px;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    border-top: 1px solid #eef2f7;
     flex-wrap: wrap;
 }
 
-.manage-students-page .pagination button {
-    padding: 6px 12px;
-    border: 1px solid var(--border-color);
-    background-color: var(--card-bg);
+:root.dark-mode .pagination {
+    border-top-color: #2a3442;
+}
+
+.page-btn {
+    min-width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid #dee9f0;
+    background: white;
+    color: #000000;
+    font-weight: 500;
+    font-size: 0.85rem;
     cursor: pointer;
-    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+:root.dark-mode .page-btn {
+    background: #2d2d2d;
+    border-color: #404040;
+    color: #ffffff;
+}
+
+.page-btn:hover {
+    background: #2c7cb6;
+    border-color: #2c7cb6;
+    color: white;
+}
+
+.page-btn.active {
+    background: #2c7cb6;
+    border-color: #2c7cb6;
+    color: white;
+}
+
+/* ========== EMPTY STATE ========== */
+.empty-state {
+    text-align: center;
+    padding: 60px 24px;
+}
+
+.empty-state-icon {
+    font-size: 3.5rem;
+    color: #8a9ba8;
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    font-size: 1.2rem;
+    color: #000000;
+    margin-bottom: 8px;
+}
+
+:root.dark-mode .empty-state h3 {
+    color: #ffffff;
+}
+
+.empty-state p {
+    color: #5a6e7c;
     font-size: 0.9rem;
-    color: var(--text-primary);
-    transition: var(--transition);
-    min-width: 36px;
+    margin-bottom: 20px;
 }
 
-.manage-students-page .pagination button:hover:not(:disabled) {
-    background-color: var(--accent-color);
+:root.dark-mode .empty-state p {
+    color: #9aa9bb;
+}
+
+.empty-state-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.suggestion-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(44, 124, 182, 0.1);
+    border-radius: 40px;
+    color: #2c7cb6;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-badge:hover {
+    background: rgba(44, 124, 182, 0.2);
+    transform: translateY(-2px);
+}
+
+.suggestion-badge.highlight {
+    background: linear-gradient(100deg, #2c7cb6, #1f6392);
     color: white;
-    border-color: var(--accent-color);
 }
 
-.manage-students-page .pagination button:disabled {
-    background-color: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
-    cursor: default;
+.suggestion-badge.highlight:hover {
+    box-shadow: 0 6px 14px rgba(44, 124, 182, 0.3);
 }
 
-/* ================================
-   Responsive Design
-   ================================ */
+:root.dark-mode .suggestion-badge {
+    background: rgba(102, 176, 255, 0.15);
+    color: #66b0ff;
+}
 
+/* ========== LOADING SPINNER ========== */
+.loading-spinner {
+    text-align: center;
+    padding: 60px 24px;
+}
+
+.spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #dee9f0;
+    border-radius: 50%;
+    border-top-color: #2c7cb6;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+}
+
+:root.dark-mode .spinner {
+    border-color: #404040;
+    border-top-color: #2c7cb6;
+}
+
+.loading-spinner p {
+    color: #5a6e7c;
+    font-size: 0.85rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========== RESPONSIVE ========== */
 @media (max-width: 1024px) {
     .manage-students-page {
-        margin-left: 250px;
-        padding: 25px 30px;
+        padding: 20px;
     }
 }
 
 @media (max-width: 768px) {
     .manage-students-page {
-        margin-left: 0;
-        padding: 20px;
+        padding: 16px;
     }
     
-    .manage-students-page .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .manage-students-page .filter-bar select,
-    .manage-students-page .filter-bar input {
-        width: 100%;
-        min-width: auto;
-        max-width: none;
-    }
-    
-    .manage-students-page .table-container {
-        padding: 15px;
-        overflow-x: auto;
-    }
-    
-    .manage-students-page .students-table {
-        min-width: 800px;
-    }
-}
-
-@media (max-width: 480px) {
-    .manage-students-page {
-        padding: 15px;
-    }
-    
-    .manage-students-page .page-title {
-        font-size: 1.5rem;
-    }
-    
-    .manage-students-page .table-container {
-        padding: 12px;
-        border-radius: 8px;
-    }
-    
-    .manage-students-page .students-table th,
-    .manage-students-page .students-table td {
-        padding: 8px 10px;
-        font-size: 0.85rem;
-    }
-    
-    .manage-students-page .action-buttons {
-        flex-direction: column;
-    }
-}
-
-/* Animation for loading */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.manage-students-page .table-container {
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Add hover effect to cards */
-.manage-students-page .filter-bar:hover {
-    box-shadow: var(--shadow-sm);
-}
-
-/* ==================== FLASH MESSAGES ==================== */
-.manage-students-page .flash-container {
-    margin-bottom: 20px;
-}
-
-.manage-students-page .flash-message {
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    color: white;
-    font-size: 0.9rem;
-    animation: fadeInFlash 0.5s forwards;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-:root.dark-mode .manage-students-page .flash-message {
-    border: 1px solid var(--border-color);
-}
-
-.manage-students-page .flash-message.success {
-    background: var(--success-green);
-}
-
-.manage-students-page .flash-message.danger {
-    background: var(--danger-red);
-}
-
-.manage-students-page .flash-message.info {
-    background: var(--accent-color);
-}
-
-@keyframes fadeInFlash {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeOutFlash {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-10px); }
-}
-
-/* ==================== PAGE HEADER WITH BUTTONS ==================== */
-.page-header-with-button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: 10px !important;
-    margin-bottom: 10px;
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
-.header-left {
-    flex: 1;
-    display: flex;
-    justify-content: flex-start;
-}
-
-.header-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-}
-
-.header-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: nowrap; /* CRITICAL: Prevents wrapping */
-}
-
-.page-header-with-button .page-title {
-    margin-bottom: 0;
-    text-align: center;
-}
-
-/* ==================== BUTTON STYLES - FORCED ONE LINE ==================== */
-.request-deletion-btn,
-.manage-all-btn,
-.school-year-indicator {
-    white-space: nowrap !important;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-}
-
-.request-deletion-btn {
-    background: linear-gradient(135deg, #e67e22, #d35400);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3);
-}
-
-.request-deletion-btn:hover {
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(230, 126, 34, 0.4);
-    color: white;
-}
-
-.request-deletion-btn i {
-    font-size: 1.1rem;
-    margin-right: 8px;
-}
-
-.manage-all-btn {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
-}
-
-.manage-all-btn:hover {
-    background: linear-gradient(135deg, #5dade2, #3498db);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
-    color: white;
-}
-
-.manage-all-btn i {
-    font-size: 1.1rem;
-    margin-right: 8px;
-}
-
-.school-year-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-    color: white;
-    border-radius: 30px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.3);
-    transition: all 0.3s ease;
-    white-space: nowrap;
-}
-
-.school-year-indicator i {
-    font-size: 0.9rem;
-    margin-right: 5px;
-}
-
-/* Dark mode support */
-:root.dark-mode .request-deletion-btn {
-    background: linear-gradient(135deg, #d35400, #a04000);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-:root.dark-mode .request-deletion-btn:hover {
-    background: linear-gradient(135deg, #e67e22, #d35400);
-}
-
-:root.dark-mode .manage-all-btn {
-    background: linear-gradient(135deg, #2980b9, #1f618d);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-:root.dark-mode .manage-all-btn:hover {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-:root.dark-mode .school-year-indicator {
-    background: linear-gradient(135deg, #66b0ff, #88c0ff);
-    box-shadow: 0 4px 10px rgba(102, 176, 255, 0.4);
-}
-
-/* ==================== RESPONSIVE FIXES ==================== */
-@media (max-width: 1200px) {
-    .header-right {
-        gap: 10px;
-    }
-    
-    .request-deletion-btn,
-    .manage-all-btn {
-        padding: 8px 16px;
-        font-size: 0.9rem;
-    }
-    
-    .school-year-indicator {
-        padding: 5px 12px;
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 992px) {
-    .page-header-with-button {
+    .page-header {
         flex-direction: column;
         align-items: flex-start;
     }
     
-    .header-left,
-    .header-center,
     .header-right {
         width: 100%;
         justify-content: flex-start;
+        flex-wrap: wrap;
     }
     
-    .header-right {
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    .header-right {
-        flex-wrap: wrap;
-        gap: 8px;
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
     }
     
-    .request-deletion-btn,
-    .manage-all-btn {
-        padding: 8px 14px;
-        font-size: 0.85rem;
+    .filter-select, .search-wrapper, .export-btn {
+        width: 100%;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 12px 16px;
     }
 }
 
 @media (max-width: 480px) {
-    .header-right {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
+    .manage-students-page {
+        padding: 12px;
     }
     
-    .request-deletion-btn,
-    .manage-all-btn,
-    .school-year-indicator {
-        flex: 0 1 auto;
-        white-space: nowrap;
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 10px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .status-badge {
+        padding: 3px 8px;
+        font-size: 0.65rem;
     }
 }
 
-/* Disable transitions during theme change */
-.no-transition * {
-    transition: none !important;
+
+/* ========== EXPORT BUTTON SPINNING ANIMATION ========== */
+.export-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.export-btn.exporting {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.export-btn.exporting i {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Optional: Add a subtle loading text effect */
+.export-btn.exporting span {
+    opacity: 0.9;
 }

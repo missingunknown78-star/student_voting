@@ -36,7 +36,7 @@ html {
     --warning-orange: #e67e22;
     --info-blue: #3498db;
     --sidebar-width: 280px;
-    --card-radius: 12px;
+    --card-radius: 25px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);

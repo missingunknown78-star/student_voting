@@ -23,19 +23,19 @@
             <td>{{ student.year_level.year_name if student.year_level else '' }}</td>
             <td>
                 {% if student.id_number in registered_numbers %}
-                    <span class="status-registered">Registered</span>
+                    <span class="status-badge registered">Registered</span>
                 {% else %}
-                    <span class="status-not-registered">Not Registered</span>
+                    <span class="status-badge not-registered">Not Registered</span>
                 {% endif %}
             </td>
-            <td>
-                <button class="delete-btn" onclick="openDeleteModal(
-                    '{{ student.id }}',
-                    '{{ student.id_number }}',
-                    '{{ student.last_name }}, {{ student.first_name }}',
-                    '{{ student.course or (student.course_rel.course_name if student.course_rel else 'N/A') }}'
-                )">
-                    <i class="fa-solid fa-trash"></i> Delete
+            <td class="action-buttons">
+                <button class="delete-student-btn" 
+                        data-student-id="{{ student.id }}"
+                        data-student-id-num="{{ student.id_number }}"
+                        data-student-name="{{ student.last_name }}, {{ student.first_name }}"
+                        data-student-course="{{ student.course or (student.course_rel.course_name if student.course_rel else 'N/A') }}">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Delete</span>
                 </button>
             </td>
         </tr>
@@ -46,7 +46,7 @@
 {% if students.pages > 1 %}
 <div class="pagination">
     {% if students.has_prev %}
-        <a href="#" onclick="loadStudents({{ students.prev_num }}); return false;">&laquo; Prev</a>
+        <a href="#" onclick="loadStudents({{ students.prev_num }}); return false;"><i class="fas fa-chevron-left"></i> Prev</a>
     {% endif %}
 
     {% for p in students.iter_pages() %}
@@ -56,11 +56,33 @@
     {% endfor %}
 
     {% if students.has_next %}
-        <a href="#" onclick="loadStudents({{ students.next_num }}); return false;">Next &raquo;</a>
+        <a href="#" onclick="loadStudents({{ students.next_num }}); return false;">Next <i class="fas fa-chevron-right"></i></a>
     {% endif %}
 </div>
 {% endif %}
 
 {% else %}
-<p>No students found.</p>
+<div class="empty-state-container">
+    <div class="empty-state-icon">
+        <i class="fas fa-user-graduate"></i>
+    </div>
+    <h3 class="empty-state-title">No Students Found</h3>
+    <p class="empty-state-message">
+        {% if search %}
+            No students match your search "{{ search }}".
+        {% else %}
+            There are no students registered in the system yet.
+        {% endif %}
+    </p>
+    <div class="empty-state-suggestions">
+        <div class="suggestion-badge" onclick="document.getElementById('searchInput').value=''; loadStudents(1);">
+            <i class="fas fa-search"></i>
+            <span>Clear Search</span>
+        </div>
+        <div class="suggestion-badge highlight">
+            <i class="fas fa-user-plus"></i>
+            <span>Import Students</span>
+        </div>
+    </div>
+</div>
 {% endif %}

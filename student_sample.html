@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Election Center · Redesigned Results Dashboard</title>
+    <!-- Font Awesome 6 (free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts: Inter + SF Pro style -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ---------- GLOBAL VARIABLES: sidebar width accounted ---------- */
+        :root {
+            --sidebar-width: 280px;
+            --primary-dark: #0f172a;
+            --primary-glow: #3b82f6;
+            --success-emerald: #10b981;
+            --amber-warning: #f59e0b;
+            --gray-mist: #f1f5f9;
+            --card-radius: 1.25rem;
+            --transition-smooth: all 0.25s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(145deg, #f8fafc 0%, #eef2ff 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* main layout wrapper: respects sidebar width (designed to sit next to fixed sidebar) */
+        .main-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* simulated sidebar (exactly as spec --sidebar-width: 280px) */
+        .demo-sidebar {
+            width: var(--sidebar-width);
+            background: #0a0f1f;
+            backdrop-filter: blur(2px);
+            background: linear-gradient(180deg, #0b1120 0%, #0f172a 100%);
+            color: #e2e8f0;
+            flex-shrink: 0;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 40;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .sidebar-header {
+            padding: 28px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 24px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c084fc, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 24px;
+            margin: 4px 12px;
+            border-radius: 14px;
+            color: #cbd5e1;
+            transition: var(--transition-smooth);
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            width: 24px;
+            font-size: 1.2rem;
+        }
+
+        .nav-item.active {
+            background: rgba(59,130,246,0.2);
+            color: white;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .nav-item:not(.active):hover {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
+
+        /* main content: offset due to fixed sidebar */
+        .results-main {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 2rem 2rem 3rem 2rem;
+            max-width: calc(100% - var(--sidebar-width));
+        }
+
+        /* responsive behaviour */
+        @media (max-width: 768px) {
+            .demo-sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                transition: 0.2s;
+            }
+            .results-main {
+                margin-left: 0;
+                max-width: 100%;
+                padding: 1.5rem;
+            }
+            :root {
+                --sidebar-width: 0px;
+            }
+            .mobile-sidebar-toggle {
+                display: block;
+            }
+        }
+
+        /* cards modern */
+        .card-modern {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(0px);
+            border-radius: var(--card-radius);
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.02);
+            transition: var(--transition-smooth);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        /* results header (white text but on gradient) */
+        .hero-header {
+            background: linear-gradient(105deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 1.75rem;
+            padding: 1.8rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 24px -12px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .hero-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(4px);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-tile {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.25rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            border: 1px solid #eef2ff;
+            transition: transform 0.1s ease;
+        }
+
+        .stat-icon-circle {
+            width: 48px;
+            height: 48px;
+            background: #eef2ff;
+            border-radius: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #2563eb;
+        }
+
+        .turnout-wrapper {
+            background: #f8fafc;
+            border-radius: 1.5rem;
+            padding: 0.8rem 1.2rem;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar-bg {
+            background: #e2e8f0;
+            border-radius: 40px;
+            height: 12px;
+            overflow: hidden;
+        }
+
+        .progress-fill-dynamic {
+            background: linear-gradient(90deg, #3b82f6, #a855f7);
+            width: 0%;
+            height: 100%;
+            border-radius: 40px;
+            transition: width 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+
+        /* candidate cards */
+        .position-group {
+            margin-bottom: 2rem;
+        }
+
+        .position-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            padding-left: 0.25rem;
+            border-left: 5px solid #3b82f6;
+        }
+
+        .candidate-card {
+            background: white;
+            border-radius: 1.2rem;
+            padding: 1rem 1.2rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            border: 1px solid #eef2ff;
+        }
+
+        .candidate-name {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .vote-badge {
+            background: #eef2ff;
+            border-radius: 40px;
+            padding: 4px 12px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .verify-card {
+            background: #ffffffdd;
+            backdrop-filter: blur(4px);
+            border-radius: 1.5rem;
+            padding: 1.6rem;
+            margin: 1.8rem 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-primary {
+            background: #0f172a;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.6rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1e293b;
+            transform: scale(0.98);
+        }
+
+        .verification-result {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 1rem;
+        }
+
+        /* responsiveness */
+        @media (max-width: 640px) {
+            .results-main {
+                padding: 1rem;
+            }
+            .candidate-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+        .footer-notice {
+            background: #fef9e3;
+            border-left: 6px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-top: 2rem;
+        }
+        .simple-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 2rem;
+            font-weight: 500;
+            color: #334155;
+            text-decoration: none;
+        }
+        .live-badge {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        select, input {
+            border: 1px solid #cbd5e1;
+            border-radius: 60px;
+            padding: 0.7rem 1rem;
+            width: 100%;
+            font-family: inherit;
+        }
+        .flex-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        .flex-form > div {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+<div class="main-layout">
+    <!-- SIDEBAR fixed width 280px -->
+    <aside class="demo-sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-gavel"></i> STUDENT VOTE</h2>
+            <p>Election Commission</p>
+        </div>
+        <div class="nav-item active">
+            <i class="fas fa-poll"></i> <span>Results Dashboard</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-check-circle"></i> <span>Verify Vote</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-history"></i> <span>Past Elections</span>
+        </div>
+        <div class="nav-item">
+            <i class="fas fa-user-shield"></i> <span>Candidate Hub</span>
+        </div>
+        <div style="margin-top: auto; padding: 20px 24px; font-size: 0.7rem; opacity: 0.4;">
+            <i class="fas fa-lock"></i> secure · PHE encrypted
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT (offset by sidebar width) -->
+    <main class="results-main">
+        <!-- HERO SECTION (white text style) -->
+        <div class="hero-header" style="color: white;">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <h1><i class="fas fa-chart-line"></i>  Supreme Student Government Election 2026</h1>
+                <span class="status-badge"><i class="fas fa-circle-notch fa-spin"></i> Live Results · Final Phase</span>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; justify-content: space-between;">
+                <span><i class="far fa-calendar-alt"></i> April 17, 2026 · 08:00 AM - 05:00 PM</span>
+                <span><i class="fas fa-chalkboard-user"></i> "Lead with integrity, vote with purpose"</span>
+            </div>
+        </div>
+
+        <!-- SUMMARY STATS (cards) -->
+        <div class="summary-grid">
+            <div class="stat-tile">
+                <div class="stat-icon-circle"><i class="fas fa-users"></i></div>
+                <div><div style="font-size: 1.8rem; font-weight: 800;">1,284</div><div style="color: #475569;">Registered Voters</div></div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-icon-circle"><i class="fas fa-vote-yea"></i></div>
+                <div><div style="font-size: 1.8rem; font-weight: 800;" id="totalVotesDisplay">1,042</div><div style="color: #475569;">Votes Cast</div></div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-icon-circle"><i class="fas fa-chart-simple"></i></div>
+                <div><div style="font-size: 1.8rem; font-weight: 800;" id="turnoutPercent">81.2</div><div style="color: #475569;">Turnout %</div></div>
+            </div>
+        </div>
+        <!-- Turnout progress bar -->
+        <div class="turnout-wrapper" style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span><i class="fas fa-chart-line"></i> Voter participation</span><span id="turnoutLabel">81.2%</span></div>
+            <div class="progress-bar-bg"><div class="progress-fill-dynamic" id="turnoutFillBar" style="width: 81.2%;"></div></div>
+            <div style="font-size: 0.7rem; margin-top: 8px;"><i class="fas fa-user-check"></i> 1,042 out of 1,284 students have voted</div>
+        </div>
+
+        <!-- VERIFICATION SECTION (modern, same as original but refreshed) -->
+        <div class="verify-card" id="verify-vote">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <h2><i class="fas fa-key"></i> 🔐 Verify Your Vote</h2>
+                <span style="background: #0f172a10; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem;"><i class="fas fa-lock"></i> PHE ENCRYPTED</span>
+            </div>
+            <p style="margin: 12px 0 16px 0; color: #334155;">Use your secret receipt code to confirm your ballot was counted correctly.</p>
+            <div class="flex-form">
+                <div style="flex: 2;">
+                    <label><i class="fas fa-user-tie"></i> I voted for:</label>
+                    <select id="candidateSelect">
+                        <option value="">-- select candidate --</option>
+                        <option value="Alex Rivera">Alex Rivera (President) - LEAD</option>
+                        <option value="Jordan Lee">Jordan Lee (President) - BUKLOD</option>
+                        <option value="Sam Cruz">Sam Cruz (VP Internal) - LEAD</option>
+                        <option value="Taylor Kim">Taylor Kim (VP Internal) - BUKLOD</option>
+                        <option value="Morgan Santos">Morgan Santos (Secretary) - IND</option>
+                    </select>
+                </div>
+                <div style="flex: 2;">
+                    <label><i class="fas fa-qrcode"></i> Secret Receipt Code:</label>
+                    <input type="text" id="secretCodeInput" placeholder="e.g., f7a2c9k3...">
+                </div>
+                <div style="flex: 1;">
+                    <button class="btn-primary" id="verifyBtnAction" style="margin-top: 24px; width: 100%;"><i class="fas fa-check-circle"></i> Verify</button>
+                </div>
+            </div>
+            <div id="verificationMessage" class="verification-result" style="display: none;"></div>
+        </div>
+
+        <!-- ========== POSITION RESULTS (LIVE / FINAL) ========== -->
+        <div id="resultsContainer">
+            <!-- President position -->
+            <div class="position-group">
+                <div class="position-title"><i class="fas fa-crown"></i> President</div>
+                <div class="candidate-card">
+                    <div class="candidate-name"><i class="fas fa-user-circle fa-lg"></i> Alex Rivera · <span style="font-weight: normal;">LEAD Party</span></div>
+                    <div><span class="vote-badge"><i class="fas fa-chart-simple"></i> 587 votes (56.3%)</span></div>
+                    <div class="progress-bar-bg" style="width: 160px;"><div style="width: 56.3%; height: 6px; background: #3b82f6; border-radius: 20px;"></div></div>
+                </div>
+                <div class="candidate-card">
+                    <div class="candidate-name"><i class="fas fa-user-circle fa-lg"></i> Jordan Lee · <span style="font-weight: normal;">BUKLOD</span></div>
+                    <div><span class="vote-badge">455 votes (43.7%)</span></div>
+                    <div class="progress-bar-bg" style="width: 160px;"><div style="width: 43.7%; height: 6px; background: #a855f7; border-radius: 20px;"></div></div>
+                </div>
+            </div>
+
+            <!-- VP Internal -->
+            <div class="position-group">
+                <div class="position-title"><i class="fas fa-handshake"></i> Vice President Internal</div>
+                <div class="candidate-card">
+                    <div class="candidate-name">Sam Cruz (LEAD)</div>
+                    <div><span class="vote-badge">612 votes (58.7%)</span></div>
+                    <div class="progress-bar-bg" style="width: 160px;"><div style="width: 58.7%; height: 6px; background: #3b82f6;"></div></div>
+                </div>
+                <div class="candidate-card">
+                    <div class="candidate-name">Taylor Kim (BUKLOD)</div>
+                    <div><span class="vote-badge">430 votes (41.3%)</span></div>
+                    <div class="progress-bar-bg" style="width: 160px;"><div style="width: 41.3%; height: 6px; background: #a855f7;"></div></div>
+                </div>
+            </div>
+
+            <!-- Secretary -->
+            <div class="position-group">
+                <div class="position-title"><i class="fas fa-file-signature"></i> Secretary</div>
+                <div class="candidate-card">
+                    <div class="candidate-name">Morgan Santos (Independent)</div>
+                    <div><span class="vote-badge">722 votes (69.2%)</span></div>
+                    <div class="progress-bar-bg" style="width: 160px;"><div style="width: 69.2%; background: #10b981;"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate Personal Distribution (simulate "qualified candidate" view) -->
+        <div class="card-modern" style="padding: 1.5rem; margin: 2rem 0; background: linear-gradient(115deg, #ffffff 0%, #fefce8 100%);">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <i class="fas fa-chart-pie" style="font-size: 2rem; color: #3b82f6;"></i>
+                <div><h3 style="margin: 0;">📊 Your Personal Vote Distribution</h3><p style="margin: 0;">As a candidate for President, see vote breakdown by course</p></div>
+            </div>
+            <div style="background: #f1f5f9; border-radius: 1rem; padding: 1rem; margin: 1rem 0;">
+                <i class="fas fa-user-graduate"></i> You ran for: <strong>President</strong> · Total votes received: <strong>587</strong>
+            </div>
+            <div><h4><i class="fas fa-building"></i> Votes by Department / Course</h4></div>
+            <div style="margin-top: 12px;">
+                <div><span>📘 College of Engineering</span> <span style="float: right;">214 votes (36.5%)</span><div class="progress-bar-bg mt-1"><div style="width: 36.5%; height: 8px; background: #2563eb;"></div></div></div>
+                <div style="margin-top: 12px;"><span>📗 College of Business</span> <span style="float: right;">198 votes (33.7%)</span><div class="progress-bar-bg"><div style="width: 33.7%; background: #8b5cf6;"></div></div></div>
+                <div style="margin-top: 12px;"><span>📙 College of Arts & Sciences</span> <span style="float: right;">175 votes (29.8%)</span><div class="progress-bar-bg"><div style="width: 29.8%; background: #ec489a;"></div></div></div>
+            </div>
+            <div style="font-size: 0.7rem; text-align: center; margin-top: 1rem;"><i class="fas fa-info-circle"></i> Based on official certified results</div>
+        </div>
+
+        <!-- Official PDF report simulation (like "results published") -->
+        <div class="card-modern" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1.3rem;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <i class="fas fa-file-pdf" style="font-size: 2rem; color: #dc2626;"></i>
+                <div><h3 style="margin: 0;">📄 Official Election Report Available</h3><p>Certified results from COMELEC · signed and sealed</p></div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <div><i class="far fa-file-pdf"></i> FINAL_RESULTS_SSG_2026.pdf <span style="font-size: 0.7rem;">(2.4 MB)</span></div>
+                <div><button class="btn-primary" style="background: #16a34a; padding: 0.4rem 1rem;"><i class="fas fa-download"></i> Download PDF</button> <button style="background: #334155; border-radius: 2rem; padding: 0.4rem 1rem; border: none; color: white;"><i class="fas fa-eye"></i> Preview</button></div>
+            </div>
+            <div class="footer-notice" style="background: #dcfce7; margin-top: 0.8rem; border-left-color: #15803d;"><i class="fas fa-check-circle"></i> This is the official certified report generated by the automated election system.</div>
+        </div>
+
+        <!-- Important Notice -->
+        <div class="card-modern" style="padding: 1.2rem; margin-top: 1.5rem;">
+            <div style="display: flex; gap: 10px;"><i class="fas fa-info-circle" style="color:#f97316"></i> <strong>Important Notice</strong></div>
+            <p style="margin-top: 6px;">✅ These are final certified results published by the Student Commission on Elections. All votes are immutable and cryptographically verified.</p>
+            <div style="border-top: 1px dashed #cbd5e1; margin-top: 10px; padding-top: 8px; font-style: italic;">— COMELEC Chairperson</div>
+        </div>
+
+        <!-- Simple Back Link -->
+        <a href="#" class="simple-back"><i class="fas fa-arrow-left"></i> Back to Elections Dashboard</a>
+    </main>
+</div>
+
+<script>
+    (function() {
+        // simulate dynamic live behavior & verification logic
+        const totalVoters = 1284;
+        let currentVotes = 1042;
+        const turnoutElem = document.getElementById('turnoutPercent');
+        const fillBar = document.getElementById('turnoutFillBar');
+        const totalVotesSpan = document.getElementById('totalVotesDisplay');
+        const turnoutLabel = document.getElementById('turnoutLabel');
+
+        function updateTurnoutUI(votes) {
+            let turnout = (votes / totalVoters) * 100;
+            turnout = Math.min(100, turnout);
+            if (turnoutElem) turnoutElem.innerText = turnout.toFixed(1);
+            if (turnoutLabel) turnoutLabel.innerText = turnout.toFixed(1) + '%';
+            if (fillBar) fillBar.style.width = turnout + '%';
+            if (totalVotesSpan) totalVotesSpan.innerText = votes;
+        }
+
+        // optional: simulate new vote after 3 seconds to show live aspect (just demo)
+        setTimeout(() => {
+            if (currentVotes < 1100) {
+                currentVotes = 1087;
+                updateTurnoutUI(currentVotes);
+                // also update one candidate card to reflect slight change
+                const presFirst = document.querySelector('.position-group:first-child .candidate-card:first-child .vote-badge');
+                if(presFirst) presFirst.innerHTML = '<i class="fas fa-chart-simple"></i> 613 votes (56.4%)';
+                const secondPres = document.querySelector('.position-group:first-child .candidate-card:last-child .vote-badge');
+                if(secondPres) secondPres.innerHTML = '474 votes (43.6%)';
+                // update turnout text bottom
+                const footnote = document.querySelector('.turnout-wrapper div:last-child');
+                if(footnote) footnote.innerHTML = `<i class="fas fa-user-check"></i> ${currentVotes} out of ${totalVoters} students have voted · live update`;
+            }
+        }, 2800);
+
+        updateTurnoutUI(currentVotes);
+        const turnoutInfoDiv = document.querySelector('.turnout-wrapper div:last-child');
+        if(turnoutInfoDiv) turnoutInfoDiv.innerHTML = `<i class="fas fa-user-check"></i> ${currentVotes} out of ${totalVoters} students have voted`;
+
+        // Verification logic
+        const verifyBtn = document.getElementById('verifyBtnAction');
+        const candidateSelect = document.getElementById('candidateSelect');
+        const secretInput = document.getElementById('secretCodeInput');
+        const messageDiv = document.getElementById('verificationMessage');
+
+        function showMessage(msg, isError = false) {
+            messageDiv.style.display = 'block';
+            messageDiv.innerHTML = `<i class="fas ${isError ? 'fa-times-circle' : 'fa-check-circle'}"></i> ${msg}`;
+            messageDiv.style.background = isError ? '#fee2e2' : '#e0f2fe';
+            messageDiv.style.color = isError ? '#b91c1c' : '#0c4a6e';
+            setTimeout(() => {
+                if(messageDiv) messageDiv.style.opacity = '0.8';
+            }, 50);
+        }
+
+        verifyBtn.addEventListener('click', () => {
+            const selectedCandidate = candidateSelect.value;
+            const code = secretInput.value.trim();
+            if (!selectedCandidate) {
+                showMessage('❌ Please select a candidate you voted for.', true);
+                return;
+            }
+            if (!code) {
+                showMessage('🔐 Please enter your secret receipt code.', true);
+                return;
+            }
+            // dummy receipt verification logic: check if code resembles f7a2c9k3 pattern or any non-empty
+            if (code.length < 4) {
+                showMessage('Invalid receipt format. The code should be at least 4 characters.', true);
+                return;
+            }
+            // mock successful verification (pretend ballot mapping)
+            // in real scenario we would match candidate + receipt hash
+            if (code.toLowerCase().includes('vote') || code.length > 3) {
+                showMessage(`✅ SUCCESS! Your vote for "${selectedCandidate}" has been verified and recorded on the immutable ledger. Receipt hash matches the blockchain anchor.`, false);
+                // optional effect
+                const resultDiv = document.getElementById('verificationMessage');
+                resultDiv.style.background = '#dcfce7';
+                resultDiv.style.border = '1px solid #86efac';
+            } else {
+                showMessage('⚠️ Receipt code does not match any recorded ballot. Please double-check or contact COMELEC.', true);
+            }
+        });
+
+        // Photo modal simulation not needed but we keep lightweight
+        // add some micro interaction for refresh feel
+        const refreshMock = () => {
+            const newTotal = Math.floor(1042 + Math.random() * 20);
+            if(newTotal <= totalVoters) {
+                currentVotes = newTotal;
+                updateTurnoutUI(currentVotes);
+                showMessage('🔄 Results auto-refreshed: live feed updated.', false);
+                setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 1800);
+            }
+        };
+        // simulate auto refresh every 45 seconds (just for demo)
+        setInterval(() => {
+            if(document.hasFocus()) refreshMock();
+        }, 45000);
+    })();
+</script>
+</body>
+</html>

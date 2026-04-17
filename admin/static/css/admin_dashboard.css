@@ -42,7 +42,7 @@
 
 .card {
     padding: 25px;
-    border-radius: 16px;
+    border-radius: 25px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -82,7 +82,7 @@
 /* ==================== RECENT ELECTIONS ==================== */
 .recent-elections-container {
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 25px;
     margin-bottom: 25px;
     background: var(--card-bg) !important;
     border: 1px solid var(--border-color) !important;

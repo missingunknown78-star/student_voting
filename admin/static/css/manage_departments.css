@@ -37,7 +37,7 @@ body {
     --light-gray: #f8fafc;
     
     /* Card & UI colors */
-    --card-radius: 12px;
+    --card-radius: 25px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -189,7 +189,7 @@ body {
 .container .card form select {
     padding: 12px 15px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 25px;
     flex: 1;
     min-width: 250px;
     font-size: 15px;
@@ -241,7 +241,7 @@ body {
     background-color: var(--button-primary);
     color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 20px;
     cursor: pointer;
     transition: var(--transition);
     font-weight: 600;
@@ -273,7 +273,7 @@ body {
     margin-right: 8px;
     margin-bottom: 15px;
     border: none;
-    border-radius: 6px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
@@ -325,7 +325,7 @@ body {
     border-collapse: separate;
     border-spacing: 0;
     margin-top: 15px;
-    border-radius: 8px;
+    border-radius: 20px;
     overflow: hidden;
     box-shadow: var(--shadow-md);
     background-color: var(--card-bg);

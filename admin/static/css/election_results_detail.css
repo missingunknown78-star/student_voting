@@ -34,7 +34,7 @@ body {
     --dark-gray: #1f2937;
     --light-gray: #f8fafc;
     --sidebar-width: 280px;
-    --card-radius: 12px;
+    --card-radius: 25px;
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -128,15 +128,6 @@ body {
     transition: var(--transition);
 }
 
-.election-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-blue), var(--accent-teal), var(--warning-amber));
-}
 
 .election-header h1 {
     margin: 0 0 10px 0;
@@ -330,11 +321,6 @@ body {
     box-shadow: var(--shadow-lg);
     border-color: var(--primary-blue);
 }
-
-.summary-card.voters { border-top-color: var(--secondary-blue); }
-.summary-card.turnout { border-top-color: var(--success-green); }
-.summary-card.candidates { border-top-color: #9b59b6; }
-.summary-card.positions { border-top-color: var(--danger-red); }
 
 .summary-card i {
     font-size: 32px;

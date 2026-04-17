@@ -65,7 +65,7 @@ html {
     --primary-blue: #0066cc;
     --secondary-blue: #0052a3;
     --sidebar-width: 280px;
-    --card-radius: 12px;
+    --card-radius: 25px;
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -429,7 +429,7 @@ main .info-float-btn,
     padding: 10px 12px;
     width: 250px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 25px;
     background: var(--card-bg);
     color: var(--text-primary);
     font-size: 0.9rem;
@@ -451,7 +451,7 @@ main .info-float-btn,
     border: none;
     background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
     color: white;
-    border-radius: 8px;
+    border-radius: 25px;
     cursor: pointer;
     font-size: 0.9rem;
     transition: var(--transition);
@@ -482,7 +482,7 @@ main .info-float-btn,
     border-collapse: collapse;
     margin-top: 1rem;
     background: var(--card-bg);
-    border-radius: 8px;
+    border-radius: 25px;
     overflow: hidden;
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
@@ -532,7 +532,7 @@ main .info-float-btn,
     padding: 8px 12px;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 15px;
     text-decoration: none;
     color: var(--text-primary);
     font-size: 0.9rem;
