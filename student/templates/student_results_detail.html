@@ -381,39 +381,7 @@
             }
         </style>
     {% endif %}
-
-    <!-- Results Notice -->
-    <div class="card notice-card">
-        <div class="notice-header">
-            <span class="notice-icon">ℹ️</span>
-            <h3 class="notice-title">Important Notice</h3>
-        </div>
-        
-        <div class="notice-content">
-            <p>These are the official results of the Student Government Elections.</p>
-            {% if election.end_date < now_naive %}
-                {% if results_published %}
-                    <p style="color: #28a745;">✅ These are the final certified results published by COMELEC.</p>
-                {% else %}
-                    <p style="color: #ffc107;">⏳ Results are being finalized and will be published by COMELEC once ready.</p>
-                {% endif %}
-            {% elif election.start_date <= now_naive <= election.end_date %}
-                <p style="color: #dc2626;">⚠️ These are live results and may change until voting ends.</p>
-            {% endif %}
-        </div>
-        
-        <div class="notice-footer">
-            <span class="signature">— Student Commission on Elections (COMELEC)</span>
-        </div>
-    </div>
-
-    <!-- Back Button at Bottom (Centered, Text Only) -->
-    <!-- Simple Back Button -->
-<div class="back-button-container">
-    <a href="{{ url_for('student.results') }}" class="simple-back-btn">
-        <i class="fa-solid fa-arrow-left"></i> Back
-    </a>
-</div>
+    
 </div>
 
 <!-- Loading Overlay for AJAX -->

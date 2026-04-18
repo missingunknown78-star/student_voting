@@ -3,147 +3,41 @@
 {% block title %}Configure Election Positions{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/configure_positions.css') }}">
-<style>
-    /* ==================== FLOATING NOTIFICATION STYLES ==================== */
-    .floating-notification {
-        position: fixed;
-        top: 80px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 100000;
-        min-width: 320px;
-        max-width: 450px;
-        animation: slideDown 0.3s ease-out;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        overflow: hidden;
-        pointer-events: all;
-    }
-    
-    .notification-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 20px;
-        color: white;
-        font-size: 0.95rem;
-        font-weight: 500;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-    
-    .floating-notification.success .notification-content {
-        background: linear-gradient(135deg, #00c851, #00a844);
-        border-left: 5px solid #007e33;
-    }
-    
-    .floating-notification.error .notification-content {
-        background: linear-gradient(135deg, #ff4444, #cc0000);
-        border-left: 5px solid #a70000;
-    }
-    
-    .floating-notification.info .notification-content {
-        background: linear-gradient(135deg, #2196f3, #0b5ed7);
-        border-left: 5px solid #084298;
-    }
-    
-    .notification-content i:first-child {
-        font-size: 1.4rem;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    }
-    
-    .notification-message {
-        flex: 1;
-        line-height: 1.4;
-        word-break: break-word;
-    }
-    
-    .notification-close {
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        font-size: 1.2rem;
-        margin-left: auto;
-        padding: 0 8px;
-        opacity: 0.8;
-        transition: opacity 0.2s;
-    }
-    
-    .notification-close:hover {
-        opacity: 1;
-    }
-    
-    @keyframes slideDown {
-        from {
-            transform: translate(-50%, -20px);
-            opacity: 0;
-        }
-        to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideUp {
-        from {
-            transform: translate(-50%, 0);
-            opacity: 1;
-        }
-        to {
-            transform: translate(-50%, -20px);
-            opacity: 0;
-        }
-    }
-    
-    /* Submit button loading state */
-    .save-btn.submitting {
-        opacity: 0.8;
-        cursor: wait;
-        pointer-events: none;
-    }
-    
-    .save-btn .spinner {
-        display: none;
-        width: 16px;
-        height: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: white;
-        animation: spinnerRotate 0.8s linear infinite;
-    }
-    
-    .save-btn.submitting .spinner {
-        display: inline-block;
-    }
-    
-    .save-btn.submitting .btn-text {
-        display: none;
-    }
-    
-    @keyframes spinnerRotate {
-        to { transform: rotate(360deg); }
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="config-container">
-    <div class="election-header">
-        <h2>⚡ Configure Election Positions</h2>
-        <div class="election-meta">
-            <span>{{ election.title }}</span>
-            <span class="scope-badge {{ election.scope }}">{{ election.scope|title }} Election</span>
-            {% if election.department %}
-                <span>{{ election.department }}</span>
-            {% endif %}
-            <span>{{ election.start_date.strftime('%B %d, %Y') }} - {{ election.end_date.strftime('%B %d, %Y') }}</span>
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <h1 class="page-title"><i class="fas fa-sliders-h" style="margin-right: 10px;"></i>Configure Election Positions</h1>
+            <p class="page-description">Set up positions, voting limits, and eligibility restrictions.</p>
         </div>
     </div>
 
+    <!-- Election Info Card -->
+    <div class="election-meta-card">
+        <div class="election-title-section">
+            <h2>{{ election.title }}</h2>
+            <div class="election-badges">
+                <span class="badge {{ election.scope }}">{{ election.scope|title }} Election</span>
+                {% if election.department %}
+                    <span class="badge year">🏛️ {{ election.department }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="election-dates">
+            <i class="fas fa-calendar-alt"></i> {{ election.start_date.strftime('%B %d, %Y at %I:%M %p') }} - {{ election.end_date.strftime('%B %d, %Y at %I:%M %p') }}
+        </div>
+    </div>
+
+    <!-- Instruction Box -->
     <div class="instruction-box">
-        <h3>📋 How to Configure</h3>
-        <p>Select which positions will be included in this election and set how many candidates students can vote for per position.</p>
+        <h3><i class="fas fa-info-circle"></i> How to Configure</h3>
+        <p>Select all positions will be included in this election and set how many candidates students can vote for per position.</p>
         {% if election.scope == 'campus' %}
         <p><strong>For Campus-Wide Elections:</strong> You can restrict positions to specific courses, year levels, or program types (Day/Night).</p>
         {% elif election.scope == 'department' %}
@@ -156,7 +50,7 @@
         <div class="select-all-bar">
             <label>
                 <input type="checkbox" id="selectAll" {% if configured_position_ids|length > 0 %}checked{% endif %}>
-                <strong>Select All Positions</strong>
+                <strong><i class="fas fa-check-double"></i> Select All Positions</strong>
             </label>
             <span class="selection-counter">
                 <strong id="selected-count">{{ configured_position_ids|length }}</strong> positions selected
@@ -172,155 +66,108 @@
             {% endif %}
         </div>
 
-        <!-- Positions Grid - Fixed 3 columns -->
+        <!-- Positions Grid - 4 columns -->
         <div class="positions-grid">
             {% for position in all_positions|sort(attribute='id') %}
             <div class="position-card {% if position.id in configured_position_ids %}selected{% endif %}" id="position-{{ position.id }}" data-position-id="{{ position.id }}">
-                <!-- Card Header with Position Name and Checkmark Indicator -->
+                <!-- Card Header -->
                 <div class="card-header">
-                    <div class="header-left">
-                        <span class="checkmark-indicator {% if position.id in configured_position_ids %}visible{% endif %}" id="indicator-{{ position.id }}">
-                            ✓
-                        </span>
+                    <div class="checkmark-indicator {% if position.id in configured_position_ids %}visible{% endif %}" id="indicator-{{ position.id }}">
+                        ✓
                     </div>
-                    <div class="header-center">
-                        <span class="position-name">{{ position.name }}</span>
-                    </div>
-                    <div class="header-right">
-                        {% if position.description %}
-                            <span class="badge">{{ position.description|truncate(15) }}</span>
-                        {% endif %}
-                    </div>
+                    <div class="position-name" title="{{ position.name }}">{{ position.name }}</div>
+                    {% if position.description %}
+                        <div class="badge-sm" title="{{ position.description }}">{{ position.description|truncate(8) }}</div>
+                    {% else %}
+                        <div></div>
+                    {% endif %}
                 </div>
 
-                <!-- Configuration Options Stacked Vertically -->
-                <div class="config-stack">
+                <!-- Vertical Stack - Ultra Compact -->
+                <div class="config-stack-vertical">
                     <!-- Max Votes -->
                     <div class="config-item">
                         <div class="config-label">
-                            <i class="fa-solid fa-square-poll-vertical"></i>
-                            <span>Max Votes</span>
+                            <i class="fas fa-square-poll-vertical"></i>
+                            <span>Votes</span>
                         </div>
-                        <div class="config-input-group">
-                            <input type="text" 
-                                   name="max_votes_{{ position.id }}" 
-                                   id="max_votes_{{ position.id }}"
-                                   pattern="[0-9]+"
-                                   inputmode="numeric"
-                                   value="{{ configured_positions.get(position.id, 1) }}"
-                                   class="vote-input"
-                                   {% if position.id not in configured_position_ids %}disabled{% endif %}>
-                        </div>
+                        <input type="text" 
+                               name="max_votes_{{ position.id }}" 
+                               id="max_votes_{{ position.id }}"
+                               pattern="[0-9]+"
+                               inputmode="numeric"
+                               value="{{ configured_positions.get(position.id, 1) }}"
+                               class="vote-input"
+                               {% if position.id not in configured_position_ids %}disabled{% endif %}>
                     </div>
 
-                    <!-- Program Type (Day/Night) - Available for all election types -->
+                    <!-- Program Type -->
                     <div class="config-item">
                         <div class="config-label">
-                            <i class="fa-solid fa-calendar-alt"></i>
-                            <span>Program Type</span>
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Program</span>
                         </div>
-                        <div class="config-input-group">
-                            <select name="program_type_{{ position.id }}" 
-                                    id="program_type_{{ position.id }}" 
-                                    class="program-select"
-                                    {% if position.id not in configured_position_ids %}disabled{% endif %}>
-                                <option value="">All Programs</option>
-                                {% for program_type in program_types %}
-                                    <option value="{{ program_type.id }}" 
-                                            {% if position_program_types.get(position.id) == program_type.id %}selected{% endif %}>
-                                        {{ program_type.name }}
+                        <select name="program_type_{{ position.id }}" 
+                                id="program_type_{{ position.id }}" 
+                                class="program-select"
+                                {% if position.id not in configured_position_ids %}disabled{% endif %}>
+                            <option value="">All</option>
+                            {% for program_type in program_types %}
+                                <option value="{{ program_type.id }}" 
+                                        {% if position_program_types.get(position.id) == program_type.id %}selected{% endif %}>
+                                    {{ program_type.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Year Level -->
+                    <div class="config-item">
+                        <div class="config-label">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Year</span>
+                        </div>
+                        <select name="year_level_{{ position.id }}" 
+                                id="year_level_{{ position.id }}" 
+                                class="year-level-select"
+                                {% if position.id not in configured_position_ids %}disabled{% endif %}>
+                            <option value="">All</option>
+                            {% for year_level in year_levels %}
+                                <option value="{{ year_level.value }}" 
+                                        {% if position_year_levels.get(position.id) == year_level.value %}selected{% endif %}>
+                                    {{ year_level.label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Course Restriction -->
+                    <div class="config-item">
+                        <div class="config-label">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>Course</span>
+                        </div>
+                        <select name="course_{{ position.id }}" 
+                                id="course_{{ position.id }}" 
+                                class="course-select"
+                                {% if position.id not in configured_position_ids %}disabled{% endif %}>
+                            <option value="">All</option>
+                            {% for course in all_courses %}
+                                {% if election.scope == 'campus' %}
+                                    <option value="{{ course.id }}" 
+                                            {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
+                                        {{ course.course_name }}
                                     </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="config-badge" id="program-badge-{{ position.id }}">
-                            {% if position_program_types.get(position.id) %}
-                                {% for program_type in program_types %}
-                                    {% if program_type.id == position_program_types.get(position.id) %}
-                                        {{ program_type.name }}
-                                    {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                All
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Year Level Restriction -->
-                    <div class="config-item">
-                        <div class="config-label">
-                            <i class="fa-solid fa-layer-group"></i>
-                            <span>Year Level</span>
-                        </div>
-                        <div class="config-input-group">
-                            <select name="year_level_{{ position.id }}" 
-                                    id="year_level_{{ position.id }}" 
-                                    class="year-level-select"
-                                    {% if position.id not in configured_position_ids %}disabled{% endif %}>
-                                <option value="">All Years</option>
-                                {% for year_level in year_levels %}
-                                    <option value="{{ year_level.value }}" 
-                                            {% if position_year_levels.get(position.id) == year_level.value %}selected{% endif %}>
-                                        {{ year_level.label }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="config-badge" id="year-badge-{{ position.id }}">
-                            {% if position_year_levels.get(position.id) %}
-                                {% for year_level in year_levels %}
-                                    {% if year_level.value == position_year_levels.get(position.id) %}
-                                        {{ year_level.label }}
-                                    {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                All
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Course Restriction - Available for ALL election types -->
-                    <div class="config-item">
-                        <div class="config-label">
-                            <i class="fa-solid fa-graduation-cap"></i>
-                            <span>Course Restriction</span>
-                        </div>
-                        <div class="config-input-group">
-                            <select name="course_{{ position.id }}" 
-                                    id="course_{{ position.id }}" 
-                                    class="course-select"
-                                    {% if position.id not in configured_position_ids %}disabled{% endif %}>
-                                <option value="">All Courses</option>
-                                {% for course in all_courses %}
-                                    {% if election.scope == 'campus' %}
-                                        <!-- For campus elections, show all courses -->
+                                {% elif election.scope == 'department' %}
+                                    {% if course.department_id == election.department_id %}
                                         <option value="{{ course.id }}" 
                                                 {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
-                                            {{ course.course_name }} ({{ course.department.name if course.department else 'No Dept' }})
+                                            {{ course.course_name }}
                                         </option>
-                                    {% elif election.scope == 'department' %}
-                                        <!-- For department elections, only show courses in this department -->
-                                        {% if course.department_id == election.department_id %}
-                                            <option value="{{ course.id }}" 
-                                                    {% if position_courses.get(position.id) == course.id %}selected{% endif %}>
-                                                {{ course.course_name }}
-                                            </option>
-                                        {% endif %}
                                     {% endif %}
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="config-badge" id="course-badge-{{ position.id }}">
-                            {% if position_courses.get(position.id) %}
-                                {% for course in all_courses %}
-                                    {% if course.id == position_courses.get(position.id) %}
-                                        {{ course.course_name|truncate(12) }}
-                                    {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                All
-                            {% endif %}
-                        </div>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
             </div>
@@ -328,10 +175,12 @@
         </div>
 
         <div class="action-buttons">
-            <a href="{{ url_for('admin.create_election') }}" class="cancel-btn">← Back to Elections</a>
+            <a href="{{ url_for('admin.create_election') }}" class="cancel-btn">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
             <button type="submit" class="save-btn" id="saveConfigBtn">
                 <span class="spinner"></span>
-                <span class="btn-text"><i class="fa-solid fa-save"></i> Save Configuration</span>
+                <span class="btn-text"><i class="fas fa-save"></i> Save</span>
             </button>
         </div>
     </form>
@@ -340,19 +189,15 @@
 <input type="hidden" id="return_url" value="{{ url_for('admin.create_election') }}">
 
 <script>
-// ==================== FLOATING NOTIFICATION FUNCTION ====================
 function showFloatingNotification(message, type = 'success') {
-    // Remove any existing floating notifications
     const existingNotification = document.querySelector('.floating-notification');
     if (existingNotification) {
         existingNotification.remove();
     }
     
-    // Create floating notification element
     const notification = document.createElement('div');
     notification.className = `floating-notification ${type}`;
     
-    // Add icon based on type
     let icon = '';
     if (type === 'success') icon = 'fa-check-circle';
     else if (type === 'error') icon = 'fa-exclamation-circle';
@@ -360,17 +205,16 @@ function showFloatingNotification(message, type = 'success') {
     
     notification.innerHTML = `
         <div class="notification-content">
-            <i class="fa ${icon}"></i>
+            <i class="fas ${icon}"></i>
             <div class="notification-message">${message}</div>
             <button class="notification-close" onclick="this.closest('.floating-notification').remove()">
-                <i class="fa fa-times"></i>
+                <i class="fas fa-times"></i>
             </button>
         </div>
     `;
     
     document.body.appendChild(notification);
     
-    // Auto hide after 4 seconds
     setTimeout(() => {
         if (notification.parentNode) {
             notification.style.animation = 'slideUp 0.3s ease-out forwards';
@@ -383,7 +227,6 @@ function showFloatingNotification(message, type = 'success') {
     }, 4000);
 }
 
-// ==================== FORM SUBMISSION WITH NOTIFICATION ====================
 function updateSelectedCount() {
     const selectAllCheckbox = document.getElementById('selectAll');
     const hiddenInputs = document.querySelectorAll('.position-hidden-input');
@@ -395,11 +238,9 @@ function toggleAllPositions(isChecked) {
     const hiddenContainer = document.getElementById('hidden-positions-container');
     const allPositions = {{ all_positions|map(attribute='id')|list|tojson }};
     
-    // Clear existing hidden inputs
     hiddenContainer.innerHTML = '';
     
     if (isChecked) {
-        // Add hidden inputs for all positions
         allPositions.forEach(positionId => {
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
@@ -409,33 +250,26 @@ function toggleAllPositions(isChecked) {
             hiddenContainer.appendChild(hiddenInput);
         });
         
-        // Enable all configuration inputs
         document.querySelectorAll('.vote-input, .program-select, .year-level-select, .course-select').forEach(input => {
             input.disabled = false;
         });
         
-        // Show checkmark indicators for all positions
         document.querySelectorAll('.checkmark-indicator').forEach(indicator => {
             indicator.classList.add('visible');
         });
         
-        // Add selected class to all cards
         document.querySelectorAll('.position-card').forEach(card => {
             card.classList.add('selected');
         });
     } else {
-        // Remove all hidden inputs (nothing selected)
-        // Disable all configuration inputs
         document.querySelectorAll('.vote-input, .program-select, .year-level-select, .course-select').forEach(input => {
             input.disabled = true;
         });
         
-        // Hide checkmark indicators for all positions
         document.querySelectorAll('.checkmark-indicator').forEach(indicator => {
             indicator.classList.remove('visible');
         });
         
-        // Remove selected class from all cards
         document.querySelectorAll('.position-card').forEach(card => {
             card.classList.remove('selected');
         });
@@ -444,42 +278,10 @@ function toggleAllPositions(isChecked) {
     updateSelectedCount();
 }
 
-function validateVoteLimit(input) {
-    // Get current value
-    let value = input.value;
-    
-    // If empty, don't do anything (will be handled on blur)
-    if (value === '') {
-        return;
-    }
-    
-    // Remove any non-numeric characters
-    value = value.replace(/[^\d]/g, '');
-    
-    // If empty after cleaning, return (will be handled on blur)
-    if (value === '') {
-        return;
-    }
-    
-    let numValue = parseInt(value);
-    
-    // Check range
-    if (numValue < 1) {
-        input.value = '1';
-    } else if (numValue > 50) {
-        input.value = '50';
-        showFloatingNotification('Maximum votes cannot exceed 50', 'error');
-    } else {
-        input.value = numValue;
-    }
-}
-
 function handleVoteInputBlur(input) {
-    // On blur, if empty, set to default 1
     if (input.value === '') {
         input.value = '1';
     } else {
-        // Validate the value
         let numValue = parseInt(input.value);
         if (isNaN(numValue) || numValue < 1) {
             input.value = '1';
@@ -488,46 +290,6 @@ function handleVoteInputBlur(input) {
             showFloatingNotification('Maximum votes cannot exceed 50', 'error');
         }
     }
-}
-
-function updateBadges() {
-    // Update program type badges
-    document.querySelectorAll('.program-select:not(:disabled)').forEach(select => {
-        const positionId = select.id.replace('program_type_', '');
-        const badge = document.getElementById(`program-badge-${positionId}`);
-        if (badge && select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            badge.textContent = selectedOption.text;
-        } else if (badge && !select.value) {
-            badge.textContent = 'All';
-        }
-    });
-    
-    // Update year level badges
-    document.querySelectorAll('.year-level-select:not(:disabled)').forEach(select => {
-        const positionId = select.id.replace('year_level_', '');
-        const badge = document.getElementById(`year-badge-${positionId}`);
-        if (badge && select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            badge.textContent = selectedOption.text;
-        } else if (badge && !select.value) {
-            badge.textContent = 'All';
-        }
-    });
-    
-    // Update course badges
-    document.querySelectorAll('.course-select:not(:disabled)').forEach(select => {
-        const positionId = select.id.replace('course_', '');
-        const badge = document.getElementById(`course-badge-${positionId}`);
-        if (badge && select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            badge.textContent = selectedOption.text.length > 12 ? 
-                selectedOption.text.substring(0, 12) + '...' : 
-                selectedOption.text;
-        } else if (badge && !select.value) {
-            badge.textContent = 'All';
-        }
-    });
 }
 
 function validateForm() {
@@ -559,13 +321,11 @@ function validateForm() {
     return valid;
 }
 
-// Handle form submission with loading state and notification
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('selectAll');
     const configForm = document.getElementById('configForm');
     const saveBtn = document.getElementById('saveConfigBtn');
     
-    // Check for flash messages from server and show as floating notifications
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -580,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     {% endwith %}
     
-    // Initialize based on current state (if any positions are configured)
     const hasConfiguredPositions = {{ configured_position_ids|length }} > 0;
     if (hasConfiguredPositions) {
         toggleAllPositions(true);
@@ -590,67 +349,40 @@ document.addEventListener('DOMContentLoaded', function() {
         selectAllCheckbox.checked = false;
     }
     
-    // Add event listener to select all checkbox
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
             toggleAllPositions(this.checked);
         });
     }
     
-    // Add vote limit validation for text inputs
     document.querySelectorAll('.vote-input').forEach(input => {
-        // Validate on input (as user types) - only clean non-numeric but allow empty
         input.addEventListener('input', function() {
-            // Allow empty field while typing
-            if (this.value === '') {
-                return;
-            }
-            // Remove non-numeric characters but keep the value as is
+            if (this.value === '') return;
             let cleaned = this.value.replace(/[^\d]/g, '');
             if (cleaned !== this.value) {
                 this.value = cleaned;
             }
         });
         
-        // On blur, set default if empty
         input.addEventListener('blur', function() {
             handleVoteInputBlur(this);
         });
         
-        // On change, validate
-        input.addEventListener('change', function() {
-            if (this.value !== '') {
-                validateVoteLimit(this);
-            }
-        });
-        
-        // Prevent non-numeric characters
         input.addEventListener('keypress', function(e) {
-            // Allow: backspace, delete, tab, escape, enter, home, end, left, right, etc.
             if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab' || 
                 e.key === 'Escape' || e.key === 'Enter' || e.key === 'Home' || 
                 e.key === 'End' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 return;
             }
-            
-            // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
             if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'c' || e.key === 'v' || e.key === 'x')) {
                 return;
             }
-            
-            // Allow only numbers
             if (e.key < '0' || e.key > '9') {
                 e.preventDefault();
             }
         });
     });
     
-    // Update badges when dropdowns change
-    document.querySelectorAll('.program-select, .year-level-select, .course-select').forEach(select => {
-        select.addEventListener('change', updateBadges);
-    });
-    
-    // Form submission with loading state and notification
     if (configForm) {
         configForm.addEventListener('submit', function(e) {
             if (!validateForm()) {
@@ -658,35 +390,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
             
-            // Show loading state on button
             if (saveBtn) {
                 saveBtn.classList.add('submitting');
             }
             
-            // Allow form to submit - server will show success/error via flash
             return true;
         });
     }
-    
-    sessionStorage.setItem('return_to_elections', 'true');
 });
-
-// Function to show notification from server-side flash messages
-function checkForFlashMessages() {
-    // This will be called from server-side rendered flash messages
-    const flashMessages = document.querySelectorAll('.flash-message');
-    if (flashMessages.length > 0) {
-        flashMessages.forEach(msg => {
-            const type = msg.classList.contains('success') ? 'success' : 
-                        (msg.classList.contains('error') || msg.classList.contains('danger')) ? 'error' : 'info';
-            const message = msg.textContent.replace('×', '').trim();
-            showFloatingNotification(message, type);
-            msg.remove();
-        });
-    }
-}
-
-// Call on load
-setTimeout(checkForFlashMessages, 100);
 </script>
 {% endblock %}
