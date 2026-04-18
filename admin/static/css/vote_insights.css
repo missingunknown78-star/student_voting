@@ -123,7 +123,8 @@
     padding: 1.5rem;
     border-bottom: 1px solid #e2edf4;
     width: 100%;
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: visible;
 }
 
 :root.dark-mode .chart-container {
@@ -133,20 +134,27 @@
 .chart-wrapper {
     position: relative;
     width: 100%;
-    height: auto;
+    height: 400px;  /* FIXED HEIGHT - prevents pushing legend down */
 }
 
 .chart-wrapper canvas {
     width: 100% !important;
-    height: auto !important;
+    height: 400px !important;  /* FIXED HEIGHT for canvas */
     max-height: 400px;
 }
 
-/* ==================== LEGEND CONTAINER - COMPACT ==================== */
+/* For charts with many bars, make it horizontally scrollable */
+.chart-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* ==================== LEGEND CONTAINER - STAYS CLOSE TO CHART ==================== */
 .candidate-legend {
     padding: 0.75rem 1rem;
     background: #f8fafc;
     border-top: 1px solid #e2edf4;
+    margin-top: 0;  /* No extra margin */
 }
 
 :root.dark-mode .candidate-legend {
@@ -159,6 +167,8 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
+    max-height: 120px;  /* Limit legend height */
+    overflow-y: auto;    /* Scroll if too many legends */
 }
 
 /* Compact Legend Items */
