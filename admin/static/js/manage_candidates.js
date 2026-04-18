@@ -1,12 +1,33 @@
-/* PHOTO LIGHTBOX */
-// manage_candidates.js - Updated with school year support and platform field
-// All notifications now float above the modal
-
-// ==================== CSRF TOKEN HELPER - REMOVED ====================
-// CSRF protection has been disabled - removed getCsrfToken() function
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Manage Candidates JS loaded");
+    
+    // ===== NEW PAGINATION DELEGATION CODE - PASTE HERE =====
+    function initPaginationDelegation() {
+        const paginationContainer = document.getElementById('pagination-container');
+        if (paginationContainer) {
+            paginationContainer.removeEventListener('click', handlePaginationClick);
+            paginationContainer.addEventListener('click', handlePaginationClick);
+        }
+    }
+
+    function handlePaginationClick(e) {
+        const link = e.target.closest('.pagination-link');
+        if (link && link.dataset.page) {
+            e.preventDefault();
+            e.stopPropagation();
+            const page = parseInt(link.dataset.page);
+            console.log("Pagination clicked (delegation) - page:", page);
+            filterCandidates(page, true);
+        }
+    }
+
+    initPaginationDelegation();
+    // ===== END NEW PAGINATION DELEGATION CODE =====
+    
+    // Display school year info if filtered
+    displaySchoolYearInfo();
+    
+    // ... rest of your existing code ...
     
     // Display school year info if filtered
     displaySchoolYearInfo();
@@ -1215,25 +1236,8 @@ function updatePagination(pagination) {
     container.innerHTML = html;
 
     // Attach pagination listeners
-    attachPaginationListeners();
 }
 
-function attachPaginationListeners() {
-    const paginationLinks = document.querySelectorAll('.pagination-link');
-    paginationLinks.forEach(link => {
-        // Remove any existing listeners
-        const newLink = link.cloneNode(true);
-        link.parentNode.replaceChild(newLink, link);
-        
-        newLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const page = parseInt(this.dataset.page);
-            console.log("Pagination clicked - page:", page);
-            filterCandidates(page, true);
-        });
-    });
-}
 
 /* Handle pagination click */
 function handlePaginationClick(e) {
