@@ -3,146 +3,49 @@
 {% block title %}Qualify Students as Candidates{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/convert_to_candidates.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-    /* Real-time search styles - FULL WIDTH + ROUNDED */
-    .search-section {
-        margin-bottom: 25px;
-    }
-    
-    .search-wrapper {
-        position: relative;
-        width: 100%;
-    }
-    
-    .search-input {
-        width: 100%;
-        padding: 14px 50px 14px 24px;
-        border: 2px solid var(--border-color);
-        border-radius: 50px !important;
-        background: var(--input-bg);
-        color: var(--text-primary);
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        outline: none;
-        box-sizing: border-box;
-    }
-    
-    .search-input:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
-    }
-    
-    .search-input::placeholder {
-        color: var(--text-muted);
-    }
-    
-    .search-loading {
-        position: absolute;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-muted);
-        display: none;
-        font-size: 1.1rem;
-    }
-    
-    .search-wrapper.loading .search-loading {
-        display: block;
-    }
-    
-    /* Table container loading state */
-    .table-container.loading {
-        opacity: 0.5;
-        pointer-events: none;
-    }
-    
-    /* Stats card styling */
-    .stats-card {
-        margin-bottom: 25px;
-        background: var(--gradient-info);
-        border-radius: 16px;
-        padding: 25px;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 20px;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--border-color);
-    }
-    
-    .stats-info {
-        flex: 1;
-        min-width: 150px;
-    }
-    
-    .stats-info h3 {
-        font-size: 0.9rem;
-        margin: 0 0 5px 0;
-        opacity: 0.9;
-        font-weight: 500;
-        letter-spacing: 0.5px;
-    }
-    
-    .stats-info p {
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin: 0;
-        line-height: 1.2;
-    }
-    
-    :root.dark-mode .stats-card {
-        background: linear-gradient(135deg, #7c2d12, #991b1b);
-        border-color: rgba(245, 158, 11, 0.3);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .search-input {
-            padding: 12px 45px 12px 20px;
-            font-size: 0.9rem;
-        }
-        
-        .search-loading {
-            right: 16px;
-        }
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="manage-students-page">
+<div class="qualify-candidates-page">
     <div class="page-header">
-        <h1 class="page-title">
-            <i class="fa-solid fa-star"></i> Qualify Students as Candidates
-        </h1>
-        <a href="{{ url_for('admin.manage_candidates') }}" class="request-deletion-btn">
-            <i class="fa-solid fa-arrow-left"></i> Back to Candidates
+        <div class="header-left">
+            <h1 class="page-title"><i class="fas fa-user-check" style="margin-right: 10px;"></i>Qualify Students as Candidates</h1>
+            <p class="page-description">Mark students as qualified candidates. Qualified students will be able to apply for candidacy from their profile.</p>
+        </div>
+        <a href="{{ url_for('admin.manage_candidates') }}" class="back-btn">
+            <span class="btn-icon">←</span> Back to Candidates
         </a>
     </div>
     
-    <p class="page-description">
-        Mark students as qualified candidates. Qualified students will be able to apply for candidacy from their profile.
-    </p>
-
-    <!-- Stats Card -->
-    <div class="stats-card">
-        <div class="stats-info">
+    <!-- Stats Cards - Changed icon from ✅ to clean checkmark -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
             <h3>Total Students</h3>
             <p id="totalStudentsCount">{{ total_students }}</p>
         </div>
-        <div class="stats-info">
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-info">
             <h3>Qualified Students</h3>
             <p id="qualifiedCount">{{ qualified_count }}</p>
         </div>
     </div>
-
-    <!-- Search Bar - No Container, Just Search -->
+</div>
+    
+    <!-- Search Section -->
     <div class="search-section">
         <div class="search-wrapper" id="searchWrapper">
+            <i class="fas fa-search search-icon"></i>
             <input type="text" 
                    placeholder="Search by ID or name..." 
                    value="{{ search }}" 
@@ -150,11 +53,11 @@
                    class="search-input"
                    autocomplete="off">
             <span class="search-loading">
-                <i class="fa-solid fa-spinner fa-spin"></i>
+                <i class="fas fa-spinner fa-spin"></i>
             </span>
         </div>
     </div>
-
+    
     <!-- Table Container -->
     <div class="table-container" id="tableContainer">
         <table class="students-table">
@@ -174,29 +77,29 @@
                     {% set full_name = student.first_name ~ ' ' ~ student.last_name %}
                     {% set is_qualified = student.id in qualified_student_ids %}
                     <tr data-id="{{ student.id }}">
-                        <td>{{ student.id_number }}</td>
-                        <td>{{ full_name }}</td>
-                        <td>{{ student.course or 'N/A' }}</td>
-                        <td>{{ student.year_level.year_name if student.year_level else 'N/A' }}</td>
-                        <td>
+                        <td data-label="Student ID">{{ student.id_number }}</td>
+                        <td data-label="Name">{{ full_name }}</td>
+                        <td data-label="Course">{{ student.course or 'N/A' }}</td>
+                        <td data-label="Year Level">{{ student.year_level.year_name if student.year_level else 'N/A' }}</td>
+                        <td data-label="Status">
                             {% if is_qualified %}
-                                <span class="candidate-badge">
-                                    <i class="fa-solid fa-star"></i> Qualified
+                                <span class="status-badge qualified">
+                                    <i class="fas fa-check-circle"></i> Qualified
                                 </span>
                             {% else %}
-                                <span class="not-candidate-badge">
-                                    <i class="fa-solid fa-user"></i> Not Qualified
+                                <span class="status-badge not-qualified">
+                                    <i class="fas fa-clock"></i> Not Qualified
                                 </span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Actions">
                             {% if is_qualified %}
                                 <button class="action-btn remove-btn" onclick="removeQualification({{ student.id }})">
-                                    <i class="fa-solid fa-times"></i> Remove
+                                    <i class="fas fa-times"></i> Remove
                                 </button>
                             {% else %}
                                 <button class="action-btn qualify-btn" onclick="qualifyStudent({{ student.id }})">
-                                    <i class="fa-solid fa-check"></i> Qualify
+                                    <i class="fas fa-check"></i> Qualify
                                 </button>
                             {% endif %}
                         </td>
@@ -205,20 +108,19 @@
                 {% else %}
                     <tr>
                         <td colspan="6" class="empty-state">
-                            <i class="fa-solid fa-users-slash"></i>
-                            <h3>No Students Found</h3>
-                            <p>No students match your current filter criteria.</p>
+                            <div class="empty-state-icon">👥</div>
+                            <p>No students found.</p>
                         </td>
                     </tr>
                 {% endif %}
             </tbody>
         </table>
-
+        
         <!-- Pagination -->
         {% if total_pages > 1 %}
         <div class="pagination" id="pagination">
             {% for page_num in range(1, total_pages + 1) %}
-            <button onclick="goToPage({{ page_num }})" {% if page_num == current_page %}disabled{% endif %}>
+            <button onclick="goToPage({{ page_num }})" {% if page_num == current_page %}class="active"{% endif %}>
                 {{ page_num }}
             </button>
             {% endfor %}
@@ -227,9 +129,10 @@
     </div>
 </div>
 
-<script>
-    // CSRF Token Helper Function - REMOVED (CSRF protection disabled)
+<!-- Notification Container -->
+<div id="notificationContainer" class="notification-container"></div>
 
+<script>
     let searchTimeout = null;
     let currentPage = {{ current_page|default(1) }};
     let totalPages = {{ total_pages|default(1) }};
@@ -241,21 +144,19 @@
     const totalStudentsSpan = document.getElementById('totalStudentsCount');
     const qualifiedCountSpan = document.getElementById('qualifiedCount');
     const paginationDiv = document.getElementById('pagination');
+    const notificationContainer = document.getElementById('notificationContainer');
     
     // REAL-TIME SEARCH - triggers on every keystroke
     searchInput.addEventListener('input', function() {
-        // Clear previous timeout
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         
         const searchTerm = this.value;
         
-        // Show loading indicator
         searchWrapper.classList.add('loading');
         tableContainer.classList.add('loading');
         
-        // Debounce to avoid too many requests while typing fast
         searchTimeout = setTimeout(() => {
             loadStudents(1, searchTerm);
         }, 300);
@@ -272,21 +173,17 @@
         fetch(`{{ url_for('admin.get_qualified_students_data') }}?${params}`)
             .then(response => response.json())
             .then(data => {
-                // Update table body
                 studentsTableBody.innerHTML = data.html;
                 currentPage = data.current_page;
                 totalPages = data.total_pages;
                 
-                // Update stats
                 if (data.total_students !== undefined) {
                     totalStudentsSpan.textContent = data.total_students;
                     qualifiedCountSpan.textContent = data.qualified_count;
                 }
                 
-                // Update pagination
                 updatePagination(data.current_page, data.total_pages);
                 
-                // Hide loading
                 searchWrapper.classList.remove('loading');
                 tableContainer.classList.remove('loading');
             })
@@ -314,7 +211,7 @@
             btn.textContent = i;
             btn.onclick = () => goToPage(i);
             if (i === currentPage) {
-                btn.disabled = true;
+                btn.classList.add('active');
             }
             paginationDiv.appendChild(btn);
         }
@@ -327,43 +224,34 @@
     
     function showNotification(message, type = 'success') {
         const notification = document.createElement('div');
-        notification.className = `global-notification ${type}`;
+        notification.className = `notification ${type}`;
         notification.innerHTML = `
-            <i class="fa ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
             <span>${message}</span>
         `;
         
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 10px;
-            color: white;
-            font-weight: 500;
-            z-index: 100000;
-            animation: slideIn 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: ${type === 'success' ? 'linear-gradient(135deg, #00c851, #00a844)' : 
-                        type === 'error' ? 'linear-gradient(135deg, #ff4444, #cc0000)' : 
-                        'linear-gradient(135deg, #4361ee, #3b82f6)'};
-        `;
-
-        document.body.appendChild(notification);
-
+        notificationContainer.appendChild(notification);
+        
+        // Trigger animation
         setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease-out forwards';
-            setTimeout(() => notification.remove(), 300);
+            notification.classList.add('show');
+        }, 10);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
         }, 3000);
     }
     
     function qualifyStudent(studentId) {
         const button = event ? event.target.closest('button') : null;
         if (button) {
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
             button.disabled = true;
         }
         
@@ -371,7 +259,6 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ student_id: studentId })
         })
@@ -383,7 +270,7 @@
             } else {
                 showNotification('Error: ' + data.message, 'error');
                 if (button) {
-                    button.innerHTML = '<i class="fa-solid fa-check"></i> Qualify';
+                    button.innerHTML = '<i class="fas fa-check"></i> Qualify';
                     button.disabled = false;
                 }
             }
@@ -392,7 +279,7 @@
             console.error('Error:', error);
             showNotification('Error qualifying student', 'error');
             if (button) {
-                button.innerHTML = '<i class="fa-solid fa-check"></i> Qualify';
+                button.innerHTML = '<i class="fas fa-check"></i> Qualify';
                 button.disabled = false;
             }
         });
@@ -405,7 +292,7 @@
         
         const button = event ? event.target.closest('button') : null;
         if (button) {
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
             button.disabled = true;
         }
         
@@ -413,7 +300,6 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-                // REMOVED: 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ student_id: studentId })
         })
@@ -425,7 +311,7 @@
             } else {
                 showNotification('Error: ' + data.message, 'error');
                 if (button) {
-                    button.innerHTML = '<i class="fa-solid fa-times"></i> Remove';
+                    button.innerHTML = '<i class="fas fa-times"></i> Remove';
                     button.disabled = false;
                 }
             }
@@ -434,27 +320,10 @@
             console.error('Error:', error);
             showNotification('Error removing qualification', 'error');
             if (button) {
-                button.innerHTML = '<i class="fa-solid fa-times"></i> Remove';
+                button.innerHTML = '<i class="fas fa-times"></i> Remove';
                 button.disabled = false;
             }
         });
-    }
-    
-    // Add animation styles if not present
-    if (!document.getElementById('notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notification-styles';
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
     }
 </script>
 {% endblock %}
