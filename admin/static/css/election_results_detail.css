@@ -1221,12 +1221,12 @@ body {
 
 /* Legend Container */
 .candidate-legend {
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
     background: #f8fafc;
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
-    max-height: 320px;
+    gap: 0.5rem;
+    max-height: 200px;
     overflow-y: auto;
 }
 
@@ -1237,13 +1237,13 @@ body {
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
+    gap: 0.35rem;
+    font-size: 0.7rem;
     color: #000000;
-    min-width: 200px;
-    padding: 8px 12px;
+    min-width: 160px;
+    padding: 4px 8px;
     background: white;
-    border-radius: 12px;
+    border-radius: 8px;
     transition: all 0.2s;
     border: 1px solid #e2edf4;
 }
@@ -1256,7 +1256,7 @@ body {
 
 .legend-item:hover {
     background: #eef2f8;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 :root.dark-mode .legend-item:hover {
@@ -1264,33 +1264,83 @@ body {
 }
 
 .legend-color {
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
     flex-shrink: 0;
 }
 
 .legend-name {
-    font-weight: 600;
+    font-weight: 500;
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 0.7rem;
 }
 
 .legend-position {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     color: #64748b;
     background: #eef2f8;
-    padding: 2px 6px;
-    border-radius: 12px;
-    margin-left: 4px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-left: 3px;
+}
+
+.legend-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .legend-votes {
     color: #64748b;
     font-family: monospace;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
+}
+
+.legend-badge {
+    font-size: 0.6rem;
+    color: #64748b;
+    background: #eef2f8;
+    padding: 2px 6px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+:root.dark-mode .legend-badge {
+    background: #404040;
+    color: #94a3b8;
+}
+
+.legend-badge.winner {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+}
+
+/* Scroll hint smaller */
+.scroll-hint {
+    text-align: center;
+    font-size: 0.6rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed #e2edf4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+}
+
+:root.dark-mode .scroll-hint {
+    border-top-color: #404040;
+}
+
+.scroll-hint i {
+    font-size: 0.55rem;
 }
 
 /* ==================== PDF LOADING OVERLAY ==================== */
