@@ -25,27 +25,27 @@
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Dark mode variables - Fire theme with yellow, red, orange, black */
+/* Dark mode variables - Navy & Gold theme (Election/Government style) */
 :root.dark-mode {
-    --sidebar-bg: #000000;
-    --sidebar-hover: #1a1a1a;
-    --sidebar-active: #f59e0b;  /* Amber/orange */
+    --sidebar-bg: #0a0e27;
+    --sidebar-hover: #1a1f3a;
+    --sidebar-active: #fbbf24;
     --sidebar-text: #ffffff;
-    --sidebar-text-muted: #cccccc;
+    --sidebar-text-muted: #9ca3af;
     
-    /* Dark mode gradients - Fire theme */
-    --gradient-primary: linear-gradient(135deg, #000000 0%, #7c2d12 50%, #991b1b 100%); /* Black to burnt orange to red */
-    --gradient-logo: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #dc2626 100%); /* Yellow to orange to red */
-    --border-color: rgba(245, 158, 11, 0.4); /* Orange border */
-    --shadow-color: rgba(220, 38, 38, 0.3); /* Red shadow */
+    /* Dark mode gradients - Navy & Gold */
+    --gradient-primary: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f172a 100%);
+    --gradient-logo: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+    --border-color: rgba(251, 191, 36, 0.4);
+    --shadow-color: rgba(251, 191, 36, 0.3);
     --text-primary: #ffffff;
-    --text-secondary: #fcd34d; /* Light yellow */
-    --icon-color: #fbbf24; /* Yellow icons */
-    --hover-bg: linear-gradient(90deg, rgba(245, 158, 11, 0.4), rgba(220, 38, 38, 0.4)); /* Orange to red gradient */
-    --active-bg: linear-gradient(90deg, rgba(245, 158, 11, 0.7), rgba(220, 38, 38, 0.7)); /* Stronger orange to red */
-    --active-border: #f59e0b; /* Orange border */
-    --hover-border: #fbbf24; /* Yellow border */
-    --sidebar-border: 2px solid #000000; /* SOLID BLACK LINE - no shadow */
+    --text-secondary: #fcd34d;
+    --icon-color: #fbbf24;
+    --hover-bg: linear-gradient(90deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3));
+    --active-bg: linear-gradient(90deg, rgba(251, 191, 36, 0.5), rgba(245, 158, 11, 0.5));
+    --active-border: #fbbf24;
+    --hover-border: #fcd34d;
+    --sidebar-border: 2px solid #0a0e27;
 }
 
 /* ------------------- Sidebar Container ------------------- */
@@ -183,17 +183,16 @@
     color: #ffffff;
 }
 
+/* Update active indicator color */
 :root.dark-mode .sidebar-nav a.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 6px;
-    height: 70%;
-    background: #fbbf24; /* Yellow indicator */
-    border-radius: 0 4px 4px 0;
-    box-shadow: 0 0 15px #fbbf24; /* Yellow glow */
+    background: #fbbf24;
+    box-shadow: 0 0 15px #fbbf24;
+}
+
+/* Update logout button for dark mode */
+:root.dark-mode .sidebar-nav a:last-child {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.3), rgba(185, 28, 28, 0.3));
+    border-color: rgba(220, 38, 38, 0.5);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -574,7 +573,7 @@
 }
 
 :root.dark-mode .floating-theme-btn {
-    background: linear-gradient(135deg, #f59e0b, #dc2626);
+    background: linear-gradient(135deg, #fbbf24, #d97706);
     border: 2px solid rgba(255, 255, 255, 0.9);
 }
 

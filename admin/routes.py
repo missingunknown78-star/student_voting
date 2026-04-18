@@ -627,9 +627,12 @@ def login_forgot_password():
         }), 500
 
 
-
+from flask import get_flashed_messages
 @admin_bp.route('/2fa/verify', methods=['GET', 'POST'])
 def verify_2fa():
+
+    get_flashed_messages()
+
     # Check if user is in pre-2fa session
     if 'pre_2fa_admin_id' not in session:
         flash('Please login first.', 'warning')
@@ -790,7 +793,6 @@ def verify_2fa():
                 session.pop(f'2fa_cooldown_{ip}', None)
                 
                 print("🏠 Redirecting to dashboard (trusted device)")
-                flash("2FA verified successfully! Welcome, Admin.", "success")
                 return redirect(url_for('admin.dashboard'))
         else:
             # Increment failed attempts
@@ -7276,7 +7278,7 @@ def announcements():
             Announcement.date <= end_date
         )
     
-    announcements_list = announcements_query.order_by(Announcement.date.desc()).all()
+    announcements_list = announcements_query.order_by(Announcement.created_at.desc()).all()
     
     # 🚫 REMOVED: ANNOUNCEMENTS_VIEW audit log (not a data modification)
     # Viewing the page should not be logged
@@ -9924,6 +9926,6 @@ def logout():
         description=f"Admin user '{username}' logged out"
     )
     
-    flash('You have been logged out successfully.', 'success')
+    
     # Redirect to the dynamic access path
     return redirect(url_for('admin.dynamic_access', secret_path=secret_path))
