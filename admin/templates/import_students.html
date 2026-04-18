@@ -3,161 +3,77 @@
 {% block title %}Import Students{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/import_students.css') }}">
 <style>
-    /* ==================== FORCED LIGHT GREEN FLASH MESSAGE ==================== */
-    /* These styles will override everything to keep flash messages light green */
-    
-    /* Success flash message - LIGHT GREEN even in dark mode */
-    .flash-message.import-success {
-        background-color: #d4edda !important;  /* Light green background */
-        color: #155724 !important;              /* Dark green text */
-        border: 2px solid #c3e6cb !important;   /* Light green border */
-        padding: 15px !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
-        font-weight: 500 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        text-shadow: none !important;
-        opacity: 1 !important;
-        z-index: 1000 !important;
-    }
-    
-    /* Danger flash message - Keep red for errors */
-    .flash-message.import-danger {
-        background-color: #f8d7da !important;  /* Light red background */
-        color: #721c24 !important;              /* Dark red text */
-        border: 2px solid #f5c6cb !important;   /* Light red border */
-        padding: 15px !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
-        font-weight: 500 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        text-shadow: none !important;
-        opacity: 1 !important;
-        z-index: 1000 !important;
-    }
-    
-    /* Warning flash message */
-    .flash-message.import-warning {
-        background-color: #fff3cd !important;  /* Light yellow background */
-        color: #856404 !important;              /* Dark yellow text */
-        border: 2px solid #ffeeba !important;   /* Light yellow border */
-        padding: 15px !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
-        font-weight: 500 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        text-shadow: none !important;
-        opacity: 1 !important;
-        z-index: 1000 !important;
-    }
-    
-    /* Flash message container */
+    /* Hide the default flash container from base template */
     .flash-container {
-        margin: 20px 0 !important;
-        position: relative !important;
-        z-index: 999 !important;
-        max-width: 500px !important;
-    }
-    
-    /* Fade animation */
-    @keyframes fadeOutFlash {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(-10px); }
-    }
-    
-    /* Force main-content to have transitions */
-    .main-content {
-        transition: background-color 0.3s ease, background-image 0.3s ease !important;
-    }
-    
-    /* Ensure the background shows through */
-    .import-students-page {
-        background: transparent !important;
-    }
-    
-    /* Adjust info button position to not conflict with floating toggle */
-    .info-float-btn {
-        top: 20px;
-        right: 80px; /* Moved left to make room for floating toggle */
-    }
-    
-    /* Disable transitions during theme change */
-    .no-transition * {
-        transition: none !important;
+        display: none !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="import-students-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <h1 class="page-title"><i class="fas fa-file-import" style="margin-right: 10px;"></i>Import CTU Students</h1>
+            <p class="page-description">Upload the official Excel file containing CTU Moalboal Campus students.</p>
+        </div>
+        <button class="info-btn" id="open-info-modal">
+            <i class="fas fa-circle-info"></i> Instructions
+        </button>
+    </div>
 
-    <!-- Floating Info Button -->
-    <button class="info-float-btn" id="open-info-modal" title="Import instructions">
-        <i class="fa-solid fa-circle-info"></i>
-    </button>
-
-    <h2 class="page-title">Import CTU Students</h2>
-    <p class="page-description">
-        Upload the official Excel file containing CTU Moalboal Campus students.
-    </p>
-
-    <!-- ================= FORM + CARD FLEX CONTAINER ================= -->
-    <div class="import-card-container">
-
-        <!-- Excel Import Form -->
-        <div class="import-form-wrapper">
-            <form method="POST" enctype="multipart/form-data" class="import-form">
+    <!-- Stats and Import Row -->
+    <div class="import-stats-row">
+        <!-- Import Card -->
+        <div class="import-card">
+            <div class="import-card-header">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h3>Import Excel File</h3>
+            </div>
+            <form method="POST" enctype="multipart/form-data" class="import-form" id="importForm">
                 <div class="form-group">
-                    <label for="excel_file"><strong>Select Excel file:</strong></label>
+                    <label for="excel_file">Select Excel file (.xlsx or .xls)</label>
                     <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
                 </div>
                 <button type="submit" class="import-btn" id="import-btn">
-                    <i class="fa-solid fa-file-import"></i> 
+                    <i class="fas fa-file-import"></i>
                     <span class="btn-text">Import Students</span>
                     <span class="dots" style="display:none;"><span></span><span></span><span></span></span>
                 </button>
             </form>
         </div>
 
-        <!-- Total Students Card -->
-        <div class="total-students-card-wrapper">
-            <div class="total-students-card">
-                <h4>CTU Master List</h4>
-                <span class="total-number">{{ total_students or 0 }}</span>
+        <!-- Stats Card -->
+        <div class="stats-card">
+            <div class="stats-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stats-info">
+                <p class="stats-number">{{ total_students or 0 }}</p>
+                <h3 class="stats-label">CTU Master List</h3>
+                <span class="stats-note">Total students in database</span>
             </div>
         </div>
-
     </div>
 
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-container">
-          {% for category, message in messages %}
-            {% if category.startswith('import-') %}
-                <div class="flash-message {{ category }}">
-                  {{ message }}
-                </div>
-            {% endif %}
-          {% endfor %}
+    <!-- Students Table Section -->
+    <div class="students-section">
+        <div class="section-header">
+            <h3><i class="fas fa-list"></i> Imported Students</h3>
+            <div class="search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search by Student ID or Name..." 
+                       value="{{ request.args.get('q','') }}">
+                <button type="button" id="search-btn">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
         </div>
-      {% endif %}
-    {% endwith %}
-
-    <!-- Students Table -->
-    <div class="students-list">
-        <h3 style="margin-top:2rem;">Imported Students</h3>
-
-        <!-- Search Form -->
-        <form id="search-form" class="search-form">
-            <input type="text" name="q" id="search-input" placeholder="Search by Student No or Name..."
-                   value="{{ request.args.get('q','') }}">
-            <button type="submit" id="search-btn">
-                <i class="fa-solid fa-magnifying-glass"></i> Search
-            </button>
-        </form>
 
         <div id="students-table-container">
             {% include 'partials/_students_table.html' %}
@@ -165,101 +81,263 @@
     </div>
 
     <!-- Info Modal -->
-<div class="info-modal-overlay" id="info-modal-overlay">
-    <div class="info-modal">
-        <button class="close-modal-btn" id="close-info-modal">&times;</button>
-        <h4>Import Instructions</h4>
+    <div class="info-modal-overlay" id="info-modal-overlay">
+        <div class="info-modal">
+            <button class="close-modal-btn" id="close-info-modal">&times;</button>
+            <div class="modal-icon">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <h4>Import Instructions</h4>
+            
+            <div class="instruction-content">
+                <p>Import only Excel files <strong>(.xlsx or .xls)</strong> with the following format:</p>
+                
+                <div class="required-headers">
+                    <h5>Required Column Headers:</h5>
+                    <ul>
+                        <li><span class="header-name">StudentNo</span> - Student ID number</li>
+                        <li><span class="header-name">FirstName</span> - Student's first name</li>
+                        <li><span class="header-name">LastName</span> - Student's last name</li>
+                        <li><span class="header-name">YearLevel</span> - Numbers only (1, 2, 3, or 4)</li>
+                    </ul>
+                </div>
 
-        <p>Import only Excel files (.xlsx or .xls).</p>
-
-        <p><strong>Make sure the file has the exact header columns:</strong></p>
-        <ul>
-            <li>StudentNo</li>
-            <li>FirstName</li>
-            <li>LastName</li>
-            <li>YearLevel - Use numbers only (1, 2, 3, or 4)</li>
-        </ul>
-        
-        <p>Existing students will be updated automatically.</p>
-        <p><strong>⚠️ Important: Students no longer in the new file will be:</strong></p>
-        <ul>
-            <li>Removed from the CTU import list</li>
-            <li>Automatically deleted from registered students IF they have NOT voted</li>
-            <li>Students who have already voted will be kept for audit purposes but they can no longer login their account.</li>
-        </ul>
-        <p><strong>Use the official CTU master list only.</strong></p>
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="warning-text">
+                        <strong>Important Notes:</strong>
+                        <ul>
+                            <li>Existing students will be updated automatically</li>
+                            <li>Students no longer in the new file will be removed from the import list</li>
+                            <li>Students who have not voted will be automatically deleted</li>
+                            <li>Students who have already voted will be kept for audit purposes but cannot log in</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <p class="note"><i class="fas fa-info-circle"></i> Use the official CTU master list only.</p>
+            </div>
+        </div>
     </div>
 </div>
-</div>
+
+<!-- Hidden div to store flash messages as data attributes (safe from JS errors) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div id="flashData" style="display: none;" 
+             data-messages='[
+                {% for category, message in messages %}
+                    {"category": "{{ category }}", "message": {{ message|tojson|safe }}}{% if not loop.last %},{% endif %}
+                {% endfor %}
+             ]'>
+        </div>
+    {% endif %}
+{% endwith %}
+
+<!-- Floating Notification Container -->
+<div id="notificationContainer" class="notification-container"></div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-$(document).ready(function(){
-    // AJAX search and pagination
-    function loadStudents(page=1, query="") {
-        let $btn = $("#search-btn");
-        let originalContent = $btn.html();
-        $btn.prop("disabled", true);
-        $btn.html('<i class="fa-solid fa-spinner fa-spin"></i> Loading');
+// ==================== FLOATING NOTIFICATION FUNCTION ====================
+function showNotification(message, type = 'success') {
+    console.log('Showing notification:', message, type);
+    const notificationContainer = document.getElementById('notificationContainer');
+    
+    if (!notificationContainer) {
+        console.error('Notification container not found!');
+        return;
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    // Set icon based on type
+    let icon = 'fa-check-circle';
+    if (type === 'error' || type === 'danger') {
+        icon = 'fa-exclamation-circle';
+    } else if (type === 'warning') {
+        icon = 'fa-exclamation-triangle';
+    } else if (type === 'info') {
+        icon = 'fa-info-circle';
+    }
+    
+    // Split message by newlines and create line breaks
+    const lines = message.split('\n');
+    let formattedHtml = '';
+    
+    lines.forEach(function(line) {
+        if (line.trim()) {
+            formattedHtml += `<div style="margin-bottom: 4px;">${line}</div>`;
+        }
+    });
+    
+    notification.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <div style="line-height: 1.5;">${formattedHtml}</div>
+    `;
+    
+    notificationContainer.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Remove after appropriate duration (8 seconds for import summary)
+    const duration = message.includes('Sync complete') ? 8000 : 4000;
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 300);
+    }, duration);
+}
 
+// ==================== CHECK FOR FLASH MESSAGES ====================
+$(document).ready(function(){
+    console.log('Page loaded, checking for flash messages...');
+    
+    // Method 1: Check for flash data in the hidden div
+    const flashDataDiv = document.getElementById('flashData');
+    if (flashDataDiv && flashDataDiv.dataset.messages) {
+        try {
+            const messages = JSON.parse(flashDataDiv.dataset.messages);
+            console.log('Found flash messages via data attribute:', messages.length);
+            
+            messages.forEach(function(msg) {
+                let notificationType = 'success';
+                if (msg.category === 'import-danger') {
+                    notificationType = 'danger';
+                } else if (msg.category === 'import-warning') {
+                    notificationType = 'warning';
+                } else if (msg.category === 'import-info') {
+                    notificationType = 'info';
+                } else if (msg.category === 'import-success') {
+                    notificationType = 'success';
+                }
+                
+                console.log('Displaying notification:', notificationType, msg.message);
+                showNotification(msg.message, notificationType);
+            });
+        } catch(e) {
+            console.error('Error parsing flash messages:', e);
+        }
+    } else {
+        console.log('No flash data div found or no messages');
+    }
+    
+    // Method 2: Also check for any existing flash message elements in the DOM (backup)
+    setTimeout(function() {
+        const existingFlashMessages = document.querySelectorAll('.flash-message');
+        console.log('Found existing flash message elements:', existingFlashMessages.length);
+        
+        existingFlashMessages.forEach(function(flash) {
+            const message = flash.innerText || flash.textContent;
+            const classes = flash.className;
+            let type = 'success';
+            
+            if (classes.includes('danger') || classes.includes('error')) {
+                type = 'danger';
+            } else if (classes.includes('warning')) {
+                type = 'warning';
+            } else if (classes.includes('info')) {
+                type = 'info';
+            }
+            
+            if (message && message.trim()) {
+                console.log('Converting existing flash to notification:', type, message);
+                showNotification(message, type);
+                flash.style.display = 'none';
+            }
+        });
+    }, 200);
+    
+    // ==================== SEARCH AND PAGINATION FUNCTIONS ====================
+    function loadStudents(page = 1, query = "") {
+        const $btn = $("#search-btn");
+        const originalContent = $btn.html();
+        
+        // Show loading state
+        $btn.prop("disabled", true);
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> Loading...');
+        
+        // Make AJAX request
         $.ajax({
             url: "{{ url_for('admin.import_students_table') }}",
             method: "GET",
-            data: {page: page, q: query},
-            success: function(data){
-                $("#students-table-container").html(data);
+            data: {
+                page: page,
+                q: query
             },
-            error: function(){
-                alert("Failed to load data. Please check server console.");
+            success: function(response) {
+                $("#students-table-container").html(response);
             },
-            complete: function(){
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", error);
+                showNotification("Failed to load students. Please try again.", "error");
+            },
+            complete: function() {
                 $btn.prop("disabled", false);
                 $btn.html(originalContent);
             }
         });
     }
-
-    $("#search-form").on("submit", function(e){
-        e.preventDefault();
-        loadStudents(1, $("#search-input").val());
-    });
-
-    $("#students-table-container").on("click", ".page-link", function(e){
-        e.preventDefault();
-        let page = $(this).data("page");
-        loadStudents(page, $("#search-input").val());
-    });
-
-    // Info modal logic
-    // When opening modal
-    $("#open-info-modal").on("click", function(){ 
-        $("#info-modal-overlay").addClass("active");  // Add active class
-    });
-
-    // When closing modal
-    $("#close-info-modal, #info-modal-overlay").on("click", function(e){
-        if(e.target.id === "close-info-modal" || e.target.id === "info-modal-overlay"){
-            $("#info-modal-overlay").removeClass("active");  // Remove active class
+    
+    // Search input handler - Enter key
+    $("#search-input").on("keypress", function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            const query = $(this).val();
+            loadStudents(1, query);
         }
     });
-
-    // Import button animation
-    $(".import-form").on("submit", function(e){
-        let $btn = $("#import-btn");
-        let $text = $btn.find(".btn-text");
-        let $dots = $btn.find(".dots");
+    
+    // Search button click handler
+    $("#search-btn").on("click", function() {
+        const query = $("#search-input").val();
+        loadStudents(1, query);
+    });
+    
+    // Pagination click handler
+    $("#students-table-container").on("click", ".page-link", function(e) {
+        e.preventDefault();
+        const page = $(this).data("page");
+        const query = $("#search-input").val();
+        loadStudents(page, query);
+    });
+    
+    // ==================== IMPORT FORM HANDLER ====================
+    $("#importForm").on("submit", function() {
+        const $btn = $("#import-btn");
+        const $text = $btn.find(".btn-text");
+        const $dots = $btn.find(".dots");
+        
         $btn.prop("disabled", true);
         $text.text("Importing");
         $dots.show();
     });
-
-    // Auto-hide flash messages
-    setTimeout(function(){
-        $(".flash-message").each(function(){
-            $(this).css("animation", "fadeOutFlash 0.5s forwards");
-            setTimeout(() => { $(this).remove(); }, 500);
-        });
-    }, 5000);
+    
+    // ==================== INFO MODAL HANDLERS ====================
+    $("#open-info-modal").on("click", function() {
+        $("#info-modal-overlay").addClass("active");
+    });
+    
+    $("#close-info-modal, #info-modal-overlay").on("click", function(e) {
+        if (e.target.id === "close-info-modal" || e.target.id === "info-modal-overlay") {
+            $("#info-modal-overlay").removeClass("active");
+        }
+    });
+    
+    // Prevent modal close when clicking inside modal content
+    $(".info-modal").on("click", function(e) {
+        e.stopPropagation();
+    });
+    
+    console.log('Notification system ready');
 });
 </script>
 {% endblock %}

@@ -23,11 +23,13 @@ body {
     color: #ffffff;
 }
 
-/* Main content with sidebar margin */
+/* Main content with sidebar margin - FULL WIDTH */
 .main-content {
     margin-left: 280px;
     transition: margin-left 0.3s ease;
     min-height: 100vh;
+    width: calc(100% - 280px);
+    position: relative;
 }
 
 .main-content {
@@ -39,16 +41,17 @@ body {
 }
 
 @media (max-width: 1024px) {
-    .main-content { margin-left: 250px; }
+    .main-content { margin-left: 250px; width: calc(100% - 250px); }
 }
 
 @media (max-width: 768px) {
-    .main-content { margin-left: 0; }
+    .main-content { margin-left: 0; width: 100%; }
 }
 
 .manage-students-page {
     padding: 28px 32px;
-    max-width: 1400px;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* ========== PAGE HEADER ========== */
@@ -583,4 +586,17 @@ body {
 /* Optional: Add a subtle loading text effect */
 .export-btn.exporting span {
     opacity: 0.9;
+}
+
+/* Full width on larger screens */
+@media (min-width: 1400px) {
+    .manage-students-page {
+        padding: 28px 48px;
+    }
+}
+
+@media (min-width: 1920px) {
+    .manage-students-page {
+        padding: 32px 64px;
+    }
 }

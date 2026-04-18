@@ -3,546 +3,396 @@
 {% block title %}Manage Departments & Courses{% endblock %}
 
 {% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/manage_departments.css') }}">
-
-<style>
-    /* -------------------- Buttons -------------------- */
-    .edit-btn, .delete-btn, .select-all-btn, .inline-edit-btn, .inline-save-btn, .inline-cancel-btn {
-        padding: 6px 12px;
-        margin-bottom: 10px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        position: relative;
-        transition: all 0.3s ease;
-    }
-    
-    .edit-btn { background-color: #2c7be5; color: #fff; }
-    .edit-btn:hover { background-color: #1a5bb8; }
-    .delete-btn { background-color: #e74c3c; color: #fff; }
-    .delete-btn:hover { background-color: #c0392b; }
-    .select-all-btn { background-color: #17a2b8; color: #fff; }
-    .select-all-btn:hover { background-color: #117a8b; }
-    
-    /* Inline edit buttons */
-    .inline-edit-btn {
-        background-color: #f39c12;
-        color: #fff;
-        padding: 4px 8px;
-        margin: 0 5px;
-        font-size: 0.85rem;
-    }
-    .inline-edit-btn:hover {
-        background-color: #e67e22;
-    }
-    
-    .inline-save-btn {
-        background-color: #27ae60;
-        color: #fff;
-        padding: 4px 8px;
-        margin: 0 5px;
-        font-size: 0.85rem;
-    }
-    .inline-save-btn:hover {
-        background-color: #2ecc71;
-    }
-    
-    .inline-cancel-btn {
-        background-color: #95a5a6;
-        color: #fff;
-        padding: 4px 8px;
-        margin: 0 5px;
-        font-size: 0.85rem;
-    }
-    .inline-cancel-btn:hover {
-        background-color: #7f8c8d;
-    }
-    
-    /* Spinner Animation */
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .btn-loading {
-        position: relative;
-        pointer-events: none;
-        opacity: 0.7;
-    }
-    
-    .btn-loading::after {
-        content: '';
-        position: absolute;
-        width: 16px;
-        height: 16px;
-        top: 50%;
-        left: 50%;
-        margin-left: -8px;
-        margin-top: -8px;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        border-top-color: transparent;
-        animation: spin 0.8s linear infinite;
-    }
-    
-    .btn-loading span {
-        visibility: hidden;
-    }
-    
-    /* ==================== CENTERED FLOATING MESSAGE ==================== */
-    .floating-message-center {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-100px);
-        z-index: 10000;
-        padding: 15px 30px;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 1rem;
-        text-align: center;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        backdrop-filter: blur(10px);
-        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        max-width: 90%;
-        min-width: 300px;
-        pointer-events: none;
-    }
-    
-    .floating-message-center.show {
-        transform: translateX(-50%) translateY(0);
-    }
-    
-    .floating-message-center.success {
-        background: linear-gradient(135deg, #27ae60, #2ecc71);
-        color: white;
-        border-left: 4px solid #fff;
-    }
-    
-    .floating-message-center.error {
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        color: white;
-        border-left: 4px solid #fff;
-    }
-    
-    .floating-message-center.warning {
-        background: linear-gradient(135deg, #f39c12, #e67e22);
-        color: white;
-        border-left: 4px solid #fff;
-    }
-    
-    .floating-message-center.info {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        border-left: 4px solid #fff;
-    }
-    
-    .floating-message-center i {
-        margin-right: 10px;
-        font-size: 1.2rem;
-    }
-    
-    /* Dark mode support */
-    :root.dark-mode .floating-message-center {
-        box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    }
-    
-    .select-col { width: 40px; text-align: center; }
-    
-    /* Edit mode styles */
-    .edit-mode-input {
-        padding: 6px 10px;
-        border: 2px solid var(--button-primary);
-        border-radius: 4px;
-        width: 90%;
-        font-size: 0.95rem;
-        background-color: var(--input-bg);
-        color: var(--text-color);
-    }
-    
-    .edit-mode-input:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(44, 123, 229, 0.2);
-    }
-    
-    .action-buttons {
-        white-space: nowrap;
-    }
-    
-    /* ==================== THEME TRANSITION FIXES ==================== */
-    /* Force main-content to have transitions */
-    .main-content {
-        transition: background-color 0.3s ease, background-image 0.3s ease !important;
-    }
-    
-    /* Ensure the background shows through */
-    .container {
-        background: transparent !important;
-    }
-    
-    /* Dark mode main content background - using :root.dark-mode */
-    :root.dark-mode .main-content {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
-    }
-    
-    /* Light mode main content background */
-    :root:not(.dark-mode) .main-content {
-        background: linear-gradient(135deg, #f5f7fb 0%, #e2e8f0 100%) !important;
-    }
-    
-    /* Dark mode specific overrides for buttons - using :root.dark-mode */
-    :root.dark-mode .edit-btn {
-        background-color: #3498db;
-    }
-    
-    :root.dark-mode .delete-btn {
-        background-color: #e74c3c;
-    }
-    
-    :root.dark-mode .select-all-btn {
-        background-color: #17a2b8;
-    }
-    
-    :root.dark-mode .inline-edit-btn {
-        background-color: #f39c12;
-    }
-    
-    :root.dark-mode .inline-save-btn {
-        background-color: #27ae60;
-    }
-    
-    :root.dark-mode .inline-cancel-btn {
-        background-color: #7f8c8d;
-    }
-    
-    /* Fix for form elements in dark mode */
-    :root.dark-mode .container .card form input[type="text"],
-    :root.dark-mode .container .card form select,
-    :root.dark-mode .edit-mode-input {
-        color: var(--text-color);
-        background-color: var(--input-bg);
-        border-color: var(--border-color);
-    }
-    
-    /* Fix for table text in dark mode */
-    :root.dark-mode .container table td {
-        color: var(--text-color);
-    }
-    
-    /* Fix for checkbox in dark mode */
-    :root.dark-mode .select-col input[type="checkbox"] {
-        accent-color: var(--button-primary);
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="manage-depts-page">
 
-    <h2>Departments & Courses</h2>
+    <div class="page-header">
+        <div class="header-left">
+            <h1 class="page-title"><i class="fas fa-building" style="margin-right: 10px;"></i>Departments & Courses</h1>
+            <p class="page-description">Organize academic departments and their associated courses.</p>
+        </div>
+    </div>
 
     <!-- -------------------- ADD DEPARTMENT -------------------- -->
-    <div class="card">
-        <h3>Add Department</h3>
-        <form id="addDepartmentForm" method="POST" action="{{ url_for('admin.add_department') }}">
-            <input type="text" name="name" placeholder="Department Name" required>
-            <button type="submit" id="addDeptBtn">Add Department</button>
+    <div class="settings-card">
+        <div class="card-header">
+            <h3><i class="fas fa-plus-circle"></i> Add Department</h3>
+        </div>
+        <form id="addDepartmentForm" method="POST" action="{{ url_for('admin.add_department') }}" class="inline-form">
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <input type="text" name="name" placeholder="Department Name" required>
+                </div>
+                <button type="submit" id="addDeptBtn" class="btn-primary">
+                    <i class="fas fa-save"></i> Add Department
+                </button>
+            </div>
         </form>
     </div>
 
     <!-- -------------------- DEPARTMENTS TABLE -------------------- -->
-    <div class="card">
-        <h3>Departments</h3>
-        <button id="editDepartmentsBtn" class="edit-btn">Edit</button>
-        <button id="selectAllDepartmentsBtn" class="select-all-btn" style="display:none;">Select All</button>
-        <button id="deleteDepartmentsBtn" class="delete-btn" style="display:none;">Delete Selected</button>
+    <div class="settings-card" id="departmentsCard">
+        <div class="card-header">
+            <h3><i class="fas fa-list"></i> Departments</h3>
+            <div class="card-actions">
+                <button id="editDepartmentsBtn" class="btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Mode
+                </button>
+                <button id="selectAllDepartmentsBtn" class="btn-secondary" style="display:none;">
+                    <i class="fas fa-check-double"></i> Select All
+                </button>
+                <button id="deleteDepartmentsBtn" class="btn-danger" style="display:none;">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+            </div>
+        </div>
 
-        <!-- Hidden form for delete -->
         <form id="deleteDepartmentsForm" method="POST" action="{{ url_for('admin.delete_multiple_departments') }}">
         </form>
 
-        <table>
-            <thead>
-                <tr>
-                    <th class="select-col" style="display:none;">Select</th>
-                    <th>Department Name</th>
-                    <th class="actions-col" style="display:none;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for dept in departments %}
-                <tr data-id="{{ dept.id }}" data-type="department">
-                    <td class="select-col" style="display:none;">
-                        <input type="checkbox" class="select-dept" value="{{ dept.id }}">
-                    </td>
-                    <td class="name-cell">
-                        <span class="view-mode">{{ dept.name }}</span>
-                        <input type="text" class="edit-mode-input" value="{{ dept.name }}" style="display:none;">
-                    </td>
-                    <td class="actions-col action-buttons" style="display:none;">
-                        <button class="inline-edit-btn" onclick="startEdit(this)">Edit</button>
-                        <button class="inline-save-btn" onclick="saveEdit(this)" style="display:none;">Save</button>
-                        <button class="inline-cancel-btn" onclick="cancelEdit(this)" style="display:none;">Cancel</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table class="data-table" id="departmentsTable">
+                <thead>
+                    <tr>
+                        <th class="select-col" style="display:none;">Select</th>
+                        <th>Department Name</th>
+                        <th class="actions-col" style="display:none;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    <tr data-id="{{ dept.id }}" data-type="department">
+                        <td class="select-col" style="display:none;">
+                            <input type="checkbox" class="select-dept" value="{{ dept.id }}">
+                        </td>
+                        <td class="name-cell">
+                            <span class="view-mode">{{ dept.name }}</span>
+                            <input type="text" class="edit-mode-input" value="{{ dept.name }}" style="display:none;">
+                        </td>
+                        <td class="actions-col action-buttons" style="display:none;">
+                            <button class="inline-edit-btn" onclick="startEdit(this)"><i class="fas fa-pen"></i> Edit</button>
+                            <button class="inline-save-btn" onclick="saveEdit(this)" style="display:none;"><i class="fas fa-check"></i> Save</button>
+                            <button class="inline-cancel-btn" onclick="cancelEdit(this)" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- -------------------- ADD COURSE -------------------- -->
-    <div class="card">
-        <h3>Add Course</h3>
-        <form id="addCourseForm" method="POST" action="{{ url_for('admin.add_course') }}">
-            <select name="department_id" required>
-                <option value="">Select Department</option>
-                {% for dept in departments %}
-                    <option value="{{ dept.id }}">{{ dept.name }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" name="course_name" placeholder="Course Name" required>
-            <button type="submit" id="addCourseBtn">Add Course</button>
+    <div class="settings-card">
+        <div class="card-header">
+            <h3><i class="fas fa-plus-circle"></i> Add Course</h3>
+        </div>
+        <form id="addCourseForm" method="POST" action="{{ url_for('admin.add_course') }}" class="inline-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <select name="department_id" required>
+                        <option value="">Select Department</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 2;">
+                    <input type="text" name="course_name" placeholder="Course Name" required>
+                </div>
+                <button type="submit" id="addCourseBtn" class="btn-primary">
+                    <i class="fas fa-save"></i> Add Course
+                </button>
+            </div>
         </form>
     </div>
 
     <!-- -------------------- COURSES TABLE -------------------- -->
-    <div class="card">
-        <h3>Courses</h3>
-        <button id="editCoursesBtn" class="edit-btn">Edit</button>
-        <button id="selectAllCoursesBtn" class="select-all-btn" style="display:none;">Select All</button>
-        <button id="deleteCoursesBtn" class="delete-btn" style="display:none;">Delete Selected</button>
+    <div class="settings-card" id="coursesCard">
+        <div class="card-header">
+            <h3><i class="fas fa-book"></i> Courses</h3>
+            <div class="card-actions">
+                <button id="editCoursesBtn" class="btn-secondary">
+                    <i class="fas fa-edit"></i> Edit Mode
+                </button>
+                <button id="selectAllCoursesBtn" class="btn-secondary" style="display:none;">
+                    <i class="fas fa-check-double"></i> Select All
+                </button>
+                <button id="deleteCoursesBtn" class="btn-danger" style="display:none;">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+            </div>
+        </div>
 
-        <!-- Hidden form for delete -->
         <form id="deleteCoursesForm" method="POST" action="{{ url_for('admin.delete_multiple_courses') }}">
         </form>
 
-        <table>
-            <thead>
-                <tr>
-                    <th class="select-col" style="display:none;">Select</th>
-                    <th>Course Name</th>
-                    <th>Department</th>
-                    <th class="actions-col" style="display:none;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for course in courses %}
-                <tr data-id="{{ course.id }}" data-type="course">
-                    <td class="select-col" style="display:none;">
-                        <input type="checkbox" class="select-course" value="{{ course.id }}">
-                    </td>
-                    <td class="name-cell">
-                        <span class="view-mode">{{ course.course_name }}</span>
-                        <input type="text" class="edit-mode-input" value="{{ course.course_name }}" style="display:none;">
-                    </td>
-                    <td class="dept-cell">
-                        <span class="view-mode">{{ course.department_name }}</span>
-                        <select class="edit-mode-input" style="display:none;">
-                            {% for dept in departments %}
-                                <option value="{{ dept.id }}" {% if dept.id == course.department_id %}selected{% endif %}>{{ dept.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                    <td class="actions-col action-buttons" style="display:none;">
-                        <button class="inline-edit-btn" onclick="startEdit(this)">Edit</button>
-                        <button class="inline-save-btn" onclick="saveEdit(this)" style="display:none;">Save</button>
-                        <button class="inline-cancel-btn" onclick="cancelEdit(this)" style="display:none;">Cancel</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table class="data-table" id="coursesTable">
+                <thead>
+                    <tr>
+                        <th class="select-col" style="display:none;">Select</th>
+                        <th>Course Name</th>
+                        <th>Department</th>
+                        <th class="actions-col" style="display:none;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr data-id="{{ course.id }}" data-type="course">
+                        <td class="select-col" style="display:none;">
+                            <input type="checkbox" class="select-course" value="{{ course.id }}">
+                        </td>
+                        <td class="name-cell">
+                            <span class="view-mode">{{ course.course_name }}</span>
+                            <input type="text" class="edit-mode-input" value="{{ course.course_name }}" style="display:none;">
+                        </td>
+                        <td class="dept-cell">
+                            <span class="view-mode">{{ course.department_name }}</span>
+                            <select class="edit-mode-input" style="display:none;">
+                                {% for dept in departments %}
+                                    <option value="{{ dept.id }}" {% if dept.id == course.department_id %}selected{% endif %}>{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="actions-col action-buttons" style="display:none;">
+                            <button class="inline-edit-btn" onclick="startEdit(this)"><i class="fas fa-pen"></i> Edit</button>
+                            <button class="inline-save-btn" onclick="saveEdit(this)" style="display:none;"><i class="fas fa-check"></i> Save</button>
+                            <button class="inline-cancel-btn" onclick="cancelEdit(this)" style="display:none;"><i class="fas fa-times"></i> Cancel</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
 </div>
 
-<!-- =============== CENTERED FLOATING MESSAGE FUNCTION =============== -->
+<!-- Floating Notification Container -->
+<div id="notificationContainer" class="notification-container"></div>
+
 <script>
-// Show centered floating message for results only
+// ==================== FLOATING NOTIFICATION FUNCTION ====================
 function showFloatingMessage(message, type = 'success') {
-    // Remove any existing message
-    const existingMessage = document.querySelector('.floating-message-center');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
+    const notificationContainer = document.getElementById('notificationContainer');
+    if (!notificationContainer) return;
     
-    // Create message element
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `floating-message-center ${type}`;
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
     
-    // Add icon based on type
-    let icon = '';
-    if (type === 'success') icon = '<i class="fa-solid fa-circle-check"></i>';
-    else if (type === 'error') icon = '<i class="fa-solid fa-circle-exclamation"></i>';
-    else if (type === 'warning') icon = '<i class="fa-solid fa-triangle-exclamation"></i>';
-    else icon = '<i class="fa-solid fa-info-circle"></i>';
+    let icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-exclamation-circle';
+    else if (type === 'warning') icon = 'fa-exclamation-triangle';
+    else if (type === 'info') icon = 'fa-info-circle';
     
-    messageDiv.innerHTML = `${icon} ${message}`;
-    document.body.appendChild(messageDiv);
+    notification.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+    notificationContainer.appendChild(notification);
     
-    // Trigger animation
+    setTimeout(() => notification.classList.add('show'), 10);
     setTimeout(() => {
-        messageDiv.classList.add('show');
-    }, 10);
-    
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        messageDiv.classList.remove('show');
-        setTimeout(() => {
-            if (messageDiv.parentElement) {
-                messageDiv.remove();
-            }
-        }, 300);
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Check for flash messages from server (results of actions)
+// Check for flash messages
 document.addEventListener('DOMContentLoaded', function() {
-    // Look for flash messages in the page (rendered by Flask)
-    const flashMessages = document.querySelectorAll('.flash-message, .alert, .message');
-    flashMessages.forEach(msg => {
-        let message = msg.textContent;
-        let type = 'info';
-        
-        if (msg.classList.contains('success') || msg.classList.contains('alert-success')) {
-            type = 'success';
-        } else if (msg.classList.contains('error') || msg.classList.contains('alert-danger') || msg.classList.contains('alert-error')) {
-            type = 'error';
-        } else if (msg.classList.contains('warning') || msg.classList.contains('alert-warning')) {
-            type = 'warning';
-        }
-        
-        showFloatingMessage(message, type);
-        msg.remove();
-    });
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                showFloatingMessage("{{ message|safe }}", "{{ category }}");
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    // Initialize edit mode functionality
+    initEditModes();
 });
-</script>
 
-<!-- =============== THEME SYNCHRONIZATION FIX =============== -->
-<script>
-// This ensures the theme applies immediately without refresh
-function applyThemeToMainContent() {
-    const mainContent = document.querySelector('.main-content');
-    if (!mainContent) return;
+// ==================== EDIT MODE FUNCTIONS ====================
+function initEditModes() {
+    // DEPARTMENTS EDIT MODE
+    const editDeptBtn = document.getElementById('editDepartmentsBtn');
+    const selectAllDeptBtn = document.getElementById('selectAllDepartmentsBtn');
+    const deleteDeptBtn = document.getElementById('deleteDepartmentsBtn');
+    const deptSelectCols = document.querySelectorAll('#departmentsTable .select-col');
+    const deptActionCols = document.querySelectorAll('#departmentsTable .actions-col');
+    const deptCheckboxes = document.querySelectorAll('#departmentsTable .select-dept');
+    let deptEditMode = false;
     
-    // Check current theme from localStorage
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    // Apply or remove dark-mode class
-    if (isDark) {
-        mainContent.classList.add('dark-mode');
-    } else {
-        mainContent.classList.remove('dark-mode');
+    if (editDeptBtn) {
+        editDeptBtn.addEventListener('click', function() {
+            deptEditMode = !deptEditMode;
+            
+            // Toggle select columns
+            deptSelectCols.forEach(col => {
+                col.style.display = deptEditMode ? 'table-cell' : 'none';
+            });
+            
+            // Toggle action columns
+            deptActionCols.forEach(col => {
+                col.style.display = deptEditMode ? 'table-cell' : 'none';
+            });
+            
+            // Toggle buttons
+            if (selectAllDeptBtn) {
+                selectAllDeptBtn.style.display = deptEditMode ? 'inline-flex' : 'none';
+            }
+            
+            // Uncheck all checkboxes
+            deptCheckboxes.forEach(cb => cb.checked = false);
+            
+            // Hide delete button initially
+            if (deleteDeptBtn) {
+                deleteDeptBtn.style.display = 'none';
+            }
+            
+            // Change button text
+            editDeptBtn.innerHTML = deptEditMode ? '<i class="fas fa-times"></i> Exit Edit' : '<i class="fas fa-edit"></i> Edit Mode';
+            
+            // Cancel any inline edits when exiting
+            if (!deptEditMode) {
+                document.querySelectorAll('#departmentsTable .inline-cancel-btn').forEach(btn => {
+                    if (btn.style.display !== 'none') {
+                        cancelEdit(btn);
+                    }
+                });
+            }
+        });
     }
     
-    // Ensure content is visible
-    mainContent.classList.add('theme-applied');
-}
-
-// Apply immediately when page loads
-(function() {
-    applyThemeToMainContent();
+    // Select All for Departments
+    if (selectAllDeptBtn) {
+        selectAllDeptBtn.addEventListener('click', function() {
+            const allChecked = Array.from(deptCheckboxes).every(cb => cb.checked);
+            deptCheckboxes.forEach(cb => cb.checked = !allChecked);
+            const selectedCount = Array.from(deptCheckboxes).filter(cb => cb.checked).length;
+            if (deleteDeptBtn) {
+                deleteDeptBtn.style.display = selectedCount > 0 ? 'inline-flex' : 'none';
+            }
+        });
+    }
     
-    // Also apply after a tiny delay to catch any late initialization
-    setTimeout(applyThemeToMainContent, 10);
-    setTimeout(applyThemeToMainContent, 50);
-    setTimeout(applyThemeToMainContent, 100);
-    
-    // Listen for theme toggle button clicks
-    document.addEventListener('click', function(e) {
-        // Check if the clicked element is the theme toggle button or inside it
-        if (e.target.closest('#floatingThemeBtn') || e.target.closest('.floating-theme-btn')) {
-            // Small delay to let localStorage update
-            setTimeout(function() {
-                applyThemeToMainContent();
-            }, 50);
-        }
-    });
-    
-    // Listen for storage events (if theme changed in another tab)
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'theme') {
-            applyThemeToMainContent();
-        }
-    });
-    
-    // Create a mutation observer to watch for class changes on body
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
-                applyThemeToMainContent();
+    // Department checkbox changes
+    deptCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const selectedCount = Array.from(deptCheckboxes).filter(c => c.checked).length;
+            if (deleteDeptBtn) {
+                deleteDeptBtn.style.display = selectedCount > 0 ? 'inline-flex' : 'none';
             }
         });
     });
     
-    observer.observe(document.body, { attributes: true });
-    
-    // Also watch for changes to the main-content class
-    const mainContent = document.querySelector('.main-content');
-    if (mainContent) {
-        const mainContentObserver = new MutationObserver(function(mutations) {
-            // Just ensure theme-applied is present
-            if (!mainContent.classList.contains('theme-applied')) {
-                mainContent.classList.add('theme-applied');
+    // Delete Departments
+    if (deleteDeptBtn) {
+        deleteDeptBtn.addEventListener('click', function() {
+            const ids = Array.from(deptCheckboxes).filter(c => c.checked).map(c => c.value);
+            if (ids.length && confirm(`Delete ${ids.length} selected department(s)?`)) {
+                const form = document.getElementById('deleteDepartmentsForm');
+                form.innerHTML = '';
+                ids.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'department_ids';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                form.submit();
             }
         });
-        
-        mainContentObserver.observe(mainContent, { attributes: true });
     }
-})();
-</script>
-
-<script>
-// Spinner button handler
-function showButtonSpinner(button) {
-    if (!button) return;
     
-    // Save original content
-    const originalHtml = button.innerHTML;
-    button.setAttribute('data-original-html', originalHtml);
+    // ==================== COURSES EDIT MODE ====================
+    const editCourseBtn = document.getElementById('editCoursesBtn');
+    const selectAllCourseBtn = document.getElementById('selectAllCoursesBtn');
+    const deleteCourseBtn = document.getElementById('deleteCoursesBtn');
+    const courseSelectCols = document.querySelectorAll('#coursesTable .select-col');
+    const courseActionCols = document.querySelectorAll('#coursesTable .actions-col');
+    const courseCheckboxes = document.querySelectorAll('#coursesTable .select-course');
+    let courseEditMode = false;
     
-    // Add loading class
-    button.classList.add('btn-loading');
+    if (editCourseBtn) {
+        editCourseBtn.addEventListener('click', function() {
+            courseEditMode = !courseEditMode;
+            
+            courseSelectCols.forEach(col => {
+                col.style.display = courseEditMode ? 'table-cell' : 'none';
+            });
+            
+            courseActionCols.forEach(col => {
+                col.style.display = courseEditMode ? 'table-cell' : 'none';
+            });
+            
+            if (selectAllCourseBtn) {
+                selectAllCourseBtn.style.display = courseEditMode ? 'inline-flex' : 'none';
+            }
+            
+            courseCheckboxes.forEach(cb => cb.checked = false);
+            
+            if (deleteCourseBtn) {
+                deleteCourseBtn.style.display = 'none';
+            }
+            
+            editCourseBtn.innerHTML = courseEditMode ? '<i class="fas fa-times"></i> Exit Edit' : '<i class="fas fa-edit"></i> Edit Mode';
+            
+            if (!courseEditMode) {
+                document.querySelectorAll('#coursesTable .inline-cancel-btn').forEach(btn => {
+                    if (btn.style.display !== 'none') {
+                        cancelEdit(btn);
+                    }
+                });
+            }
+        });
+    }
     
-    // Create span for text
-    const span = document.createElement('span');
-    span.textContent = button.textContent || 'Loading...';
-    button.innerHTML = '';
-    button.appendChild(span);
+    // Select All for Courses
+    if (selectAllCourseBtn) {
+        selectAllCourseBtn.addEventListener('click', function() {
+            const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
+            courseCheckboxes.forEach(cb => cb.checked = !allChecked);
+            const selectedCount = Array.from(courseCheckboxes).filter(cb => cb.checked).length;
+            if (deleteCourseBtn) {
+                deleteCourseBtn.style.display = selectedCount > 0 ? 'inline-flex' : 'none';
+            }
+        });
+    }
     
-    return function restoreButton() {
-        button.classList.remove('btn-loading');
-        button.innerHTML = button.getAttribute('data-original-html') || originalHtml;
-    };
+    // Course checkbox changes
+    courseCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const selectedCount = Array.from(courseCheckboxes).filter(c => c.checked).length;
+            if (deleteCourseBtn) {
+                deleteCourseBtn.style.display = selectedCount > 0 ? 'inline-flex' : 'none';
+            }
+        });
+    });
+    
+    // Delete Courses
+    if (deleteCourseBtn) {
+        deleteCourseBtn.addEventListener('click', function() {
+            const ids = Array.from(courseCheckboxes).filter(c => c.checked).map(c => c.value);
+            if (ids.length && confirm(`Delete ${ids.length} selected course(s)?`)) {
+                const form = document.getElementById('deleteCoursesForm');
+                form.innerHTML = '';
+                ids.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'course_ids';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                form.submit();
+            }
+        });
+    }
 }
 
-// Handle form submissions - show spinner only, no "adding" messages
-document.querySelectorAll('form').forEach(form => {
-    form.addEventListener('submit', function(e) {
-        const submitBtn = this.querySelector('button[type="submit"]');
-        if (submitBtn && !submitBtn.classList.contains('btn-loading')) {
-            showButtonSpinner(submitBtn);
-        }
-    });
-});
-
-// -------------------- Scroll Position --------------------
-document.querySelectorAll('form').forEach(form => {
-    form.addEventListener('submit', () => {
-        localStorage.setItem('scrollPos', window.scrollY);
-    });
-});
-window.addEventListener('load', () => {
-    const scrollPos = localStorage.getItem('scrollPos');
-    if(scrollPos){ window.scrollTo(0, parseInt(scrollPos)); localStorage.removeItem('scrollPos'); }
-    
-    // Reapply theme after page load
-    applyThemeToMainContent();
-});
-
-// -------------------- Inline Edit Functions --------------------
+// ==================== INLINE EDIT FUNCTIONS ====================
 function startEdit(button) {
     const row = button.closest('tr');
     const viewSpans = row.querySelectorAll('.view-mode');
@@ -551,16 +401,12 @@ function startEdit(button) {
     const saveBtn = row.querySelector('.inline-save-btn');
     const cancelBtn = row.querySelector('.inline-cancel-btn');
     
-    // Hide view mode, show edit mode
     viewSpans.forEach(span => span.style.display = 'none');
     editInputs.forEach(input => input.style.display = 'block');
-    
-    // Toggle buttons
     editBtn.style.display = 'none';
-    saveBtn.style.display = 'inline-block';
-    cancelBtn.style.display = 'inline-block';
+    saveBtn.style.display = 'inline-flex';
+    cancelBtn.style.display = 'inline-flex';
     
-    // Focus on first input
     if (editInputs.length > 0) {
         editInputs[0].focus();
     }
@@ -574,19 +420,15 @@ function cancelEdit(button) {
     const saveBtn = row.querySelector('.inline-save-btn');
     const cancelBtn = row.querySelector('.inline-cancel-btn');
     
-    // Reset input values to original
     viewSpans.forEach((span, index) => {
         if (editInputs[index]) {
             editInputs[index].value = span.textContent.trim();
         }
     });
     
-    // Show view mode, hide edit mode
     viewSpans.forEach(span => span.style.display = '');
     editInputs.forEach(input => input.style.display = 'none');
-    
-    // Toggle buttons
-    editBtn.style.display = 'inline-block';
+    editBtn.style.display = 'inline-flex';
     saveBtn.style.display = 'none';
     cancelBtn.style.display = 'none';
 }
@@ -594,10 +436,12 @@ function cancelEdit(button) {
 function saveEdit(button) {
     const row = button.closest('tr');
     const rowId = row.dataset.id;
-    const rowType = row.dataset.type; // 'department' or 'course'
+    const rowType = row.dataset.type;
+    const saveBtn = button;
+    const originalHtml = saveBtn.innerHTML;
     
-    // Add spinner to save button
-    const restoreSpinner = showButtonSpinner(button);
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    saveBtn.disabled = true;
     
     let formData = new FormData();
     
@@ -605,34 +449,33 @@ function saveEdit(button) {
         const newName = row.querySelector('.edit-mode-input').value.trim();
         if (!newName) {
             showFloatingMessage('Department name cannot be empty', 'error');
-            if (restoreSpinner) restoreSpinner();
+            saveBtn.innerHTML = originalHtml;
+            saveBtn.disabled = false;
             return;
         }
         formData.append('id', rowId);
         formData.append('name', newName);
         
-        // Send AJAX request to update department
         fetch('/ctumoalboal-comelec/departments/update', {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
-            if (restoreSpinner) restoreSpinner();
-            
             if (data.success) {
-                // Update the view mode span
                 row.querySelector('.view-mode').textContent = newName;
                 cancelEdit(button);
-                showFloatingMessage(data.message || 'Department updated successfully!', 'success');
+                showFloatingMessage(data.message || 'Department updated!', 'success');
             } else {
                 showFloatingMessage(data.message || 'Error updating department', 'error');
             }
         })
         .catch(error => {
-            if (restoreSpinner) restoreSpinner();
-            console.error('Error:', error);
-            showFloatingMessage('An error occurred while updating', 'error');
+            showFloatingMessage('An error occurred', 'error');
+        })
+        .finally(() => {
+            saveBtn.innerHTML = originalHtml;
+            saveBtn.disabled = false;
         });
         
     } else if (rowType === 'course') {
@@ -641,7 +484,8 @@ function saveEdit(button) {
         
         if (!newName) {
             showFloatingMessage('Course name cannot be empty', 'error');
-            if (restoreSpinner) restoreSpinner();
+            saveBtn.innerHTML = originalHtml;
+            saveBtn.disabled = false;
             return;
         }
         
@@ -649,202 +493,42 @@ function saveEdit(button) {
         formData.append('course_name', newName);
         formData.append('department_id', newDeptId);
         
-        // Send AJAX request to update course
         fetch('/ctumoalboal-comelec/courses/update', {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
-            if (restoreSpinner) restoreSpinner();
-            
             if (data.success) {
-                // Update the view mode spans
                 row.querySelectorAll('.view-mode')[0].textContent = newName;
                 row.querySelectorAll('.view-mode')[1].textContent = data.department_name;
                 cancelEdit(button);
-                showFloatingMessage(data.message || 'Course updated successfully!', 'success');
+                showFloatingMessage(data.message || 'Course updated!', 'success');
             } else {
                 showFloatingMessage(data.message || 'Error updating course', 'error');
             }
         })
         .catch(error => {
-            if (restoreSpinner) restoreSpinner();
-            console.error('Error:', error);
-            showFloatingMessage('An error occurred while updating', 'error');
+            showFloatingMessage('An error occurred', 'error');
+        })
+        .finally(() => {
+            saveBtn.innerHTML = originalHtml;
+            saveBtn.disabled = false;
         });
     }
-    
-    // Reapply theme after update
-    setTimeout(applyThemeToMainContent, 10);
 }
 
-// -------------------- Departments Edit Mode --------------------
-const deptCard = document.querySelector('.card:nth-of-type(2)'); // Departments table
-const deptCols = deptCard ? deptCard.querySelectorAll('.select-col') : [];
-const deptActionCols = deptCard ? deptCard.querySelectorAll('.actions-col') : [];
-const deptCheckboxes = deptCard ? deptCard.querySelectorAll('.select-dept') : [];
-const editDepartmentsBtn = document.getElementById('editDepartmentsBtn');
-const deleteDepartmentsBtn = document.getElementById('deleteDepartmentsBtn');
-const selectAllDepartmentsBtn = document.getElementById('selectAllDepartmentsBtn');
-const deleteDepartmentsForm = document.getElementById('deleteDepartmentsForm');
-let deptEditMode = false;
-
-if (editDepartmentsBtn) {
-    editDepartmentsBtn.addEventListener('click', () => {
-        deptEditMode = !deptEditMode;
-        deptCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
-        deptActionCols.forEach(col => col.style.display = deptEditMode ? 'table-cell' : 'none');
-        if (deleteDepartmentsBtn) deleteDepartmentsBtn.style.display = 'none';
-        if (selectAllDepartmentsBtn) selectAllDepartmentsBtn.style.display = deptEditMode ? 'inline-block' : 'none';
-        deptCheckboxes.forEach(cb => cb.checked = false);
-        
-        // If exiting edit mode, cancel any inline edits
-        if (!deptEditMode && deptCard) {
-            deptCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
-                if (btn.style.display !== 'none') {
-                    cancelEdit(btn);
-                }
-            });
-        }
-        
-        // Reapply theme after state change
-        setTimeout(applyThemeToMainContent, 10);
-    });
-}
-
-if (selectAllDepartmentsBtn) {
-    selectAllDepartmentsBtn.addEventListener('click', () => {
-        const allChecked = Array.from(deptCheckboxes).every(cb => cb.checked);
-        deptCheckboxes.forEach(cb => cb.checked = !allChecked);
-        const selectedCount = Array.from(deptCheckboxes).filter(cb => cb.checked).length;
-        if (deleteDepartmentsBtn) {
-            deleteDepartmentsBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
-        }
-        
-        // Reapply theme after state change
-        setTimeout(applyThemeToMainContent, 10);
-    });
-}
-
-deptCheckboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-        const selectedCount = Array.from(deptCheckboxes).filter(c => c.checked).length;
-        if (deleteDepartmentsBtn) {
-            deleteDepartmentsBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
-        }
-        
-        // Reapply theme after state change
-        setTimeout(applyThemeToMainContent, 10);
-    });
+// Handle form submissions
+document.querySelectorAll('form').forEach(form => {
+    if (form.id !== 'deleteDepartmentsForm' && form.id !== 'deleteCoursesForm') {
+        form.addEventListener('submit', function() {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                btn.disabled = true;
+            }
+        });
+    }
 });
-
-if (deleteDepartmentsBtn) {
-    deleteDepartmentsBtn.addEventListener('click', () => {
-        const ids = Array.from(deptCheckboxes).filter(c => c.checked).map(c => c.value);
-        const selectedCount = ids.length;
-        
-        if(selectedCount && confirm(`Are you sure you want to delete ${selectedCount} selected department(s)?`)){
-            // Add spinner to delete button
-            const restoreSpinner = showButtonSpinner(deleteDepartmentsBtn);
-            
-            // Clear previous inputs
-            deleteDepartmentsForm.innerHTML = '';
-            
-            ids.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'department_ids';
-                input.value = id;
-                deleteDepartmentsForm.appendChild(input);
-            });
-            deleteDepartmentsForm.submit();
-        }
-    });
-}
-
-// -------------------- Courses Edit Mode --------------------
-const courseCard = document.querySelector('.card:nth-of-type(4)'); // Courses table
-const courseCols = courseCard ? courseCard.querySelectorAll('.select-col') : [];
-const courseActionCols = courseCard ? courseCard.querySelectorAll('.actions-col') : [];
-const courseCheckboxes = courseCard ? courseCard.querySelectorAll('.select-course') : [];
-const editCoursesBtn = document.getElementById('editCoursesBtn');
-const deleteCoursesBtn = document.getElementById('deleteCoursesBtn');
-const selectAllCoursesBtn = document.getElementById('selectAllCoursesBtn');
-const deleteCoursesForm = document.getElementById('deleteCoursesForm');
-let courseEditMode = false;
-
-if (editCoursesBtn) {
-    editCoursesBtn.addEventListener('click', () => {
-        courseEditMode = !courseEditMode;
-        courseCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
-        courseActionCols.forEach(col => col.style.display = courseEditMode ? 'table-cell' : 'none');
-        if (deleteCoursesBtn) deleteCoursesBtn.style.display = 'none';
-        if (selectAllCoursesBtn) selectAllCoursesBtn.style.display = courseEditMode ? 'inline-block' : 'none';
-        courseCheckboxes.forEach(cb => cb.checked = false);
-        
-        // If exiting edit mode, cancel any inline edits
-        if (!courseEditMode && courseCard) {
-            courseCard.querySelectorAll('.inline-cancel-btn').forEach(btn => {
-                if (btn.style.display !== 'none') {
-                    cancelEdit(btn);
-                }
-            });
-        }
-        
-        // Reapply theme after state change
-        setTimeout(applyThemeToMainContent, 10);
-    });
-}
-
-if (selectAllCoursesBtn) {
-    selectAllCoursesBtn.addEventListener('click', () => {
-        const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
-        courseCheckboxes.forEach(cb => cb.checked = !allChecked);
-        const selectedCount = Array.from(courseCheckboxes).filter(cb => cb.checked).length;
-        if (deleteCoursesBtn) {
-            deleteCoursesBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
-        }
-        
-        // Reapply theme after state change
-        setTimeout(applyThemeToMainContent, 10);
-    });
-}
-
-courseCheckboxes.forEach(cb => {
-    cb.addEventListener('change', () => {
-        const selectedCount = Array.from(courseCheckboxes).filter(c => c.checked).length;
-        if (deleteCoursesBtn) {
-            deleteCoursesBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
-        }
-        
-        // Reapply theme after state change
-        setTimeout(applyThemeToMainContent, 10);
-    });
-});
-
-if (deleteCoursesBtn) {
-    deleteCoursesBtn.addEventListener('click', () => {
-        const ids = Array.from(courseCheckboxes).filter(c => c.checked).map(c => c.value);
-        const selectedCount = ids.length;
-        
-        if(selectedCount && confirm(`Are you sure you want to delete ${selectedCount} selected course(s)?`)){
-            // Add spinner to delete button
-            const restoreSpinner = showButtonSpinner(deleteCoursesBtn);
-            
-            // Clear previous inputs
-            deleteCoursesForm.innerHTML = '';
-            
-            ids.forEach(id => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'course_ids';
-                input.value = id;
-                deleteCoursesForm.appendChild(input);
-            });
-            deleteCoursesForm.submit();
-        }
-    });
-}
 </script>
 {% endblock %}

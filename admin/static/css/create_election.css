@@ -28,6 +28,8 @@ body {
     margin-left: 280px;
     transition: margin-left 0.3s ease;
     min-height: 100vh;
+    width: calc(100% - 280px);
+    position: relative;
 }
 
 /* Light mode main content background */
@@ -50,7 +52,8 @@ body {
 
 .create-election-page {
     padding: 28px 32px;
-    max-width: 1400px;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* page header area */

@@ -5489,8 +5489,6 @@ def manage_departments():
     return render_template('manage_departments.html', departments=departments, courses=courses)
 
 
-# In your routes, make sure you're using flash() for all actions
-
 @admin_bp.route('/departments/add', methods=['POST'])
 @admin_required
 def add_department():
@@ -5527,7 +5525,7 @@ def add_department():
             description=f"Admin user '{username}' added new department: '{name}' from IP: {ip}"
         )
         
-        flash(f'✅ Department "{name}" added successfully!', 'success')
+        flash(f'✅ Department added successfully!', 'success')
     except Exception as e:
         flash(f'❌ Error adding department: {str(e)}', 'error')
     finally:
@@ -5589,7 +5587,7 @@ def add_course():
             description=f"Admin user '{username}' added new course: '{course_name}' to department: '{dept_name}' (ID: {department_id}) from IP: {ip}"
         )
         
-        flash(f'✅ Course "{course_name}" added successfully to {dept_name}!', 'success')
+        flash(f'✅ Course added successfully!', 'success')
     except Exception as e:
         flash(f'❌ Error adding course: {str(e)}', 'error')
     finally:
@@ -5628,10 +5626,7 @@ def delete_multiple_departments():
         course_count = result['course_count'] if result else 0
         
         if course_count > 0:
-            cursor.execute(f"SELECT name FROM departments WHERE id IN ({format_strings})", tuple(ids))
-            depts = cursor.fetchall()
-            dept_names = [d['name'] for d in depts]
-            flash(f'❌ Cannot delete departments that have courses. Please delete courses first. Departments: {", ".join(dept_names)}', 'error')
+            flash(f'❌ Cannot delete departments that have courses. Please delete courses first.', 'error')
             cursor.close()
             connection.close()
             return redirect(url_for('admin.manage_departments'))
@@ -5639,7 +5634,6 @@ def delete_multiple_departments():
         # Get department names before deletion
         cursor.execute(f"SELECT name FROM departments WHERE id IN ({format_strings})", tuple(ids))
         departments_to_delete = cursor.fetchall()
-        department_names = [d['name'] for d in departments_to_delete]
         
         if not departments_to_delete:
             flash('⚠️ No matching departments found to delete.', 'warning')
@@ -5659,10 +5653,10 @@ def delete_multiple_departments():
             
             log_audit(
                 action='DELETE_MULTIPLE_DEPARTMENTS',
-                description=f"Admin user '{username}' deleted {len(department_names)} department(s): {', '.join(department_names)} from IP: {ip}"
+                description=f"Admin user '{username}' deleted {len(departments_to_delete)} department(s) from IP: {ip}"
             )
             
-            flash(f'✅ Successfully deleted {len(department_names)} department(s): {", ".join(department_names)}', 'success')
+            flash(f'✅ {len(departments_to_delete)} department(s) deleted successfully!', 'success')
         else:
             flash('⚠️ No departments were deleted.', 'warning')
             
@@ -5695,7 +5689,7 @@ def delete_multiple_courses():
     try:
         format_strings = ','.join(['%s'] * len(ids))
         
-        # Check if courses have students (using 'students' table, not 'voters')
+        # Check if courses have students
         cursor.execute(f"""
             SELECT COUNT(*) as student_count 
             FROM students 
@@ -5705,15 +5699,7 @@ def delete_multiple_courses():
         student_count = result['student_count'] if result else 0
         
         if student_count > 0:
-            cursor.execute(f"""
-                SELECT c.course_name, d.name as dept_name
-                FROM courses c
-                JOIN departments d ON c.department_id = d.id
-                WHERE c.id IN ({format_strings})
-            """, tuple(ids))
-            courses = cursor.fetchall()
-            course_list = [f'"{c["course_name"]}" ({c["dept_name"]})' for c in courses]
-            flash(f'❌ Cannot delete courses that have students assigned. Please reassign students first. Courses: {", ".join(course_list)}', 'error')
+            flash(f'❌ Cannot delete courses that have students assigned. Please reassign students first.', 'error')
             cursor.close()
             connection.close()
             return redirect(url_for('admin.manage_departments'))
@@ -5733,8 +5719,6 @@ def delete_multiple_courses():
             connection.close()
             return redirect(url_for('admin.manage_departments'))
         
-        course_names = [f'"{c["course_name"]}" ({c["dept_name"]})' for c in courses_to_delete]
-        
         # Delete courses
         cursor.execute(f"DELETE FROM courses WHERE id IN ({format_strings})", tuple(ids))
         connection.commit()
@@ -5747,10 +5731,10 @@ def delete_multiple_courses():
             
             log_audit(
                 action='DELETE_MULTIPLE_COURSES',
-                description=f"Admin user '{username}' deleted {len(course_names)} course(s): {', '.join(course_names)} from IP: {ip}"
+                description=f"Admin user '{username}' deleted {len(courses_to_delete)} course(s) from IP: {ip}"
             )
             
-            flash(f'✅ Successfully deleted {len(course_names)} course(s): {", ".join(course_names)}', 'success')
+            flash(f'✅ {len(courses_to_delete)} course(s) deleted successfully!', 'success')
         else:
             flash('⚠️ No courses were deleted.', 'warning')
             
@@ -5813,7 +5797,7 @@ def update_department():
         cursor.close()
         connection.close()
         
-        return jsonify({'success': True, 'message': f'✅ Department updated from "{old_name}" to "{new_name}"'})
+        return jsonify({'success': True, 'message': '✅ Department updated successfully!'})
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'❌ Error: {str(e)}'}), 500
@@ -5883,7 +5867,7 @@ def update_course():
         
         return jsonify({
             'success': True, 
-            'message': f'✅ Course updated from "{old_data["course_name"]}" to "{new_name}" in {new_dept_name}',
+            'message': '✅ Course updated successfully!',
             'department_name': new_dept_name
         })
         
