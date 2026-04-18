@@ -144,13 +144,8 @@
 
 /* ==================== LEGEND CONTAINER - COMPACT ==================== */
 .candidate-legend {
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem 1rem;
     background: #f8fafc;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    max-height: 160px;
-    overflow-y: auto;
     border-top: 1px solid #e2edf4;
 }
 
@@ -159,15 +154,22 @@
     border-top-color: #404040;
 }
 
+/* Legend Grid - 3 COLUMNS */
+.legend-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
 /* Compact Legend Items */
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    font-size: 0.65rem;
-    padding: 3px 6px;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    padding: 4px 8px;
     background: white;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #e2edf4;
     transition: all 0.2s;
 }
@@ -189,30 +191,29 @@
 
 /* Legend Color Swatch */
 .legend-color {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
     flex-shrink: 0;
 }
 
 /* Legend Name */
 .legend-name {
     font-weight: 500;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 130px;
+    flex: 1;
 }
 
 /* Legend Position Badge */
 .legend-position {
-    font-size: 0.55rem;
+    font-size: 0.6rem;
     color: #64748b;
     background: #eef2f8;
-    padding: 1px 4px;
-    border-radius: 8px;
-    margin-left: 2px;
+    padding: 1px 5px;
+    border-radius: 10px;
     white-space: nowrap;
 }
 
@@ -220,7 +221,7 @@
 .legend-stats {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.25rem;
     margin-left: auto;
 }
 
@@ -228,19 +229,19 @@
 .legend-votes {
     color: #64748b;
     font-family: monospace;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
 }
 
 /* Legend Badge */
 .legend-badge {
-    font-size: 0.55rem;
+    font-size: 0.6rem;
     color: #64748b;
     background: #eef2f8;
-    padding: 1px 5px;
+    padding: 1px 6px;
     border-radius: 10px;
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
 }
 
 :root.dark-mode .legend-badge {
@@ -254,28 +255,21 @@
 }
 
 .legend-badge i {
-    font-size: 0.5rem;
-}
-
-/* Legend Grid */
-.legend-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, auto));
-    gap: 0.35rem;
+    font-size: 0.55rem;
 }
 
 /* Scroll Hint */
 .scroll-hint {
     text-align: center;
-    font-size: 0.55rem;
+    font-size: 0.6rem;
     color: #64748b;
-    margin-top: 0.35rem;
-    padding-top: 0.25rem;
+    margin-top: 0.5rem;
+    padding-top: 0.35rem;
     border-top: 1px dashed #e2edf4;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
+    gap: 0.35rem;
 }
 
 :root.dark-mode .scroll-hint {
@@ -283,13 +277,13 @@
 }
 
 .scroll-hint i {
-    font-size: 0.5rem;
+    font-size: 0.55rem;
     color: #2c7cb6;
 }
 
 /* Scrollbar */
 .candidate-legend::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
 }
 
 .candidate-legend::-webkit-scrollbar-track {
@@ -303,6 +297,12 @@
 }
 
 /* ==================== RESPONSIVE ==================== */
+@media (max-width: 1024px) {
+    .legend-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .insight-charts-section {
         padding: 1rem;
@@ -320,16 +320,8 @@
         font-size: 1.2rem;
     }
     
-    .candidate-legend {
-        max-height: 200px;
-    }
-    
     .legend-grid {
         grid-template-columns: 1fr;
-    }
-    
-    .legend-name {
-        max-width: none;
     }
 }
 
@@ -347,11 +339,7 @@
     }
     
     .legend-item {
-        padding: 2px 5px;
-    }
-    
-    .legend-name {
-        font-size: 0.6rem;
+        padding: 4px 8px;
     }
 }
 
