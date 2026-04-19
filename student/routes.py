@@ -4822,8 +4822,13 @@ def apply_as_candidate():
         if election_end.tzinfo is None:
             election_end = tz.localize(election_end)
         
-        if not (election_start <= now <= election_end):
-            return jsonify({'success': False, 'message': 'This election is not currently open for applications'}), 400
+        # Allow applications for upcoming AND active elections
+        if now > election_end:
+            return jsonify({'success': False, 'message': 'This election has already ended'}), 400
+
+# Optional: Check if applications haven't started too early
+# if now < election_start:
+#     return jsonify({'success': False, 'message': f'Applications for this election will open on {election_start.strftime("%B %d, %Y")}'}), 400
         
         # Verify the position is valid for this election
         from admin.models import ElectionPosition
