@@ -4175,7 +4175,8 @@ def account_deletion_requests():
 
 @admin_bp.route('/deletion-requests/data')
 def get_deletion_requests_data():
-    """Get paginated deletion requests data including both pending and processed requests"""
+    """Get paginated deletion requests data including both pending (from deletion_requests) 
+    and processed requests (from deletion_request_audit)"""
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'all')
     search = request.args.get('search', '')
@@ -4210,7 +4211,7 @@ def get_deletion_requests_data():
     
     # Handle different status filters
     if status == 'pending':
-        # Only from deletion_requests table (should only have pending)
+        # Only from deletion_requests table (pending requests)
         query = DeletionRequest.query.filter_by(status='pending')
         
         # Apply GLOBAL date range filter from dashboard
@@ -4253,7 +4254,7 @@ def get_deletion_requests_data():
         })
     
     elif status == 'approved':
-        # Only from audit table with status approved
+        # ✅ FIXED: Get from deletion_request_audit table with status 'approved'
         query = DeletionRequestAudit.query.filter_by(status='approved')
         
         # Apply GLOBAL date range filter from dashboard
@@ -4277,6 +4278,7 @@ def get_deletion_requests_data():
         for audit in paginated.items:
             requests_data.append({
                 'id': audit.id,
+                'original_request_id': audit.original_request_id,
                 'student_name': audit.student_name,
                 'reason': audit.reason,
                 'request_date': audit.request_date.isoformat(),
@@ -4284,6 +4286,7 @@ def get_deletion_requests_data():
                 'processed_date': audit.processed_date.isoformat(),
                 'processed_by': audit.processed_by_username,
                 'votes_anonymized': audit.votes_anonymized,
+                'admin_notes': audit.admin_notes,
                 'from_audit': True
             })
         
@@ -4294,7 +4297,7 @@ def get_deletion_requests_data():
         })
     
     elif status == 'rejected':
-        # Only from audit table with status rejected
+        # ✅ FIXED: Get from deletion_request_audit table with status 'rejected'
         query = DeletionRequestAudit.query.filter_by(status='rejected')
         
         # Apply GLOBAL date range filter from dashboard
@@ -4318,6 +4321,7 @@ def get_deletion_requests_data():
         for audit in paginated.items:
             requests_data.append({
                 'id': audit.id,
+                'original_request_id': audit.original_request_id,
                 'student_name': audit.student_name,
                 'reason': audit.reason,
                 'request_date': audit.request_date.isoformat(),
@@ -4325,6 +4329,7 @@ def get_deletion_requests_data():
                 'processed_date': audit.processed_date.isoformat(),
                 'processed_by': audit.processed_by_username,
                 'votes_anonymized': audit.votes_anonymized,
+                'admin_notes': audit.admin_notes,
                 'from_audit': True
             })
         
@@ -4398,6 +4403,7 @@ def get_deletion_requests_data():
         for audit in approved_requests:
             all_requests.append({
                 'id': audit.id,
+                'original_request_id': audit.original_request_id,
                 'student_name': audit.student_name,
                 'reason': audit.reason,
                 'request_date': audit.request_date,
@@ -4405,6 +4411,7 @@ def get_deletion_requests_data():
                 'processed_date': audit.processed_date,
                 'processed_by': audit.processed_by_username,
                 'votes_anonymized': audit.votes_anonymized,
+                'admin_notes': audit.admin_notes,
                 'from_audit': True,
                 'sort_date': audit.request_date
             })
@@ -4433,6 +4440,7 @@ def get_deletion_requests_data():
         for audit in rejected_requests:
             all_requests.append({
                 'id': audit.id,
+                'original_request_id': audit.original_request_id,
                 'student_name': audit.student_name,
                 'reason': audit.reason,
                 'request_date': audit.request_date,
@@ -4440,6 +4448,7 @@ def get_deletion_requests_data():
                 'processed_date': audit.processed_date,
                 'processed_by': audit.processed_by_username,
                 'votes_anonymized': audit.votes_anonymized,
+                'admin_notes': audit.admin_notes,
                 'from_audit': True,
                 'sort_date': audit.request_date
             })
@@ -4457,7 +4466,8 @@ def get_deletion_requests_data():
         
         # Remove sort_date and convert datetime to string for JSON
         for item in paginated_items:
-            del item['sort_date']
+            if 'sort_date' in item:
+                del item['sort_date']
             if isinstance(item['request_date'], datetime):
                 item['request_date'] = item['request_date'].isoformat()
             if 'processed_date' in item and item['processed_date'] and isinstance(item['processed_date'], datetime):
@@ -4508,7 +4518,7 @@ def get_deletion_requests_stats():
         )
     pending = pending_query.count()
     
-    # From audit table with global filter
+    # ✅ FIXED: From audit table with global filter
     approved_query = DeletionRequestAudit.query.filter_by(status='approved')
     rejected_query = DeletionRequestAudit.query.filter_by(status='rejected')
     
@@ -4567,8 +4577,13 @@ def get_deletion_request(request_id):
                 'processed_date': req.processed_date.isoformat() if req.processed_date else None
             })
         
-        # If not found in deletion_requests, check the audit table (processed requests)
+        # ✅ FIXED: If not found in deletion_requests, check the audit table (processed requests)
+        # Try to find by original_request_id first, then by id
         audit = DeletionRequestAudit.query.filter_by(original_request_id=request_id).first()
+        
+        if not audit:
+            # Try by audit table's own ID
+            audit = DeletionRequestAudit.query.get(request_id)
         
         if audit:
             # This is a processed request - get data from audit table
@@ -4585,7 +4600,8 @@ def get_deletion_request(request_id):
                 'admin_notes': audit.admin_notes,
                 'processed_by_name': audit.processed_by_username,
                 'processed_date': audit.processed_date.isoformat() if audit.processed_date else None,
-                'votes_anonymized': audit.votes_anonymized
+                'votes_anonymized': audit.votes_anonymized,
+                'action_taken': audit.action_taken
             })
         
         # Not found in either table
@@ -4603,11 +4619,36 @@ def get_deletion_request(request_id):
             'error': str(e)
         }), 500
 
+@admin_bp.route('/debug-audit-table')
+@admin_required
+def debug_audit_table():
+    """Debug endpoint to check audit table contents"""
+    from admin.models import DeletionRequestAudit
+    
+    all_records = DeletionRequestAudit.query.all()
+    approved_records = DeletionRequestAudit.query.filter_by(status='approved').all()
+    
+    result = {
+        'total_records': len(all_records),
+        'approved_count': len(approved_records),
+        'records': []
+    }
+    
+    for r in all_records:
+        result['records'].append({
+            'id': r.id,
+            'student_name': r.student_name,
+            'status': r.status,
+            'action_taken': r.action_taken,
+            'processed_date': r.processed_date.isoformat() if r.processed_date else None
+        })
+    
+    return jsonify(result)
 
 @admin_bp.route('/deletion-requests/<int:request_id>/process', methods=['POST'])
 @admin_required
 def process_deletion_request(request_id):
-    """Approve or reject a deletion request - WITH AUDIT LOGGING"""
+    """Approve or reject a deletion request - COMPLETELY DELETE STUDENT"""
     
     print(f"\n🔥 PROCESSING DELETION REQUEST #{request_id}")
     
@@ -4629,9 +4670,9 @@ def process_deletion_request(request_id):
         student_id = student.id
         student_id_number = student.id_number
         
-        # Store data for audit log
+        # Store data for audit log (using existing table - NO NEW COLUMNS NEEDED)
         audit_data = {
-            'original_request_id': req.id,  # IMPORTANT: Store the original request ID
+            'original_request_id': req.id,
             'student_id': student_id,
             'student_name': student_name,
             'student_id_number': student_id_number,
@@ -4641,23 +4682,28 @@ def process_deletion_request(request_id):
             'processed_by': current_user.id,
             'processed_by_username': current_user.username,
             'admin_notes': admin_notes,
-            'action_taken': action
+            'action_taken': action,
+            'status': 'approved' if action == 'approve' else 'rejected',  # 🔥 FIXED: Use full word 'approved'
+            'votes_anonymized': 0  # Will update below
         }
         
         vote_count = 0
         
         if action == 'approve':
-            print(f"✅ APPROVING - Cleaning up records for student ID: {student_id}")
+            print(f"✅ APPROVING - Completely deleting student ID: {student_id}")
             
-            # 1. Votes - anonymize them
+            # 1. Anonymize votes (keep them but disconnect from student)
             votes = Vote.query.filter_by(student_id=student_id).all()
             vote_count = len(votes)
             for vote in votes:
                 vote.original_student_id = student_id
                 vote.anonymized_at = datetime.utcnow()
-                vote.student_id = None
+                vote.student_id = None  # Disconnect from student
             
-            # 2. Delete related records
+            # Update vote count in audit data
+            audit_data['votes_anonymized'] = vote_count
+            
+            # 2. Delete related records (these must be deleted before student)
             pending = PendingCandidate.query.filter_by(student_id=student_id).all()
             for p in pending:
                 db.session.delete(p)
@@ -4670,54 +4716,44 @@ def process_deletion_request(request_id):
             for d in devices:
                 db.session.delete(d)
             
-            # 3. Create audit log entry
-            audit_entry = DeletionRequestAudit(
-                **audit_data,
-                status='approved',
-                votes_anonymized=vote_count
-            )
+            # 3. Create audit log entry BEFORE deleting student
+            audit_entry = DeletionRequestAudit(**audit_data)
             db.session.add(audit_entry)
             
-            # 4. Update the deletion request status (DO NOT DELETE)
+            # 4. Update the deletion request status
             req.status = 'approved'
             req.processed_date = datetime.utcnow()
             req.processed_by = current_user.id
             req.admin_notes = admin_notes
             
-            # 5. Anonymize student data
-            student.first_name = f"Deleted_{student.id}"
-            student.last_name = "User"
-            student.email = f"deleted_{student.id}@deleted.local"
-            student.username = f"deleted_{student.id}"
-            student.id_number = None
-            student.password = None
-            student.deletion_requested = True
-            student.deletion_request_date = datetime.utcnow()
-            student.deletion_processed = True
-            student.deletion_processed_date = datetime.utcnow()
+            # 5. FLUSH to ensure audit and request are saved before deletion
+            db.session.flush()
+            
+            # 6. COMPLETELY DELETE the student from database
+            db.session.delete(student)
             
             db.session.commit()
-            print(f"✅ Student {student_name} anonymized, request marked approved")
+            print(f"✅ Student {student_name} (ID: {student_id}) COMPLETELY DELETED from database")
+            print(f"✅ {vote_count} votes anonymized and preserved")
+            print(f"✅ Audit log saved in deletion_request_audit table")
             
         else:  # reject
-            print(f"🚫 REJECTING - Creating audit log")
+            print(f"🚫 REJECTING - Keeping student account")
             
             # Create audit log for rejection
-            audit_entry = DeletionRequestAudit(
-                **audit_data,
-                status='rejected',
-                votes_anonymized=0
-            )
+            audit_data['votes_anonymized'] = 0
+            audit_entry = DeletionRequestAudit(**audit_data)
             db.session.add(audit_entry)
             
-            # Update the deletion request status (DO NOT DELETE)
+            # Update the deletion request status (keep student)
             req.status = 'rejected'
             req.processed_date = datetime.utcnow()
             req.processed_by = current_user.id
             req.admin_notes = admin_notes
             
             db.session.commit()
-            print(f"✅ Request rejected, audit log created")
+            print(f"✅ Request rejected, student account preserved")
+            print(f"✅ Audit log saved in deletion_request_audit table")
         
         return jsonify({'success': True})
         
