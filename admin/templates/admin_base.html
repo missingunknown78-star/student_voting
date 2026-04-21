@@ -87,6 +87,12 @@
                <i class="fa-solid fa-file-import"></i> Import Students
             </a>
 
+            <!-- ELECTIONS -->
+            <a href="{{ url_for('admin.create_department_election') }}"
+               class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
+               <i class="fa-solid fa-building-columns"></i> Manage Elections
+            </a>
+
             <!-- STUDENTS / VOTERS -->
             <a href="{{ url_for('admin.manage_students') }}"
                class="{% if request.endpoint == 'admin.manage_students' %}active{% endif %}">
@@ -99,28 +105,22 @@
                <i class="fa-solid fa-user-check"></i> Manage Candidates
             </a>
 
-            <!-- ELECTIONS -->
-            <a href="{{ url_for('admin.create_department_election') }}"
-               class="{% if request.endpoint == 'admin.create_department_election' %}active{% endif %}">
-               <i class="fa-solid fa-building-columns"></i> Manage Elections
-            </a>
-
             <!-- COLLEGES / DEPARTMENTS -->
             <a href="{{ url_for('admin.manage_departments') }}"
                class="{% if request.endpoint == 'admin.manage_departments' %}active{% endif %}">
                <i class="fa-solid fa-building"></i> Colleges
             </a>
 
-            <!-- ANNOUNCEMENTS -->
-            <a href="{{ url_for('admin.announcements') }}"
-               class="{% if request.endpoint == 'admin.announcements' %}active{% endif %}">
-               <i class="fa-solid fa-bullhorn"></i> Announcements
-            </a>
-
             <!-- RESULTS -->
             <a href="{{ url_for('admin.results_page') }}"
                class="{% if request.endpoint in ['admin.results_page', 'admin.election_results'] %}active{% endif %}">
                <i class="fa-solid fa-trophy"></i> Results
+            </a>
+
+            <!-- ANNOUNCEMENTS -->
+            <a href="{{ url_for('admin.announcements') }}"
+               class="{% if request.endpoint == 'admin.announcements' %}active{% endif %}">
+               <i class="fa-solid fa-bullhorn"></i> Announcements
             </a>
          
             <!-- LOGOUT -->
