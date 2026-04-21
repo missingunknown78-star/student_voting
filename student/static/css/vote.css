@@ -28,7 +28,7 @@ body {
 }
 
 /* ======================
-   CTU HEADER STYLING - COMPACT
+   CTU HEADER STYLING - FLEXIBLE (matches container width)
 ====================== */
 
 .ctu-header {
@@ -42,9 +42,8 @@ body {
 
 .ctu-header img {
     width: 100%;
-    max-width: min(1200px, 100%);
     height: auto;
-    max-height: 1in;
+    max-width: 100%;
     object-fit: contain;
     display: block;
     margin: 0 auto;
@@ -52,7 +51,7 @@ body {
 }
 
 /* ======================
-   CTU FOOTER STYLING - COMPACT
+   CTU FOOTER STYLING - FLEXIBLE (matches container width)
 ====================== */
 
 .ctu-footer {
@@ -69,9 +68,8 @@ body {
 
 .ctu-footer img {
     width: 100%;
-    max-width: min(1200px, 100%);
     height: auto;
-    max-height: 0.6in;
+    max-width: 100%;
     object-fit: contain;
     display: block;
     margin: 0 auto 8px auto;
@@ -649,6 +647,35 @@ body {
     .party-badge {
         font-size: 6px;
         padding: 1px 4px;
+    }
+}
+
+/* Tablet and desktop responsive adjustments for header/footer */
+@media (min-width: 768px) {
+    .vote-container {
+        padding: 20px;
+    }
+    
+    .ctu-header img {
+        border-radius: 16px;
+    }
+    
+    .ctu-footer img {
+        border-radius: 12px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .vote-container {
+        padding: 24px;
+    }
+    
+    .ctu-header img {
+        border-radius: 20px;
+    }
+    
+    .ctu-footer img {
+        border-radius: 16px;
     }
 }
 
