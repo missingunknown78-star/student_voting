@@ -7,6 +7,7 @@
             <th>Last Name</th>
             <th>First Name</th>
             <th>Year Level</th>
+            <th>Token</th>
             <th>Status</th>
         </tr>
     </thead>
@@ -24,13 +25,22 @@
                     <span class="text-muted">—</span>
                 {% endif %}
             </td>
+            <td class="token-cell">
+                {% if student.student_number in registered_numbers %}
+                    <span class="text-muted">Already Registered</span>
+                {% elif student.registration_token %}
+                    <code class="token-code">{{ student.registration_token }}</code>
+                {% else %}
+                    <span class="text-muted">No Token</span>
+                {% endif %}
+            </td>
             <td>
                 {% if student.student_number in registered_numbers %}
-                    <span class="status-registered">Registered</span>
+                    <span class="status-registered">✓ Registered</span>
                 {% else %}
                     <span class="status-not-registered">Not Registered</span>
                 {% endif %}
-            </td>            
+            </td>
         </tr>
         {% endfor %}
     </tbody>
@@ -55,6 +65,24 @@
 </div>
 
 <style>
+    .token-cell {
+        min-width: 180px;
+    }
+    
+    .token-code {
+        background: #f8f9fa;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-family: 'Roboto', 'Segoe UI', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: #2c3e50;
+        border: 1px solid #e1e8ed;
+        letter-spacing: 0.3px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        display: inline-block;
+    }
+    
     .year-badge {
         background: #e8f5e8;
         color: #27ae60;
@@ -73,7 +101,7 @@
     .status-registered {
         background: #e8f5e8;
         color: #27ae60;
-        padding: 4px 8px;
+        padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
@@ -83,7 +111,7 @@
     .status-not-registered {
         background: #ffebee;
         color: #e74c3c;
-        padding: 4px 8px;
+        padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;

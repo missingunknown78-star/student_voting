@@ -296,11 +296,7 @@ def get_all_school_years():
 
 
 # ============= END OF NEW HELPER FUNCTIONS =============
-
-
-from admin.models import CtuStudent  # the table where admin imported students
-from sqlalchemy import func  # needed for case-insensitive comparison
-
+from admin.models import CtuStudent
 # ==================== REGISTER ====================
 @student_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -309,14 +305,12 @@ def register():
     from sqlalchemy import func
     import json
 
-    # ✅ Clear form session only if not coming from failed POST
-    # Also clear on GET if no form data in session
+    # Clear form session only if not coming from failed POST
     if request.method == 'GET':
-        # Only clear if explicitly requested or session expired
         if not session.get('registration_data'):
             session.pop('registration_data', None)
             session.pop('error_fields', None)
-            session.pop('temp_password', None)  # Clear temp password on GET
+            session.pop('temp_password', None)
 
     if request.method == 'POST':
         # Helper function to clean text fields
@@ -324,10 +318,10 @@ def register():
             """Remove leading/trailing spaces and normalize multiple spaces to single space"""
             if not value:
                 return ''
-            # Trim and replace multiple spaces with single space
             return ' '.join(value.strip().split())
         
         # Clean all text inputs
+        registration_token = clean_text(request.form.get('registration_token', ''))
         first_name = clean_text(request.form.get('first_name', ''))
         middle_name = clean_text(request.form.get('middle_name', ''))
         last_name = clean_text(request.form.get('last_name', ''))
@@ -335,34 +329,15 @@ def register():
         email = clean_text(request.form.get('email', ''))
         id_number = clean_text(request.form.get('id_number', ''))
         username = clean_text(request.form.get('username', ''))
-        password = request.form.get('password', '')  # Don't trim password
+        password = request.form.get('password', '')
         birth_date = request.form.get('birth_date', '')
         
-        # ⚠️ IMPORTANT: Validate password presence on server side too
-        if not password or password.strip() == '':
-            flash("Password is required!", "danger")
-            session['error_fields'] = session.get('error_fields', [])
-            session['error_fields'].append('password')
-            
-            # Store cleaned data (excluding password for security)
-            session['registration_data'] = {
-                'first_name': first_name,
-                'middle_name': middle_name,
-                'last_name': last_name,
-                'suffix': suffix,
-                'email': email,
-                'id_number': id_number,
-                'username': username,
-                'birth_date': birth_date,
-                'course': request.form.get('course', ''),
-                'year_level': request.form.get('year_level', ''),
-                'program_type': request.form.get('program_type', '')
-            }
-            session['keep_form'] = True
-            return redirect(url_for('student.register'))
+        session['error_fields'] = []
+        session['keep_form'] = True
         
-        # Store cleaned data in session
+        # Store cleaned data in session (excluding password)
         session['registration_data'] = {
+            'registration_token': registration_token,
             'first_name': first_name,
             'middle_name': middle_name,
             'last_name': last_name,
@@ -376,13 +351,48 @@ def register():
             'program_type': request.form.get('program_type', '')
         }
         
-        # ✅ Store password in a separate session variable for OTP phase
+        # Store password in temp session for OTP phase
         session['temp_password'] = password
         
-        session['error_fields'] = []
-        session['keep_form'] = True
+        # ========== TOKEN VALIDATION ==========
+        if not registration_token:
+            flash("Registration token is required. Please get a token from the COMELEC administrator.", "danger")
+            session['error_fields'].append('registration_token')
+        else:
+            # Find student in CTU list with matching token AND student number
+            ctu_student = CtuStudent.query.filter(
+                CtuStudent.registration_token == registration_token,
+                CtuStudent.student_number == id_number,
+                CtuStudent.is_active == True
+            ).first()
+            
+            if not ctu_student:
+                # Check if token exists but doesn't match the ID number
+                token_exists = CtuStudent.query.filter(
+                    CtuStudent.registration_token == registration_token
+                ).first()
+                
+                if token_exists:
+                    flash("The registration token is not associated with this ID number. Please check your ID number.", "danger")
+                else:
+                    flash("Invalid registration token. Please contact the COMELEC administrator for a valid token.", "danger")
+                session['error_fields'].append('registration_token')
+            else:
+                # Token is valid - store CTU student info for later use
+                session['validated_ctu_student'] = {
+                    'id': ctu_student.id,
+                    'student_number': ctu_student.student_number,
+                    'first_name': ctu_student.first_name,
+                    'last_name': ctu_student.last_name,
+                    'year_level': ctu_student.year_level
+                }
 
-        # ---------------- DUPLICATE CHECKS ----------------
+        # ========== PASSWORD VALIDATION ==========
+        if not password or password.strip() == '':
+            flash("Password is required!", "danger")
+            session['error_fields'].append('password')
+        
+        # ========== DUPLICATE CHECKS ==========
         if Student.query.filter(func.trim(Student.id_number) == id_number).first():
             flash("ID Number already registered!", "danger")
             session['error_fields'].append('id_number')
@@ -395,7 +405,7 @@ def register():
             flash("Username already taken!", "danger")
             session['error_fields'].append('username')
 
-        # ---------------- YEAR LEVEL VALIDATION ----------------
+        # ========== YEAR LEVEL VALIDATION ==========
         year_level = request.form.get('year_level')
         if not year_level or int(year_level) not in [1, 2, 3, 4]:
             flash("Please select a valid year level.", "danger")
@@ -404,7 +414,7 @@ def register():
             session['registration_data']['year_level'] = int(year_level)
             session['registration_data']['year_level_id'] = int(year_level)
 
-        # ---------------- COURSE VALIDATION ----------------
+        # ========== COURSE VALIDATION ==========
         course_id = request.form.get('course')
         course_obj = Course.query.get(course_id)
         if not course_obj:
@@ -415,10 +425,10 @@ def register():
                 "course": course_obj.course_name,
                 "course_id": course_obj.id,
                 "department_id": course_obj.department_id,
-                "course_name": course_obj.course_name  # For email template
+                "course_name": course_obj.course_name
             })
 
-        # ---------------- PROGRAM TYPE VALIDATION ----------------
+        # ========== PROGRAM TYPE VALIDATION ==========
         program_type_id = request.form.get('program_type')
         program_type_name = "Not specified"
         if program_type_id:
@@ -434,8 +444,8 @@ def register():
             flash("Please select a program type (Day/Night).", "danger")
             session['error_fields'].append('program_type')
 
-        # ---------------- CTU DATABASE VERIFICATION ----------------
-        # Also clean the database values for comparison
+        # ========== CTU DATABASE VERIFICATION (without token) ==========
+        # Also verify that the student exists in CTU list (backup check)
         ctu_match = CtuStudent.query.filter(
             func.trim(func.lower(CtuStudent.first_name)) == first_name.lower(),
             func.trim(func.lower(CtuStudent.last_name)) == last_name.lower(),
@@ -447,22 +457,17 @@ def register():
             flash("You are not in the CTU Masterlist. Please contact the COMELEC admin.", "danger")
             session['error_fields'].append('ctu_verification')
 
-        # ---------------- HANDLE ERRORS ----------------
+        # ========== HANDLE ERRORS ==========
         if session['error_fields']:
-            # ✅ Don't remove temp_password on error - keep it for next attempt
-            # Just clear any password marker in registration_data if exists
-            if 'password' in session['registration_data']:
-                del session['registration_data']['password']
-            # temp_password remains in session for the next submission attempt
             return redirect(url_for('student.register'))
 
-        # ---------------- OTP GENERATION ----------------
+        # ========== OTP GENERATION ==========
         registration_data = session['registration_data']
         otp = generate_otp()
         session['otp'] = otp
 
         try:
-            # Send OTP email with cleaned data
+            # Send OTP email
             msg = Message(
                 subject="🔐 CTU Moalboal - Email Verification Code",
                 recipients=[email]
@@ -533,21 +538,17 @@ def register():
             </html>
             """
             mail.send(msg)
-
-            # ✅ Don't remove temp_password yet - we need it for OTP verification
-            # It will be cleared after successful registration in verify_otp route
             
             flash("📧 OTP has been sent to your email. Please check your inbox (and spam folder).", "info")
             return redirect(url_for('student.verify_otp'))
 
         except Exception as e:
             flash(f"Failed to send OTP email: {str(e)}", "danger")
-            # Clean up on error
             if 'temp_password' in session:
                 del session['temp_password']
             return redirect(url_for('student.register'))
 
-    # ---------------- LOAD COURSES AND PROGRAM TYPES ----------------
+    # ========== GET REQUEST - LOAD FORM DATA ==========
     departments = Department.query.order_by(Department.name).all()
     courses_by_department = {
         dept.name: Course.query.filter_by(department_id=dept.id).all()
@@ -562,23 +563,47 @@ def register():
         program_types=program_types
     )
 
+
 # ==================== AJAX VALIDATION ====================
 @student_bp.route('/register/validate', methods=['POST'])
 def ajax_validate_register():
     from student.models import Student, ProgramType
+    from admin.models import CtuStudent
     from sqlalchemy import func
     
     errors = {}
 
-    # Get data from FormData (not JSON)
-    # When using FormData, request.form works, but you need to remove the JSON header
+    # Get data from FormData
+    registration_token = request.form.get('registration_token', '').strip()
     email = request.form.get('email', '').strip()
     id_number = request.form.get('id_number', '').strip()
     username = request.form.get('username', '').strip()
     program_type_id = request.form.get('program_type', '').strip()
 
-    print(f"🔍 Validation check - Email: {email}, ID: {id_number}, Username: {username}, Program Type: {program_type_id}")
+    print(f"🔍 Validation check - Token: {registration_token[:10]}..., Email: {email}, ID: {id_number}, Username: {username}")
 
+    # ========== TOKEN VALIDATION ==========
+    if not registration_token:
+        errors['registration_token'] = 'Registration token is required'
+    else:
+        ctu_student = CtuStudent.query.filter(
+            CtuStudent.registration_token == registration_token,
+            CtuStudent.student_number == id_number,
+            CtuStudent.is_active == True
+        ).first()
+        
+        if not ctu_student:
+            # Check if token exists but doesn't match ID
+            token_exists = CtuStudent.query.filter(
+                CtuStudent.registration_token == registration_token
+            ).first()
+            
+            if token_exists:
+                errors['registration_token'] = 'This token is not associated with this ID number'
+            else:
+                errors['registration_token'] = 'Invalid registration token'
+
+    # ========== DUPLICATE CHECKS ==========
     if id_number and Student.query.filter(func.trim(Student.id_number) == id_number).first():
         errors['id_number'] = 'ID Number already registered'
 
@@ -588,7 +613,7 @@ def ajax_validate_register():
     if username and Student.query.filter_by(username=username).first():
         errors['username'] = 'Username already taken'
     
-    # Validate program type
+    # ========== PROGRAM TYPE VALIDATION ==========
     if not program_type_id or program_type_id == '':
         errors['program_type'] = 'Program type is required'
     else:
@@ -603,39 +628,26 @@ def ajax_validate_register():
     return jsonify(errors)
 
 
-@student_bp.route('/check-session')
-def check_session():
-    """Check if session is still active (for frontend to clear storage)"""
-    from flask import jsonify
-    
-    # Check if user has an active session for registration
-    session_active = bool(session.get('registration_data'))
-    
-    return jsonify({
-        'session_active': session_active
-    })
-
-
 # ==================== OTP VERIFICATION ====================
 @student_bp.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
-    from student.models import Student  # Import Student
+    from student.models import Student
     
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
         if entered_otp == session.get('otp'):
             data = session.get('registration_data')
             
-            # ✅ Get password from temp storage instead of registration_data
+            # Get password from temp storage
             password = session.get('temp_password')
             
-            # ✅ Validate that password exists
+            # Validate that password exists
             if not password:
                 flash("Session expired or password missing. Please register again.", "danger")
-                # Clear all session data
                 session.pop('otp', None)
                 session.pop('registration_data', None)
                 session.pop('temp_password', None)
+                session.pop('validated_ctu_student', None)
                 session.pop('error_fields', None)
                 session.pop('keep_form', None)
                 return redirect(url_for('student.register'))
@@ -655,18 +667,35 @@ def verify_otp():
                 course_id=data.get('course_id'),
                 department_id=data.get('department_id'),
                 year_level_id=data.get('year_level_id'),
-                program_type_id=data.get('program_type_id'),  # NEW FIELD
+                program_type_id=data.get('program_type_id'),
                 birth_date=data.get('birth_date'),
                 id_number=data.get('id_number')
             )
 
             db.session.add(new_student)
+            
+            # ========== CLEAR THE TOKEN AFTER SUCCESSFUL REGISTRATION ==========
+            # Find the CTU student by token and clear it so it can't be reused
+            registration_token = data.get('registration_token')
+            if registration_token:
+                ctu_student = CtuStudent.query.filter(
+                    CtuStudent.registration_token == registration_token,
+                    CtuStudent.is_active == True
+                ).first()
+                
+                if ctu_student:
+                    # Clear the token so it cannot be used again
+                    ctu_student.registration_token = None
+                    ctu_student.token_generated_at = None
+                    print(f"✅ Token cleared for student: {ctu_student.student_number}")
+            
             db.session.commit()
 
-            # ✅ Clear all session data after successful registration
+            # Clear all session data after successful registration
             session.pop('otp', None)
             session.pop('registration_data', None)
-            session.pop('temp_password', None)  # ✅ Clear temp password
+            session.pop('temp_password', None)
+            session.pop('validated_ctu_student', None)
             session.pop('error_fields', None)
             session.pop('keep_form', None)
 
@@ -676,6 +705,7 @@ def verify_otp():
             flash('Invalid OTP.', 'danger')
 
     return render_template('verify_otp.html', email=session.get('registration_data', {}).get('email', ''))
+
 
 # ==================== RESEND OTP ====================
 @student_bp.route('/resend-otp', methods=['GET'])
@@ -690,29 +720,17 @@ def resend_otp():
     session['otp'] = otp
 
     try:
-        # Import the EmailTemplates from JS file
-        import json
-        import os
-        
-        # Read the email_templates.js file
-        js_file_path = os.path.join(current_app.root_path, 'student', 'static', 'js', 'email_templates.js')
-        
-        # Since we can't directly execute JS in Python, we'll use the template directly
-        # Or better: create a separate Python template file
+        from admin.models import Course
+        from student.models import ProgramType
         
         msg = Message(
             subject="🔄 CTU Moalboal - New Verification Code",
             recipients=[registration_data['email']]
         )
         
-        # Get course name and program type name
-        from admin.models import Course
-        from student.models import ProgramType
-        
         course = Course.query.get(registration_data.get('course_id'))
         program_type = ProgramType.query.get(registration_data.get('program_type_id'))
         
-        # Prepare data for template
         template_data = {
             'first_name': registration_data.get('first_name', ''),
             'last_name': registration_data.get('last_name', ''),
@@ -722,7 +740,6 @@ def resend_otp():
             'id_number': registration_data.get('id_number', '')
         }
         
-        # Use the template from email_templates.js (copied here for Python)
         msg.html = f"""
         <!DOCTYPE html>
         <html>
@@ -734,14 +751,10 @@ def resend_otp():
             </style>
         </head>
         <body style="margin:0; padding:0; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background-color: #f0f4f8;">
-            <!-- Main Container -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f4f8; padding: 40px 20px;">
                 <tr>
                     <td align="center">
-                        <!-- Email Card -->
                         <table width="560" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #e9ecef;">
-                            
-                            <!-- Header -->
                             <tr>
                                 <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center;">
                                     <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">Cebu Technological University</h1>
@@ -751,8 +764,6 @@ def resend_otp():
                                     </div>
                                 </td>
                             </tr>
-                            
-                            <!-- Body -->
                             <tr>
                                 <td style="padding: 40px 30px;">
                                     <p style="color: #4a5568; margin: 0 0 20px; font-size: 16px;">Hello <strong style="color: #f59e0b;">{template_data['first_name']}</strong>,</p>
@@ -763,7 +774,6 @@ def resend_otp():
                                         <p style="color: #92400e; margin: 15px 0 0; font-size: 14px;">⏰ This code expires in 10 minutes</p>
                                     </div>
                                     
-                                    <!-- Optional: Show registration summary -->
                                     <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e9ecef;">
                                         <p style="color: #4a5568; margin: 0 0 10px; font-size: 14px; font-weight: 600;">Registration Details:</p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
@@ -789,8 +799,6 @@ def resend_otp():
                                     <p style="color: #718096; margin: 25px 0 0; font-size: 13px; font-style: italic;">If you didn't request this, please ignore this email or contact support.</p>
                                 </td>
                             </tr>
-                            
-                            <!-- Footer -->
                             <tr>
                                 <td style="padding: 30px; border-top: 1px solid #e9ecef; background: #f8fafc;">
                                     <p style="color: #94a3b8; margin: 0; font-size: 12px; text-align: center;">CTU Moalboal Campus Student Portal</p>
@@ -837,39 +845,58 @@ def login():
             flash("Mismatched Credentials", "danger")
             return render_template('student_login.html')
 
-        # 🔐 ================= CHECK IF STUDENT STILL EXISTS IN CTU_STUDENTS =================
-        # Check if this student's ID number still exists in the ctu_students table
+        # ================= ACCOUNT STATUS CHECKS (MUST COME FIRST) =================
+        
+        # Check 1: Is the account marked as active?
+        if not student.is_active:
+            print(f"❌ Account is inactive - Student: {student.id_number}")
+            flash("Your account has been deactivated. Please contact the administrator for assistance.", "danger")
+            return render_template('student_login.html')
+        
+        # Check 2: Is the account allowed to login?
+        if not student.can_login:
+            print(f"❌ Account cannot login - Student: {student.id_number}")
+            flash("Your account has been restricted from logging in. Please contact the administrator.", "danger")
+            return render_template('student_login.html')
+        
+        # Check 3: Verify student still exists in CTU master list (optional additional check)
         ctu_student = CtuStudent.query.filter_by(student_number=student.id_number).first()
         
         if not ctu_student:
             # Student has been removed from CTU master list (graduated, stopped, or dropped)
-            print("❌ Student not in CTU master list")
-            flash("Your account is no longer active. Please contact the admin for assistance.", "danger")
+            print(f"❌ Student not in CTU master list - Student: {student.id_number}")
+            
+            # Optionally auto-deactivate the account
+            if student.is_active:
+                student.is_active = False
+                db.session.commit()
+                print(f"📝 Auto-deactivated student account: {student.id_number}")
+            
+            flash("Your account is no longer active in the university system. Please contact the registrar's office.", "danger")
             return render_template('student_login.html')
+        
         # ====================================================================================
 
+        # Password check (only proceed if all status checks passed)
         if not bcrypt.check_password_hash(student.password, password):
             print("❌ Incorrect password")
             flash('Incorrect password', 'danger')
             return render_template('student_login.html')
 
-        # ================= FIXED: GENERATE CONSISTENT FINGERPRINT =================
-        # Always generate a fingerprint, even if none was sent
+        # ================= FINGERPRINT GENERATION =================
         if not device_fp or device_fp == '':
             print("⚠️ No device fingerprint received, generating from request data")
-            # FIXED: Removed Accept header which changes between requests
             raw_data = (
                 request.headers.get('User-Agent', '') +
                 request.headers.get('Accept-Encoding', '')
-                # REMOVED: request.headers.get('Accept', '') - this changes!
             )
             device_fp = hashlib.sha256(raw_data.encode()).hexdigest()
             print(f"🔑 Generated fingerprint: {device_fp[:32]}...")
         
-        # 🔐 ================= FIXED DEVICE TRUST CHECK =================
+        # ================= DEVICE TRUST CHECK =================
         print(f"🔍 CHECKING DEVICE: {device_fp[:32]}...")
         
-        # Check if THIS EXACT device is trusted (CASE 1: Already trusted)
+        # Check if THIS EXACT device is trusted
         trusted_device = TrustedDevice.query.filter_by(
             student_id=student.id,
             device_fingerprint=device_fp,
@@ -889,17 +916,18 @@ def login():
             db.session.commit()
             
             login_user(student)
-            flash('Login successful!', 'success')
             
-            # ================================================
-            # 🔥 FIX: Always redirect students to student dashboard
-            # ================================================
+            # Update last login timestamp in student record
+            student.last_login = datetime.utcnow()  # Make sure you have this field
+            db.session.commit()
+            
+            flash('Login successful!', 'success')
             return redirect(url_for('student.dashboard'))
         
         # If we get here, this is not a trusted device
         print(f"⚠️ Device not trusted: {device_fp[:32]}...")
         
-        # Check if this device exists but is untrusted (CASE 2: Known but untrusted)
+        # Check if this device exists but is untrusted
         existing_device = TrustedDevice.query.filter_by(
             student_id=student.id,
             device_fingerprint=device_fp
@@ -910,7 +938,7 @@ def login():
         else:
             print(f"📱 New device - never seen before")
         
-        # Check if student has ANY trusted devices (CASE 3: Has other trusted devices)
+        # Check if student has ANY trusted devices
         any_trusted_device = TrustedDevice.query.filter_by(
             student_id=student.id,
             trusted=True
@@ -924,14 +952,12 @@ def login():
             
             # Save or update device as untrusted
             if existing_device:
-                # Update existing untrusted device
                 existing_device.ip_address = request.remote_addr
                 existing_device.browser = request.headers.get('User-Agent')
                 existing_device.last_login = datetime.utcnow()
-                existing_device.verification_token = None  # Clear old token
+                existing_device.verification_token = None
                 new_device = existing_device
             else:
-                # Create new untrusted device record
                 new_device = TrustedDevice(
                     student_id=student.id,
                     device_fingerprint=device_fp,
@@ -955,7 +981,7 @@ def login():
             flash('New device detected! Please check your email to verify this device.', 'info')
             return redirect(url_for('student.verify_device'))
         else:
-            # CASE 4: FIRST EVER LOGIN - no trusted devices at all
+            # FIRST EVER LOGIN - no trusted devices at all
             print(f"🎉 First login for this student - auto-trust this device")
             
             # Create trusted device record
@@ -973,15 +999,15 @@ def login():
             
             # Login normally
             login_user(student)
-            flash('Login successful! This device has been trusted.', 'success')
             
-            # ================================================
-            # 🔥 FIX: Always redirect students to student dashboard
-            # ================================================
+            # Update last login timestamp
+            student.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            flash('Login successful! This device has been trusted.', 'success')
             return redirect(url_for('student.dashboard', trust_prompt=True))
 
     return render_template('student_login.html')
-
     
 
 

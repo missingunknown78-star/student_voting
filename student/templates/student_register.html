@@ -10,6 +10,48 @@
 <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@9.0.1/dist/bundle.min.js"></script>
 
 <style>
+    /* Additional styles for token field */
+    .token-info {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        font-size: 0.75rem;
+        color: #1e40af;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .token-info i {
+        font-size: 0.9rem;
+        color: #3b82f6;
+    }
+    
+    /* Fix for token input group - center the entire group */
+    .token-input-wrapper {
+        margin-bottom: 20px;
+        width: 100%;
+    }
+    
+    /* Ensure the floating label works with token input */
+    .token-input-wrapper .input-group.floating {
+        margin-bottom: 0;
+    }
+    
+    /* Center the field hint text */
+    .field-hint-center {
+        text-align: center;
+        display: block;
+        margin-top: 8px;
+        font-size: 11px;
+        color: #6b7280;
+    }
+    
     /* Spinner styles */
     .btn-spinner {
         display: inline-block;
@@ -51,24 +93,10 @@
         line-height: 1;
     }
     
-    .register-btn span {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        vertical-align: middle;
-    }
-    
     /* Input trim indicator styles */
     .input-trimmed {
         border-color: #f59e0b !important;
         background-color: #fffbeb !important;
-    }
-    
-    .field-hint {
-        font-size: 12px;
-        color: #6b7280;
-        margin-top: 4px;
-        display: block;
     }
     
     .trim-hint {
@@ -194,24 +222,6 @@
     .toast.fade-out {
         animation: fadeOut 0.3s ease forwards;
     }
-    
-    /* Security note */
-    .security-note {
-        background: #fef3c7;
-        padding: 10px 14px;
-        border-radius: 10px;
-        margin-bottom: 16px;
-        font-size: 0.75rem;
-        color: #92400e;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-left: 3px solid #f59e0b;
-    }
-    
-    .security-note i {
-        font-size: 0.9rem;
-    }
 </style>
 </head>
 
@@ -241,7 +251,7 @@
         <form id="registrationForm" method="POST" novalidate>
             <!-- FIRST NAME -->
             <div class="input-group floating">
-                <input type="text" name="first_name" required placeholder=" "
+                <input type="text" name="first_name" id="first_name" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('first_name', '') }}"
                        data-trim="true">
                 <label>First Name <span class="required-asterisk">*</span></label>
@@ -250,7 +260,7 @@
 
             <!-- MIDDLE NAME -->
             <div class="input-group floating">
-                <input type="text" name="middle_name" placeholder=" "
+                <input type="text" name="middle_name" id="middle_name" placeholder=" "
                        value="{{ session.get('registration_data', {}).get('middle_name', '') }}"
                        data-trim="true">
                 <label>Middle Name</label>
@@ -259,7 +269,7 @@
 
             <!-- LAST NAME -->
             <div class="input-group floating">
-                <input type="text" name="last_name" required placeholder=" "
+                <input type="text" name="last_name" id="last_name" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('last_name', '') }}"
                        data-trim="true">
                 <label>Last Name <span class="required-asterisk">*</span></label>
@@ -268,7 +278,7 @@
 
             <!-- SUFFIX -->
             <div class="input-group floating">
-                <input type="text" name="suffix" placeholder=" "
+                <input type="text" name="suffix" id="suffix" placeholder=" "
                        value="{{ session.get('registration_data', {}).get('suffix', '') }}"
                        data-trim="true">
                 <label>Suffix</label>
@@ -330,7 +340,7 @@
 
             <!-- EMAIL -->
             <div class="input-group floating">
-                <input type="email" name="email" required placeholder=" "
+                <input type="email" name="email" id="email" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('email', '') }}"
                        data-trim="true">
                 <label>Email <span class="required-asterisk">*</span></label>
@@ -339,7 +349,7 @@
 
             <!-- USERNAME -->
             <div class="input-group floating">
-                <input type="text" name="username" required placeholder=" "
+                <input type="text" name="username" id="username" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('username', '') }}"
                        data-trim="true">
                 <label>Username <span class="required-asterisk">*</span></label>
@@ -355,11 +365,32 @@
 
             <!-- ID NUMBER -->
             <div class="input-group floating">
-                <input type="text" name="id_number" required placeholder=" "
+                <input type="text" name="id_number" id="id_number" required placeholder=" "
                        value="{{ session.get('registration_data', {}).get('id_number', '') }}"
                        data-trim="true">
                 <label>ID Number <span class="required-asterisk">*</span></label>
                 <div class="trim-hint" id="id_number_hint">⚠️ Extra spaces will be removed</div>
+            </div>
+
+            <!-- REGISTRATION TOKEN SECTION - PROPERLY CENTERED -->
+            <div class="token-info">
+                <i class="fas fa-key"></i>
+                <span>You need a registration token from the COMELEC administrator to register.</span>
+            </div>
+            
+            <div class="token-input-wrapper">
+                <div class="input-group floating">
+                    <input type="text" name="registration_token" id="tokenInput" required placeholder=" "
+                           value="{{ session.get('registration_data', {}).get('registration_token', '') }}"
+                           data-trim="true"
+                           style="text-align: center; font-family: monospace; letter-spacing: 1px;">
+                    <label style="text-align: left;">Registration Token <span class="required-asterisk">*</span></label>
+                    <div class="trim-hint" id="token_hint">⚠️ Extra spaces will be removed</div>
+                </div>
+            </div>
+            
+            <div class="field-hint-center">
+                <i class="fas fa-info-circle"></i> Enter the token provided by your COMELEC administrator
             </div>
 
             <button type="submit" class="register-btn" id="registerBtn">
@@ -377,18 +408,16 @@
 
 <script>
 // ======================
-// TOAST NOTIFICATION SYSTEM (with duplicate prevention)
+// TOAST NOTIFICATION SYSTEM
 // ======================
 
-let toastTimeout = null;
 let lastToastMessage = '';
 let lastToastTime = 0;
 
 function showToast(message, type = 'error') {
-    // Prevent duplicate toasts within 2 seconds
     const now = Date.now();
     if (message === lastToastMessage && (now - lastToastTime) < 2000) {
-        return; // Don't show duplicate
+        return;
     }
     
     lastToastMessage = message;
@@ -442,6 +471,7 @@ function removeToast(toast) {
 
 function saveFormToStorage() {
     const formData = {
+        registration_token: document.querySelector('input[name="registration_token"]')?.value || '',
         first_name: document.querySelector('input[name="first_name"]')?.value || '',
         middle_name: document.querySelector('input[name="middle_name"]')?.value || '',
         last_name: document.querySelector('input[name="last_name"]')?.value || '',
@@ -462,6 +492,7 @@ function restoreFormFromStorage() {
     if (savedData) {
         const formData = JSON.parse(savedData);
         
+        document.querySelector('input[name="registration_token"]').value = formData.registration_token || '';
         document.querySelector('input[name="first_name"]').value = formData.first_name || '';
         document.querySelector('input[name="middle_name"]').value = formData.middle_name || '';
         document.querySelector('input[name="last_name"]').value = formData.last_name || '';
@@ -484,7 +515,7 @@ function clearFormStorage() {
 }
 
 // ======================
-// PASSWORD VALIDATION (Single Toast)
+// PASSWORD VALIDATION
 // ======================
 
 let isShowingToast = false;
@@ -526,7 +557,6 @@ function validatePassword() {
     return true;
 }
 
-// Clear password error on input
 document.getElementById('passwordInput')?.addEventListener('input', function() {
     const passwordError = document.getElementById('passwordError');
     const passwordGroup = document.getElementById('passwordGroup');
