@@ -9,22 +9,44 @@ from extensions import db, bcrypt, login_manager, mail
 from datetime import timedelta
 from sqlalchemy.pool import NullPool
 
+# Import Flask-Session
+from flask_session import Session
+
 # ---------------------- Initialize Flask app ---------------------- #
 app = Flask(__name__)
 
 # ---------------------- Configuration ---------------------- #
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# Database configuration - WITH CONNECTION POOL FIXES FOR PYTHONANYWHERE
+# ==================== FLASK-SESSION CONFIGURATION (SERVER-SIDE SESSIONS) ====================
+# This stores session data on the server instead of in cookies
+# This solves the "session cookie too large" error
+
+# Determine if on PythonAnywhere
 ON_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
 
+# Configure server-side session
+app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions in filesystem
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hours
+app.config['SESSION_USE_SIGNER'] = True  # Sign the session ID cookie
+app.config['SESSION_KEY_PREFIX'] = 'my_session_'  # Prefix for session files
+app.config['SESSION_FILE_DIR'] = './flask_session'  # Directory for session files
+
+# Create session directory if it doesn't exist
+os.makedirs('./flask_session', exist_ok=True)
+
+# Initialize Flask-Session
+Session(app)
+
+# Database configuration - WITH CONNECTION POOL FIXES FOR PYTHONANYWHERE
 if ON_PYTHONANYWHERE:
     # Use NullPool to avoid connection timeouts
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'poolclass': NullPool,  # Don't keep connections alive
-        'pool_pre_ping': True,   # Check connection before using
-        'pool_recycle': 280,      # Recycle connections every 280 seconds
+        'poolclass': NullPool,
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
         'connect_args': {
             'connect_timeout': 10,
             'read_timeout': 30,
@@ -41,20 +63,14 @@ if ON_PYTHONANYWHERE:
     from werkzeug.middleware.proxy_fix import ProxyFix
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
     print("✅ PythonAnywhere ProxyFix applied")
-
-# ---- Session Security ----
-app.config['SESSION_PERMANENT'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
-
-# ---- PythonAnywhere Session Fixes ----
-if ON_PYTHONANYWHERE:
-    # Fix for proxy/HTTPS
+    
+    # Session cookie settings for PythonAnywhere
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['SESSION_COOKIE_DOMAIN'] = None
     
-    # Also ensure REMEMBER_COOKIE works
+    # Remember cookie settings
     app.config['REMEMBER_COOKIE_SECURE'] = True
     app.config['REMEMBER_COOKIE_HTTPONLY'] = True
     app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)

@@ -6,3 +6,4 @@ __pycache__/
 admin_access.log
 student_voting.sql
 .env
+flask_session/
