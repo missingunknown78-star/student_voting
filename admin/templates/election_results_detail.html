@@ -8,13 +8,86 @@
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/election_results_detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('admin.static', filename='css/vote_insights.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    /* Countdown Timer Styles */
+    .title-with-countdown {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+    }
+    
+    .title-with-countdown h1 {
+        margin: 0;
+    }
+    
+    .countdown-timer {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        border-radius: 12px;
+        padding: 8px 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    }
+    
+    .countdown-timer i {
+        font-size: 18px;
+        color: white;
+        animation: pulse 1.5s infinite;
+    }
+    
+    .countdown-timer .countdown-text {
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+    }
+    
+    .countdown-timer .countdown-value {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-family: monospace;
+        font-size: 16px;
+        font-weight: 700;
+        color: white;
+        min-width: 120px;
+        text-align: center;
+    }
+    
+    .countdown-timer.expired {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    }
+    
+    .countdown-timer.expired .countdown-value {
+        background: rgba(255, 255, 255, 0.25);
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="results-detail-container">
     <!-- Election Header -->
     <div class="election-header">
-        <h1>{{ election.title }} - Results</h1>
+        <div class="title-with-countdown">
+            <h1>{{ election.title }} - Results</h1>
+            
+            <!-- Countdown Timer -->
+            <div class="countdown-timer" id="countdownTimer" data-end-date="{{ election.end_date.strftime('%Y-%m-%d %H:%M:%S') }}">
+                <i class="fa-solid fa-clock"></i>
+                <span class="countdown-text">Time Remaining:</span>
+                <span class="countdown-value" id="countdownValue">Calculating...</span>
+            </div>
+        </div>
+        
         <div class="election-meta">
             <div class="meta-item">
                 <i class="fa-solid fa-calendar"></i>
@@ -563,6 +636,61 @@
 <script>
     // Pass eligible voters data from backend to JavaScript
     window.positionEligibleVoters = {{ position_eligible_voters|tojson }};
+    
+    // ==================== COUNTDOWN TIMER FUNCTION ====================
+    function startCountdown() {
+        const countdownElement = document.getElementById('countdownTimer');
+        const countdownValueElement = document.getElementById('countdownValue');
+        
+        if (!countdownElement || !countdownValueElement) return;
+        
+        const endDateStr = countdownElement.getAttribute('data-end-date');
+        const endDate = new Date(endDateStr).getTime();
+        
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = endDate - now;
+            
+            if (distance < 0) {
+                // Election has ended
+                countdownValueElement.innerHTML = 'Election Ended';
+                countdownElement.classList.add('expired');
+                countdownElement.querySelector('.countdown-text').innerHTML = '<i class="fa-solid fa-flag-checkered"></i> Status:';
+                clearInterval(interval);
+                return;
+            }
+            
+            // Calculate days, hours, minutes, seconds
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            let displayText = '';
+            if (days > 0) {
+                displayText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            } else if (hours > 0) {
+                displayText = `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+                displayText = `${minutes}m ${seconds}s`;
+            } else {
+                displayText = `${seconds}s`;
+            }
+            
+            countdownValueElement.innerHTML = displayText;
+        }
+        
+        // Update immediately
+        updateCountdown();
+        
+        // Update every second
+        const interval = setInterval(updateCountdown, 1000);
+    }
+    
+    // Start countdown when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        startCountdown();
+    });
 </script>
 
 <script src="{{ url_for('admin.static', filename='js/election_results_detail.js') }}"></script>
