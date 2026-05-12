@@ -3334,25 +3334,18 @@ def import_students():
             # ===== OPTIMIZATION 6: Handle deletions =====
             to_delete_ctu = []
             to_delete_registered = []
-            to_deactivate_registered = []  # Students who voted but are no longer in CTU list
-
+            
             for student_no, existing in existing_ctu.items():
                 if student_no not in excel_student_nos:
                     to_delete_ctu.append(student_no)
                     
                     # Check if registered
-                    if student_no in registered_map:
-                        if registered_map[student_no]['has_voted']:
-                            # Student voted - keep but deactivate
-                            to_deactivate_registered.append(registered_map[student_no]['id'])
-                        else:
-                            # Student didn't vote - can delete
-                            to_delete_registered.append(registered_map[student_no]['id'])
-
+                    if student_no in registered_map and not registered_map[student_no]['has_voted']:
+                        to_delete_registered.append(registered_map[student_no]['id'])
+            
             deleted_from_ctu = len(to_delete_ctu)
             deleted_from_registration = 0
-            deactivated_count = 0
-
+            
             # Bulk delete CTU students
             if to_delete_ctu:
                 chunk_size = 500
@@ -3362,65 +3355,32 @@ def import_students():
                         .filter(CtuStudent.student_number.in_(chunk))\
                         .delete(synchronize_session=False)
                     db.session.flush()
-
+            
             print(f"📊 STEP 8: Deleted {deleted_from_ctu} CTU students in {time.time() - start_time:.2f}s")
-
-            # Deactivate students who voted but are no longer in CTU list
-            if to_deactivate_registered:
-                chunk_size = 500
-                for i in range(0, len(to_deactivate_registered), chunk_size):
-                    chunk = to_deactivate_registered[i:i+chunk_size]
-                    # Set is_active and can_login to False
-                    db.session.query(Student)\
-                        .filter(Student.id.in_(chunk))\
-                        .update({'is_active': False, 'can_login': False}, synchronize_session=False)
-                    db.session.flush()
-                deactivated_count = len(to_deactivate_registered)
-                print(f"📊 STEP 8.5: Deactivated {deactivated_count} students who voted (kept for audit)")
-
+            
             # Bulk delete registered students (with no votes)
             if to_delete_registered:
+                # First delete TrustedDevice records
                 chunk_size = 500
                 for i in range(0, len(to_delete_registered), chunk_size):
                     chunk = to_delete_registered[i:i+chunk_size]
-                    
-                    # 1. Delete from pending_candidates FIRST
-                    from student.models import PendingCandidate
-                    db.session.query(PendingCandidate)\
-                        .filter(PendingCandidate.student_id.in_(chunk))\
-                        .delete(synchronize_session=False)
-                    db.session.flush()
-                    
-                    # 2. Delete from qualified_candidates
-                    from student.models import QualifiedCandidate
-                    db.session.query(QualifiedCandidate)\
-                        .filter(QualifiedCandidate.student_id.in_(chunk))\
-                        .delete(synchronize_session=False)
-                    db.session.flush()
-                    
-                    # 3. Delete TrustedDevice records
                     from student.models import TrustedDevice
                     db.session.query(TrustedDevice)\
                         .filter(TrustedDevice.student_id.in_(chunk))\
                         .delete(synchronize_session=False)
                     db.session.flush()
-                    
-                    # 4. Delete votes (these should be none since has_voted=False)
-                    from student.models import Vote
-                    db.session.query(Vote)\
-                        .filter(Vote.student_id.in_(chunk))\
-                        .delete(synchronize_session=False)
-                    db.session.flush()
-                    
-                    # 5. Finally delete students
+                
+                # Then delete students
+                for i in range(0, len(to_delete_registered), chunk_size):
+                    chunk = to_delete_registered[i:i+chunk_size]
                     db.session.query(Student)\
                         .filter(Student.id.in_(chunk))\
                         .delete(synchronize_session=False)
                     db.session.flush()
                 
                 deleted_from_registration = len(to_delete_registered)
-
-            print(f"📊 STEP 9: Deleted {deleted_from_registration} non-voted students, deactivated {deactivated_count} voted students in {time.time() - start_time:.2f}s")
+            
+            print(f"📊 STEP 9: Deleted {deleted_from_registration} registered students in {time.time() - start_time:.2f}s")
             
             # ===== OPTIMIZATION 7: Commit once at the end =====
             db.session.commit()
@@ -3435,7 +3395,7 @@ def import_students():
             
             log_audit(
                 action='IMPORT_STUDENTS',
-                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {len(to_insert)}, Updated: {len(to_update)}, Year Level Updates: {year_level_updates}, Deleted from CTU: {deleted_from_ctu}, Deleted non-voted students: {deleted_from_registration}, Deactivated voted students: {deactivated_count}, Time: {total_time:.2f}s"
+                description=f"Admin user '{username}' imported students from '{filename}' from IP: {ip} | Imported: {len(to_insert)}, Updated: {len(to_update)}, Year Level Updates: {year_level_updates}, Deleted from CTU: {deleted_from_ctu}, Deleted registered: {deleted_from_registration}, Time: {total_time:.2f}s"
             )
 
             flash(
@@ -3444,8 +3404,7 @@ def import_students():
                 f"🔄 Updated: {len(to_update)}\n"
                 f"📅 Year Levels Updated: {year_level_updates}\n"
                 f"🗑️ Removed from CTU list: {deleted_from_ctu}\n"
-                f"🚫 Deleted non-voted students: {deleted_from_registration}\n"
-                f"🔒 Deactivated voted students (kept for audit): {deactivated_count}",
+                f"🚫 Removed registered students: {deleted_from_registration}",
                 "import-success"
             )
             
@@ -3485,36 +3444,11 @@ def import_students():
         .paginate(page=page, per_page=20, error_out=False)
 
     total_students = CtuStudent.query.count()
-    
-    # Get registered students for the current page
-    student_numbers = [str(s.student_number) for s in students.items if s.student_number]
-    registered_numbers = set()
-    
-    if student_numbers:
-        registered_students = Student.query.filter(
-            Student.id_number.in_(student_numbers)
-        ).all()
-        registered_numbers = set(str(s.id_number) for s in registered_students)
-
-    # ✅ FIX: Check if there are any tokens to show the PDF export button
-    # Get all registered student numbers (for token status check)
-    all_registered_numbers_query = db.session.query(Student.id_number).filter(
-        Student.id_number.isnot(None)
-    ).all()
-    all_registered_numbers = set([r[0] for r in all_registered_numbers_query])
-    
-    # Check if any CTU students have tokens AND are not registered
-    has_tokens = CtuStudent.query.filter(
-        ~CtuStudent.student_number.in_(all_registered_numbers),
-        CtuStudent.registration_token.isnot(None)
-    ).count() > 0
 
     return render_template(
         "import_students.html",
         students=students,
-        total_students=total_students,
-        registered_numbers=registered_numbers,
-        has_tokens=has_tokens  # ✅ Added this missing variable
+        total_students=total_students
     )
 
 
@@ -3597,18 +3531,21 @@ def import_students_table():
                 )
             )
 
+        # Prevent paginate error if page > total_pages
         students = students_query.order_by(CtuStudent.last_name.asc()) \
                                  .paginate(page=page, per_page=20, error_out=False)
 
-        # Get registered student numbers
+        # Ensure string comparison
         student_numbers = [str(s.student_number) for s in students.items]
-        registered_numbers = set()
-        
         if student_numbers:
             registered_students = Student.query.filter(
                 Student.id_number.in_(student_numbers)
             ).all()
             registered_numbers = set(str(s.id_number) for s in registered_students)
+        else:
+            registered_numbers = set()
+
+        # 🚫 REMOVED: IMPORT_STUDENTS_TABLE_VIEW audit log (AJAX table refresh - not a data modification)
 
         return render_template(
             "partials/_students_table.html",
@@ -3620,467 +3557,24 @@ def import_students_table():
         import traceback
         traceback.print_exc()
         
+        # ✅ KEEP THIS AUDIT LOG (Error occurred - but only log once, not on every refresh)
+        # Only log if this is a POST request or first load, not on every AJAX refresh
+        if request.method == "POST" or request.args.get("error_logged") != "true":
+            username = getattr(current_user, 'username', 'Unknown')
+            ip = request.remote_addr
+            
+            log_audit(
+                action='IMPORT_STUDENTS_TABLE_ERROR',
+                description=f"Admin user '{username}' encountered error viewing import students table from IP: {ip} | Error: {str(e)[:100]}..."
+            )
+        
+        # Return a simple HTML message instead of plain text, for AJAX
         return render_template(
             "partials/_students_table.html",
             students=None,
             registered_numbers=set()
         )
     
-
-# Add these imports at the top if not already there
-import secrets
-import hashlib
-from datetime import datetime
-from flask import jsonify, send_file
-import io
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER
-
-# ==================== GENERATE TOKENS ROUTE ====================
-@admin_bp.route("/generate_tokens", methods=["POST"])
-@admin_required
-def generate_tokens():
-    """Generate unique tokens for all unregistered CTU students"""
-    try:
-        from sqlalchemy import text
-        
-        # Get all students who are NOT registered yet
-        registered_numbers_query = db.session.query(Student.id_number).filter(
-            Student.id_number.isnot(None)
-        ).all()
-        registered_numbers = set([r[0] for r in registered_numbers_query])
-        
-        # Get CTU students that are not registered
-        unregistered_students = CtuStudent.query.filter(
-            ~CtuStudent.student_number.in_(registered_numbers)
-        ).all()
-        
-        if not unregistered_students:
-            flash('No unregistered students found to generate tokens for.', 'import-warning')
-            return redirect(url_for("admin.import_students"))
-        
-        tokens_generated = 0
-        token_list = []
-        
-        for student in unregistered_students:
-            # Generate a secure random token (12 characters)
-            raw_token = secrets.token_urlsafe(9)  # ~12 characters
-            
-            # Store plain token directly in database (NO HASHING)
-            student.registration_token = raw_token
-            student.token_generated_at = datetime.now()
-            tokens_generated += 1
-            
-            # Store for response (for display)
-            token_list.append({
-                'student_number': student.student_number,
-                'student_name': f"{student.last_name}, {student.first_name}",
-                'token': raw_token
-            })
-        
-        db.session.commit()
-        
-        # Audit log
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='GENERATE_TOKENS',
-            description=f"Admin user '{username}' generated tokens for {tokens_generated} unregistered students from IP: {ip}"
-        )
-        
-        # Store tokens in session for PDF export
-        session['last_generated_tokens'] = token_list
-        
-        flash(f'✅ Successfully generated {tokens_generated} tokens!', 'import-success')
-        return redirect(url_for("admin.import_students"))
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"❌ Error generating tokens: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        flash(f'Error generating tokens: {str(e)}', 'import-danger')
-        return redirect(url_for("admin.import_students"))
-
-
-# ==================== EXPORT TOKENS TO PDF ====================
-# ==================== EXPORT TOKENS TO PDF ====================
-@admin_bp.route("/export_tokens_pdf", methods=["GET"])
-@admin_required
-def export_tokens_pdf():
-    """Export generated tokens as PDF for distribution"""
-    try:
-        from datetime import datetime
-        from reportlab.lib.pagesizes import letter
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-        from reportlab.lib import colors
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
-        from reportlab.lib.units import inch
-        import io
-        
-        # Get export type from query parameter (default to 'with_tokens')
-        export_type = request.args.get('type', 'with_tokens')
-        
-        # Get all unregistered students with tokens, sorted by last name (surname)
-        registered_numbers_query = db.session.query(Student.id_number).filter(
-            Student.id_number.isnot(None)
-        ).all()
-        registered_numbers = set([r[0] for r in registered_numbers_query])
-        
-        students_with_tokens = CtuStudent.query.filter(
-            ~CtuStudent.student_number.in_(registered_numbers),
-            CtuStudent.registration_token.isnot(None)
-        ).order_by(CtuStudent.last_name.asc()).all()
-        
-        if not students_with_tokens:
-            flash("No tokens found to export. Please generate tokens first.", "import-warning")
-            return redirect(url_for("admin.import_students"))
-        
-        # Create PDF
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer, 
-            pagesize=letter,
-            topMargin=0.5*inch,
-            bottomMargin=0.5*inch,
-            leftMargin=0.5*inch,
-            rightMargin=0.5*inch
-        )
-        
-        story = []
-        
-        # Styles
-        styles = getSampleStyleSheet()
-        
-        # Main Title Style
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=14,
-            alignment=TA_CENTER,
-            spaceAfter=5,
-            fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e3a8a')
-        )
-        
-        # Subtitle Style
-        subtitle_style = ParagraphStyle(
-            'Subtitle',
-            parent=styles['Normal'],
-            fontSize=9,
-            alignment=TA_CENTER,
-            spaceAfter=5,
-            textColor=colors.HexColor('#6b7280'),
-            fontName='Helvetica'
-        )
-        
-        # Header Style for table
-        header_style = ParagraphStyle(
-            'Header',
-            parent=styles['Normal'],
-            fontSize=8,
-            alignment=TA_CENTER,
-            textColor=colors.whitesmoke,
-            fontName='Helvetica-Bold'
-        )
-        
-        def add_header():
-            """Add header to story"""
-            title = Paragraph("CTU Moalboal Campus", title_style)
-            story.append(title)
-            
-            if export_type == 'with_tokens':
-                subtitle = Paragraph("Student Registration Tokens", subtitle_style)
-            else:
-                subtitle = Paragraph("Student Reference List", subtitle_style)
-            story.append(subtitle)
-            
-            # Get dates
-            token_dates = [s.token_generated_at for s in students_with_tokens if s.token_generated_at]
-            if token_dates:
-                token_generated_date = min(token_dates).strftime('%B %d, %Y')
-            else:
-                token_generated_date = "N/A"
-            
-            export_date = datetime.now().strftime('%B %d, %Y at %I:%M %p')
-            
-            date_text = f"Tokens Generated: {token_generated_date}  |  Exported: {export_date}"
-            date_style = ParagraphStyle(
-                'DateStyle',
-                parent=styles['Normal'],
-                fontSize=7,
-                alignment=TA_CENTER,
-                textColor=colors.HexColor('#6b7280'),
-                fontName='Helvetica',
-                spaceAfter=10
-            )
-            date_paragraph = Paragraph(date_text, date_style)
-            story.append(date_paragraph)
-            
-            # Horizontal line
-            line_data = [['']]
-            line_table = Table(line_data, colWidths=[doc.width])
-            line_table.setStyle(TableStyle([
-                ('LINEABOVE', (0, 0), (-1, -1), 0.5, colors.HexColor('#2563eb')),
-            ]))
-            story.append(line_table)
-            story.append(Spacer(1, 10))
-        
-        def create_table(students, start_number, title_text):
-            """Create a single table"""
-            if not students:
-                empty_style = ParagraphStyle(
-                    'Empty',
-                    parent=styles['Normal'],
-                    fontSize=8,
-                    alignment=TA_CENTER,
-                    textColor=colors.grey
-                )
-                data = [[Paragraph("No students", empty_style)]]
-                table = Table(data, colWidths=[200])
-                return table
-            
-            table_data = []
-            # Title row
-            table_data.append([Paragraph(f"<b>{title_text}</b>", header_style)])
-            
-            if export_type == 'with_tokens':
-                # Header row with Token column
-                table_data.append(['#', 'Student No', 'Last Name', 'Token'])
-                
-                for idx, student in enumerate(students, start_number):
-                    token = student.registration_token
-                    table_data.append([
-                        str(idx),
-                        student.student_number,
-                        student.last_name,
-                        token
-                    ])
-                
-                col_widths = [25, 70, 85, 75]
-            else:
-                # Header row without Token column
-                table_data.append(['#', 'Student No', 'Last Name'])
-                
-                for idx, student in enumerate(students, start_number):
-                    table_data.append([
-                        str(idx),
-                        student.student_number,
-                        student.last_name
-                    ])
-                
-                col_widths = [25, 85, 120]
-            
-            t = Table(table_data, colWidths=col_widths, repeatRows=2)
-            
-            t.setStyle(TableStyle([
-                # Title header
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-                ('TOPPADDING', (0, 0), (-1, 0), 6),
-                ('SPAN', (0, 0), (-1, 0)),
-                
-                # Column headers
-                ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#e5e7eb')),
-                ('TEXTCOLOR', (0, 1), (-1, 1), colors.HexColor('#374151')),
-                ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 1), (-1, 1), 8),
-                ('BOTTOMPADDING', (0, 1), (-1, 1), 4),
-                ('TOPPADDING', (0, 1), (-1, 1), 4),
-                
-                # Body rows
-                ('FONTNAME', (0, 2), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 2), (-1, -1), 7),
-                ('BOTTOMPADDING', (0, 2), (-1, -1), 3),
-                ('TOPPADDING', (0, 2), (-1, -1), 3),
-                
-                # Grid
-                ('GRID', (0, 1), (-1, -1), 0.3, colors.HexColor('#cccccc')),
-                
-                # Alternating row colors
-                ('ROWBACKGROUNDS', (0, 2), (-1, -1), [colors.white, colors.HexColor('#f9fafb')]),
-                
-                # Alignment
-                ('ALIGN', (0, 2), (0, -1), 'CENTER'),
-            ]))
-            
-            # Add left alignment for text columns (only for columns that exist)
-            if export_type == 'with_tokens':
-                t.setStyle(TableStyle([
-                    ('ALIGN', (1, 2), (3, -1), 'LEFT'),
-                    ('LEFTPADDING', (1, 2), (3, -1), 5),
-                ]))
-            else:
-                t.setStyle(TableStyle([
-                    ('ALIGN', (1, 2), (2, -1), 'LEFT'),
-                    ('LEFTPADDING', (1, 2), (2, -1), 5),
-                ]))
-            
-            return t
-        
-        total_students = len(students_with_tokens)
-        students_per_column = 30  # 30 students per column
-        students_per_page = students_per_column * 2  # 60 students per page (30 per column)
-        
-        # Split into pages
-        for page_start in range(0, total_students, students_per_page):
-            page_end = min(page_start + students_per_page, total_students)
-            page_students = students_with_tokens[page_start:page_end]
-            
-            # Add header on each page
-            add_header()
-            
-            # Split page students into 2 columns (30 each)
-            mid = (len(page_students) + 1) // 2
-            col1_students = page_students[:mid]
-            col2_students = page_students[mid:]
-            
-            # Calculate starting numbers
-            start_num1 = page_start + 1
-            start_num2 = page_start + mid + 1
-            
-            # Create tables
-            table1 = create_table(col1_students, start_num1, "COLUMN A")
-            table2 = create_table(col2_students, start_num2, "COLUMN B")
-            
-            # Create wrapper for 2 columns
-            wrapper_data = [[table1, table2]]
-            wrapper_table = Table(wrapper_data, colWidths=[doc.width/2 - 10, doc.width/2 - 10])
-            wrapper_table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ]))
-            
-            story.append(wrapper_table)
-            
-            # Add footer with page info
-            page_num = (page_start // students_per_page) + 1
-            total_pages = (total_students + students_per_page - 1) // students_per_page
-            
-            footer_style = ParagraphStyle(
-                'Footer',
-                parent=styles['Normal'],
-                fontSize=7,
-                alignment=TA_CENTER,
-                textColor=colors.grey,
-                fontName='Helvetica'
-            )
-            footer_text = Paragraph(f"Page {page_num} of {total_pages} | Total Students with Tokens: {total_students}", footer_style)
-            story.append(footer_text)
-            
-            # Add page break if not last page
-            if page_end < total_students:
-                story.append(PageBreak())
-        
-        # Build PDF
-        doc.build(story)
-        buffer.seek(0)
-        
-        # Determine filename based on export type
-        if export_type == 'with_tokens':
-            filename = f"student_tokens_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        else:
-            filename = f"student_reference_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        
-        # Audit log
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='EXPORT_TOKENS_PDF',
-            description=f"Admin user '{username}' exported {export_type} PDF for {total_students} students from IP: {ip}"
-        )
-        
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name=filename,
-            mimetype='application/pdf'
-        )
-        
-    except Exception as e:
-        print(f"❌ Error exporting PDF: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        flash(f"Error exporting PDF: {str(e)}", "import-danger")
-        return redirect(url_for("admin.import_students"))
-
-
-# ==================== REGENERATE SINGLE TOKEN ====================
-@admin_bp.route("/regenerate_token/<int:student_id>", methods=["POST"])
-@admin_required
-def regenerate_token(student_id):
-    """Regenerate token for a single student"""
-    try:
-        student = CtuStudent.query.get_or_404(student_id)
-        
-        # Check if student is already registered
-        existing_student = Student.query.filter_by(id_number=student.student_number).first()
-        if existing_student:
-            return jsonify({
-                'success': False,
-                'message': 'This student is already registered. Cannot regenerate token.'
-            }), 400
-        
-        # Generate new plain token
-        raw_token = secrets.token_urlsafe(9)
-        
-        # Store plain token directly (NO HASHING)
-        student.registration_token = raw_token
-        student.token_generated_at = datetime.now()
-        db.session.commit()
-        
-        # Audit log
-        username = getattr(current_user, 'username', 'Unknown')
-        ip = request.remote_addr
-        log_audit(
-            action='REGENERATE_TOKEN',
-            description=f"Admin user '{username}' regenerated token for student {student.student_number} from IP: {ip}"
-        )
-        
-        return jsonify({
-            'success': True,
-            'token': raw_token,
-            'student_number': student.student_number,
-            'student_name': f"{student.last_name}, {student.first_name}"
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@admin_bp.route("/check_tokens_exist", methods=["GET"])
-@admin_required
-def check_tokens_exist():
-    """Check if there are any tokens generated"""
-    try:
-        registered_numbers_query = db.session.query(Student.id_number).filter(
-            Student.id_number.isnot(None)
-        ).all()
-        registered_numbers = set([r[0] for r in registered_numbers_query])
-        
-        has_tokens = CtuStudent.query.filter(
-            ~CtuStudent.student_number.in_(registered_numbers),
-            CtuStudent.registration_token.isnot(None)
-        ).count() > 0
-        
-        return jsonify({'has_tokens': has_tokens})
-    except Exception as e:
-        return jsonify({'has_tokens': False, 'error': str(e)})
-
 
 @admin_bp.route('/students')
 @admin_required
