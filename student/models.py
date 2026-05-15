@@ -56,6 +56,10 @@ class Student(db.Model, UserMixin):
     deletion_processed = db.Column(db.Boolean, default=False)
     deletion_processed_date = db.Column(db.DateTime, nullable=True)
     
+    # ADD THESE TWO LINES
+    is_active = db.Column(db.Boolean, default=True)
+    can_login = db.Column(db.Boolean, default=True)
+    
     user_type = "student"
     
     # Relationships - FIXED: Removed the conflicting backref

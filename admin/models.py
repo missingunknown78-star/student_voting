@@ -414,8 +414,12 @@ class CtuStudent(db.Model):
     last_name = db.Column(db.String(100))
     course = db.Column(db.String(100))
     email = db.Column(db.String(150))
-    year_level = db.Column(db.String(50))  # NEW: Store year level as string (e.g., "1st Year", "2nd Year", etc.)
+    year_level = db.Column(db.String(50))
     is_active = db.Column(db.Boolean, default=True)
+    
+    # ADD THESE TOKEN FIELDS
+    registration_token = db.Column(db.String(255), nullable=True, unique=True)
+    token_generated_at = db.Column(db.DateTime, nullable=True)
 
 
 # Add this to your models.py

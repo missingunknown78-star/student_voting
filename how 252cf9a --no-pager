@@ -1,0 +1,201 @@
+[33m08ff0f1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Added Countdown in admin results
+[33m252cf9a[m Fixing app to cater large data
+[33mc9f9fd9[m Added tokens for registration for security
+[33m7d78f73[m Fixed siidebar laytout
+[33mca0a5dd[m Fixed deletion of approved deletiona ccounbt
+[33mf9ebdc1[m Make the footer and headr in voting page flexible accross devices
+[33md51ef62[m Allow students to apply for upcomming elections
+[33m689ce3f[m Pushing to git the pictured
+[33m2892b03[m Fixed configure election positions UI
+[33m1f4944f[m Change sidebar's theme color in dark
+[33mfccd718[m Get back the last
+[33macd1d7e[m Fixing the big space of the insight
+[33mfbf4849[m Make the legends in vote insight in 3 columns
+[33me699fa3[m Fixed the large legend
+[33m7ddb700[m Fixed the overall UI of the admin
+[33mef9a82c[m Improved dashboard UI, Last comit before the settings UI touched
+[33m6694798[m Fixed candidates' pagination
+[33m6c58a9a[m Fixed the other UI to match with the election create page
+[33m58c3a9b[m Fixing the overall UI of the other pages
+[33mb941a7c[m Fixed the email autoverified in admin gmail change
+[33m0fdd71c[m Final fix for result log error
+[33md3a996d[m Fixing error login on pythonanywhere for the caused my nresult page in student
+[33mae4e7ce[m Fixed confimed new gmail that confirms in different device
+[33me94a3ff[m Fix of gmail change expired link in student panel trial
+[33ma43a3d8[m added reset token to admin just like with students
+[33m0590dc4[m Fixing xhange password for pythonany
+[33m6b688b0[m The enforcement to use PH Time does not work so just made it manually click send link for verification
+[33m15f645f[m Trying to fix the gmail change invalid reqest link for first send
+[33m7dae7d1[m Improved interface of general resul page
+[33me69d446[m Added result publish status in admin result
+[33mbadc3e5[m Fixing email add change in student when deployed
+[33mfe64bfd[m Fixing the vote page to show the configured position base on year level to the vote page of the student that matched
+[33mc0d1e85[m Added tallied status in result general display
+[33m5af11e9[m Change the quote in manage election
+[33m5294653[m Improved create election page
+[33m7dde807[m Added year level configuration for year level representatives
+[33m70385bf[m Fix add candidate studio without department and course
+[33mcec8760[m Added studio candidate
+[33m96f2339[m Added forgot password in admin login
+[33m72d4893[m Added code, forget add code to generate hash pass
+[33m33d2c82[m Added generate hash to change admin password in pythonanywhere
+[33m32e7d19[m Improved UI in Application Center
+[33m2afb89d[m Improved email message
+[33m5d8342d[m Optimizing student student dashboard
+[33md91018d[m Fixed trust device prompt for student and updataed base as well as the voting page
+[33m03b3305[m Fixing the Admin Settings and other changes for the overall ui spaces in Student Panel
+[33m9a65745[m Fixed registration form withgour clearing all fields when refreshed, and enhancing the voting page
+[33m317a084[m Fixing student registration and setup election to measure accuracy
+[33m73a2d03[m Profile edit in admin settings fixed and the ajax live result
+[33m0de4d7c[m Fixing warnings in student route and model related to msql
+[33mc44bb04[m Manila time zone for recei-pt
+[33m2ddaab9[m Fixed time display in UCT
+[33m5d8ebe1[m Fixed result page to show ongoing election in python anywhere
+[33m0416e71[m Fixed login route and dashboard for student, added admin checks
+[33me578f54[m Fixed the sleep inactivity for seconds
+[33m9f76b7e[m Candidate application fixed
+[33m5474ada[m Added code to make the application not sleeping every 5 seconds
+[33m98fb3a8[m Fixed election_positions model
+[33m34c05c6[m Removed CSRF in the entire system
+[33m513d2c7[m Undo all changes in app.p and add a debug in configure route
+[33mccc9ff9[m Another fixed for app.p
+[33m835aec1[m Added conditional for python anywhere, disable CSRF if on pythonanywhere
+[33m875768c[m Fixing configure posiiton
+[33m1577355[m Moved csrf import at the top
+[33m715466f[m Added csrf in access code roite
+[33m1d3f210[m Deloyment for PythoAnywhere
+[33m1065a86[m Weasyprint to Reportlab for Pythonanywhere
+[33m3c9999d[m Added debug route for weasyprint dependencies
+[33mc4f62be[m Added email_helper.py
+[33m0f4731e[m Change to Resend
+[33ma5f3e86[m Fixing mail config
+[33m0977940[m Add socket timeout to all email functions (FULL VERSION)
+[33m76e8bde[m Use SSL port 465 for faster email
+[33m0671182[m Increase timeouts for email
+[33m92b7d72[m Fix: add import flag, increase timeout, fix email
+[33me414109[m Setting's mail serve changed
+[33m6ace465[m Fix circular import
+[33m43d623f[m Fix email: add TLS support
+[33me0563bb[m Fix import: only insert data, skip CREATE TABLE
+[33mcbbb1be[m Add student_voting.sql to repo for Railway import
+[33m8a0d703[m Add auto-import on startup
+[33mbce3f11[m Fix settings.py: remove duplicate MySQL variable definitions
+[33m059670f[m Auto-create database tables on startup
+[33mb6655e1[m Add gunicorn to requirements.txt
+[33md015051[m Remove custom build files
+[33m964d000[m Another nixpacks fixation
+[33m1785924[m Remove ensure in Nixpacks
+[33m989d62c[m Fixed Nixpacks
+[33m7f0c504[m Deployment using nixpack
+[33m52c3ab4[m  to fetched when venv fails
+[33m24db967[m Fixed election result detail
+[33m9a1e9a3[m Some css were fixed
+[33m127da3d[m Added vote insights chart bar
+[33mc88224a[m Year Filter Fixed
+[33m600785e[m fixed manage election
+[33m2414353[m Fixed Railway
+[33m1379383[m Ready for Railway
+[33mae65495[m Removed Dockerfile
+[33m07c5e8c[m Fix Dockerfile for Render + WeasyPrint
+[33m05c6b51[m Fixed Dockerfile
+[33mb1fea2e[m Fix gdk-pixbuf package for Docker
+[33ma16dc58[m Added Dockerfile
+[33m2d16a86[m Manage students minor change
+[33maf24341[m Switch to Python 3.11 and update packages
+[33m8128a57[m Add setuptools to fix crash
+[33ma5c14a0[m Add gunicorn to requirements
+[33m3bc485d[m Mail configuration moved to .env and make sure when disabling the 2FA it should ask confirmation in gmail first
+[33m3fb963e[m Added Password reset email, Fixed general settings and fixed the url prefix of the admin prefix
+[33md5e711b[m I added COMELEC Chairman name. And Access Page for admin when someone got into the link
+[33m5311273[m Added CSRF PROTECTION
+[33ma4dce03[m Small fixation in admin settings js and student profile not allowed to edit course and year, and also this should be later use to pull when I get wrong with my mail configuration to database
+[33m463c13a[m In vote distribution, it was fixed like when detected no other courses in departmental elecion it should distribute the data in program type like day or night
+[33mf4a17cc[m added vote distribution function and make the student_results_detail conditional for student candidates only
+[33m0df1d04[m Added an election result pdf upload in admin panel, then visible in student panel
+[33m712b9a2[m Last commited has error, and this is the fixation of error
+[33mb699fea[m Added an application for a condidate in student panel and reviewed by the admin
+[33mc91c0f5[m Added day or night program configuration and fixed interface of position configuratiuon
+[33m00736a5[m Unknown key
+[33m1316b81[m Make the help page and guidelines of the students modifiable in admin
+[33md25bd02[m Added system darkmode correctly, add modifiable election especially in House of Representatives Positions
+[33m25a440b[m added admin_Settings.html, trusted device feature and partial vote distribution
+[33m6fab8ae[m .
+[33m67e707c[m Added system setings and fixed the database no DEFINER
+[33mbeeefdc[m Created fresh database for pythonanywhere purpoises
+[33m8310df2[m Fix Student profile, edit and delation request.  Verify new email. and also the Receipt part
+[33m6ca8622[m Fixed but not totally, results in student panel
+[33mc69f8cb[m Fixed Pages Display added hash finder perfectly
+[33mbbbf6cb[m Result page for student added and hash finder code
+[33m7c63ecd[m Fixed election votes database
+[33mf621341[m Election modifieable to set how many candidates the votes can vote per position
+[33mb06f8d9[m Fixed darkmode feature for admin panel
+[33m008e2ec[m Applied Paillier Encryption, improved admin panel as suggested by mj, darkmode also applied, then audit logs. Important changes: the candidate_id in the database and model has change into encrypted_votes
+[33md7a4df3[m Improved user interface in Student Panel and added results display only first function
+[33m3926920[m total number of students in import page added
+[33m126d6c7[m Added feature for cross checked database
+[33m8e612f0[m Users in admin panel removed
+[33m1ea20a8[m import students page fixed
+[33m35788d2[m Import students from main database added
+[33m6585392[m New styles
+[33m49567f2[m New menu style for mobile view
+[33m5af6241[m New feature added , the users.html
+[33mac23216[m New statistics code
+[33m4fdd824[m Pagination for candidates' page
+[33m4b831bc[m Fixed modal form for candidate management
+[33m40f8fe6[m New styles
+[33mde07691[m New bar chart fixed
+[33mc9a8faa[m New features in manage students
+[33m1c8d622[m Polished verify device new feature
+[33m7f6e9fa[m New design for student dahboard and OTP page
+[33m42c52fa[m New html for trusted device security features
+[33m14f3202[m New security feature for student, the trust device
+[33mf17ceec[m New feature, statistics
+[33m3ba843c[m Sample changes in sample .html file
+[33mba40539[m Merge branch 'main' of https://github.com/missingunknown77-star/student_voting
+[33mcfe9fb3[m Added space in model for testing only
+[33m0eff7dd[m Resolve .gitignore merge conflict
+[33m5a52e4f[m Ignore database dump file
+[33m0da4464[m Update .gitignore to ignore log files
+[33m299d8ba[m admin_access.log inside .gitignore
+[33mf12d2c5[m Ignore admin_access.log
+[33mba03af7[m Ignore admin_access.log
+[33ma2763b7[m admin_access.log
+[33m2da2cf9[m Ignore admin_access.log
+[33m7342e02[m admin_access.log
+[33m120b245[m Reset password feature
+[33mfe98e5b[m Finger print registration move in student dashboard
+[33m4b8fb1f[m New security method in admin page, 2fa
+[33m843c480[m New feature in admin dashboard, profile and sttings
+[33m316dc6b[m New added functions, guidelines and help page
+[33ma1433d1[m New function feature specifically in announcement
+[33m685b48c[m New changes in admin_dashboard.html, css and the route
+[33ma045b2f[m Fixed model Recent election in dashboard admin
+[33m7059355[m fixed side bar css
+[33m21b5bfe[m Login history feature addedd
+[33m9925664[m Costumer service inbox
+[33m92907cb[m Succesful biometric login
+[33mc448e28[m Changes of css, routes, models and additional feature
+[33m9d8e95b[m New Codes for function, html abnd css
+[33mc823879[m All changes specifically in candidate management part
+[33m5c718f4[m Old and formal css fot login and registration
+[33mdba3aa7[m Premium style login.css and registration.css
+[33m9706c02[m New dashboard.css
+[33me1a5b32[m Add mobile-friendly updates for student dashboard and related pages
+[33m562a3ce[m New html and route
+[33me38a65d[m Newly paste route
+[33mf22bb0c[m New route
+[33m52da5f8[m New route in creature election function for timezone
+[33ma5a0d66[m New route for create election funcction
+[33me3132e2[m New route for admin dashboaard
+[33m8e53bdf[m New fix route in dahbrd
+[33m70ea136[m Set new admin dashboard route
+[33medd92ab[m Fix admin dahboard route
+[33m2bfec27[m Fixed the missing code in import
+[33m97f48ec[m Make admin dashboard timezone-aware
+[33mab16798[m Add pytz for timezone handling and update available_elections route
+[33m587ede2[m Add pytz for timezone handling and update available_elections route
+[33mc59b2c4[m Fix department display, hide ended elections, update student election pages
+[33m465255a[m Fixed MySQL connections for both local and PythonAnywhere
+[33m8acd9f7[m Fix settings.py for PythonAnywhere and local MySQL
+[33mbbe843f[m Update project files
+[33m5a76745[m Initial commit
