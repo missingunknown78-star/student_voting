@@ -3708,7 +3708,6 @@ def generate_tokens():
 
 
 # ==================== EXPORT TOKENS TO PDF ====================
-# ==================== EXPORT TOKENS TO PDF ====================
 @admin_bp.route("/export_tokens_pdf", methods=["GET"])
 @admin_required
 def export_tokens_pdf():
@@ -3789,6 +3788,26 @@ def export_tokens_pdf():
             fontName='Helvetica-Bold'
         )
         
+        # Style for token text - using monospace font for readability (distinguishes l, I, 1)
+        token_style = ParagraphStyle(
+            'TokenStyle',
+            parent=styles['Normal'],
+            fontSize=7,
+            fontName='Courier',
+            textColor=colors.HexColor('#2c3e50'),
+            alignment=TA_LEFT
+        )
+        
+        # Style for student number and other text
+        normal_style = ParagraphStyle(
+            'NormalStyle',
+            parent=styles['Normal'],
+            fontSize=7,
+            fontName='Helvetica',
+            textColor=colors.HexColor('#374151'),
+            alignment=TA_LEFT
+        )
+        
         def add_header():
             """Add header to story"""
             title = Paragraph("CTU Moalboal Campus", title_style)
@@ -3832,7 +3851,7 @@ def export_tokens_pdf():
             story.append(Spacer(1, 10))
         
         def create_table(students, start_number, title_text):
-            """Create a single table"""
+            """Create a single table with readable token font"""
             if not students:
                 empty_style = ParagraphStyle(
                     'Empty',
@@ -3854,12 +3873,15 @@ def export_tokens_pdf():
                 table_data.append(['#', 'Student No', 'Last Name', 'Token'])
                 
                 for idx, student in enumerate(students, start_number):
-                    token = student.registration_token
+                    # Format token with monospace font for better readability
+                    token = student.registration_token or ''
+                    token_paragraph = Paragraph(f'<font face="Courier" size="7">{token}</font>', normal_style)
+                    
                     table_data.append([
                         str(idx),
                         student.student_number,
                         student.last_name,
-                        token
+                        token_paragraph
                     ])
                 
                 col_widths = [25, 70, 85, 75]
@@ -3913,10 +3935,10 @@ def export_tokens_pdf():
                 ('ALIGN', (0, 2), (0, -1), 'CENTER'),
             ]))
             
-            # Add left alignment for text columns (only for columns that exist)
+            # Add left alignment for text columns
             if export_type == 'with_tokens':
                 t.setStyle(TableStyle([
-                    ('ALIGN', (1, 2), (3, -1), 'LEFT'),
+                    ('ALIGN', (1, 2), (2, -1), 'LEFT'),
                     ('LEFTPADDING', (1, 2), (3, -1), 5),
                 ]))
             else:
